@@ -69,18 +69,11 @@ NON-STANDARD DIRECTORY STRUCTURE
       To achieve this, scripts/* and elisp/* is placed in YATT/.
 
   [2] Since YATT::Lite is still evolving, single (system-wide) installation
-      may not fit for multi-service site. To minimize stability risk,
+      may not fit for multi-service site. To isolate instability risk,
       individual service should have its own installation of engine.
       To achieve this, runyatt.cgi uses runyatt.lib first.
 
 SUPPORT AND DOCUMENTATION
-
-  After installing, you can find documentation for this module with
-  the perldoc command.
-
-    perldoc YATT::Lite::Manual
-
-  Unfortunately, there is no English manual yet.
 
   You can also look for Source Code Repository at:
 
