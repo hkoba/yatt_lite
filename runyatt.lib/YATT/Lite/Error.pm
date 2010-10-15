@@ -1,0 +1,35 @@
+package YATT::Lite::Error; sub Error () {__PACKAGE__}
+use strict;
+use warnings FATAL => qw(all);
+use base qw(YATT::Lite::Object);
+
+use fields qw(cf_file cf_line cf_tmpl_file cf_tmpl_line
+	      cf_format cf_args);
+use overload qw("" message);
+use YATT::Lite::Util qw(lexpand);
+
+sub message {
+  my Error $error = shift;
+  $error->reason . $error->place;
+}
+
+sub reason {
+  my Error $error = shift;
+  sprintf $error->{cf_format}, map {
+    defined $_ ? $_ : '(undef)'
+  } lexpand($error->{cf_args});
+}
+
+sub place {
+  (my Error $err) = @_;
+  my $place = '';
+  $place .= " at file $err->{cf_tmpl_file}" if $err->{cf_tmpl_file};
+  $place .= " line $err->{cf_tmpl_line}" if $err->{cf_tmpl_line};
+  if ($err->{cf_file}) {
+    $place .= ",\n reported from YATT Engine: $err->{cf_file} line $err->{cf_line}";
+  }
+  $place .= "\n" if $place ne ""; # To make 'warn/die' happy.
+  $place;
+}
+
+1;

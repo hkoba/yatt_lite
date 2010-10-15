@@ -1,0 +1,88 @@
+package YATT::Lite::Constants;
+use strict;
+use warnings FATAL => qw(all);
+require Carp;
+
+#========================================
+# 今回は LRXML の serializability を捨てる
+use YATT::Lite::Util::Enum
+  (TYPE_ => [qw(LINEINFO COMMENT
+		  ENTITY PI ELEMENT
+		  ATTRIBUTE=ATT_NAMEONLY ATT_BARENAME ATT_TEXT ATT_NESTED
+		  ATT_MACRO=DECL_ENTITY)]
+   , NODE_ => [qw(TYPE BEGIN END LNO PATH REST=BODY ATTLIST
+		  AELEM_HEAD AELEM_FOOT BODY_BEGIN BODY_END)]
+   # node item
+   # BODY が必ず配列になるが、代わりに @attlist は配列不要に。 空の [] を pad しなくて済む
+   # XXX: <:yatt:else /> とかもあったじゃん！
+  );
+
+sub cut_first (&@) {
+  my ($code, $list) = @_;
+  local $_;
+  for (my $i = 0; $i < @$list; $i++) {
+    $_ = $list->[$i];
+    next unless $code->($_);
+    splice @$list, $i, 1;
+    return $_;
+  }
+}
+
+sub cut_first_att {
+  my ($list) = @_;
+  cut_first {$_->[NODE_TYPE] >= TYPE_ATTRIBUTE} $list;
+}
+
+# list expand if nested.
+sub lxnest {
+  ref $_[0][0] ? @{$_[0]} : $_[0]
+}
+# node expand.
+sub nx {
+  @{$_[0]}[(NODE_PATH + ($_[1] // 0)) .. $#{$_[0]}];
+}
+sub paren_escape ($) {
+  unless (defined $_[0]) {
+    Carp::confess "Undefined text";
+  }
+  my $cp = shift;
+  $cp =~ s{([\|\\])}{\\$1}g;
+  $cp;
+}
+sub qparen ($) {
+  'q|'.paren_escape($_[0]).'|'
+}
+sub qqvalue ($) {
+  'q'.qparen($_[0]);
+}
+
+sub node_path {
+  my ($self, $node) = @_;
+  $node->[NODE_PATH];
+}
+
+sub node_attlist {
+  my ($self, $node) = @_;
+  $node->[NODE_ATTLIST];
+}
+
+sub node_body {
+  my ($self, $node) = @_;
+  wantarray ? YATT::Lite::Util::lexpand($node->[NODE_BODY])
+    : $node->[NODE_BODY];
+}
+
+sub node_extract {
+  my ($self, $node) = splice @_, 0, 2;
+  nx($node, @_);
+}
+
+#========================================
+my $symtab = YATT::Lite::Util::symtab(__PACKAGE__);
+our @EXPORT = grep {*{$symtab->{$_}}{CODE}} keys %$symtab;
+our @EXPORT_OK = @EXPORT;
+
+require Exporter;
+import Exporter qw(import);
+
+1;

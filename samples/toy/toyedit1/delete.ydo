@@ -1,0 +1,18 @@
+# -*- perl -*-
+use strict; use warnings FATAL => qw(all);
+
+sub {
+  my ($this, $con) = @_;
+  my MY $yatt = $this->YATT;
+
+  unless ($con->param('!cancel')) {
+    my $fnum = $con->param('fnum')
+      or die "fnum is empty\n";
+
+    # XXX: This can loose old content!
+    unlink "$yatt->{cf_datadir}/.ht_$fnum"
+      or die "Can't delete $fnum: $!";
+  }
+
+  $con->redirect('./');
+};

@@ -1,0 +1,105 @@
+# -*- coding: utf-8 -*-
+YATT_CONFIG[
+special_entities[
+- HTML
+]
+]
+
+TITLE: &yatt:dump();
+IN:
+ <!yatt:args x=list>
+ &yatt:HTML(:dump(:x));
+PARAM[
+[
+- foo
+- bar
+]
+]
+OUT:
+ ['foo','bar']
+
+
+TITLE: &HTML(:var);
+IN:
+ <!yatt:args x=html>
+ &HTML(:x);
+PARAM[
+- <h2>foo</h2>
+]
+OUT:
+ <h2>foo</h2>
+
+
+TITLE: &yatt:template();
+BREAK: 1
+IN:
+ <!yatt:config usage="For template entity">
+ &yatt:template(){cf_usage};.
+OUT:
+ For template entity.
+
+TITLE: &yatt:concat();
+IN:
+ <!yatt:args x y z>
+ &yatt:concat(:x,:y,foo,:z);
+PARAM[
+- A
+- B
+- C
+]
+OUT:
+ ABfooC
+
+
+TITLE: &yatt:join();
+IN:
+ <!yatt:args x=list>
+ &yatt:join(-,:lexpand(:x));
+PARAM[
+[
+- A
+- B
+-
+- C
+]
+]
+OUT:
+ A-B-C
+
+
+TITLE: &yatt:format(fmt,values);
+IN:
+ <!yatt:args fmt x=list>
+ &yatt:format(:fmt,:lexpand(:x));
+PARAM[
+- foo%2$sbar%1$sbaz
+[
+- X
+- Y
+]
+]
+OUT:
+ fooYbarXbaz
+
+
+TITLE: &yatt:breakpoint();
+IN:
+ A &yatt:breakpoint(); B
+OUT:
+ A  B
+
+
+TITLE: entity in pi
+IN:
+ <!yatt:args x=list>
+ <?perl= &yatt:join(-,:lexpand(:x));  ?>
+PARAM[
+[
+- A
+- B
+-
+- C
+]
+]
+OUT:
+ A-B-C

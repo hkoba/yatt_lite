@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings FATAL => qw(all);
+sub MY () {__PACKAGE__}
+use base qw(File::Spec);
+
+use File::Basename;
+sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
+my $libdir;
+use lib $libdir = updir(3, MY->rel2abs(__FILE__));
+# print STDERR join("\n", __FILE__, $libdir), "\n";
+
+use YATT::Lite::Breakpoint;
+use YATT::Lite::Util qw(default);
+use YATT::Lite::Error;
+# XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
+# XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
+
+# library の追加は？ <= .htyattrc で？違うよね?
+
+my $dispatcher = do {
+  (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
+  do $cgi;
+};
+
+my $nerror = 0;
+foreach my $fn (@ARGV) {
+  my $dir = dirname($fn);
+  my $dirhandler = $dispatcher->get_dirhandler($dir);
+  $dirhandler->configure
+    (error_handler => sub {
+       my YATT::Lite::Error $err = shift;
+       my @lineinfo = ("[file] ".default($err->{cf_tmpl_file}, '-')
+		       , "[line] ".default($err->{cf_tmpl_line}, '-'));
+       my $msg = "[@lineinfo]\n "
+	 .sprintf($err->{cf_format}, @{$err->{cf_args}});
+       $msg .= "\n" unless $msg =~ m{\n\Z};
+       print STDERR $msg;
+       exit 1;
+     });
+  my $trans = $dirhandler->open_trans;
+  my $tmpl = $trans->find_file(basename($fn)) or do {
+    warn "No such file: $fn\n";
+    $nerror++;
+    next;
+  };
+  my $pkg = $trans->find_product(perl => $tmpl);
+}
+
+exit 1 if $nerror;

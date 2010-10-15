@@ -1,0 +1,64 @@
+#!/usr/bin/perl -w
+sub MY () {__PACKAGE__}
+use strict;
+use warnings FATAL => qw(all);
+
+use File::Basename;
+use File::Spec;
+my ($bindir, $libdir);
+use lib File::Spec->rel2abs
+  ($libdir = ($bindir = dirname($0)) . "/../../../../runyatt.lib");
+
+use YATT::Lite::Breakpoint;
+use YATT::Lite::XHFTest2;
+use base qw(YATT::Lite::XHFTest2);
+
+my MY $tests = MY->load_tests([dir => "$bindir/.."
+			       , libdir => File::Spec->rel2abs($libdir)]
+			      , @ARGV ? @ARGV : $bindir);
+$tests->enter;
+
+plan $tests->test_plan;
+
+my $dispatcher = $tests->load_dispatcher;
+$dispatcher->configure(at_done => sub { die \"DONE"; });
+
+foreach my File $sect (@{$tests->{files}}) {
+  my $dir = $tests->{cf_dir};
+  my $sect_name = $tests->file_title($sect);
+  foreach my Item $item (@{$sect->{items}}) {
+
+    if (my $action = $item->{cf_ACTION}) {
+      my ($method, @args) = @$action;
+      my $sub = $tests->can("action_$method")
+	or die "No such action: $method";
+      $sub->($tests, @args);
+      next;
+    }
+
+    my ($con, $dir, $file) = $dispatcher->make_connection
+      (undef, "./$item->{cf_FILE}"
+       , map {defined $_ ? $_ : ()} $item->{cf_PARAM});
+
+    $item->{cf_METHOD} //= 'GET';
+
+    eval {$dispatcher->run_dirhandler($con, $dir, $file)};
+
+    if ($item->{cf_ERROR}) {
+      like $@, qr{$item->{cf_ERROR}}
+	, "[$sect_name] ERROR $item->{cf_METHOD} $item->{cf_FILE}";
+      next;
+    }
+
+    if ($item->{cf_METHOD} eq 'POST') {
+      like trimlast(nocr($con->buffer)), $tests->mkpat($item->{cf_HEADER})
+	, "[$sect_name] POST $item->{cf_FILE}";
+    } elsif (ref $item->{cf_BODY}) {
+      like nocr($con->buffer), $tests->mkseqpat($item->{cf_BODY})
+	, "[$sect_name] $item->{cf_METHOD} $item->{cf_FILE}";
+    } else {
+      eq_or_diff trimlast(nocr($con->buffer)), $item->{cf_BODY}
+	, "[$sect_name] $item->{cf_METHOD} $item->{cf_FILE}";
+    }
+  }
+}

@@ -1,0 +1,33 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings FATAL => qw(all);
+sub MY () {__PACKAGE__}
+use base qw(File::Spec);
+
+use Carp;
+
+use File::Basename;
+sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
+my $libdir;
+use lib $libdir = updir(3, MY->rel2abs(__FILE__));
+# print STDERR join("\n", __FILE__, $libdir), "\n";
+
+use YATT::Lite::Breakpoint;
+# XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
+# XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
+
+# library の追加は？ <= .htyattrc で？違うよね?
+
+my $dispatcher = do {
+  (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
+  do $cgi;
+};
+
+foreach my $path (@ARGV) {
+  my $fn = basename($path);
+  unless ($fn eq '.htyattrc.pl' or $fn eq '.htyattconfig.xhf') {
+    croak "Not for yatt: $fn";
+  }
+  my $dir = dirname($path);
+  my $dirhandler = $dispatcher->get_dirhandler($dir);
+}

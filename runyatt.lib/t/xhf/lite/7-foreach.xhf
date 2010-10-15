@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+
+TITLE: foreach
+IN:
+ <ul>
+ <yatt:foreach my=i "1..3"><li>&yatt:i;</li>
+ </yatt:foreach></ul>
+PARAM[
+[
+- 1
+- 2
+- 3
+]
+]
+OUT:
+ <ul>
+ <li>1</li>
+ <li>2</li>
+ <li>3</li>
+ </ul>
+
+
+TITLE: foreach list=x pass through
+BREAK: 1
+IN:
+ <!yatt:args x=list>
+ <ul>
+ <yatt:foreach my=i list=x><li>&yatt:i;</li>
+ </yatt:foreach></ul>
+PARAM[
+[
+- 1
+- 2
+- 3
+]
+]
+OUT:
+ <ul>
+ <li>1</li>
+ <li>2</li>
+ <li>3</li>
+ </ul>
+
+
+TITLE: foreach list pass through
+IN:
+ <!yatt:args list=list>
+ <ul>
+ <yatt:foreach my=i list><li>&yatt:i;</li>
+ </yatt:foreach></ul>
+PARAM[
+[
+- 1
+- 2
+- 3
+]
+]
+OUT:
+ <ul>
+ <li>1</li>
+ <li>2</li>
+ <li>3</li>
+ </ul>
+
+
+TITLE: foreach list pass through, type mismatch.
+BREAK: 1
+IN:
+ <!yatt:args x>
+ <ul>
+ <yatt:foreach my=i list=x><li>&yatt:i;</li>
+ </yatt:foreach></ul>
+ERROR: ^yatt:foreach - x should be list type
+
+
+TITLE: foreach $_
+IN:
+ <!yatt:args list=list>
+ <ul>
+ <yatt:foreach list><li>&yatt:_;</li>
+ </yatt:foreach></ul>
+PARAM[
+[
+- 1
+- 2
+- 3
+]
+]
+OUT:
+ <ul>
+ <li>1</li>
+ <li>2</li>
+ <li>3</li>
+ </ul>
+

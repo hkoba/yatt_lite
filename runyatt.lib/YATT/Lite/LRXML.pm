@@ -1,0 +1,636 @@
+#========================================
+# Parsing and Building. part の型を確定させる所まで請け負うことに。
+package YATT::Lite::LRXML; sub MY () {__PACKAGE__}
+use strict;
+use warnings FATAL => qw(all);
+use 5.010;
+use base qw(YATT::Lite::VarMaker);
+use fields qw(re_decl
+	      re_body
+	      re_entopn
+	      re_att
+	      re_name
+	      re_evar ch_etext
+	      re_eopen re_eclose
+	      template
+	      chunklist
+	      startln endln
+	      startpos curpos
+	      cf_namespace
+	      cf_vfs
+	      cf_default_part
+	      cf_base cf_scheme cf_path cf_encoding cf_debug
+	      cf_all
+	      cf_special_entities
+	    );
+
+use YATT::Lite::Core qw(Part Widget Page Action Data Template);
+use YATT::Lite::VarTypes;
+use YATT::Lite::Constants;
+use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand);
+require Scalar::Util;
+require Encode;
+use Carp;
+
+#========================================
+sub default_part {'widget'}
+#========================================
+sub after_new {
+  my MY $self = shift;
+  $self->SUPER::after_new;
+  Scalar::Util::weaken($self->{cf_vfs}) if $self->{cf_vfs};
+  $self->{cf_namespace} ||= [qw(yatt perl)];
+  my $nspat = $self->re_ns;
+  $self->{re_name} ||= $self->re_name;
+  $self->{re_decl} ||= qr{<!(?:(?<declname>$nspat(?::\w++)+)
+			  |(?:--\#(?<comment>$nspat(?::\w++)*)))\b}xs;
+  my $entOpen = do {
+    my @entPat = qq{(?<entity>$nspat(?=:))};
+    # special の場合は entgroup を呼びたいので、 先に open ( を削っておく。
+    push @entPat, sprintf q{(?<special>(?:%s))\(}
+      , join "|", lexpand($self->{cf_special_entities})
+	if $self->{cf_special_entities};
+    sprintf q{&(?:%s)}, join "|", @entPat;
+  };
+  $self->{re_att}
+    ||= qr{(?<ws>\s++)
+	 | (?<comment>--.*?--)
+	 | (?<macro>%(?:[\w\:\.]+(?:[\w:\.\-=\[\]\{\}\(,\)]+)?);)
+	 | (?:(?<attname>[\w:]+)\s*=\s*+)?+
+	   (?:'(?<sq>[^']*+)'
+	   |"(?<dq>[^\"]*+)"
+	   |(?<nest>\[) | (?<nestclo>\])
+	   |$entOpen
+	   |(?<bare>[^\s'\"<>\[\]/=]++)
+	   )
+	}xs;
+  $self->{re_body} ||= qr{$entOpen
+			|<(?:(?<clo>/?)(?<opt>:?)(?<elem>$nspat(?::\w++)+)
+			  |\?(?<pi>$nspat(?::\w++)*))\b
+		       }xs;
+  # For entities.
+  $self->{re_entopn} = qr{$entOpen}xs;
+  $self->{re_eopen}  ||= qr{(?<open>  [\(\{\[])}xs;
+  $self->{re_eclose} ||= qr{(?<close> [\)\}\]])}xs;
+  $self->{re_evar}   ||= qr{: (?<var>\w+)}xs;
+  $self->{ch_etext}  ||= qr{(?: \w | [\$\-\+\*/%<>\.\@!=\|])}xs;
+  $self;
+}
+#========================================
+sub load_file_into {
+  my ($pack, $tmpl, $fn) = splice @_, 0, 3;
+  croak "Template argument is missing!
+YATT::Lite::Parser->from_file(filename, templateObject)"
+    unless defined $tmpl and UNIVERSAL::isa($tmpl, $pack->Template);
+  my MY $self = ref $pack ? $pack->configure(@_) : $pack->new(@_);
+  open my $fh, '<', $fn or die "Can't open $fn: $!";
+  binmode $fh, ":encoding($$self{cf_encoding})" if $$self{cf_encoding};
+  $self->{cf_path} = $fn;
+  $self->{cf_scheme} = 'file';
+  my $string = do {
+    local $/;
+    untaint_unless_tainted($fn, scalar <$fh>);
+  };
+  $self->load_string_into($tmpl, $string);
+}
+sub load_string_into {
+  (my $pack, my Template $tmpl) = splice @_, 0, 2;
+  my MY $self = ref $pack ? $pack->configure(@_[1 .. $#_])
+    : $pack->new(@_[1 .. $#_]);
+  $self->parse_decl($tmpl, $_[0]);
+  $self->parse_body($tmpl) if $self->{cf_all};
+  wantarray ? ($tmpl, $self) : $tmpl;
+}
+sub parse_body {
+  (my MY $self, my Template $tmpl) = @_;
+  return if $tmpl->{parse_ok};
+  $self->{template} = $tmpl;
+  $self->parse_widget($_) for $tmpl->list_parts($self->Widget);
+  $tmpl->{parse_ok} = 1;
+}
+sub posinfo {
+  (my MY $self) = shift;
+  ($self->{startpos}, $self->{curpos});
+}
+sub add_posinfo {
+  (my MY $self, my ($len, $sync)) = @_;
+  $self->{curpos} += $len;
+  $self->{startpos} = $self->{curpos} if $sync;
+  $len;
+}
+sub update_posinfo {
+  my MY $self = shift;
+  my ($sync) = splice @_, 1;
+  # $self->{curpos} = $self->{total} - length $_[0];
+  $self->{startpos} = $self->{curpos} if $sync;
+}
+sub parse_decl {
+  (my MY $self, my Template $tmpl, my $str, my @config) = @_;
+  break_parser();
+  $self->{template} = $tmpl;
+  $tmpl->reset if $tmpl->{product}; #XXX: NIMPL
+  $self->configure(@config);
+  $tmpl->{cf_string} = $str;
+  $tmpl->{cf_utf8} = Encode::is_utf8($str);
+  $self->{startln} = $self->{endln} = 1;
+  $self->add_part($tmpl, my Part $part = $self->build
+		  ($self->primary_ns, $self->default_part, '', implicit => 1
+		   , startpos => 0, bodypos => 0));
+  ($self->{startpos}, $self->{curpos}, my $total) = (0, 0, length $str);
+  while ($str =~ s{^(.*?)($$self{re_decl})}{}s) {
+    $self->add_text($part, $1) if length $1;
+    $self->{curpos} = $total - length $str;
+    if (my $comment_ns = $+{comment}) {
+      unless ($str =~ s{^(.*?)-->(\r?\n)?}{}s) {
+	die $self->synerror(q{Comment is not closed});
+      }
+      my $nlines = numLines($1) + ($2 ? 1 : 0);
+      $self->{curpos} += length $&;
+      push @{$part->{toks}}, [TYPE_COMMENT, $self->posinfo($str)
+			      , $self->{startln}
+			      , $comment_ns, $nlines, $1];
+      $self->{startln} = $self->{endln} += $nlines;
+      next;
+    }
+    my ($ns, $kind) = split /:/, $+{declname}, 2;
+    # XXX: build と declare の順序が逆ではないか? 気にしなくていい?
+    my $is_new;
+    if ($self->can("build_$kind")) {
+      # yatt:widget, action
+      my (@args) = $self->parse_attlist($str, 1); # To delay entity parsing.
+      my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
+	die $self->synerror(q{No part name in %s:%s\n%s}, $ns, $kind
+		  , nonmatched($str));
+      };
+      unless ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
+	die $self->synerror(q{Invalid part name in %s:%s}, $ns, $kind);
+      }
+      my $partName = $nameAtt->[NODE_PATH];
+      # XXX: $partName が foo=bar とかだったら。
+      $self->add_part($tmpl, $part = $self->build($ns, $kind, $partName));
+      $self->add_args($part, @args);
+      $is_new++;
+    } elsif (my $sub = $self->can("declare_$kind")) {
+      # yatt:base, yatt:args vs perl:base, perl:args...
+      # 戻り値が undef なら、同じ $part を用いつづける。
+      $part = $sub->($self, $tmpl, $ns, $self->parse_attlist($str, 1))
+	// $part;
+    } else {
+      die $self->synerror(q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
+    }
+    unless ($str =~ s{^>([\ \t]*\r?\n)?}{}s) {
+      # XXX: たくさん出しすぎ
+      die $self->synerror(q{Invalid character in decl %s:%s : %s}
+		   , $ns, $kind
+		   , $str);
+    }
+    # <!yatt:...> の直後には改行が必要、とする。
+    unless ($1) {
+      die $self->synerror(q{<!%s:%s> must end with newline!}, $ns, $kind);
+    }
+    $self->add_posinfo(length $&);
+    $self->{endln} += numLines($1);
+    $part->{cf_bodypos} = $self->{curpos};
+    $part->{cf_bodyln} = $self->{endln}; # part の本体開始行の初期値
+  } continue {
+    $self->{startpos} = $self->{curpos};
+  }
+  push @{$part->{toks}}, nonmatched($str);
+  # widget->{cf_endln} は, (視覚上の最後の行)より一つ先の行を指す。(末尾の改行を数える分,多い)
+  $part->{cf_endln} = $self->{endln} += numLines($str);
+  # $default が partlist に足されてなかったら、先頭に足す... 逆か。
+  # args が、 $default を先頭から削る?
+  # fixup parts.
+  my Part $prev;
+  foreach my Part $part (@{$tmpl->{partlist}}) {
+    if ($prev) {
+      unless (defined $part->{cf_startpos}) {
+	die $self->synerror(q{startpos is undef});
+      }
+      unless (defined $prev->{cf_bodypos}) {
+	die $self->synerror(q{prev bodypos is undef});
+      }
+      $prev->{cf_bodylen} = $part->{cf_startpos} - $prev->{cf_bodypos};
+    }
+    if ($part->{toks} and @{$part->{toks}}) {
+      # widget 末尾の連続改行を、単一の改行トークンへ変換。(行番号は解析済みだから大丈夫)
+      if ($part->{toks}[-1] =~ s/(?:\r?\n)+\Z//) {
+	push @{$part->{toks}}, "\n";
+      }
+    }
+    if (my $sub = $part->can('fixup')) {
+      $sub->($part, $tmpl, $self);
+    }
+  } continue { $prev = $part }
+  if ($prev) {
+    $prev->{cf_bodylen} = length($tmpl->{cf_string}) - $prev->{cf_bodypos};
+  }
+  $tmpl
+}
+
+sub parse_attlist {
+  my MY $self = shift;
+  my ($for_decl) = my @opt = splice @_, 1;
+  my (@result);
+  my $curln = $self->{endln};
+  while ($_[0] =~ s{^$$self{re_att}}{}xs) {
+    my $start = $self->{curpos};
+    $self->{curpos} += length $&;
+    # startln は不変に保つ. これは add_part が startln を使うため
+    $self->{endln} += numLines($&);
+    next if $+{ws} || $+{comment};
+    last if $+{nestclo};
+    next if $+{macro};		#XXX: 今はまだ argmacro を無視！
+    push @result, do {
+      my @common = ($start, $self->{curpos}, $curln);
+      if (not $+{attname} and $+{bare} and is_ident($+{bare})) {
+	[TYPE_ATT_NAMEONLY, @common, split_ns($+{bare})];
+      } elsif ($+{nest}) {
+	[TYPE_ATT_NESTED, @common, $+{attname}
+	 , $self->parse_attlist($_[0], @opt)];
+      } elsif ($+{entity} or $+{special}) {
+	# XXX: 間に space が入ってたら?
+	[TYPE_ATT_TEXT, @common, $+{attname}, [$self->mkentity(@common)]];
+      } else {
+	# XXX: stringify したくなるかもだから、 sq/dq の区別も保存するべき?
+	my ($quote, $value) = oneof(\%+, qw(bare sq dq));
+	[!$quote && is_ident($value) ? TYPE_ATT_BARENAME : TYPE_ATT_TEXT
+	 , @common, split_ns($+{attname})
+	 , $for_decl ? $value : $self->_parse_text_entities($value)];
+      }
+    };
+  } continue {
+    $curln = $self->{endln};
+    $self->_verify_token($self->{curpos}, $_[0]) if $self->{cf_debug};
+  }
+  wantarray ? @result : \@result;
+}
+
+sub mkentity {
+  (my MY $self) = shift;
+  [TYPE_ENTITY, @_, do {
+    if (my $ns = $+{entity}) {
+      ($ns, $self->_parse_entpath);
+    } elsif (my $special = $+{special}) {
+      (undef, [call => $special
+	       , $self->_parse_entpath(_parse_entgroup => ')')]);
+    } else {
+      die "mkentity called without entity or special";
+    }
+  }];
+}
+
+sub split_ns {
+  defined (my $value = shift)
+    or return undef; # make sure one scalar.
+  local %+;
+  my @names = split /:/, $value;
+  @names > 1 ? \@names : $value;
+}
+
+# widget の body の構文については、 Template が規定してよい。
+sub parse_widget {
+  (my MY $self, my Widget $widget) = @_;
+  $self->{startln} = $self->{endln} = $widget->{cf_bodyln};
+  # XXX: 戻り値でも良い気はする。とはいえ、デバッグは楽か。
+  local $self->{chunklist} = my $chunks = [@{$widget->{toks} //= []}];
+  local $_ = @$chunks && !ref $chunks->[0] ? shift @$chunks : '';
+  $self->{startpos} = $self->{curpos} = $widget->{cf_bodypos};
+  $self->_parse_body($widget, $widget->{tree} = []);
+  push @{$widget->{tree}}, nonmatched($_); # XXX: nest 時以外
+  $widget;
+}
+
+sub _get_chunk {
+  (my MY $self, my $sink) = @_;
+  my $chunks = $self->{chunklist};
+  if (length $_) {
+    push @$sink, $_ if $sink;
+    $self->{startln} = $self->{endln} += numLines($_);
+    $self->{curpos} = $self->{startpos} += length $_;
+    $_ = '';
+  }
+  # comment の読み飛ばし
+  while (@$chunks and ref $chunks->[0]) {
+    my $next = shift @$chunks;
+    push @$sink, $next if $sink;
+    $self->{startln} = $self->{endln} += $next->[NODE_BODY];
+    $self->{curpos} = $self->{startpos} = $next->[NODE_END];
+  }
+  return unless @$chunks;
+  $_ = shift @$chunks;
+  1
+}
+
+sub nonspace {
+  local (%+, $&, $1, $2);
+  $_[0] =~ /\S/;
+}
+
+sub splitline {
+  local (%+, $&, $1, $2);
+  split /(?<=\n)/, $_[0];
+}
+
+sub _verify_token {
+  (my MY $self, my $pos) = splice @_, 0, 2;
+  unless (defined $pos) {
+    die $self->synerror(q{Token pos is undef!: now='%s'}, $_[0]);
+  }
+  my $tok = $self->{template}->source_substr($pos, length $_[0]);
+  unless (defined $tok) {
+    die $self->synerror(q{Token substr is empty!: now='%s'}, $_[0]);
+  }
+  unless ($tok eq $_[0]) {
+    die $self->synerror(q{Token mismatch!: substr='%s', now='%s'}
+			, $tok, $_[0]);
+  }
+}
+
+sub drop_leading_ws {
+  my $list = shift;
+  local (%+, $1, $2, $&);
+  pop @$list while @$list and $list->[-1] =~ /^\s*$/s;
+}
+sub verify_tag {
+  (my MY $self, my ($path, $close)) = @_;
+  # XXX: デバッグ時、この段階での sink の様子を見たくなる。
+  unless (s{^>}{}xs) {
+    die $self->synerror(q{Missing tagclose});
+  }
+  $self->{curpos} += 1;
+  unless (defined $close) {
+    die $self->synerror(q{TAG close without open! got %s}, $path);
+  } elsif ($path ne $close) {
+    die $self->synerror(q{TAG Mismatch! got %s expected %s}
+		 , $path, $close);
+  }
+}
+
+#========================================
+# build($ns, $kind, $partName, @attlist)
+sub build {
+  (my MY $self, my ($ns, $kind, $partName)) = splice @_, 0, 4;
+  $self->can("build_$kind")->
+    ($self, name => $partName, kind => $kind
+     , startpos => $self->{startpos}, @_);
+}
+# 今度はこっちが今一ね。
+sub build_widget { shift->Widget->new(@_) }
+sub build_page { shift->Page->new(@_) }
+sub build_action { shift->Action->new(@_) }
+sub build_data { shift->Data->new(@_) }
+#========================================
+# declare
+sub declare_base {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  my $att = YATT::Lite::Constants::cut_first_att(\@args) or do {
+    die $self->synerror(q{No base arg});
+  };
+  # !yatt:base dir="..."
+  #            PATH BODY
+  push @{$tmpl->{cf_base}}, [@$att[NODE_PATH, NODE_BODY]]; # XXX: 定形？
+  undef;
+}
+sub declare_args {
+  (my MY $self, my Template $tmpl, my $ns) = splice @_, 0, 3;
+  my Part $newpart = do {
+    # 宣言抜きで作られていた part を一旦一覧から外す。
+    my Part $oldpart = delete $tmpl->{Item}{''};
+    unless ($oldpart->{cf_implicit}) {
+      die $self->synerror(q{Duplicate !%s:args declaration}, $ns);
+    }
+    if (@{$tmpl->{partlist}} == 1) {
+      # 先頭だったら再利用。
+      shift @{$tmpl->{partlist}}; # == $oldpart
+    } else {
+      $oldpart->{cf_suppressed} = 1; # 途中なら、古いものを隠して、新たに作り直し。
+      $self->build($ns, $self->default_part, ''
+		   , startln => $self->{startln});
+    }
+  };
+  $newpart->{cf_startpos} = $self->{startpos};
+  $newpart->{cf_bodypos} = $self->{curpos} + 1;
+  $self->add_part($tmpl, $newpart); # partlist と Item に足し直す
+  $self->add_args($newpart, @_);
+  $newpart;
+}
+
+# <!yatt:config cf=value...>
+sub declare_config {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  # XXX: 一方が undef だったら？
+  # XXX: name only なら bool(1) 扱い、にすべきよね。
+  $tmpl->configure(map {$_->[NODE_PATH], $_->[NODE_BODY]} @args);
+  undef;
+}
+
+sub declare_constants {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  $tmpl->{cf_constants} = \@args;
+  undef;
+}
+
+
+#========================================
+sub primary_ns {
+  my MY $self = shift;
+  unless ($self->{cf_namespace}) {
+    'yatt';
+  } else {
+    first($self->{cf_namespace});
+  }
+}
+sub namespace {
+  my MY $self = shift;
+  return unless defined $self->{cf_namespace};
+  ref $self->{cf_namespace} && wantarray
+    ? @{$self->{cf_namespace}}
+      : $self->{cf_namespace}
+    }
+#========================================
+sub add_part {
+  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  if (defined $tmpl->{Item}{$part->{cf_name}}) {
+    die $self->synerror(q{Conflicting part name! '%s'}, $part->{cf_name});
+  }
+  Scalar::Util::weaken($part->{cf_folder} = $tmpl);
+  # die "Can't weaken!" unless Scalar::Util::isweak($part->{cf_folder});
+  if ($tmpl->{partlist} and my Part $prev = $tmpl->{partlist}[-1]) {
+    $prev->{cf_endln} = $self->{endln};
+  }
+  $part->{cf_startln} = $self->{startln};
+  $part->{cf_bodyln} = $self->{endln};
+  push @{$tmpl->{partlist}}, $tmpl->{Item}{$part->{cf_name}} = $part;
+}
+sub add_text {
+  (my MY $self, my Part $part, my $text) = @_;
+  push @{$part->{toks}}, $text;
+  $self->add_posinfo(length($text), 1);
+  $self->{startln} = $self->{endln} += numLines($text);
+}
+sub add_lineinfo {
+  (my MY $self, my $sink) = @_;
+  # push @$sink, [TYPE_LINEINFO, $self->{endln}];
+}
+sub add_args {
+  (my MY $self, my Part $part) = splice @_, 0, 2;
+  foreach my $argSpec (@_) {
+    # XXX: text もあるし、 %yatt:argmacro; もある。
+    my ($node_type, $lno, $argName, $desc, @rest)
+      = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY
+		    , NODE_BODY+1 .. $#$argSpec];
+    unless (defined $argName) {
+      die $self->synerror('Invalid argument spec');
+    }
+    if (exists $part->{arg_dict}{$argName}) {
+      die $self->synerror('Argument %s redefined in %s %s'
+		   , $argName, $part->{cf_kind}, $part->{cf_name});
+    }
+    my ($type, $dflag, $default);
+    if ($node_type == TYPE_ATT_NESTED) {
+      $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
+      # primary of [primary key=val key=val] # delegate:foo の時は BODY に入る？
+    } else {
+      ($type, $dflag, $default) = split m{([|/?!])}, $desc || '', 2;
+    };
+    my $var = $self->mkvar($type, $argName, nextArgNo($part)
+			   , $lno, $node_type, $dflag
+			   , defined $default
+			   ? $self->_parse_text_entities($default) : undef);
+
+    if ($node_type == TYPE_ATT_NESTED) {
+      # XXX: [delegate:type ...], [code  ...] の ... が来る
+      # 仮想的な widget にする？ のが一番楽そうではあるか。そうすれば add_args 出来る。
+      # $self->add_arg_of_delegate/code/...へ。
+      my $t = $var->type->[0];
+      my $sub = $self->can("add_arg_of_type_$t")
+	or die $self->synerror("Unknown arg type in arg '%s': %s", $argName, $t);
+      $sub->($self, $part, $var, \@rest);
+    } else {
+      push @{$part->{arg_order}}, $argName;
+      $part->{arg_dict}{$argName} = $var;
+    }
+  }
+  $self;
+}
+
+# code 型は仮想的な Widget を作る。
+sub add_arg_of_type_code {
+  (my MY $self, my Part $part, my ($var, $attlist)) = @_;
+  $var->widget(my Widget $virtual = $self->Widget->new(name => $var->varname));
+  $self->add_args($virtual, @$attlist);
+  my $argName = $var->varname;
+  push @{$part->{arg_order}}, $argName;
+  $part->{arg_dict}{$argName} = $var;
+}
+
+sub add_arg_of_type_delegate {
+  (my MY $self, my Widget $widget, my ($var, $attlist)) = @_;
+  # XXX: 引数でない変数も足さないと...
+  my $name = $var->varname;
+  # XXX: 既に有ったらエラーにしないと。
+  $widget->{var_dict}{$name} = $var;
+  my ($type, @subtype) = @{$var->type};
+  my Widget $delegate = $self->{cf_vfs}->find_part_from
+    ($widget->{cf_folder}, @subtype ? @subtype : $name);
+  $var->weakened_set_widget($delegate);
+  unless (Scalar::Util::isweak($var->[YATT::Lite::VarTypes::t_delegate::VSLOT_WIDGET])) {
+    die "Can't weaken!";
+  }
+  $var->delegate_vars(\ my %delegate_vars);
+  foreach my $argName (@{$delegate->{arg_order}}) {
+    # 既に宣言されている名前は、足さない。
+    next if $widget->{arg_dict}{$argName};
+    $delegate_vars{$argName} = my $orig = $delegate->{arg_dict}{$argName};
+    # clone して argno と lineno を変える。
+    $widget->{arg_dict}{$argName} = my $clone = $self->mkvar(@$orig)
+      ->argno(nextArgNo($widget))->lineno($widget->{cf_startln});
+    # XXX: lineno を widget の startln にするのは手抜き。本来は直前の arg のものを使うべき。
+    push @{$widget->{arg_order}}, $argName;
+  }
+}
+sub nextArgNo {
+  (my Part $part) = @_;
+  $part->{arg_order} ? scalar @{$part->{arg_order}} : 0;
+}
+
+#========================================
+# To allow overriding.
+sub re_ns {
+  my MY $self = shift;
+  my @ns = @_ ? @_ : $self->namespace;
+  my ($nspat) = map {qr{$_}} join "|", @ns;
+  $nspat;
+}
+sub re_name {
+  shift; qr{[\w\.]+};
+}
+#========================================
+sub synerror {
+  my MY $self = shift;
+  my %opts
+    = ($$self{cf_path} ? (tmpl_file => "$$self{cf_scheme} $$self{cf_path}") : ()
+       , $$self{startln} ? (tmpl_line => $$self{startln}) : ()
+       , depth => 2);
+  $self->{cf_vfs}->error(\%opts, @_);
+}
+#========================================
+sub is_ident {
+  local %+;
+  $_[0] =~ m{^(?:\w+|:)+$};
+}
+sub oneof {
+  my $hash = shift;
+  my $i = 0;
+  foreach my $key (@_) {
+    if (defined(my $value = $hash->{$key})) {
+      return $i => $value;
+    }
+  } continue {
+    $i++;
+  }
+  die "really??";
+}
+sub first { ref $_[0] ? $_[0][0] : $_[0] }
+sub nonmatched {
+  return unless defined $_[0] and length $_[0];
+  $_[0];
+}
+
+#========================================
+
+sub _parse_body;
+
+sub _parse_text_entities;
+sub _parse_entpath;
+sub _parse_pipeline;
+sub _parse_entgroup;
+sub _parse_entterm;
+sub _parse_group_string;
+sub _parse_hash;
+
+sub DESTROY {}
+
+sub AUTOLOAD {
+  my $sub = our $AUTOLOAD;
+  (my $meth = $sub) =~ s/.*:://;
+  my $sym = $YATT::Lite::LRXML::{$meth}
+    or croak "No such method: $meth";
+  given ($meth) {
+    when (/ent/)  { require YATT::Lite::LRXML::ParseEntpath }
+    when (/body/) { require YATT::Lite::LRXML::ParseBody }
+    default {
+      die $_[0]->synerror("Unknown method: %s", $meth);
+    }
+  }
+  my $code = *{$sym}{CODE}
+    or croak "Can't find definition of: $meth";
+  goto &$code;
+}
+
+#
+use YATT::Lite::Breakpoint qw(break_load_parser break_parser);
+break_load_parser();
+
+1;
