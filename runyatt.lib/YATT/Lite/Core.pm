@@ -247,7 +247,7 @@ sub create_file {
     $tmpl->{product}{$type};
   }
   sub YATT::Lite::Core::Template::after_create {
-    (my vfs_file $tmpl, my MY $self) = @_;
+    (my Template $tmpl, my MY $self) = @_;
     # XXX: ここでは SUPER が使えない。
     $tmpl->YATT::Lite::VFS::File::after_create($self);
     ($tmpl->{cf_name}) = $tmpl->{cf_path} =~ m{(\w+)\.\w+$}
@@ -255,7 +255,7 @@ sub create_file {
 	if not defined $tmpl->{cf_name} and defined $tmpl->{cf_path};
   }
   sub YATT::Lite::Core::Template::reset {
-    (my vfs_file $tmpl) = @_;
+    (my Template $tmpl) = @_;
     undef $tmpl->{product};
     undef $tmpl->{parse_ok};
     undef $tmpl->{Item};
@@ -264,7 +264,7 @@ sub create_file {
     # delpkg($tmpl->{cf_package}); # No way to avoid redef error.
   }
   sub YATT::Lite::Core::Template::refresh {
-    (my vfs_file $tmpl, my MY $self) = @_;
+    (my Template $tmpl, my MY $self) = @_;
     if ($tmpl->{cf_path}) {
       my $mtime = stat_mtime($tmpl->{cf_path});
       unless (defined $mtime) {
@@ -288,7 +288,7 @@ sub create_file {
     $tmpl;
   }
   sub YATT::Lite::Core::Widget::fixup {
-    (my Widget $widget, my vfs_file $tmpl, my $parser) = @_;
+    (my Widget $widget, my Template $tmpl, my $parser) = @_;
     $widget->{arg_dict}{body} ||= do {
       # lineno も入れるべきかも。 $widget->{cf_bodyln} あたり.
       my $var = $parser->mkvar(code => 'body'

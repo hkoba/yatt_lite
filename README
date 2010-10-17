@@ -2,7 +2,7 @@ YATT::Lite version 0.0.1
 ==================
 
   YATT is Yet Another Template Toolkit, aimed at Web Designers, rather than
-  well-trained programmers. To achieve these goal, YATT provides more
+  well-trained programmers. To achieve this goal, YATT provides more
   readable syntax for HTML/XML savvy designers, ``lint'' for static syntax
   checking and many safer default behaviors, ie. automatic output escaping
   based on argument type declaration and file extension based visibility
