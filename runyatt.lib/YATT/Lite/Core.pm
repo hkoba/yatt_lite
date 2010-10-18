@@ -145,6 +145,7 @@ sub create_file {
 	(vfs => $self, $self->cf_delegate
 	 (qw(namespace special_entities)
 	  , [debug_parser => 'debug']
+	  , [tmpl_encoding => 'encoding']
 	 )
 	 , $self->{cf_parse_while_loading} ? (all => 1) : ()
 	 , @_);

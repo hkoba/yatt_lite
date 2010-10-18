@@ -117,7 +117,7 @@ sub build_trans {
      , @rest
      # XXX: Should be more extensible.
      , $self->cf_delegate_defined(qw(namespace package base nsbuilder
-				     die_in_error
+				     die_in_error tmpl_encoding
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
 				     rc_script
