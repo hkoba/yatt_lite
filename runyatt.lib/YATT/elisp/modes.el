@@ -11,6 +11,9 @@
   "auto lint for yatt and others." t)
 
 (add-to-list 'auto-mode-alist '("\\.\\(yatt\\|ytmpl\\)\\'" . yatt-mode))
-(add-to-list 'auto-mode-alist '("\\.ydo\\'" . perl-mode))
+(add-to-list 'auto-mode-alist '("\\.ydo\\'" . cperl-mode))
 
 (autoload 'plist-bind "yatt/utils" "plist alternative of multivalue-bind" t)
+
+(add-hook 'cperl-mode-hook
+	  '(lambda () (yatt-lint-any-mode t)))

@@ -317,7 +317,7 @@ use YATT::Lite::Constants;
 
     # element 引数
     foreach my $arg (lexpand($head), $body ? $body : (), lexpand($foot)) {
-      my ($name, $expr) = @$arg[NODE_PATH, NODE_BODY];
+      my ($name, $expr) = @$arg[NODE_PATH, NODE_VALUE];
       push @argExpr, $self->sync_curline($arg->[NODE_LNO]);
       my $formal = $add_arg->(ref $name ? $name->[-1] : $name);
       push @argExpr, ", ", $self->as_cast_to($formal, $expr);
@@ -418,21 +418,23 @@ use YATT::Lite::Constants;
   }
   #----------------------------------------
   sub argName  {
-    my $arg = shift;
+    my ($arg, $skip) = @_;
     my $name = $$arg[NODE_PATH];
-    if (wantarray) {
-      ref $name ? @$name : $name;
-    } else {
+    unless (wantarray and ref $name) {
       $name;
+    } elsif (defined $skip) {
+      @{$name}[$skip .. $#$name];
+    } else {
+      @$name;
     }
   }
-  sub argValue { my $arg = shift; $$arg[NODE_BODY] }
+  sub argValue { my $arg = shift; $$arg[NODE_VALUE] }
   sub passThruVar {
     my $arg = shift;
     if ($arg->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
       $$arg[NODE_PATH]
     } elsif ($arg->[NODE_TYPE] == TYPE_ATT_BARENAME) {
-      $$arg[NODE_BODY]
+      $$arg[NODE_VALUE]
     }
   }
   #========================================
@@ -610,7 +612,7 @@ sub feed_arg_spec {
 	elsif ($unless) { (unless => $unless) }
 	else { die "??" }
       };
-      ["$kw (%s) ", $cond->[NODE_BODY], lexpand($body->[NODE_BODY])];
+      ["$kw (%s) ", $cond->[NODE_VALUE], lexpand($body->[NODE_VALUE])];
     };
 
     # いかん、 cond を生成するなら、body も生成しておかないと、行番号が困る。
@@ -620,13 +622,13 @@ sub feed_arg_spec {
 	$self->feed_arg_spec($arg->[NODE_ATTLIST], \%args, \@args
 			     , my ($if, $unless));
 	my ($fmt, $guard) = do {
-	  if ($if) { (q{elsif (%s) }, $if->[NODE_BODY]) }
-	  elsif ($unless) { (q{elsif (not %s) }, $unless->[NODE_BODY]) }
+	  if ($if) { (q{elsif (%s) }, $if->[NODE_VALUE]) }
+	  elsif ($unless) { (q{elsif (not %s) }, $unless->[NODE_VALUE]) }
 	  else { (q{else }, undef) }
 	};
-	push @arms, [$fmt, $guard, lexpand($arg->[NODE_BODY])]
+	push @arms, [$fmt, $guard, lexpand($arg->[NODE_VALUE])]
       } else {
-	push @{$arms[-1]}, lexpand($arg->[NODE_BODY]);
+	push @{$arms[-1]}, lexpand($arg->[NODE_VALUE]);
       }
     }
     local $self->{scope} = $self->mkscope({}, $self->{scope});
@@ -647,8 +649,8 @@ sub feed_arg_spec {
 
     my $has_body = $body && @$body ? 1 : 0;
     my $adder = sub {
-      my ($default_type, $arg, $valNode) = @_;
-      my ($name, $typename) = argName($arg);
+      my ($default_type, $arg, $valNode, $skip) = @_;
+      my ($name, $typename) = argName($arg, $skip);
       my $oldvar = $self->find_var($name)
 	and die $self->generror("Variable '%s' redefined", $name);
       $typename ||= $default_type;
@@ -677,6 +679,9 @@ sub feed_arg_spec {
       } else {
 	push @assign, $adder->(html => $arg, $body);
       }
+    }
+    foreach my $arg (map {lexpand($_)} $head, $foot) {
+      push @assign, $adder->(text => $arg, $arg, 1); # Skip leading :yatt:
     }
     \ join "; ", @assign;
   }
@@ -720,7 +725,7 @@ sub feed_arg_spec {
     my $loopvar = do {
       if ($my) {
 	my ($x, @type) = lexpand($my->[NODE_PATH]);
-	my $varname = $my->[NODE_BODY];
+	my $varname = $my->[NODE_VALUE];
 	$local{$varname} = $self->mkvar($type[0] || '' => $varname);
 	'my $' . $varname;
       } else {
@@ -732,7 +737,7 @@ sub feed_arg_spec {
     my $fmt = q{foreach %1$s (%2$s) %3$s};
     my $listexpr = do {
       unless (my $passThruVarName = passThruVar($list)) {
-	$self->as_list(lexpand($list->[NODE_BODY]));
+	$self->as_list(lexpand($list->[NODE_VALUE]));
       } elsif (my $found_var = $self->find_var($passThruVarName)) {
 	unless ($found_var->is_type('list')) {
 	  die $self->generror(q{%s - %s should be list type.}

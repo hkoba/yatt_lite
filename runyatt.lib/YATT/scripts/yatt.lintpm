@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings FATAL => qw(all);
+use base qw(File::Spec); sub MY () {__PACKAGE__}
+use File::Basename;
+
+defined (my $file = shift)
+  or die "Usage: $0 MODULE_FILE\n";
+
+defined (my $modname = file_module($file))
+  or die "Can't extract module name from $file\n";
+
+my @inc_opt = inc_opt($file, $modname);
+
+if ((system $^X, @inc_opt, -we => "require $modname") == 0) {
+  print "Module $modname is OK";
+}
+
+sub file_module {
+  my ($fn) = @_;
+  open my $fh, '<', $fn or die "Can't open $fn: $!";
+  local $/;
+  local $_ = <$fh>;
+  # XXX: 複数書いて有る場合、 basename が一致するものを
+  while (/^\s*package\s+([\w:]+);/sm) {
+    my ($modname) = $1;
+    if (rootname(basename($fn)) eq ((split /::/, $modname)[-1])) {
+      return $modname;
+    }
+  }
+}
+
+sub inc_opt {
+  my ($file, $modname) = @_;
+  (my $no_pm = $file) =~ s/\.\w+$//;
+  my @filepath = MY->splitdir(MY->rel2abs($no_pm));
+  my @modpath = grep {$_ ne ''} split "::", $modname;
+  my @popped;
+  while (@modpath and @filepath and $modpath[-1] eq $filepath[-1]) {
+    unshift @popped, pop @modpath;
+    pop @filepath;
+  }
+  if (@modpath) {
+    die "Can't find library root directory of $modname in file $file\n@modpath\n";
+  }
+  '-I' . MY->catdir(@filepath);
+}
+
+sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }

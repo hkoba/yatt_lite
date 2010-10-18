@@ -44,16 +44,14 @@ sub _parse_body {
 	  push @$sink, "\n";
 	}
 	# $self->add_lineinfo($sink);
-	return @$sink;
+	last;
       }
       # /? > まで、その後、not ee なら clo まで。
       my $is_opt = $+{opt};
-      my $body = [];
       my $elem = [$is_opt ? TYPE_ATT_NESTED : TYPE_ELEMENT
 		  , $self->{startpos}, undef, $self->{endln}
 		  , [split /:/, $path]
-		 , $is_opt ? $body : [TYPE_ATTRIBUTE, undef, undef, undef
-				      , body => $body]];
+		 , undef];
       # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
       if (my @atts = $self->parse_attlist($_)) {
 	$elem->[NODE_ATTLIST] = \@atts;
@@ -62,8 +60,17 @@ sub _parse_body {
       unless (s{^(?<empty_elem>/)? >(\r?\n)?}{}xs) {
 	die $self->synerror(q{Missing tagclose: %s}, $_);
       }
+
+      # body slot の初期化
+      my $body = [];
+      $elem->[NODE_VALUE]
+	= $is_opt
+	  ? $body : [TYPE_ATTRIBUTE, undef, undef, undef, body => $body]
+	    if not $+{empty_elem} or $is_opt;
+
       $self->{curpos} += 1 + ($1 ? length($1) : 0);
-      my $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO] unless $is_opt;
+      my $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO]
+	if not $is_opt and $elem->[NODE_VALUE];
       $elem->[NODE_END] = $self->{curpos};
       $self->{curpos} += length $2 if $2;
       $elem->[NODE_BODY_BEGIN] = $self->{curpos};
@@ -111,8 +118,8 @@ sub _parse_body {
       }				# simple call.
       $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
       $self->add_lineinfo($sink);
-      # @$body が空なら、予め開放しておく。
-      undef $elem->[NODE_BODY] unless @$body;
+      # XXX: @$body が空なら、予め開放しておく。
+      # undef $elem->[NODE_BODY] unless @$body;
     } elsif ($path = $+{pi}) {
       $$par_ln = $self->{startln} if not $has_nonspace++ and $parent;
       # ?> まで
@@ -139,6 +146,18 @@ sub _parse_body {
     $self->{startln} = $self->{endln};
     $self->{startpos} = $self->{curpos};
     $self->_verify_token($self->{startpos}, $_) if $self->{cf_debug};
+  }
+
+  # To make body-less element easily detected.
+  if ($parent and $parent->[NODE_VALUE]) {
+    _undef_if_empty($self->node_body_slot($parent));
+  }
+}
+
+sub _undef_if_empty {
+  return unless defined $_[0] and ref $_[0] eq 'ARRAY';
+  unless (@{$_[0]}) {
+    undef $_[0];
   }
 }
 

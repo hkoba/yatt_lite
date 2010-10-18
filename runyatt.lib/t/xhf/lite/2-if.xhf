@@ -97,20 +97,18 @@ OUT:
  
 
 TITLE: if elsif else, inline style.
-SKIP: Inline attelem bug.
 IN:
  <!yatt:args x>
  <h2>Hello</h2>
- <yatt:if "not defined &yatt:x;"> space!
- <:yatt:else if="&yatt:x; >= 2"/> world!
- <:yatt:else/> decades!
+ <yatt:if "not defined &yatt:x;">space!
+ <:yatt:else if="&yatt:x; >= 2"/>world!
+ <:yatt:else/>decades!
  </yatt:if>
 OUT:
  <h2>Hello</h2>
  space!
  
 
-SKIP: Inline attelem bug.
 PARAM[
 - 1
 ]
@@ -119,7 +117,6 @@ OUT:
  decades!
  
 
-SKIP: Inline attelem bug.
 PARAM[
 - 2
 ]

@@ -270,8 +270,7 @@ END
   is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
- TODO: {
-    local $TODO = 'Not fixed in this release.';
+  {
     is_deeply $w->{tree}
 , ['<h2>Hello</h2>
 ', [TYPE_ELEMENT, 30, 62, 3, [qw(yatt if)]

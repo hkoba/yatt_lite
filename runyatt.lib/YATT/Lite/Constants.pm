@@ -1,4 +1,5 @@
 package YATT::Lite::Constants;
+use 5.010;
 use strict;
 use warnings FATAL => qw(all);
 require Carp;
@@ -10,7 +11,7 @@ use YATT::Lite::Util::Enum
 		  ENTITY PI ELEMENT
 		  ATTRIBUTE=ATT_NAMEONLY ATT_BARENAME ATT_TEXT ATT_NESTED
 		  ATT_MACRO=DECL_ENTITY)]
-   , NODE_ => [qw(TYPE BEGIN END LNO PATH REST=BODY ATTLIST
+   , NODE_ => [qw(TYPE BEGIN END LNO PATH REST=VALUE=BODY ATTLIST
 		  AELEM_HEAD AELEM_FOOT BODY_BEGIN BODY_END)]
    # node item
    # BODY が必ず配列になるが、代わりに @attlist は配列不要に。 空の [] を pad しなくて済む
@@ -67,9 +68,28 @@ sub node_attlist {
 }
 
 sub node_body {
+  shift->node_value(@_);
+}
+
+sub node_body_slot {
   my ($self, $node) = @_;
-  wantarray ? YATT::Lite::Util::lexpand($node->[NODE_BODY])
-    : $node->[NODE_BODY];
+  given ($node->[NODE_TYPE]) {
+    when (TYPE_ELEMENT) {
+      return $node->[NODE_BODY][NODE_VALUE] if defined $node->[NODE_BODY];
+    }
+    when (TYPE_ATT_NESTED) {
+      return $node->[NODE_VALUE];
+    }
+    default {
+      die "Invalid node type for node_body_slot: $_";
+    }
+  }
+}
+
+sub node_value {
+  my ($self, $node) = @_;
+  wantarray ? YATT::Lite::Util::lexpand($node->[NODE_VALUE])
+    : $node->[NODE_VALUE];
 }
 
 sub node_extract {

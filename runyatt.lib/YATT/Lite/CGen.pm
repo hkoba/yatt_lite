@@ -121,8 +121,11 @@ sub sync_curline {
 # ソース上のみの(出力しない)改行に変換する。
 sub cut_next_nl {
   my MY $self = shift;
-  return unless @{$self->{curtoks}} and $self->{curtoks}[0] =~ /^\r?\n$/;
-  return if @{$self->{curtoks}} == 1; # 最後の一個の改行は、残す。これは "}\n" のため
+  # undef は返したくないので。
+  return wantarray ? () : ''
+    unless @{$self->{curtoks}} and $self->{curtoks}[0] =~ /^\r?\n$/;
+  return wantarray ? () : ''
+    if @{$self->{curtoks}} == 1; # 最後の一個の改行は、残す。これは "}\n" のため
   $self->{curline}++;
   shift @{$self->{curtoks}};
 }

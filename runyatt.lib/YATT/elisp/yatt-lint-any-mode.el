@@ -28,7 +28,10 @@
     ("\\.ydo\\'"
      after yatt-lint-any-handle-perl-action)
     ("\\.htyattrc\\.pl\\'"
-     after yatt-lint-any-handle-yattrc))
+     after yatt-lint-any-handle-yattrc)
+    ("\\.pm\\'"
+     after yatt-lint-any-handle-perl-module)
+    )
   "Auto lint filename mapping for yatt and related files.")
 
 (defvar yatt-lint-any-mode-map (make-sparse-keymap))
@@ -38,7 +41,7 @@
   "Lint anything, by hitting <F5>"
   :keymap yatt-lint-any-mode-map
   :lighter "<F5 lint>"
-  :global t
+  :global nil
   (let ((hook 'after-save-hook) (fn 'yatt-lint-any-after))
     (if yatt-lint-any-mode
 	(add-hook hook fn nil nil)
@@ -106,6 +109,19 @@
 (defun yatt-lint-any-handle-perl-action (buffer)
   (yatt-lint-any-shell-command "scripts/yatt.lintany" " "
 			       (buffer-file-name buffer)))
+
+(defun yatt-lint-any-handle-perl-module (buffer)
+  (plist-bind (rc err)
+      (yatt-lint-any-shell-command "scripts/yatt.lintpm" " "
+				   (buffer-file-name buffer))
+    (when rc
+      (let (match diag)
+	(cond ((setq match
+		     (yatt-lint-any-match
+		      " at \\([^ ]*\\) line \\([0-9]+\\)\\.\n"
+		      err 'file 1 'line 2))
+	       (setq diag (substring err 0 (plist-get match 'pos)))))
+	(append `(rc ,rc err ,diag) match)))))
 
 ;;========================================
 ;; Other utils

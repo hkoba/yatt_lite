@@ -38,7 +38,6 @@ OUT:
 
 
 TITLE: my att-elem
-SKIP: Inline attelem bug.
 IN:
  <yatt:my foo>
  <:yatt:x:html ><h2>&yatt:foo;</h2></:yatt:x:html>
@@ -48,11 +47,13 @@ IN:
  &yatt:x;
  &yatt:y;
 OUT:
+ <h2>
+ <b>foo</b>
+ </h2>
+ <h3>
+ <b>foo</b>
+ </h3>
  
-   <h2>foo</h2>
-   <h3>foo</h3>
- 
-
 
 TITLE: block my
 IN:
