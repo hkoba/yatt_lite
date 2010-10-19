@@ -21,11 +21,6 @@
 (defvar yatt-mode-hook nil
   "yatt で書かれたテンプレートを編集するためのモード")
 
-(defvar yatt-mode-file-coding 'utf-8-dos "file coding for yatt files.")
-
-(add-to-list 'file-coding-system-alist
-	     '("\\.yatt\\'" . yatt-mode-file-coding))
-
 (defvar yatt-mode-YATT-dir
   (if load-file-name
       (file-name-directory
