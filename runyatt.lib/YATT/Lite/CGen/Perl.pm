@@ -576,6 +576,14 @@ use YATT::Lite::Constants;
     (my MY $self, my ($esc_later)) = splice @_, 0, 2;
     '{'.$self->gen_entlist(undef, @_).'}';
   }
+  sub as_expr_prop {
+    (my MY $self, my ($esc_later, $name)) = @_;
+    if ($name =~ /^\w+$/) {
+      "{$name}"
+    } else {
+      '{'.qparen($name).'}';
+    }
+  }
   sub as_expr_text {
     (my MY $self, my ($esc_later, $expr)) = @_;
     qparen($expr);

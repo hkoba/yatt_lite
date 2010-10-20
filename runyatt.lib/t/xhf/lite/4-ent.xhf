@@ -31,7 +31,6 @@ OUT:
 
 
 TITLE: &yatt:template();
-BREAK: 1
 IN:
  <!yatt:config usage="For template entity">
  &yatt:template(){cf_usage};.
@@ -103,3 +102,18 @@ PARAM[
 ]
 OUT:
  A-B-C
+
+
+TITLE: Nested hash &yatt:foo:bar:baz;
+IN:
+ <!yatt:args foo=value>
+ &yatt:foo:bar:baz;
+PARAM[
+{
+bar{
+baz: hoehoe
+}
+}
+]
+OUT:
+ hoehoe

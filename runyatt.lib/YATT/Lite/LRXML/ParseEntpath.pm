@@ -83,7 +83,8 @@ sub _parse_pipeline {
 	 | ^ (?<open>\[)
 	 | ^ (?<open>(?<hash>\{))}{}xs) {
     my $table = @pipe ? \%open_rest : \%open_head;
-    my $type = $+{open} ? $table->{$+{open}} : 'var';
+    my $type = $+{open} ? $table->{$+{open}}
+      : @pipe ? 'prop' : 'var';
     push @pipe, do {
       if (not @pipe and $+{hash}) {
 	[$type, $self->_parse_hash]
