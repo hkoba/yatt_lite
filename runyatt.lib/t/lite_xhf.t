@@ -20,12 +20,12 @@ sub myapp {join _ => MyTest => appname($0), @_}
 use YATT::Lite::Breakpoint;
 
 use YATT::Lite::XHFTest qw(Item);
-use base qw(YATT::Lite::XHFTest);
+use base qw(YATT::Lite::XHFTest File::Spec);
 use fields qw(cf_VFS_CONFIG cf_YATT_CONFIG cf_YATT_RC);
 sub MY () {__PACKAGE__}
 
 my @files = MY->list_files(@ARGV ? @ARGV
-			   : <$FindBin::Bin/xhf/lite/[1-7]-*.xhf>);
+			   : <$FindBin::Bin/xhf/*/*.xhf>);
 
 my (@section);
 foreach my $fn (@files) {
@@ -43,7 +43,7 @@ plan tests => $ntests;
 
 my $i = 1;
 foreach my MY $sect (@section) {
-  my $fn = basename($sect->{cf_filename});
+  my $fn = path_tail($sect->{cf_filename}, 2);
   # XXX: as_vfs_spec => data => {}, rc => '...';
   my $spec = [data => $sect->as_vfs_data, package =>
 	      YATT::Lite->rootns_for(myapp($i))];
@@ -62,11 +62,14 @@ foreach my MY $sect (@section) {
   my $last_title;
   foreach my Item $test (@{$sect->{tests}}) {
     next unless $test->is_runnable;
-    my $title = "[$fn] " . ($test->{cf_TITLE} // $last_title // "(undef)");
+    my $title = "[$fn] " . ($test->{cf_TITLE} // $last_title
+			    // $test->{cf_ERROR} // "(undef)");
     $title .= " ($test->{num})" if $test->{num};
   SKIP: {
-      if ($test->{cf_SKIP} and my $skip = $test->ntests) {
-	skip "by SKIP: $title", $skip;
+      if ($test->{cf_SKIP}
+	  and my $skip = $test->ntests) {
+	skip "by SKIP: $title", $skip
+	  if not $test->{cf_PERL_MINVER} or $] < $test->{cf_PERL_MINVER};
       }
       breakpoint() if $test->{cf_BREAK};
       if ($test->{cf_OUT}) {
@@ -113,4 +116,12 @@ sub captured {
   $obj->$method($fh, @args);
   close $fh;
   $buf;
+}
+
+sub path_tail {
+  my $fn = shift;
+  my $len = shift // 1;
+  my @path = MY->splitdir($fn);
+  splice @path, 0, @path - $len;
+  wantarray ? @path : MY->catdir(@path);
 }

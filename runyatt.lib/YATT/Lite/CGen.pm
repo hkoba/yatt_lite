@@ -12,7 +12,7 @@ use fields qw(curtmpl curwidget curtoks curline
 
 use YATT::Lite::Core qw(Template Part);
 use YATT::Lite::Constants;
-use YATT::Lite::Util qw(callerinfo);
+use YATT::Lite::Util qw(callerinfo numLines);
 use Carp;
 
 sub ensure_generated {
@@ -107,6 +107,12 @@ sub generror {
     = (tmpl_file => $tmpl->{cf_path} // $tmpl->{cf_name}
        , tmpl_line => $self->{curline}, callerinfo());
   $self->{cf_vfs}->error(\%opts, @_);
+}
+
+sub add_curline {
+  (my MY $self, my $text) = @_;
+  $self->{curline} += numLines($text);
+  $text;
 }
 
 sub sync_curline {

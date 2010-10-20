@@ -47,7 +47,7 @@ my @section = map {
   while (my @config = $parser->read) {
     push @{$section->{items}}, new TestItem(@config);
   }
-  # XXX: . ¤È¤«ÅÏ¤·¤¿¤È¤­¤Ë¡¢Á´Á³¥À¥á¤¸¤ã¤ó¡£
+  # XXX: . ã¨ã‹æ¸¡ã—ãŸã¨ãã«ã€å…¨ç„¶ãƒ€ãƒ¡ã˜ã‚ƒã‚“ã€‚
   $section;
 } @ARGV ? @ARGV : <t/*.xhf>;
 # XXX: dict_sort
@@ -67,8 +67,8 @@ sub mode_http_localhost {
   require WWW::Mechanize;
   my $mech = new WWW::Mechanize;
   foreach my TestSection $sect (@section) {
-    # Àµ¤·¤¯ÀßÄê¤µ¤ì¤Æ¤¤¤ì¤Ğ¡¢ .htaccess ¤Î x-yatt-handler ¹Ô¤Ë¤Ï url ¤¬½ñ¤«¤ì¤Æ¤¤¤ë¡£
-    # ¤³¤³¤«¤é base_url ¤ò¼è¤ê½Ğ¤¹¡£
+    # æ­£ã—ãè¨­å®šã•ã‚Œã¦ã„ã‚Œã°ã€ .htaccess ã® x-yatt-handler è¡Œã«ã¯ url ãŒæ›¸ã‹ã‚Œã¦ã„ã‚‹ã€‚
+    # ã“ã“ã‹ã‚‰ base_url ã‚’å–ã‚Šå‡ºã™ã€‚
     my $dir = dirname(realpath($sect->{cf_file}));
     $dir =~ s{/t$}{}; # $sect->{cf_file} is assumed t/*.xhf
     my $sect_name = basename($dir).';'.basename($sect->{cf_file});
@@ -103,7 +103,7 @@ sub mode_internal {
   my ($pack, @section) = @_;
   plan tests => sum(map {$_->ntests} @section);
 
-  # do ¤Ç runyatt.cgi ¤ò load ¤·¡¢ $dispatcher ¤ò¼è¤ê½Ğ¤¹¡ª
+  # do ã§ runyatt.cgi ã‚’ load ã—ã€ $dispatcher ã‚’å–ã‚Šå‡ºã™ï¼
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
   my $dispatcher = ckdo $cgi;
 

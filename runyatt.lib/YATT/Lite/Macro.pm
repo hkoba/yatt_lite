@@ -16,9 +16,9 @@ our @EXPORT = qw(Macro lexpand);
 our @EXPORT_OK = (@EXPORT, qw(Template Part Widget Page Action));
 
 # Use cases:
-# (a) .htyattrc.pl ¤«¤é¸Æ¤Ð¤ì¤Æ¡¢ MyApp::INST1::CGEN_perl ¤Ë macro_zzz ¤òÂ­¤¹¡£
-# (b) MyApp.pm ¤«¤é¸Æ¤Ð¤ì¤Æ¡¢ MyApp::CGEN_perl ¤Ë... ¤³¤Ã¤Á¤¬¤Þ¤À¤À¤è¤Í¡£
-# sub cgen_perl () {'...CGEN_perl'} ¤òÀßÄê¤¹¤ë¤Ù¤­¤«ÈÝ¤«¡£<= ¥í¡¼¥É½çÌäÂê¤òÊú¤¨¤ë¤è¤Í¡£
+# (a) .htyattrc.pl ã‹ã‚‰å‘¼ã°ã‚Œã¦ã€ MyApp::INST1::CGEN_perl ã« macro_zzz ã‚’è¶³ã™ã€‚
+# (b) MyApp.pm ã‹ã‚‰å‘¼ã°ã‚Œã¦ã€ MyApp::CGEN_perl ã«... ã“ã£ã¡ãŒã¾ã ã ã‚ˆã­ã€‚
+# sub cgen_perl () {'...CGEN_perl'} ã‚’è¨­å®šã™ã‚‹ã¹ãã‹å¦ã‹ã€‚<= ãƒ­ãƒ¼ãƒ‰é †å•é¡Œã‚’æŠ±ãˆã‚‹ã‚ˆã­ã€‚
 
 sub define_Macro {
   my ($myPack, $callpack, $type) = @_;

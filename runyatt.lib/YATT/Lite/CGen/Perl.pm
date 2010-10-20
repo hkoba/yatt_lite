@@ -42,7 +42,10 @@ use YATT::Lite::Constants;
     my $str = '';
     unless ($self->{cf_no_lineinfo}) {
       $str .= qq{#line }. $self->{curline};
-      $str .= qq{"$tmpl->{cf_path}"} if defined $tmpl->{cf_path};
+      if (defined(my $fn = ($tmpl->{cf_path} // $tmpl->{cf_name}))) {
+	# cf_name is dummy filename.
+	$str .= qq{ "$fn"};
+      }
       $str .= "\n";
     }
     $str .= sprintf q{package %s; use strict; use warnings; use 5.010; }
@@ -151,7 +154,8 @@ use YATT::Lite::Constants;
     # curline は queue 詰めの外側で操作する。
     # $last は一回だけ出力するように、undef が必要。
     my $flush = sub {
-      my ($has_nl, $task) = @_;
+      my ($has_nl, $task, $pad) = @_;
+      push @result, $pad if defined $pad;
       push @result, q{print {$CON} (}.join(", ", @queue).");" if @queue;
       # もう token が残っていなくて、かつ $last が与えられていたら、 $last を足す。
       push @result, $task->() if $task;
@@ -173,7 +177,7 @@ use YATT::Lite::Constants;
 	$flush->($has_nl) if $has_nl || $node =~ /\n/;
 	next;
       }
-      $self->sync_curline($node->[NODE_LNO]); # 読み捨て
+      my $pad = $self->sync_curline($node->[NODE_LNO]) // '';
       my $sub = $DISPATCH[$node->[0]]
 	or die $self->generror("Unknown node type: %d", $node->[0]);
       my $expr = $sub->($self, $node);
@@ -182,8 +186,9 @@ use YATT::Lite::Constants;
 	next;
       }
       if (ref $expr) {
-	$flush->(undef, sub { ("$$expr;", $self->cut_next_nl) });
+	$flush->(undef, sub { ("$$expr;", $self->cut_next_nl) }, $pad);
       } else {
+	$flush->(undef, undef, $pad) if length $pad;
 	push @queue, $expr;
 	$flush->() if $expr =~ /\n/;
       }
@@ -262,7 +267,7 @@ use YATT::Lite::Constants;
     }
 
     my Widget $widget = $self->lookup_widget(@path)
-      or die $self->generror(q{No such widget: %s}, $wname);
+      or die $self->generror(q{No such widget <%s>}, $wname);
     $self->ensure_generated(perl => my Template $tmpl = $widget->{cf_folder});
     my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_package};
     \ sprintf(q{%s->render_%s($CON, %s)}
@@ -290,7 +295,7 @@ use YATT::Lite::Constants;
     };
     # primary 引数
     my @argExpr = map {
-      $self->sync_curline($_->[NODE_LNO]), ", ", do {
+      $self->sync_curline($_->[NODE_LNO]), ", ", $self->add_curline(do {
 	my $name = argName($_);
 	unless (defined $name) {
 	  defined($name = $widget->{arg_order}[$posArgs++])
@@ -312,7 +317,7 @@ use YATT::Lite::Constants;
 	} else {
 	  die $self->generror(q{valueless arg '%s'}, $passThruVar);
 	}
-      };
+      });
     } @$primary;
 
     # element 引数
@@ -444,15 +449,21 @@ use YATT::Lite::Constants;
     if (my $sub = $self->can("pi_of_" . $node->[NODE_PATH][0])) {
       return $sub->($self, $node);
     }
+    $self->sync_curline($node->[NODE_LNO]);
     my @body = nx($node, 1);
-    # XXX: entity の置換を
-    unless ($body[0] =~ s/^=+//) {
-      \ sprintf q{{%s}}, join '', $self->as_list(@body);
-    } elsif (length $& >= 3) {
-      sprintf q{do {%s}}, join '', $self->as_list(@body);
-    } else {
-      sprintf q{YATT::Lite::Util::escape(do {%s})}, join '', $self->as_list(@body);
-    }
+    my ($fmt, $is_statement) = do {
+      unless ($body[0] =~ s/^=+//) {
+	(q{%s}, 1);
+      } elsif (length $& >= 3) {
+	q{do {%s}};
+      } else {
+	q{YATT::Lite::Util::escape(do {%s})};
+      }
+    };
+    my $expr = join '', $self->as_list(@body);
+    return \ "" unless $expr =~ /\S/;
+    my $script = sprintf $fmt, $expr;
+    $is_statement ? \ $script : $script;
   }
   #========================================
   sub from_lineinfo { }

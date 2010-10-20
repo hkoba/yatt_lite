@@ -27,6 +27,8 @@ use Encode;
 		cf_TITLE
 		cf_BREAK
 		cf_SKIP
+		cf_PERL_MINVER
+
 		cf_WIDGET
 		cf_RANDOM
 		cf_IN

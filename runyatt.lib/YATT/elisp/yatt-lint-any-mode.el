@@ -11,7 +11,7 @@
 (require 'plist-bind "yatt/utils")
 
 (defconst yatt-lint-any-YATT-dir
-  ;; eval-current-buffer ¤Ç nil ¤ËÌá¤µ¤ì¤Ê¤¤¤è¤¦¤Ë
+  ;; eval-current-buffer ã§ nil ã«æˆ»ã•ã‚Œãªã„ã‚ˆã†ã«
   (let ((fn load-file-name))
     (if fn
 	(file-name-directory
@@ -72,7 +72,8 @@
     (unless (eq rc 0)
       (beep))
     (when (and file line)
-      (unless (equal (buffer-file-name buffer) file)
+      (if (and (not (equal file (buffer-file-name buffer)))
+	       (not (equal file "-")))
 	(find-file-other-window file))
       (goto-line (string-to-number line)))
     (message "%s" (if (> (length err) 0) err "lint OK"))))
@@ -86,7 +87,7 @@
 				   (buffer-file-name buffer))
     (when rc
       (let (match diag)
-	;; ¤¦¢·¤ó¡¢setq ¤¬¥À¥µ¤¯¤Ê¤¤¤«? ¤«¤È¤¤¤Ã¤Æ¡¢any-match¤Î¥¤¥ó¥Ç¥ó¥È¤¬¿¼¤¯¤Ê¤ë¤Î¤â·ù¤À¤·...
+	;; ã†ï½ã‚“ã€setq ãŒãƒ€ã‚µããªã„ã‹? ã‹ã¨ã„ã£ã¦ã€any-matchã®ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆãŒæ·±ããªã‚‹ã®ã‚‚å«Œã ã—...
 	(cond ((setq match
 		     (yatt-lint-any-match
 		      "^\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"

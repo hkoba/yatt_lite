@@ -39,7 +39,7 @@ $i = 1;
 
   my $text_html_sjis = qr{Content-Type: text/html; charset=shiftjis};
 
-  # $YATT::Lite::APP ¤¬¸«¤¨¤Æ¤¤¤ë¤«¤Î¥Æ¥¹¥È¤Î¤¿¤á¡¢ &yatt:template(); ¤ò¸Æ¤ó¤Ç¤ß¤ë.
+  # $YATT::Lite::APP ãŒè¦‹ãˆã¦ã„ã‚‹ã‹ã®ãƒ†ã‚¹ãƒˆã®ãŸã‚ã€ &yatt:template(); ã‚’å‘¼ã‚“ã§ã¿ã‚‹.
   local $ENV{GATEWAY_INTERFACE} = "CGI(local)";
   my @test = (['foo.yatt', '1st', <<END, <<END, $text_html_sjis]
 AAA
@@ -84,7 +84,7 @@ END
 okok
 END
 
-	      # XXX: session cookie ¼ş¤ê¤Ï?
+	      # XXX: session cookie å‘¨ã‚Šã¯?
 
 	      , ['redir.ydo', 'redirect', <<'END', ''
 sub {

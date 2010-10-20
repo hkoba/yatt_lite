@@ -11,7 +11,7 @@ setopt extendedglob
 bindir=$(cd $0:h; print $PWD)
 cd $0:h:h:h
 
-zparseopts -D -A opts C=o_cover || true
+zparseopts -D -A opts C=o_cover -brew:: || true
 
 # If no **/*.t is specified:
 if [[ -z $argv[(r)(*/)#*.t] ]]; then
@@ -22,8 +22,15 @@ if [[ -z $argv[(r)(*/)#*.t] ]]; then
     fi
 fi
 
-if (($+PERL)) && [[ -d $PERL:h/lib ]]; then
-    export PERL5LIB=$PERL:h/lib:$PERL5LIB
+if (($+opts[--brew])); then
+    PERL=${opts[--brew][2,-1]:-~/perl5/perlbrew/bin/perl}
+fi
+
+if (($+PERL)); then
+    if [[ -d $PERL:h/lib ]]; then
+	# For barely built perl.
+	export PERL5LIB=$PERL:h/lib:$PERL5LIB
+    fi
 fi
 
 if [[ -n $o_cover ]]; then

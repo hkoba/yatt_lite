@@ -19,7 +19,7 @@
 (require 'yatt-lint-any-mode)
 
 (defvar yatt-mode-hook nil
-  "yatt ¤Ç½ñ¤«¤ì¤¿¥Æ¥ó¥×¥ì¡¼¥È¤òÊÔ½¸¤¹¤ë¤¿¤á¤Î¥â¡¼¥É")
+  "yatt ã§æ›¸ã‹ã‚ŒãŸãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆã‚’ç·¨é›†ã™ã‚‹ãŸã‚ã®ãƒ¢ãƒ¼ãƒ‰")
 
 (defvar yatt-mode-YATT-dir
   (if load-file-name
@@ -30,9 +30,9 @@
   "Where YATT is installed. This is used to locate ``yatt.lint''.")
 
 ;;========================================
-;; ÄÌ¾ï¤Î html ÉôÊ¬
+;; é€šå¸¸ã® html éƒ¨åˆ†
 (define-derived-mode yatt-mode html-mode "YATT"
-  "yatt:* ¥¿¥°¤Î¤¢¤ë html ¥Õ¥¡¥¤¥ë¤òÊÔ½¸¤¹¤ë¤¿¤á¤Î¥â¡¼¥É"
+  "yatt:* ã‚¿ã‚°ã®ã‚ã‚‹ html ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ç·¨é›†ã™ã‚‹ãŸã‚ã®ãƒ¢ãƒ¼ãƒ‰"
   ;; To avoid duplicate call from mmm-mode-on (mmm-update-mode-info)
   (unless (yatt-mode-called-from-p 'mmm-mode-on)
     ;;
@@ -42,14 +42,14 @@
     (yatt-lint-any-mode 1)
     (yatt-mode-ensure-file-coding)
     (mmm-mode-on)
-    ;; cperl-mode ¤Ë¤¹¤ëÃæ¤Ç¡¢ buffer-modified-p ¤¬Î©¤Ã¤Æ¤ë... ¤«¤È»×¤¤¤­¤ä...
-    ;; Ê¬¤«¤é¤ó¡ª
-    ;; [after idle] Åª¤Ê½èÍı¤¬É¬Í×¤Ê¤ó¤Ç¤Ï?
+    ;; cperl-mode ã«ã™ã‚‹ä¸­ã§ã€ buffer-modified-p ãŒç«‹ã£ã¦ã‚‹... ã‹ã¨æ€ã„ãã‚„...
+    ;; åˆ†ã‹ã‚‰ã‚“ï¼
+    ;; [after idle] çš„ãªå‡¦ç†ãŒå¿…è¦ãªã‚“ã§ã¯?
     (yatt-mode-multipart-refontify)
     (run-hooks 'yatt-mode-hook)))
 
 (define-derived-mode yatt-declaration-mode html-mode "YATT decl"
-  "yatt:* ¥¿¥°¤Î¡¢Àë¸ÀÉôÊ¬")
+  "yatt:* ã‚¿ã‚°ã®ã€å®£è¨€éƒ¨åˆ†")
 
 ;;----------------------------------------
 (defface yatt-declaration-submode-face
@@ -60,7 +60,7 @@
   '((t (:background "#f4f2f5")))
   "Face used for yatt action part (<!yatt:...>)")
 
-;; html ¤ÎÃæ¤Î¡¢ <!yatt:...> ¤ò¼±ÊÌ¤·¤Æ yatt-declaration-mode ¤Ø¡£
+;; html ã®ä¸­ã®ã€ <!yatt:...> ã‚’è­˜åˆ¥ã—ã¦ yatt-declaration-mode ã¸ã€‚
 (mmm-add-classes
  '((yatt-declaration
     :submode yatt-declaration-mode
@@ -80,7 +80,7 @@
       (case sym
 	(!yatt:widget)
 	(!yatt:action
-	 ;; XXX: mmm-ify-region ¤ÏÎÉ¤¯¤Ê¤¤¤«¤â¡£ interactive ¤À¤È¡£
+	 ;; XXX: mmm-ify-region ã¯è‰¯ããªã„ã‹ã‚‚ã€‚ interactive ã ã¨ã€‚
 	 (mmm-make-region 'cperl-mode start finish
 			  :face 'yatt-action-submode-face)
 	 (mmm-enable-font-lock 'cperl-mode))))
@@ -100,22 +100,22 @@
 	(next (cdr regions) (cdr regions))
 	(section `(default ,(cadr (car regions))))
 	reg)
-      ;; ¼¡¤¬Ìµ¤¤¤Ê¤é¡¢ºÇ¸å¤Î section ¤òµÍ¤á¤ÆÊÖ¤¹
+      ;; æ¬¡ãŒç„¡ã„ãªã‚‰ã€æœ€å¾Œã® section ã‚’è©°ã‚ã¦è¿”ã™
       ((not next)
        (reverse (cons (append section (list (caddr reg))) result)))
     (when (eq (car reg) 'yatt-declaration-mode)
       (setq begin (cadr reg) end (caddr reg)
-	    ;; ¤³¤³¤Ş¤Ç¤òÅĞÏ¿¤·¤Ä¤Ä¡¢
+	    ;; ã“ã“ã¾ã§ã‚’ç™»éŒ²ã—ã¤ã¤ã€
 	    result (cons (append section (list begin))
 			 result)
-	    ;; ¿·¤·¤¤ section ¤ò»Ï¤á¤ë
+	    ;; æ–°ã—ã„ section ã‚’å§‹ã‚ã‚‹
 	    section (list (yatt-mode-decltype reg) end)))))
 
 (defun yatt-mode-decltype (region)
   (let* ((min (cadr region)) (max (caddr region))
 	 (start (next-single-property-change min 'face (current-buffer) max))
 	 (end (next-single-property-change start 'face (current-buffer) max)))
-    ;; XXX: !yatt: ¤Ç»Ï¤Ş¤é¤Ê¤«¤Ã¤¿¤é?
+    ;; XXX: !yatt: ã§å§‹ã¾ã‚‰ãªã‹ã£ãŸã‚‰?
     (intern (buffer-substring-no-properties start end))))
 
 ;;========================================

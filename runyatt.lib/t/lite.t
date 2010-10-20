@@ -250,7 +250,7 @@ perl file: lite.t<br>
 perl line: 100<br>
 END
 
-    # Á°È¾ 3 ¹Ô¤À¤±°ìÃ×¤¹¤ì¤Ğ¤¤¤¤¡£
+    # å‰åŠ 3 è¡Œã ã‘ä¸€è‡´ã™ã‚Œã°ã„ã„ã€‚
     sub lines {
       my ($num, $string) = @_;
       my @lines = split /\n/, $string, $num+1;

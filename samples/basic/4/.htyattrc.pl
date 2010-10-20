@@ -11,7 +11,7 @@ Macro given => sub {
   my $result = "given (";
   $result .= $cgen->as_list($cgen->node_body($primary->[0]));
   $result .= ") {";
-  # XXX: ²þ¹Ô
+  # XXX: æ”¹è¡Œ
   #my ($cases) = $cgen->terse_dump($foot);
   foreach my $arg (lexpand($foot)) {
     $cgen->node_sync_curline($arg);

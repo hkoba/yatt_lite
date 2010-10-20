@@ -13,7 +13,9 @@ sub MY () {__PACKAGE__}
 # DirHandler の生成, .htyattrc.pl の読み込みとキャッシュに責任を持つ.
 use base qw(YATT::Lite::NSBuilder);
 use fields qw(DirHandler Action
-	      cf_tmpl_encoding cf_output_encoding cf_debug_cgen
+	      cf_tmpl_encoding cf_output_encoding
+	      cf_header_charset
+	      cf_debug_cgen
 	      cf_only_parse cf_namespace cf_tmpldirs
 	      cf_debug_cgi
 	      cf_tmpl_cache
@@ -228,7 +230,8 @@ sub make_connection {
 	   my ($con) = shift;
 	   my $o = (my ConnProp $prop = $con->prop)->{session} || $cgi;
 	   $o->header($con->list_header
-		      , -charset => $$self{cf_output_encoding});
+		      , -charset =>
+		      $$self{cf_header_charset} || $$self{cf_output_encoding});
 	 });
       } else {
 	# direct mode.

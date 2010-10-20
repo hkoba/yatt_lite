@@ -42,7 +42,7 @@ my @command;
     my $dirhandler = $dispatcher->get_dirhandler($dir);
     my $trans = $dirhandler->open_trans;
 
-    my ($part, $sub, $pkg) = $trans->find_part_handler($file);
+    my ($part, $sub, $pkg) = $trans->find_part_handler(basename($file));
     
     push @command, [$dirhandler, $file, $sub, $pkg
 		    , $part->reorder_hash_params(\%param)];

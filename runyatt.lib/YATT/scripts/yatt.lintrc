@@ -13,10 +13,10 @@ use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use YATT::Lite::Breakpoint;
-# XXX: �ƥǥ��쥯�ȥ�� .htyattcf.xhf ��ͭ�ä��顩 rc ��ͭ�ä���?
-# XXX: ����餬̵�����֤ǡ� Web::* �Ķ��Ǥ�ư��ڤ򤷤����Ȥ��ϡ�
+# XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
+# XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
 
-# library ���ɲäϡ� <= .htyattrc �ǡ��㤦���?
+# library の追加は？ <= .htyattrc で？違うよね?
 
 my $dispatcher = do {
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;

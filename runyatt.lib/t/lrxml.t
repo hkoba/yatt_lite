@@ -14,6 +14,9 @@ sub MY () {__PACKAGE__}
 my $CLASS = 'YATT::Lite::LRXML';
 use_ok($CLASS);
 
+# XXX: Node の内部表現は、本当はまだ固まってない。大幅変更の余地が有る
+# ただ、それでも parse 結果もテストしておかないと、余計な心配が増えるので。
+
 {
   my $parser = $CLASS->new(all => 1);
   my $tmpl = $CLASS->Template->new;
@@ -52,7 +55,7 @@ BAZ
     is $w->{tree}[++$i], "FOO\n", "render_$name node $i";
     is_deeply $tmpl->node_source($w->{tree}[++$i])
       , '<yatt:foo x y>', "render_$name node $i";
-    is $w->{tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n ���򤷤��ʤ�
+    is $w->{tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n が嬉しくない
 
     is_deeply $w->{tree}, [
 'FOO
@@ -298,4 +301,94 @@ END
    , '
 '], "[Inline attelem bug] nodetree $name";
   }
+}
+
+{
+  my $tmpl = $CLASS->Template->new;
+  $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<!yatt:args>
+<yatt:foo a='
+' b="
+" />
+<?perl===undef?>
+<!yatt:widget foo a b >
+END
+
+  my $name = '';
+  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    , "tmpl Item '$name'";
+
+  {
+    is_deeply $w->{tree}
+, [[TYPE_ELEMENT, 13, 37, 2, [qw(yatt foo)], undef
+   , [[TYPE_ATT_TEXT, 23, 28, 2, 'a', '
+'], [TYPE_ATT_TEXT, 29, 34, 3, 'b', '
+']]
+   , undef, undef, 38]
+   , '
+', [TYPE_PI, 38, 54, 5, ['perl'], '===undef']
+ , '
+'
+   ]
+   , "[long widget call bug] nodetree $name";;
+  }
+}
+
+{
+  my $tmpl = $CLASS->Template->new;
+  $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<yatt:foo
+
+--  foo --
+
+/>
+<?perl===undef?>
+END
+
+  my $name = '';
+  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    , "tmpl Item '$name'";
+
+  {
+    is_deeply $w->{tree}
+, [[TYPE_ELEMENT, 0, 25, 1, [qw(yatt foo)], undef, undef, undef, undef, 26]
+, '
+', [TYPE_PI, 26, 42, 6, ['perl'], '===undef']
+, '
+'
+], "newline and comment in call."
+}
+}
+
+{
+  my $tmpl = $CLASS->Template->new;
+  $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<yatt:foo>
+<yatt:bar>
+&yatt:x;
+</yatt:bar>
+</yatt:foo>
+
+<!yatt:widget foo>
+<yatt:body/>
+<!yatt:widget bar body = [code x=html]>
+<yatt:body/>
+END
+
+  my $name = '';
+  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    , "tmpl Item '$name'";
+
+  is_deeply $w->{tree}
+, [[TYPE_ELEMENT, 0, 10, 1, [qw(yatt foo)]
+    , [TYPE_ATTRIBUTE, undef, undef, 1, body => ['
+', [TYPE_ELEMENT, 11, 21, 2, [qw(yatt bar)]
+      , [TYPE_ATTRIBUTE, undef, undef, 2, body => ['
+', [TYPE_ENTITY, 22, 30, 3, yatt => [qw(var x)]], '', '
+']]
+      , undef, undef, undef, 22, 30], '', '
+']]
+    , undef, undef, undef, 11, 42], '
+'
+], "var in nested body."
 }

@@ -9,8 +9,12 @@ sub _parse_body {
   # $sink は最初、外側の $body 配列。
   # <:option /> が出現した所から先は、 その option element の body が新しい $sink になる
 
-  # 非空白文字が出現したか。 <:opt>HEAD</:opt> と BODY の間に
-  my $has_nonspace;
+  # XXX: 使い方の指針を解説せよ
+  # curpos, startln, endln
+
+  my $has_nonspace; # 非空白文字が出現したか。 <:opt>HEAD</:opt> と BODY の間に
+  my $is_closed; # tag が閉じたか。
+
   while (s{^(.*?)$$self{re_body}}{}xs or my $retry = $self->_get_chunk($sink)) {
     next if $retry;
     $self->{endln} += numLines($&);
@@ -36,7 +40,8 @@ sub _parse_body {
     } elsif (my $path = $+{elem}) {
       if ($+{clo}) {
 	$parent->[NODE_BODY_END] = $self->{startpos};
-	if ($self->{template}->node_body_source($parent) =~ /(\r?\n)\Z/) {
+	if (defined $parent->[NODE_BODY_BEGIN]
+	    and $self->{template}->node_body_source($parent) =~ /(\r?\n)\Z/) {
 	  $parent->[NODE_BODY_END] -= length $1;
 	}
 	$self->verify_tag($path, $close);
@@ -44,6 +49,7 @@ sub _parse_body {
 	  push @$sink, "\n";
 	}
 	# $self->add_lineinfo($sink);
+	$is_closed++;
 	last;
       }
       # /? > まで、その後、not ee なら clo まで。
@@ -52,28 +58,30 @@ sub _parse_body {
 		  , $self->{startpos}, undef, $self->{endln}
 		  , [split /:/, $path]
 		 , undef];
-      # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
+
       if (my @atts = $self->parse_attlist($_)) {
 	$elem->[NODE_ATTLIST] = \@atts;
       }
+
       # タグの直後の改行は、独立したトークンにしておく
-      unless (s{^(?<empty_elem>/)? >(\r?\n)?}{}xs) {
-	die $self->synerror(q{Missing tagclose: %s}, $_);
-      }
+      s{^(?<empty_elem>/)? >(\r?\n)?}{}xs
+	or die $self->synerror_at($self->{startln}, q{Missing CLO(>) for: <%s}, $path);
 
       # body slot の初期化
+      # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
       my $body = [];
       $elem->[NODE_VALUE]
 	= $is_opt
 	  ? $body : [TYPE_ATTRIBUTE, undef, undef, undef, body => $body]
 	    if not $+{empty_elem} or $is_opt;
-
-      $self->{curpos} += 1 + ($1 ? length($1) : 0);
       my $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO]
 	if not $is_opt and $elem->[NODE_VALUE];
+
+      $self->{curpos} += 1 + ($1 ? length($1) : 0); # $& じゃないので注意。
       $elem->[NODE_END] = $self->{curpos};
       $self->{curpos} += length $2 if $2;
       $elem->[NODE_BODY_BEGIN] = $self->{curpos};
+
       $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
 
       if ($is_opt and not $+{empty_elem}) {
@@ -85,10 +93,11 @@ sub _parse_body {
 	       ? $parent->[NODE_AELEM_FOOT] ||= []
 		 : $sink}, $elem;
 
-      # <:opt> の時は, $parent->[head] にも加える
+      # <:opt> の時は, $parent->[head] にも(?)加える
       push @{$parent->[NODE_AELEM_HEAD] ||= []}, $elem
 	if $is_opt && !$+{empty_elem};
 
+      my $bodystartln = $self->{endln};
       # <TAG>\n タグ直後の改行について。
       # <foo />\n だけは, 現在の $sink へ、それ以外は、今作る $elem の $body へ改行を足す
       $self->{endln}++, push @{!$is_opt && $+{empty_elem} ? $sink : $body}, "\n"
@@ -99,32 +108,31 @@ sub _parse_body {
       } elsif (not $+{empty_elem}) {
 	# XXX: もし $is_opt かつ not ee だったら、
 	# $sink (親の $body) が空かどうかを調べる必要が有る。
-#	die $self->synerror(q{element option '%s' must precede body!}, $path)
+#	die $self->synerror_at(q{element option '%s' must precede body!}, $path)
 #	  if $has_nonspace;
       }
       if (not $+{empty_elem}) {
 	# call <yatt:call> ...  or complex option <:yatt:opt>
 	# expects </yatt:call> or </:yatt:opt>
-	my $startln = $self->{startln};
+	# $self->{startln} = $self->{endln}; # No!
 	$self->_parse_body($widget, $body
 			   , $+{empty_elem} ? $close : $path
 			   , $elem, $bodyStartRef);
-	$$bodyStartRef ||= $startln;
+	$$bodyStartRef //= $bodystartln;
       } elsif ($is_opt) {
 	# ee style option.
 	# <:yatt:foo/>bar 出現後は、以後の要素を att に加える。
 	$sink = $body;
       } else {
-      }				# simple call.
+      } # simple call.
       $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
       $self->add_lineinfo($sink);
-      # XXX: @$body が空なら、予め開放しておく。
-      # undef $elem->[NODE_BODY] unless @$body;
+
     } elsif ($path = $+{pi}) {
       $$par_ln = $self->{startln} if not $has_nonspace++ and $parent;
       # ?> まで
       unless (s{^(.*?)\?>(\r?\n)?}{}s) {
-	die $self->synerror(q{Unbalanced pi});
+	die $self->synerror_at($self->{startln}, q{Unbalanced pi});
       }
       my $end = $self->{curpos} += 2 + length($1);
       my $nl = "\n" if $2;
@@ -148,9 +156,28 @@ sub _parse_body {
     $self->_verify_token($self->{startpos}, $_) if $self->{cf_debug};
   }
 
+  if ($close and not $is_closed) {
+    die $self->synerror_at($self->{startln}, q{Missing close tag '%s'}, $close);
+  }
+
   # To make body-less element easily detected.
   if ($parent and $parent->[NODE_VALUE]) {
     _undef_if_empty($self->node_body_slot($parent));
+  }
+}
+
+sub verify_tag {
+  (my MY $self, my ($path, $close)) = @_;
+  # XXX: デバッグ時、この段階での sink の様子を見たくなる。
+  unless (s{^>}{}xs) {
+    die $self->synerror_at($self->{endln}, q{Missing CLO(>) for: <%s}, $path);
+  }
+  $self->{curpos} += 1;
+  unless (defined $close) {
+    die $self->synerror_at($self->{endln}, q{TAG close without open! got </%s>}, $path);
+  } elsif ($path ne $close) {
+    die $self->synerror_at($self->{endln}, q{TAG Mismatch! <%s> closed by </%s>}
+			, $close, $path);
   }
 }
 

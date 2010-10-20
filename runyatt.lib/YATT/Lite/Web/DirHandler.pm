@@ -16,7 +16,7 @@ use YATT::Lite::XHF;
 
 sub new {
   my $pack = shift;
-  # XXX: .htyattrc.pl ¤Ï¡©
+  # XXX: .htyattrc.pl ã¯ï¼Ÿ
   unless (defined $_[0]) {
     confess "dir is undef!";
   }
@@ -32,7 +32,7 @@ sub new {
     } else { () }
   };
   $pack->SUPER::new(dir => @_, @opts);
-  # XXX: refresh ¤Ï¡© <= ¸½¾õ¤Ç¤Ï DirHandler Â¦¤Î¤¬¸Æ¤Ð¤ì¤ë¡£
+  # XXX: refresh ã¯ï¼Ÿ <= ç¾çŠ¶ã§ã¯ DirHandler å´ã®ãŒå‘¼ã°ã‚Œã‚‹ã€‚
 }
 
 # sub handle_ydo, _do, _psgi...
@@ -48,7 +48,7 @@ sub handle_ydo {
   my $action = $self->get_action_handler($file)
     or die "Can't find action handler for file '$file'\n";
 
-  # XXX: this ¤Ï EntNS pkg ¤« $YATT ¤«...
+  # XXX: this ã¯ EntNS pkg ã‹ $YATT ã‹...
   $action->($self->EntNS, $con);
 }
 
@@ -66,8 +66,8 @@ sub compile_file_in {
   $sub;
 }
 
-# XXX: cached_in ¼þ¤ê¤ÏÌÌÅÝ²á¤®¤ë¡£
-# XXX: package per dir ¤Ç¡¢ËÜÅö¤ËÎÉ¤¤¤Î¤«?
+# XXX: cached_in å‘¨ã‚Šã¯é¢å€’éŽãŽã‚‹ã€‚
+# XXX: package per dir ã§ã€æœ¬å½“ã«è‰¯ã„ã®ã‹?
 sub get_action_handler {
   (my MY $self, my $path) = @_;
   my $item = $self->cached_in
@@ -97,20 +97,20 @@ sub get_action_handler {
 #========================================
 sub error_handler {
   (my MY $self, my $err) = @_;
-  # ¤É¤³¤Ë½ÐÎÏ¤¹¤ë¤«¡¢¤Ã¤ÆÌäÂê¤âÍ­¤ë¡£ $CON ¤ò rewind ¤¹¤Ù¤­¡©
+  # ã©ã“ã«å‡ºåŠ›ã™ã‚‹ã‹ã€ã£ã¦å•é¡Œã‚‚æœ‰ã‚‹ã€‚ $CON ã‚’ rewind ã™ã¹ãï¼Ÿ
   my $errcon = do {
     if (my $con = $self->CON) {
-      $con->configure(is_error => 1); # »È¤Ã¤ÆÌµ¤¤¤±¤É¡£
-      # XXX: rewind ¤·¤¿Êý¤¬ÎÉ¤¤¤Î¤Ç¤Ï?
+      $con->configure(is_error => 1); # ä½¿ã£ã¦ç„¡ã„ã‘ã©ã€‚
+      # XXX: rewind ã—ãŸæ–¹ãŒè‰¯ã„ã®ã§ã¯?
       $con;
     } else {
       \*STDOUT;
     }
   };
-  # error.ytmpl ¤òÃµ¤·¡¢¤¢¤ì¤Ð¸Æ¤Ó½Ð¤¹¡£
+  # error.ytmpl ã‚’æŽ¢ã—ã€ã‚ã‚Œã°å‘¼ã³å‡ºã™ã€‚
   if (my ($sub, $pkg) = $self->find_renderer(error => ignore_error => 1)) {
     $sub->($pkg, $errcon, $err);
-    $errcon->commit; # ¤³¤ì¤¬Ìµ¤¤¤È¡¢ 500 error.
+    $errcon->commit; # ã“ã‚ŒãŒç„¡ã„ã¨ã€ 500 error.
     $self->DONE(1);
   } else {
     die $err;

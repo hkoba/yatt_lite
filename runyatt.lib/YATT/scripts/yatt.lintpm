@@ -21,7 +21,7 @@ sub file_module {
   open my $fh, '<', $fn or die "Can't open $fn: $!";
   local $/;
   local $_ = <$fh>;
-  # XXX: Ê£¿ô½ñ¤¤¤ÆÍ­¤ë¾ì¹ç¡¢ basename ¤¬°ìÃ×¤¹¤ë¤â¤Î¤ò
+  # XXX: è¤‡æ•°æ›¸ã„ã¦æœ‰ã‚‹å ´åˆã€ basename ãŒä¸€è‡´ã™ã‚‹ã‚‚ã®ã‚’
   while (/^\s*package\s+([\w:]+);/sm) {
     my ($modname) = $1;
     if (rootname(basename($fn)) eq ((split /::/, $modname)[-1])) {

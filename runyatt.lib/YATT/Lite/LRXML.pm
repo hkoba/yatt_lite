@@ -142,7 +142,7 @@ sub parse_decl {
     $self->{curpos} = $total - length $str;
     if (my $comment_ns = $+{comment}) {
       unless ($str =~ s{^(.*?)-->(\r?\n)?}{}s) {
-	die $self->synerror(q{Comment is not closed});
+	die $self->synerror_at($self->{startln}, q{Comment is not closed});
       }
       my $nlines = numLines($1) + ($2 ? 1 : 0);
       $self->{curpos} += length $&;
@@ -159,11 +159,11 @@ sub parse_decl {
       # yatt:widget, action
       my (@args) = $self->parse_attlist($str, 1); # To delay entity parsing.
       my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
-	die $self->synerror(q{No part name in %s:%s\n%s}, $ns, $kind
+	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}, $ns, $kind
 		  , nonmatched($str));
       };
       unless ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
-	die $self->synerror(q{Invalid part name in %s:%s}, $ns, $kind);
+	die $self->synerror_at($self->{startln}, q{Invalid part name in %s:%s}, $ns, $kind);
       }
       my $partName = $nameAtt->[NODE_PATH];
       # XXX: $partName が foo=bar とかだったら。
@@ -176,17 +176,17 @@ sub parse_decl {
       $part = $sub->($self, $tmpl, $ns, $self->parse_attlist($str, 1))
 	// $part;
     } else {
-      die $self->synerror(q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
+      die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
     }
     unless ($str =~ s{^>([\ \t]*\r?\n)?}{}s) {
       # XXX: たくさん出しすぎ
-      die $self->synerror(q{Invalid character in decl %s:%s : %s}
+      die $self->synerror_at($self->{startln}, q{Invalid character in decl %s:%s : %s}
 		   , $ns, $kind
 		   , $str);
     }
     # <!yatt:...> の直後には改行が必要、とする。
     unless ($1) {
-      die $self->synerror(q{<!%s:%s> must end with newline!}, $ns, $kind);
+      die $self->synerror_at($self->{startln}, q{<!%s:%s> must end with newline!}, $ns, $kind);
     }
     $self->add_posinfo(length $&);
     $self->{endln} += numLines($1);
@@ -205,10 +205,10 @@ sub parse_decl {
   foreach my Part $part (@{$tmpl->{partlist}}) {
     if ($prev) {
       unless (defined $part->{cf_startpos}) {
-	die $self->synerror(q{startpos is undef});
+	die $self->synerror_at($self->{startln}, q{startpos is undef});
       }
       unless (defined $prev->{cf_bodypos}) {
-	die $self->synerror(q{prev bodypos is undef});
+	die $self->synerror_at($self->{startln}, q{prev bodypos is undef});
       }
       $prev->{cf_bodylen} = $part->{cf_startpos} - $prev->{cf_bodypos};
     }
@@ -335,14 +335,14 @@ sub splitline {
 sub _verify_token {
   (my MY $self, my $pos) = splice @_, 0, 2;
   unless (defined $pos) {
-    die $self->synerror(q{Token pos is undef!: now='%s'}, $_[0]);
+    die $self->synerror_at($self->{startln}, q{Token pos is undef!: now='%s'}, $_[0]);
   }
   my $tok = $self->{template}->source_substr($pos, length $_[0]);
   unless (defined $tok) {
-    die $self->synerror(q{Token substr is empty!: now='%s'}, $_[0]);
+    die $self->synerror_at($self->{startln}, q{Token substr is empty!: now='%s'}, $_[0]);
   }
   unless ($tok eq $_[0]) {
-    die $self->synerror(q{Token mismatch!: substr='%s', now='%s'}
+    die $self->synerror_at($self->{startln}, q{Token mismatch!: substr='%s', now='%s'}
 			, $tok, $_[0]);
   }
 }
@@ -351,20 +351,6 @@ sub drop_leading_ws {
   my $list = shift;
   local (%+, $1, $2, $&);
   pop @$list while @$list and $list->[-1] =~ /^\s*$/s;
-}
-sub verify_tag {
-  (my MY $self, my ($path, $close)) = @_;
-  # XXX: デバッグ時、この段階での sink の様子を見たくなる。
-  unless (s{^>}{}xs) {
-    die $self->synerror(q{Missing tagclose});
-  }
-  $self->{curpos} += 1;
-  unless (defined $close) {
-    die $self->synerror(q{TAG close without open! got %s}, $path);
-  } elsif ($path ne $close) {
-    die $self->synerror(q{TAG Mismatch! got %s expected %s}
-		 , $path, $close);
-  }
 }
 
 #========================================
@@ -385,7 +371,7 @@ sub build_data { shift->Data->new(@_) }
 sub declare_base {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
   my $att = YATT::Lite::Constants::cut_first_att(\@args) or do {
-    die $self->synerror(q{No base arg});
+    die $self->synerror_at($self->{startln}, q{No base arg});
   };
   # !yatt:base dir="..."
   #            PATH BODY
@@ -398,7 +384,7 @@ sub declare_args {
     # 宣言抜きで作られていた part を一旦一覧から外す。
     my Part $oldpart = delete $tmpl->{Item}{''};
     unless ($oldpart->{cf_implicit}) {
-      die $self->synerror(q{Duplicate !%s:args declaration}, $ns);
+      die $self->synerror_at($self->{startln}, q{Duplicate !%s:args declaration}, $ns);
     }
     if (@{$tmpl->{partlist}} == 1) {
       # 先頭だったら再利用。
@@ -452,7 +438,7 @@ sub namespace {
 sub add_part {
   (my MY $self, my Template $tmpl, my Part $part) = @_;
   if (defined $tmpl->{Item}{$part->{cf_name}}) {
-    die $self->synerror(q{Conflicting part name! '%s'}, $part->{cf_name});
+    die $self->synerror_at($self->{startln}, q{Conflicting part name! '%s'}, $part->{cf_name});
   }
   Scalar::Util::weaken($part->{cf_folder} = $tmpl);
   # die "Can't weaken!" unless Scalar::Util::isweak($part->{cf_folder});
@@ -481,10 +467,10 @@ sub add_args {
       = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY
 		    , NODE_BODY+1 .. $#$argSpec];
     unless (defined $argName) {
-      die $self->synerror('Invalid argument spec');
+      die $self->synerror_at($self->{startln}, 'Invalid argument spec');
     }
     if (exists $part->{arg_dict}{$argName}) {
-      die $self->synerror('Argument %s redefined in %s %s'
+      die $self->synerror_at($self->{startln}, 'Argument %s redefined in %s %s'
 		   , $argName, $part->{cf_kind}, $part->{cf_name});
     }
     my ($type, $dflag, $default);
@@ -505,7 +491,7 @@ sub add_args {
       # $self->add_arg_of_delegate/code/...へ。
       my $t = $var->type->[0];
       my $sub = $self->can("add_arg_of_type_$t")
-	or die $self->synerror("Unknown arg type in arg '%s': %s", $argName, $t);
+	or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $t);
       $sub->($self, $part, $var, \@rest);
     } else {
       push @{$part->{arg_order}}, $argName;
@@ -567,11 +553,11 @@ sub re_name {
   shift; qr{[\w\.]+};
 }
 #========================================
-sub synerror {
-  my MY $self = shift;
+sub synerror_at {
+  (my MY $self, my $ln) = splice @_, 0, 2;
   my %opts
     = ($$self{cf_path} ? (tmpl_file => "$$self{cf_scheme} $$self{cf_path}") : ()
-       , $$self{startln} ? (tmpl_line => $$self{startln}) : ()
+       , defined $ln ? (tmpl_line => $ln) : ()
        , depth => 2);
   $self->{cf_vfs}->error(\%opts, @_);
 }
@@ -621,7 +607,8 @@ sub AUTOLOAD {
     when (/ent/)  { require YATT::Lite::LRXML::ParseEntpath }
     when (/body/) { require YATT::Lite::LRXML::ParseBody }
     default {
-      die $_[0]->synerror("Unknown method: %s", $meth);
+      my MY $self = $_[0];
+      die $self->synerror_at($self->{startln}, "Unknown method: %s", $meth);
     }
   }
   my $code = *{$sym}{CODE}

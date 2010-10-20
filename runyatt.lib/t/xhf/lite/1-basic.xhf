@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+# First paragraph is used as configuration params for YATT::Lite itself.
+# In this file, it is empty.
 
+# Rest of this file is series of tests.
 TITLE: toplevel template
 TAG: pi
 IN:
@@ -433,7 +436,7 @@ TITLE: Unknown variable: html
 IN:
  <!yatt:args x=html>
  <?perl= $x ?>
-ERROR: Global symbol "\$x" requires explicit package name at \(eval \d+\)(?:\[[^\]]*\])? line 2[\.,]
+ERROR: Global symbol "\$x" requires explicit package name at \S+ line 2[\.,]
 
 
 TITLE: valueless scalar arg -> 1

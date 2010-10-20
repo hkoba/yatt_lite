@@ -71,7 +71,7 @@ sub _parse_entpath {
   my $prevlen = length $_;
   my @pipe = $self->$how(@_);
   unless (s{^;}{}xs) {
-    die $self->synerror(q{Syntax error in entity: '%s'}, $_);
+    die $self->synerror_at($self->{startln}, q{Syntax error in entity: '%s'}, $_);
   }
   $self->{curpos} += $prevlen - length $_;
   @pipe;
@@ -109,11 +109,11 @@ sub _parse_entgroup {
   do {
     push @pipe, $self->_parse_entterm($for_expr);
     if (length $_ == $prevlen and $emptycnt++) {
-      die $self->synerror(q{Can't parse!: %s}, $_);
+      die $self->synerror_at($self->{startln}, q{Can't parse!: %s}, $_);
     }
     $prevlen = length $_;
   } until (s{^ ($$self{re_eclose})}{}xs);
-  die $self->synerror(q{Paren mismatch: expect %s got %s: str=%s}
+  die $self->synerror_at($self->{startln}, q{Paren mismatch: expect %s got %s: str=%s}
 		      , $close, $1, $_)
     unless $1 eq $close;
   @pipe;
@@ -158,7 +158,7 @@ sub _parse_group_string {
     # print pos($_), "\n";
     $text .= $&;
     if ($+{close}) {
-      die $self->synerror(q{Paren mismatch: expect %s got %s: str=%s}
+      die $self->synerror_at($self->{startln}, q{Paren mismatch: expect %s got %s: str=%s}
 		   , $close, $+{close}, substr($_, $oldpos, pos))
 	unless $+{close} eq $close;
       last;
@@ -180,7 +180,7 @@ sub _parse_hash {
     push @hash, $self->_parse_entterm;
     s{^,}{};
   }
-  die $self->synerror(q{Paren mismatch: expect \} got %s}, $_);
+  die $self->synerror_at($self->{startln}, q{Paren mismatch: expect \} got %s}, $_);
 }
 
 use YATT::Lite::Breakpoint qw(break_load_parseentpath);
