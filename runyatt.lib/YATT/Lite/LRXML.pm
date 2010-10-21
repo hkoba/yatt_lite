@@ -556,7 +556,7 @@ sub re_name {
 sub synerror_at {
   (my MY $self, my $ln) = splice @_, 0, 2;
   my %opts
-    = ($$self{cf_path} ? (tmpl_file => "$$self{cf_scheme} $$self{cf_path}") : ()
+    = ($$self{cf_path} ? (tmpl_file => $$self{cf_path}) : ()
        , defined $ln ? (tmpl_line => $ln) : ()
        , depth => 2);
   $self->{cf_vfs}->error(\%opts, @_);

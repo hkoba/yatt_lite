@@ -267,7 +267,7 @@ END
       };
     }), <<END, "$theme $SUB syntax error is handled by error page";
 <h2>Unknown declarator (&lt;!yatt:foo &gt;)</h2>
-file: data synerr<br>
+file: synerr<br>
 line: 1<br>
 END
 

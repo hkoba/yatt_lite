@@ -72,11 +72,18 @@
     (unless (eq rc 0)
       (beep))
     (when (and file line)
-      (if (and (not (equal file (buffer-file-name buffer)))
+      (when (and (not (equal (expand-file-name file) (buffer-file-name buffer)))
 	       (not (equal file "-")))
+	(message "opening error file: %s" file)
 	(find-file-other-window file))
       (goto-line (string-to-number line)))
-    (message "%s" (if (> (length err) 0) err "lint OK"))))
+    (message "%s"
+	     (cond ((> (length err) 0)
+		    err)
+		   ((not (eq rc 0))
+		    "Unknown error")
+		   (t
+		    "lint OK")))))
 
 ;;========================================
 ;; *.yatt
@@ -97,10 +104,10 @@
 						 "\\s-+\\'" err) 'pos))))
 	      ((setq match
 		     (yatt-lint-any-match
-		      " at \\([^ ]*\\) line \\([0-9]+\\)\\.\n"
+		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
 		      err 'file 1 'line 2))
 	       (setq diag (substring err 0 (plist-get match 'pos)))))
-	(append `(rc ,rc err ,diag) match)))))
+	(append `(rc ,rc err ,(or diag err)) match)))))
 
 
 (defun yatt-lint-any-handle-yattrc (buffer)
@@ -119,7 +126,7 @@
       (let (match diag)
 	(cond ((setq match
 		     (yatt-lint-any-match
-		      " at \\([^ ]*\\) line \\([0-9]+\\)\\.\n"
+		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
 		      err 'file 1 'line 2))
 	       (setq diag (substring err 0 (plist-get match 'pos)))))
 	(append `(rc ,rc err ,diag) match)))))
@@ -159,6 +166,12 @@
    err 'file 1 'line 2)
   (yatt-lint-any-match
    " at \\([^ ]*\\) line \\([0-9]+\\)\\.\n"
+   err 'file 1 'line 2))
+
+'(let ((err
+       "syntax error at ./index.yatt line 37, at EOF"))
+  (yatt-lint-any-match
+   " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
    err 'file 1 'line 2))
 
 (provide 'yatt-lint-any-mode)
