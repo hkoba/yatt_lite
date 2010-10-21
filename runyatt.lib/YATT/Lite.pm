@@ -2,7 +2,7 @@ package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 
 #
 # YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。

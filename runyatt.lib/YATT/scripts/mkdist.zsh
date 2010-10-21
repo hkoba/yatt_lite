@@ -2,9 +2,17 @@
 
 set -e
 
-# XXX: FindBin, chdir
-# XXX: version detection.
-version=0.0.1
+function die { echo 1>&2 $*; exit 1 }
+
+cd $0:h:h:h:h
+[[ -d runyatt.lib ]] || die "Can't find runyatt.lib!"
+[[ -r runyatt.lib/YATT/Lite.pm ]] || die "Can't find YATT::Lite!"
+
+#version=$(perl -Irunyatt.lib -MYATT::Lite -le 'print YATT::Lite->VERSION')
+version=$(
+    perl -Irunyatt.lib -MExtUtils::MakeMaker -le \
+	'print MM->parse_version(shift)' runyatt.lib/YATT/Lite.pm
+)
 
 clean=(
     runyatt.lib/t/vfs.d
@@ -13,6 +21,7 @@ clean=(
 main=(
     -name _build -prune
     -o -name cover_db -prune
+    -o -name .git -prune
 )
 
 samples=(

@@ -12,6 +12,7 @@
 ;; (add-to-list 'auto-mode-alist '("\\.ydo\\'" . perl-mode))
 ;;
 
+(require 'advice)
 (require 'mmm-mode)
 (require 'derived)
 (require 'sgml-mode)
@@ -41,11 +42,13 @@
     (make-variable-buffer-local 'process-environment)
     (yatt-lint-any-mode 1)
     (yatt-mode-ensure-file-coding)
+    (ad-activate 'mmm-refontify-maybe)
     (mmm-mode-on)
+    (mmm-refontify-maybe)
     ;; cperl-mode にする中で、 buffer-modified-p が立ってる... かと思いきや...
     ;; 分からん！
     ;; [after idle] 的な処理が必要なんでは?
-    (yatt-mode-multipart-refontify)
+    ;; (yatt-mode-multipart-refontify)
     (run-hooks 'yatt-mode-hook)))
 
 (define-derived-mode yatt-declaration-mode html-mode "YATT decl"
@@ -70,7 +73,9 @@
     :back ">\n")))
 
 ;;========================================
-(defun yatt-mode-multipart-refontify ()
+;;
+(defadvice mmm-refontify-maybe (before yatt-mode-refontify-multipart)
+  "This adds submode to yatt:action"
   (interactive)
   (let ((modified (buffer-modified-p))
 	(fn (buffer-file-name))
@@ -83,14 +88,13 @@
 	 ;; XXX: mmm-ify-region は良くないかも。 interactive だと。
 	 (mmm-make-region 'cperl-mode start finish
 			  :face 'yatt-action-submode-face)
-	 (mmm-enable-font-lock 'cperl-mode))))
-    (mmm-refontify-maybe)
-    (when (and (not modified)
-	       (eq (file-locked-p fn) t))
-      (message "removing unwanted file lock from %s" fn)
-      (restore-buffer-modified-p t)
-      (unlock-buffer)
-      (restore-buffer-modified-p nil))))
+	 (mmm-enable-font-lock 'cperl-mode)
+	 (when (and (not modified)
+		    (eq (file-locked-p fn) t))
+	   (message "removing unwanted file lock from %s" fn)
+	   (restore-buffer-modified-p t)
+	   (unlock-buffer)
+	   (restore-buffer-modified-p nil)))))))
 
 (defun yatt-mode-multipart-list ()
   (do* (result
