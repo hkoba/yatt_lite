@@ -190,6 +190,7 @@ sub create_file {
 
   sub find_part_handler {
     (my MY $self, my $name, my %opts) = @_;
+    # my ($method, $name) = @$name;
     my $ignore_error = delete $opts{ignore_error};
     (my Part $part, my Template $tmpl)
       = $self->get_part($name, ignore_error => $ignore_error)

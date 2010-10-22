@@ -11,7 +11,7 @@ setopt extendedglob
 bindir=$(cd $0:h; print $PWD)
 cd $0:h:h:h
 
-zparseopts -D -A opts C=o_cover -brew:: || true
+zparseopts -D -A opts C=o_cover T=o_taint -brew:: || true
 
 # If no **/*.t is specified:
 if [[ -z $argv[(r)(*/)#*.t] ]]; then
@@ -33,17 +33,29 @@ if (($+PERL)); then
     fi
 fi
 
+typeset -T HARNESS_PERL_SWITCHES harness ' '
+export HARNESS_PERL_SWITCHES
+
+if [[ -n $o_taint ]]; then
+    echo "[with taint check]"
+    harness+=($o_taint)
+else
+    echo "[normal mode (no taint check)]"
+fi
+
 if [[ -n $o_cover ]]; then
     echo "[[Coverage mode]]"
     cover_db=$bindir/cover_db
     charset=utf-8
 
-    typeset -T HARNESS_PERL_SWITCHES harness ' '
-    export HARNESS_PERL_SWITCHES
     harness+=(-MDevel::Cover=-db,$cover_db)
 fi
 
-${PERL:-perl} =prove $argv || true
+if [[ -n $o_taint ]]; then
+    ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
+else
+    ${PERL:-perl} =prove $argv || true
+fi
 
 : ${docroot:=/var/www/html}
 if [[ -n $o_cover ]] && [[ -d $cover_db ]]; then

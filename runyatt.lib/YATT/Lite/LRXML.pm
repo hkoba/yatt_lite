@@ -128,7 +128,7 @@ sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
   break_parser();
   $self->{template} = $tmpl;
-  $tmpl->reset if $tmpl->{product}; #XXX: NIMPL
+  $tmpl->reset if $tmpl->{product};
   $self->configure(@config);
   $tmpl->{cf_string} = $str;
   $tmpl->{cf_utf8} = Encode::is_utf8($str);

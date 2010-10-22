@@ -3,18 +3,22 @@ sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 
+sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use File::Basename;
 use File::Spec;
 my ($bindir, $libdir);
-use lib File::Spec->rel2abs
-  ($libdir = ($bindir = dirname($0)) . "/../../../../runyatt.lib");
+use lib untaint_any
+  (File::Spec->rel2abs
+   ($libdir = ($bindir = dirname(untaint_any($0)))
+    . "/../../../../runyatt.lib"));
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::XHFTest2;
 use base qw(YATT::Lite::XHFTest2);
 
 my MY $tests = MY->load_tests([dir => "$bindir/.."
-			       , libdir => File::Spec->rel2abs($libdir)]
+			       , libdir => untaint_any
+			       (File::Spec->rel2abs($libdir))]
 			      , @ARGV ? @ARGV : $bindir);
 $tests->enter;
 

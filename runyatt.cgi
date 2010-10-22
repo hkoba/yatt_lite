@@ -11,12 +11,12 @@ $ENV{PATH} ||= "/sbin:/usr/sbin:/bin:/usr/bin";
 
 #----------------------------------------
 # To allow do 'runyatt.cgi', we should avoid using FindBin.
-sub untaint_any { $_[0] =~ m{.*}s; $& }
+my $untaint_any; BEGIN { $untaint_any = sub { $_[0] =~ m{.*}s; $& } }
 sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
 sub extname { my $fn = shift; $fn =~ s/\.(\w+)$// and $1 }
 use Cwd qw(realpath);
 my $rootname;
-use lib ($rootname = rootname(untaint_any(realpath(__FILE__)))).".lib";
+use lib ($rootname = rootname($untaint_any->(realpath(__FILE__)))).".lib";
 #
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Web::Dispatcher;

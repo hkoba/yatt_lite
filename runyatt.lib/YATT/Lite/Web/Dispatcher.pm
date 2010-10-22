@@ -11,25 +11,15 @@ sub MY () {__PACKAGE__}
 
 # caller, runtime env の捨象. Toplevel.
 # DirHandler の生成, .htyattrc.pl の読み込みとキャッシュに責任を持つ.
-use base qw(YATT::Lite::NSBuilder);
+use base qw(YATT::Lite::Factory);
 use fields qw(DirHandler Action
-	      cf_tmpl_encoding cf_output_encoding
-	      cf_header_charset
-	      cf_debug_cgen
-	      cf_only_parse cf_namespace cf_tmpldirs
-	      cf_debug_cgi
-	      cf_tmpl_cache
 	      cf_mount
-	      cf_error_handler
-
-	      cf_at_done
-
 	      cf_is_gateway cf_document_root
+	      cf_debug_cgi
 	    );
-use YATT::Lite::Util qw(cached_in split_path untaint_any globref
+use YATT::Lite::Util qw(cached_in split_path
 			lexpand rootname extname);
 use YATT::Lite::Util::CmdLine qw(parse_params);
-use YATT::Lite::Entities qw(build_entns);
 sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
 
 use File::Basename;
@@ -38,11 +28,13 @@ sub ConnProp () {'YATT::Lite::Web::Connection'}
 sub Connection () {'YATT::Lite::Web::Connection'}
 
 #========================================
-
-sub after_new {
-  (my MY $self) = @_;
-  $self->{cf_tmpl_cache} ||= {}
+sub configparams {
+  my MY $self = shift;
+  ($self->SUPER::configparams
+   , is_gateway => $self->is_gateway)
 }
+
+#========================================
 
 sub dispatch {
   (my MY $self, my $fh) = splice @_, 0, 2;
@@ -129,57 +121,6 @@ sub init_by_env {
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
   $self->cached_in($self->{DirHandler} ||= {}, $dirPath, $self);
-}
-
-sub buildns {
-  my MY $self = shift;
-  my $appns = $self->SUPER::buildns(@_);
-
-  # MyApp が DirHandler を継承していなければ、加える
-  unless ($appns->isa(my $default = $self->default_dirhandler)) {
-    $self->add_isa($appns, $default);
-  }
-
-  # instns には MY を定義しておく。
-  my $my = globref($appns, 'MY');
-  unless (*{$my}{CODE}) {
-    *$my = sub () { $appns };
-  }
-
-  # Entity も、呼べるようにしておく。
-  my $ent = globref($appns, 'Entity');
-  unless (*{$ent}{CODE}) {
-    require YATT::Lite::Entities;
-    YATT::Lite::Entities->define_Entity(undef, $appns);
-  }
-
-  $appns;
-}
-
-# This entry is called from cached_in, and creates DirHandler(facade of trans),
-# with fresh namespace.
-sub load {
-  (my MY $self, my MY $sys, my $name) = @_;
-
-  # MyApp を使いたいときは... Runenv->new(basens => 'MyApp') で。
-  my $appns = $self->buildns; # MyApp::INST$n を作る. 親は?
-
-  my @base = map { [dir => $_] } lexpand($self->{cf_tmpldirs});
-
-  # $appns は DirHandler で Facade だから、 trans ではないことに注意。
-  # trans にメンバーを足す場合は、facade にも足して、かつ cf_delegate しておかないとだめ。
-  $appns->new($name
-	      , vfs => [dir => $name, encoding => $self->{cf_tmpl_encoding}]
-	      , package => $appns->rootns_for($appns)
-	      , nsbuilder => sub {
-		  build_entns(TMPL => $appns, $appns->EntNS);
-	      }
-	      , (@base ? (base => \@base) : ())
-	      , is_gateway => $self->is_gateway
-	      , $self->cf_delegate
-	      (qw(output_encoding debug_cgen tmpl_cache at_done
-		  namespace only_parse error_handler))
-	      , die_in_error => ! YATT::Lite::Util::is_debugging());
 }
 
 #========================================

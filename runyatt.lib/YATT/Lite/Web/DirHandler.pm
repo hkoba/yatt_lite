@@ -11,7 +11,9 @@ use fields qw(cf_dir
 	    );
 
 use Carp;
-use YATT::Lite::Util qw(cached_in ckeval);
+use YATT::Lite::Util qw(cached_in ckeval untaint_any
+			dofile_in compile_file_in
+		      );
 use YATT::Lite::XHF;
 
 sub new {
@@ -52,20 +54,6 @@ sub handle_ydo {
   $action->($self->EntNS, $con);
 }
 
-sub dofile_in {
-  my ($pkg, $file) = @_;
-  ckeval("package $pkg; do '$file' or die \$\@");
-}
-
-sub compile_file_in {
-  my ($pkg, $file) = @_;
-  my $sub = dofile_in($pkg, $file);
-  unless (defined $sub and ref $sub eq 'CODE') {
-    die "file '$file' should return CODE (but not)!\n";
-  }
-  $sub;
-}
-
 # XXX: cached_in 周りは面倒過ぎる。
 # XXX: package per dir で、本当に良いのか?
 sub get_action_handler {
@@ -75,7 +63,7 @@ sub get_action_handler {
        # first time.
        my ($self, $sys, $path) = @_;
        my $age = -M $path;
-       my $sub = compile_file_in(ref $self, $path);
+       my $sub = compile_file_in(ref $self, untaint_any($path));
        [$sub, $age];
      }, sub {
        # second time
@@ -86,7 +74,7 @@ sub get_action_handler {
        } elsif ($$item[-1] == $age) {
 	 return;
        } else {
-	 $sub = compile_file_in($self->{cf_package}, $path);
+	 $sub = compile_file_in($self->{cf_package}, untaint_any($path));
        }
        @{$item} = ($sub, $age);
      });

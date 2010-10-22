@@ -15,7 +15,9 @@ require Scalar::Util;
 		   );
     our @EXPORT_OK = (@EXPORT, qw(cached_in split_path rootname dict_order
 				  appname extname
-				  captured is_debugging callerinfo));
+				  captured is_debugging callerinfo
+				  dofile_in compile_file_in
+				));
   }
   use Carp;
   sub numLines {
@@ -63,10 +65,11 @@ require Scalar::Util;
     return $1 if $fn =~ m{(\w+)$};
   }
   sub untaint_any { $_[0] =~ m{.*}s; $& }
+  our $DEBUG_INJECT_TAINTED = 0;
   sub untaint_unless_tainted {
     return $_[1] unless ${^TAINT};
     if (defined $_[0] and not Scalar::Util::tainted($_[0])) {
-      untaint_any($_[1]);
+      $DEBUG_INJECT_TAINTED ? $_[1] : untaint_any($_[1]);
     } else {
       $_[1];
     }
@@ -186,6 +189,26 @@ require Scalar::Util;
     $@;
   }
 }
+
+sub dofile_in {
+  my ($pkg, $file) = @_;
+  unless (-e $file) {
+    croak "No such file: $file\n";
+  } elsif (not -r _) {
+    croak "Can't read file: $file\n";
+  }
+  ckeval("package $pkg; do '$file' or die \$\@");
+}
+
+sub compile_file_in {
+  my ($pkg, $file) = @_;
+  my $sub = dofile_in($pkg, $file);
+  unless (defined $sub and ref $sub eq 'CODE') {
+    die "file '$file' should return CODE (but not)!\n";
+  }
+  $sub;
+}
+
 
 BEGIN {
   my %escape = (qw(< &lt;

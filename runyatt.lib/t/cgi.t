@@ -13,8 +13,6 @@ use List::Util qw(sum);
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Web::Dispatcher;
 use YATT::Lite::Util qw(lexpand appname);
-use YATT::Lite::XHFTest qw(Item);
-use base qw(YATT::Lite::XHFTest);
 sub MY () {__PACKAGE__}
 require YATT::TestFiles;
 
@@ -56,6 +54,7 @@ MyTest_cgi_1::INST1::ROOT::foo
 BBB
 END
 
+	      , 'BREAK'
 	      , ['foo.ydo', '1st', <<'END', <<'END', $text_html_sjis]
 sub {
   my ($sys, $fh) = @_;
@@ -65,7 +64,6 @@ END
 ok
 END
 
-	      , 'BREAK'
 	      , ['foo.yatt', '2nd', <<END, <<END, $text_html_sjis]
 XXX<yatt:bar/>ZZZ
 <!yatt:widget bar>

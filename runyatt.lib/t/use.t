@@ -2,7 +2,9 @@
 use strict;
 use warnings FATAL => qw(all);
 
+sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
+BEGIN {$FindBin::Bin = untaint_any($FindBin::Bin)}
 use lib "$FindBin::Bin/..";
 
 use Test::More qw(no_plan);
@@ -16,7 +18,9 @@ my %prereq;
 my %ignore; map ++$ignore{$_}, ();
 
 my (%modules, @modules);
-find sub {
+find {
+  no_chdir => 1,
+  wanted => sub {
   my $name = $File::Find::name;
   return unless $name =~ m{\.pm$};
   $name =~ s{^\../}{};
@@ -25,8 +29,8 @@ find sub {
   return if $ignore{$name};
   print "$File::Find::name => $name\n" if $ENV{VERBOSE};
   $modules{$name} = $File::Find::name;
-  push @modules, $name;
-}, '../YATT';
+  push @modules, untaint_any($name);
+}}, untaint_any('../YATT');
 
 sub fgrep {
   my ($pattern, $file) = @_;
