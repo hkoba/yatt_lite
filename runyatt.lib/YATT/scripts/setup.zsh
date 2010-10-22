@@ -225,25 +225,8 @@ if (($is_selinux)); then
 fi
 x ln -vnsf $driver_name.cgi $cgi_bin/$driver_name.fcgi
 
-# Then activate it!
-if [[ -r $destdir/dot.htaccess ]]; then
-    x cp -v $destdir/dot.htaccess $destdir/.htaccess
-    x sed -i -e "s|@DRIVER@|$cgi_loc/$driver_name.cgi|" $destdir/.htaccess
-else
-    mkfile $destdir/.htaccess <<EOF
-Action x-yatt-handler $cgi_loc/$driver_name.cgi
-# Action x-yatt-handler $cgi_loc/$driver_name.fcgi
-AddHandler x-yatt-handler .yatt .ytmpl .ydo
-
-Options -Indexes -Includes -ExecCGI
-DirectoryIndex index.yatt index.html
-
-<Files *.ytmpl>
-deny from all
-</Files>
-EOF
-fi
-
+# Prepare data saving directory.
+# XXX: Should verify *NON* accessibility of this datadir.
 if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
     datadir=${opts[--datadir][2,-1]:-$destdir/data}
     if [[ -d $datadir ]]; then
@@ -256,6 +239,26 @@ if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
     if (($is_selinux)); then
 	x chcon -v -t httpd_sys_script_rw_t $datadir
     fi
+fi
+
+# Then activate it!
+if [[ -r $destdir/dot.htaccess ]]; then
+    x cp -v $destdir/dot.htaccess $destdir/.htaccess
+    x sed -i -e "s|@DRIVER@|$cgi_loc/$driver_name.cgi|" $destdir/.htaccess
+else
+    # Mapping *.ytmpl(private template) to x-yatt-handler is intentional.
+    mkfile $destdir/.htaccess <<EOF
+Action x-yatt-handler $cgi_loc/$driver_name.cgi
+# Action x-yatt-handler $cgi_loc/$driver_name.fcgi
+AddHandler x-yatt-handler .yatt .ytmpl .ydo
+
+Options -Indexes -Includes -ExecCGI
+DirectoryIndex index.yatt index.html
+
+<Files *.ytmpl>
+deny from all
+</Files>
+EOF
 fi
 
 if [[ -z $o_dryrun ]]; then

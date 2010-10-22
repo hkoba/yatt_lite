@@ -2,7 +2,7 @@ package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
-use version; our $VERSION = qv('0.0.2');
+use version; our $VERSION = qv('v0.0.2_1');
 
 #
 # YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。
@@ -23,10 +23,10 @@ use fields qw(YATT
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
 use YATT::Lite::Entities -as_base, qw(Entity *YATT);
-use YATT::Lite::Util qw(globref lexpand extname);
+use YATT::Lite::Util qw(globref lexpand extname ckrequire);
 
 sub Facade () {__PACKAGE__}
-sub default_trans {require YATT::Lite::Core; 'YATT::Lite::Core'}
+sub default_trans {'YATT::Lite::Core'}
 
 sub default_export {(shift->SUPER::default_export, qw(*CON))}
 
@@ -106,6 +106,7 @@ sub get_trans {
 sub build_trans {
   (my MY $self, my ($vfscache, $vfsspec, @rest)) = @_;
   my $class = $self->default_trans;
+  ckrequire($class);
 
   my @vfsspec = @{$vfsspec || $self->{cf_vfs}};
   push @vfsspec, base => $self->{cf_base} if $self->{cf_base};
@@ -147,7 +148,9 @@ foreach
   my $meth = $_;
   *{globref(MY, $meth)} = sub {
     my $pack = shift;
-    my $sub = $pack->default_trans->can($meth);
+    my $trans = $pack->default_trans;
+    ckrequire($trans);
+    my $sub = $trans->can($meth);
     $sub->($pack, @_);
   };
 }

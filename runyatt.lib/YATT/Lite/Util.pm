@@ -10,7 +10,7 @@ require Scalar::Util;
   BEGIN {
     $INC{'YATT/Lite/Util.pm'} = 1;
     our @EXPORT = qw(numLines coalesce default globref symtab lexpand escape
-		     untaint_any ckeval ckdo untaint_unless_tainted
+		     untaint_any ckeval ckrequire ckdo untaint_unless_tainted
 		     dict_sort terse_dump catch
 		   );
     our @EXPORT_OK = (@EXPORT, qw(cached_in split_path rootname dict_order
@@ -83,6 +83,9 @@ require Scalar::Util;
     }
     die $@ if $@;
     wantarray ? @__RESULT__ : $__RESULT__[0];
+  }
+  sub ckrequire {
+    ckeval("require $_[0]");
   }
   sub ckdo {
     my @__RESULT__;

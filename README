@@ -1,4 +1,4 @@
-YATT::Lite version 0.0.1
+YATT::Lite version 0.0.2
 ==================
 
   YATT is Yet Another Template Toolkit, aimed at Web Designers, rather than
@@ -56,7 +56,7 @@ INSTALLATION
     install -m 755 $DIST_DIR/runyatt.cgi .
 
     # Then, map *.yatt to runyatt.cgi, like this:
-    echo AddHandler x-yatt-handler .yatt .ydo .do > .htaccess
+    echo AddHandler x-yatt-handler .yatt .ydo > .htaccess
     echo Action x-yatt-handler $URL/runyatt.cgi >> .htaccess
 
 NON-STANDARD DIRECTORY STRUCTURE
