@@ -66,6 +66,7 @@ require Scalar::Util;
   }
   sub untaint_any { $_[0] =~ m{.*}s; $& }
   our $DEBUG_INJECT_TAINTED = 0;
+  # untaint_unless_tainted($fn, read_file($fn))
   sub untaint_unless_tainted {
     return $_[1] unless ${^TAINT};
     if (defined $_[0] and not Scalar::Util::tainted($_[0])) {

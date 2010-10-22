@@ -39,22 +39,22 @@ use YATT::Lite::Constants;
   sub generate_preamble {
     (my MY $self, my Template $tmpl) = @_;
     $tmpl ||= $self->{curtmpl};
-    my $str = '';
+    my @stats;
     unless ($self->{cf_no_lineinfo}) {
-      $str .= qq{#line }. $self->{curline};
+      my $line = qq{#line }. $self->{curline};
       if (defined(my $fn = ($tmpl->{cf_path} // $tmpl->{cf_name}))) {
 	# cf_name is dummy filename.
-	$str .= qq{ "$fn"};
+	$line .= qq{ "$fn"};
       }
-      $str .= "\n";
+      push @stats, $line .= "\n";
     }
-    $str .= sprintf q{package %s; use strict; use warnings; use 5.010; }
+    push @stats, sprintf q{package %s; use strict; use warnings; use 5.010; }
       , $$tmpl{cf_package};
-    $str .= $self->generate_inheritance($tmpl);
-    $str .= "use utf8; " if $$tmpl{cf_utf8};
-    $str .= q|no warnings qw(redefine); | if $$tmpl{cf_age}++;
+    push @stats, $self->generate_inheritance($tmpl);
+    push @stats, "use utf8; " if $$tmpl{cf_utf8};
+    push @stats, q|no warnings qw(redefine); | if $$tmpl{cf_age}++;
     #$str .= sprintf q|sub name {%s} |, qparen($$tmpl{cf_name} // '');
-    $str;
+    @stats
   }
   sub generate_page {
     # XXX: 本物へ。 public フラグ?

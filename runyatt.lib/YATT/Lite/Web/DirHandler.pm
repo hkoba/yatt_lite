@@ -41,7 +41,9 @@ sub new {
 
 sub handle {
   my MY $self = shift;
-  chdir($self->{cf_dir}) or die "Can't chdir '$self->{cf_dir}': $!";
+  # XXX: 本当は、もっと原点に近いところで untaint したい。
+  chdir(untaint_any($self->{cf_dir}))
+    or die "Can't chdir '$self->{cf_dir}': $!";
   $self->SUPER::handle(@_);
 }
 

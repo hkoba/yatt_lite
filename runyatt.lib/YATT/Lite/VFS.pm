@@ -35,7 +35,7 @@ use Carp;
 		cf_facade cf_package cf_base cf_nsbuilder
 		root extdict n_creates n_updates cf_mark
 		pkg2folder);
-  use YATT::Lite::Util qw(lexpand rootname);
+  use YATT::Lite::Util qw(lexpand rootname untaint_any);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}
   sub new {
@@ -149,11 +149,11 @@ use Carp;
     my $vfsname = "$in->{cf_path}/$partName";
     my @opt = (name => $partName, parent => $in);
     if (my $fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_public})) {
-      $vfs->create(file => $fn, @opt, public => 1);
+      $vfs->create(file => untaint_any($fn), @opt, public => 1);
     } elsif ($fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_private})) {
       # dir の場合、 new_tmplpkg では？
       my $kind = -d $fn ? 'dir' : 'file';
-      $vfs->create($kind => $fn, @opt);
+      $vfs->create($kind => untaint_any($fn), @opt);
     } else {
       undef;
     }

@@ -241,7 +241,7 @@ sub create_file {
 	 , sink => $opts{sink} || sub {
 	   my ($info, @script) = @_;
 	   print @script, "\n" if $self->{cf_debug_cgen};
-	   ckeval(join "", @script);
+	   ckeval(@script);
 	 });
       # 二重生成防止のため、代入自体は ensure_generated の中で行う。
       $cgen->ensure_generated($spec => $tmpl);
