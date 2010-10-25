@@ -229,23 +229,34 @@ YATT::Lite - Yet Another Template Toolkit, Lightweight rewrite.
 
 =head1 SYNOPSIS
 
+  # Minimum case:
   use YATT::Lite;
-  my $yatt = new YATT::Lite(vfs => [data => <<END], package => 'MyApp');
-  <!yatt:args title who="?World">
-  <h2>&yatt:title;</h2>
-  Hello &yatt:who;!
+  my $tmpl = q{
+    <!yatt:args title who="?World">
+    <h2>&yatt:title;</h2>
+    Hello &yatt:who;!
+  
+    <!yatt:widget alter title who="?Space">
+    <div class="title">&yatt:title;</div>
+    <div class="body">
+    Hello &yatt:who;!
+    </div>
+  };
+  my $yatt = new YATT::Lite(vfs => [data => $tmpl], package => "MyApp");
 
-  <!yatt:widget alter title who="?Space">
-  <div class="title">&yatt:title;</div>
-  <div class="body">
-  Hello &yatt:who;!
-  </div>
-  END
-
-  my $result = $yatt->render('', "My First YATT");
-  print $result, "\n";
+  print $yatt->render("", "My First YATT"), "\n";
   # or
-  $yatt->render_into(\*STDOUT, alter => 'My Second YATT');
+  $yatt->render_into(\*STDOUT, alter => "My Second YATT");
+
+  # Multiple template.
+  my $yatt2 = new YATT::Lite(vfs => [data => {foo => "..", bar => ".."}]
+                             , package => "MyApp2");
+  print $yatt2->render(foo => 1,2);
+  print $yatt2->render(bar => 3,4);
+
+  # And filesystem based templating.
+  my $yatt3 = new YATT::Lite(vfs => [file => "my.yatt"], package => "MyApp3");
+  my $yatt4 = new YATT::Lite(vfs => [dir  => "my.ytmpl"], package => "MyApp4");
 
 =head1 DESCRIPTION
 

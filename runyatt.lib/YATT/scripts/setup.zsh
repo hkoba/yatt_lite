@@ -21,9 +21,6 @@ driver_path=$libdir:r
 # runyatt
 driver_name=$driver_path:t
 
-# $checkout_dir
-codir=$libdir:h
-
 #========================================
 # Option parsing
 #========================================

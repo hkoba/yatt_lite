@@ -32,7 +32,7 @@ use YATT::Lite::Breakpoint ();
 		       cf_startln cf_bodyln cf_endln
 		       cf_startpos cf_bodypos cf_bodylen
 		     )]
-      , [Widget => -fields => [qw(tree var_dict)]
+      , [Widget => -fields => [qw(tree var_dict cf_has_required_arg)]
 	 , [Page => ()]]
       , [Action => ()]
       , [Data => ()]]
@@ -291,6 +291,10 @@ sub create_file {
   }
   sub YATT::Lite::Core::Widget::fixup {
     (my Widget $widget, my Template $tmpl, my $parser) = @_;
+    foreach my $argName (@{$widget->{arg_order}}) {
+      $widget->{cf_has_required_arg} = 1
+	if $widget->{arg_dict}{$argName}->is_required;
+    }
     $widget->{arg_dict}{body} ||= do {
       # lineno も入れるべきかも。 $widget->{cf_bodyln} あたり.
       my $var = $parser->mkvar(code => 'body'

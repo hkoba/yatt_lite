@@ -217,9 +217,9 @@ sub drop {
 
 sub add_table {
   (my MY $self, my ($name, $opts, @colpairs)) = @_;
-  $self->{table_dict}{$name} ||= do {
-    push @{$self->{table_list}}
-      , my Table $tab = $self->Table->new(name => $name);
+  unless ($self->{table_dict}{$name}) {
+    my Table $tab = $self->Table->new(name => $name);
+    push @{$self->{table_list}}, $self->{table_dict}{$name} = $tab;
     if (ref $opts eq 'ARRAY') {
       push @{$tab->{relationSpec}}, @$opts;
     } else {
@@ -274,7 +274,7 @@ sub add_table_column {
       if (ref $relSpec) {
 	$self->add_table(@$relSpec);
       } else {
-	$self->{table_dict}{$relSpec} || die "Unknown table $relSpec!";
+	$self->{table_dict}{$relSpec} || croak "Unknown table $relSpec!";
       }
     };
     push @{$tab->{relationSpec}}
@@ -462,7 +462,7 @@ sub run {
       }
     }
   } else {
-    die "No such method $cmd for $pack\n";
+    croak "No such method $cmd for $pack\n";
   }
   $obj->DESTROY; # To make sure committed.
 }
@@ -476,7 +476,7 @@ sub cmd_help {
     \%{$pkg};
   };
   my @methods = sort grep s/^cmd_//, keys %$stash;
-  die "Usage: @{[basename($0)]} method args..\n  "
+  croak "Usage: @{[basename($0)]} method args..\n  "
     . join("\n  ", @methods) . "\n";
 }
 

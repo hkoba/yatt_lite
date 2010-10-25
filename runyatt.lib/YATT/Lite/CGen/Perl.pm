@@ -278,7 +278,8 @@ use YATT::Lite::Constants;
   sub gen_putargs {
     (my MY $self, my Widget $widget, my $node, my $delegate_vars) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);
-    return '' if not $delegate_vars and not $primary and not $body;
+    return '' if not $delegate_vars and not $widget->{cf_has_required_arg}
+      and not $primary and not $body;
     my $wname = join ":", @$path;
     my ($posArgs, $actualNo, @argOrder);
     my $add_arg = sub {
