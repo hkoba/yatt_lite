@@ -10,8 +10,7 @@ sub {
   my $body = $con->param('body')
     or die "Body is empty\n";
 
-  my $fnum = $con->param('fnum')
-    or die "fnum is empty\n";
+  my $fnum = $con->param_type(fnum => integer => "fnum should be integer!");
 
   unless (defined $yatt->{cf_datadir}) {
     die "datadir is undef!\n";

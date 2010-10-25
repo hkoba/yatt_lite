@@ -22,7 +22,7 @@ use fields qw(
 
 
 use YATT::Lite::Entities qw(build_entns);
-use YATT::Lite::Util qw(lexpand globref untaint_any);
+use YATT::Lite::Util qw(lexpand globref);
 
 
 sub after_new {

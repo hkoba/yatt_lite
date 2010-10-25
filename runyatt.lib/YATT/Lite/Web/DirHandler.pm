@@ -11,7 +11,7 @@ use fields qw(cf_dir
 	    );
 
 use Carp;
-use YATT::Lite::Util qw(cached_in ckeval untaint_any
+use YATT::Lite::Util qw(cached_in ckeval
 			dofile_in compile_file_in
 		      );
 use YATT::Lite::XHF;
@@ -41,8 +41,7 @@ sub new {
 
 sub handle {
   my MY $self = shift;
-  # XXX: 本当は、もっと原点に近いところで untaint したい。
-  chdir(untaint_any($self->{cf_dir}))
+  chdir($self->{cf_dir})
     or die "Can't chdir '$self->{cf_dir}': $!";
   $self->SUPER::handle(@_);
 }
@@ -59,13 +58,14 @@ sub handle_ydo {
 # XXX: cached_in 周りは面倒過ぎる。
 # XXX: package per dir で、本当に良いのか?
 sub get_action_handler {
-  (my MY $self, my $path) = @_;
+  (my MY $self, my $filename) = @_;
+  my $path = "$self->{cf_dir}/$filename";
   my $item = $self->cached_in
     ($self->{Action} //= {}, $path, $self, undef, sub {
        # first time.
        my ($self, $sys, $path) = @_;
        my $age = -M $path;
-       my $sub = compile_file_in(ref $self, untaint_any($path));
+       my $sub = compile_file_in(ref $self, $path);
        [$sub, $age];
      }, sub {
        # second time
@@ -76,7 +76,7 @@ sub get_action_handler {
        } elsif ($$item[-1] == $age) {
 	 return;
        } else {
-	 $sub = compile_file_in($self->{cf_package}, untaint_any($path));
+	 $sub = compile_file_in($self->{cf_package}, $path);
        }
        @{$item} = ($sub, $age);
      });

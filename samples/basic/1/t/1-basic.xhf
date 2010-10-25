@@ -32,4 +32,4 @@ FILE: perlerr.yatt
 ERROR: ^Global symbol "\$unknown_var" requires explicit package name at \.?(?:/[^/]+)*/perlerr\.yatt line 4\.
 
 FILE: noncode.ydo
-ERROR: ^file 'noncode\.ydo' should return CODE \(but not\)!
+ERROR: ^file '(?:/[^/]*)*/noncode\.ydo' should return CODE \(but not\)!

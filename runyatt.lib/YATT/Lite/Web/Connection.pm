@@ -4,6 +4,7 @@ use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
 use fields qw(cf_cgi cf_file cf_trailing_path);
 use YATT::Lite::Util qw(globref);
+use Carp;
 
 sub commit {
   my PROP $prop = (my $glob = shift)->prop;
@@ -90,6 +91,39 @@ sub redirect {
   # 念のため, parent_fh は undef しておく
   undef $$prop{cf_parent_fh};
   $glob;
+}
+
+sub param_type {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $name = shift // croak "Undefined name!";
+  my $type = shift // croak "Undefined type!";
+  my $diag = shift;
+  my $pat = ref $type eq 'Regexp' ? $type : do {
+    my $pat_sub = $glob->can("re_$type")
+      or croak "Unknown type: $type";
+    $pat_sub->();
+  };
+
+  my $value = $prop->{cf_cgi}->param($name)
+    // return undef;
+
+  if ($value =~ $pat) {
+    return $&; # Also for taint check.
+  } elsif ($diag) {
+    croak ref $diag eq 'CODE' ? $diag->($value) : $diag;
+  } else {
+    croak "parameter $name is not a type $type!";
+  }
+}
+
+# These should be easily extendable from .htyattrc.pl
+
+sub re_integer {
+  qr{^[1-9]\d*$};
+}
+
+sub re_word {
+  qr{^\w+$};
 }
 
 1;

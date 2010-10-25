@@ -18,7 +18,7 @@ use fields qw(DirHandler Action
 	      cf_debug_cgi
 	    );
 use YATT::Lite::Util qw(cached_in split_path
-			lexpand rootname extname);
+			lexpand rootname extname untaint_any);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
 
@@ -191,7 +191,7 @@ sub run_dirhandler {
   # 結局は機能集約モジュールが欲しくなるから。
   # そのために、 dirhandler は死重を減らすよう、部分毎に delayed load する
 
-  my $dh = $self->get_dirhandler($dir);
+  my $dh = $self->get_dirhandler(untaint_any($dir));
   # XXX: cache のキーは相対パスか、絶対パスか?
 
   $dh->handle($dh->trim_ext($file), $con, $file, @rest);

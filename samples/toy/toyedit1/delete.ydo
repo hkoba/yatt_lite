@@ -6,8 +6,7 @@ sub {
   my MY $yatt = $this->YATT;
 
   unless ($con->param('!cancel')) {
-    my $fnum = $con->param('fnum')
-      or die "fnum is empty\n";
+    my $fnum = $con->param_type(fnum => integer => "fnum should be integer!");
 
     # XXX: This can loose old content!
     unlink "$yatt->{cf_datadir}/.ht_$fnum"

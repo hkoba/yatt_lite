@@ -1,5 +1,5 @@
+#!/usr/bin/perl -wT
 #!/usr/bin/perl -w
-##!/usr/bin/perl -wT
 package main; # For do 'runyatt.cgi'.
 use strict;
 use warnings FATAL => qw(all);

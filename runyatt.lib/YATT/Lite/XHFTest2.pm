@@ -21,6 +21,8 @@ use Test::Differences;
 use File::Basename;
 use List::Util qw(sum);
 
+use YATT::Lite::Util qw(untaint_any);
+
 push @EXPORT, qw(plan is is_deeply like eq_or_diff sum);
 
 sub load_tests {
@@ -114,7 +116,7 @@ sub load_file {
 sub action_remove {
   my Tests $tests = shift;
   my @files = glob(shift);
-  unlink @files if @files;
+  unlink map {untaint_any($_)} @files if @files;
 }
 
 #========================================

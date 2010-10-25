@@ -6,6 +6,8 @@ function die { echo 1>&2 $*; return 1 }
 
 setopt extendedglob
 
+# XXX: Only work for current directory.
+
 files=(
     cgi-bin/runyatt.*(@N)
     cgi-bin/runyatt.cgi

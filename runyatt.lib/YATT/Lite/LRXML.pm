@@ -27,7 +27,8 @@ use fields qw(re_decl
 use YATT::Lite::Core qw(Part Widget Page Action Data Template);
 use YATT::Lite::VarTypes;
 use YATT::Lite::Constants;
-use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand);
+use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand
+			untaint_any);
 require Scalar::Util;
 require Encode;
 use Carp;
@@ -195,7 +196,8 @@ sub parse_decl {
   } continue {
     $self->{startpos} = $self->{curpos};
   }
-  push @{$part->{toks}}, nonmatched($str);
+  push @{$part->{toks}}, # map {defined $_ ? untaint_any($_) : ()}
+	 nonmatched($str);
   # widget->{cf_endln} は, (視覚上の最後の行)より一つ先の行を指す。(末尾の改行を数える分,多い)
   $part->{cf_endln} = $self->{endln} += numLines($str);
   # $default が partlist に足されてなかったら、先頭に足す... 逆か。
@@ -599,6 +601,9 @@ sub _parse_hash;
 sub DESTROY {}
 
 sub AUTOLOAD {
+  unless (ref $_[0]) {
+    confess "BUG! \$self isn't object!";
+  }
   my $sub = our $AUTOLOAD;
   (my $meth = $sub) =~ s/.*:://;
   my $sym = $YATT::Lite::LRXML::{$meth}
