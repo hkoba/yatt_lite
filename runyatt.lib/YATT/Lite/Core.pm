@@ -32,9 +32,10 @@ use YATT::Lite::Breakpoint ();
 		       cf_startln cf_bodyln cf_endln
 		       cf_startpos cf_bodypos cf_bodylen
 		     )]
-      , [Widget => -fields => [qw(tree var_dict cf_has_required_arg)]
-	 , [Page => ()]]
-      , [Action => ()]
+      , -constants => [[public => 0]]
+      , [Widget => -fields => [qw(tree var_dict has_required_arg)]
+	 , [Page => (), -constants => [[public => 1]]]]
+      , [Action => (), -constants => [[public => 1]]]
       , [Data => ()]]
 
      , [Template => -base => MY->File
@@ -188,21 +189,46 @@ sub create_file {
     wantarray ? ($part, $tmpl) : $part;
   }
 
+  # part を保持する template を取り出す。
+  sub find_template_for_part {
+    (my MY $self, my $name) = @_;
+    if (UNIVERSAL::isa($self->{root}, Template)) {
+      $self->{root};
+    } else {
+      $self->find_file($name)
+    }
+  }
+
   sub find_part_handler {
-    (my MY $self, my $name, my %opts) = @_;
-    # my ($method, $name) = @$name;
+    (my MY $self, my $nameSpec, my %opts) = @_;
     my $ignore_error = delete $opts{ignore_error};
-    (my Part $part, my Template $tmpl)
-      = $self->get_part($name, ignore_error => $ignore_error)
-	or ($ignore_error and return)
-	  or croak "Can't find template file: $name";
+    my ($partName, $subPage, $action) = ref $nameSpec ? @$nameSpec : $nameSpec;
+    $subPage //= '';
+
+    my ($itemKey, $method) = do {
+      if (defined $action) {
+	("do_$action") x 2;
+      } else {
+	($subPage, "render_$subPage");
+      }
+    };
+
+    my Template $tmpl = $self->find_template_for_part($partName)
+      or ($ignore_error and return)
+	or croak "No such template file: $partName";
+
+    my Part $part = $tmpl->{Item}{$itemKey}
+      or ($ignore_error and return)
+	or croak "No such item in file $partName: $itemKey";
+
     my $pkg = $self->find_product(perl => $tmpl)
       or ($ignore_error and return)
-	or croak "Can't compile template file: $name";
-    # $name ではなく、 $part->{cf_name} にするのは、 render_'' のため、だったはず。
-    my $sub = $pkg->can("render_$part->{cf_name}")
+	or croak "Can't compile template file: $partName";
+
+    my $sub = $pkg->can($method)
       or ($ignore_error and return)
-	or croak "Can't extract renderer from file: $name";
+	or croak "Can't extract $method from file: $partName";
+
     ($part, $sub, $pkg);
   }
 
@@ -292,7 +318,7 @@ sub create_file {
   sub YATT::Lite::Core::Widget::fixup {
     (my Widget $widget, my Template $tmpl, my $parser) = @_;
     foreach my $argName (@{$widget->{arg_order}}) {
-      $widget->{cf_has_required_arg} = 1
+      $widget->{has_required_arg} = 1
 	if $widget->{arg_dict}{$argName}->is_required;
     }
     $widget->{arg_dict}{body} ||= do {

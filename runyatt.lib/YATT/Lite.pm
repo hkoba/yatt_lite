@@ -1,6 +1,7 @@
 package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+use 5.010;
 use Carp;
 use version; our $VERSION = qv('v0.0.2_2');
 
@@ -23,7 +24,7 @@ use fields qw(YATT
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
 use YATT::Lite::Entities -as_base, qw(Entity *YATT);
-use YATT::Lite::Util qw(globref lexpand extname ckrequire);
+use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump);
 
 sub Facade () {__PACKAGE__}
 sub default_trans {'YATT::Lite::Core'}
@@ -63,15 +64,64 @@ sub find_handler {
   $sub;
 }
 
+sub map_request {
+  (my MY $self, my ($con, $file)) = @_;
+  my ($subpage, $action);
+  # XXX: url_param
+  foreach my $name (grep {defined} $con->param()) {
+    my ($sigil, $word) = $name =~ /^([\@!])(\w*)$/
+      or next;
+    my $new = length($word) ? $word : $con->param($sigil);
+    given ($sigil) {
+      when ('@') {
+	if (defined $subpage) {
+	  $self->error("Duplicate subpage request! %s vs %s"
+		       , $subpage, $new);
+	}
+	$subpage = $new;
+      }
+      when ('!') {
+	if (defined $action) {
+	  $self->error("Duplicate action! %s vs %s"
+		       , $action, $new);
+	}
+	$action = $new;
+      }
+      default {
+	croak "Really?";
+      }
+    }
+  }
+  if (defined $subpage and defined $action) {
+    # XXX: Reserved for future use.
+    $self->error("Can't use subpage and action at one time: %s vs %s"
+		 , $subpage, $action);
+  } elsif (defined $subpage) {
+    [$file, $subpage];
+  } elsif (defined $action) {
+    [$file, undef, $action];
+  } else {
+    $file;
+  }
+}
+
 # 直接呼ぶことは禁止すべきではないか。∵ $YATT, $CON を設定するのは handle の役目だから。
 sub handle_yatt {
   (my MY $self, my ($con, $file)) = @_;
   my $trans = $self->open_trans;
 
+  my $mapped = $self->map_request($con, $file);
+  # $self->dump(@mapped, [$con->param]);
+
   # XXX: public に限定するのはどこで？ ここで？それとも find_自体？
-  my ($part, $sub, $pkg) = $trans->find_part_handler($file);
+  my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);
+  unless ($part->public) {
+    croak $self->error(q|Forbidden request '%s'|, terse_dump($mapped));
+  }
   # XXX: 未知引数エラーがあったら？
-  $sub->($pkg, $con, $part->reorder_cgi_params($con));
+  $sub->($pkg, $con, $part->isa($trans->Action)
+	 ? ()
+	 : $part->reorder_cgi_params($con));
   $con;
 }
 
@@ -204,6 +254,11 @@ sub DONE {
   } else {
     exit @_;
   }
+}
+
+sub dump {
+  my MY $self = shift;
+  die terse_dump(@_);
 }
 
 #========================================

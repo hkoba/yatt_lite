@@ -90,7 +90,7 @@ use YATT::Lite::Constants;
     my $has_nl = $src =~ s/\r?\n\Z//;
     $self->{curline} = $action->{cf_bodyln} + numLines($src)
       + ($has_nl ? 1 : 0);
-    sprintf "sub action_%s {%s}\n"
+    sprintf "sub %s {%s}\n"
       , $action->{cf_name}, $src;
   }
   #========================================
@@ -278,7 +278,7 @@ use YATT::Lite::Constants;
   sub gen_putargs {
     (my MY $self, my Widget $widget, my $node, my $delegate_vars) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);
-    return '' if not $delegate_vars and not $widget->{cf_has_required_arg}
+    return '' if not $delegate_vars and not $widget->{has_required_arg}
       and not $primary and not $body;
     my $wname = join ":", @$path;
     my ($posArgs, $actualNo, @argOrder);

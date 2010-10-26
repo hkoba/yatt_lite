@@ -31,7 +31,7 @@ sub flush {
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
-  foreach my $name (qw(param request_method header)) {
+  foreach my $name (qw(param url_param request_method header)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
       $prop->{cf_cgi}->$name(@_);

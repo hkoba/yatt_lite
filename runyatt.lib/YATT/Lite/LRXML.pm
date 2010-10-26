@@ -33,7 +33,15 @@ require Encode;
 use Carp;
 
 #========================================
-sub default_part {'widget'}
+sub default_public_part {'page'}
+sub default_private_part {'widget'}
+sub default_part_for {
+  (my MY $self, my Template $tmpl) = @_;
+  $tmpl->{cf_public}
+    ? $self->default_public_part
+      : $self->default_private_part;
+}
+
 #========================================
 sub after_new {
   my MY $self = shift;
@@ -124,6 +132,7 @@ sub update_posinfo {
   # $self->{curpos} = $self->{total} - length $_[0];
   $self->{startpos} = $self->{curpos} if $sync;
 }
+
 sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
   break_parser();
@@ -134,7 +143,8 @@ sub parse_decl {
   $tmpl->{cf_utf8} = Encode::is_utf8($str);
   $self->{startln} = $self->{endln} = 1;
   $self->add_part($tmpl, my Part $part = $self->build
-		  ($self->primary_ns, $self->default_part, '', implicit => 1
+		  ($self->primary_ns, $self->default_part_for($tmpl)
+		   , '', implicit => 1
 		   , startpos => 0, bodypos => 0));
   ($self->{startpos}, $self->{curpos}, my $total) = (0, 0, length $str);
   while ($str =~ s{^(.*?)($$self{re_decl})}{}s) {
@@ -364,7 +374,11 @@ sub build {
 # 今度はこっちが今一ね。
 sub build_widget { shift->Widget->new(@_) }
 sub build_page { shift->Page->new(@_) }
-sub build_action { shift->Action->new(@_) }
+sub build_action {
+  (my MY $self, my (%opts)) = @_;
+  $opts{name} = "do_$opts{name}";
+  $self->Action->new(%opts);
+}
 sub build_data { shift->Data->new(@_) }
 #========================================
 # declare
@@ -391,7 +405,7 @@ sub declare_args {
       shift @{$tmpl->{partlist}}; # == $oldpart
     } else {
       $oldpart->{cf_suppressed} = 1; # 途中なら、古いものを隠して、新たに作り直し。
-      $self->build($ns, $self->default_part, ''
+      $self->build($ns, $self->default_part_for($tmpl), ''
 		   , startln => $self->{startln});
     }
   };
