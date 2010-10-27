@@ -22,12 +22,13 @@ use fields (qw(table_list table_dict dbtype cf_DBH
 	     ));
 
 use YATT::Lite::Types
-  ([Item => -fields => [qw(cf_name)]
-   , [Table => -fields => [qw(pk chk_unique
-			      chk_index chk_check colNames
+  ([Item => fields => [qw(cf_name)]
+    , [Table => fields => [qw(pk chk_unique
+			      chk_index chk_check
+			      col_list col_dict
 			      relationSpec
-			      Column)]]
-   , [Column => -fields => [qw(cf_type
+			      reference_dict)]]
+    , [Column => fields => [qw(cf_type
 			       cf_hidden
 			       cf_unique
 			       cf_indexed
@@ -35,7 +36,7 @@ use YATT::Lite::Types
 			       cf_autoincrement
 			     )]]]);
 
-use YATT::Lite::Util qw(coalesce globref ckeval);
+use YATT::Lite::Util qw(coalesce globref ckeval terse_dump);
 
 #========================================
 # Class Hierarchy in case of 'package YourSchema; use YATT::Lite::DBSchema':
@@ -215,47 +216,124 @@ sub drop {
 
 #========================================
 
-sub add_table {
-  (my MY $self, my ($name, $opts, @colpairs)) = @_;
-  unless ($self->{table_dict}{$name}) {
-    my Table $tab = $self->Table->new(name => $name);
-    push @{$self->{table_list}}, $self->{table_dict}{$name} = $tab;
-    if (ref $opts eq 'ARRAY') {
-      push @{$tab->{relationSpec}}, @$opts;
-    } else {
-      # XXX HASH option だったら？
-    }
-    while (@colpairs) {
-      # colName => [colSpec]
-      # [check => args]
-      unless (ref $colpairs[0]) {
-	my ($col, $desc) = splice @colpairs, 0, 2;
-	if (defined $col) {
-	  $self->add_table_column($tab, $col, ref $desc ? @$desc : $desc);
-	} else {
-	  # XXX: column 一つに絞れない relationship の宣言。
-	}
-      } else {
-	my $spec = shift @colpairs;
-	# XXX: [unique => k1, k2..]
-      }
-    }
-    $tab;
-  };
+sub list_items {
+  (my MY $self, my $opts, my $itemlist) = @_;
+  if ($opts->{raw}) {
+    @$itemlist
+  } else {
+    map {(my Item $item = $_)->{cf_name}} @$itemlist
+  }
 }
 
-sub hyphen2bool {
-  map {/^-(\w+)$/ ? ($1 => 1) : $_} @_;
+sub list_tables {
+  (my MY $self, my %opts) = @_;
+  $self->list_items(\%opts, $self->{table_list});
+}
+
+sub list_relations {
+  (my MY $self, my ($tabName, %opts)) = @_;
+  my Table $tab = $self->{table_dict}{$tabName}
+    or return;
+  if ($opts{raw}) {
+    @{$tab->{relationSpec}}
+  } else {
+    map {
+      (my ($relType, $relName, $fkName), my Table $subTab) = @$_;
+      $fkName //= do {
+	if (my Column $pk = $subTab->{pk} || $tab->{pk}) {
+	  $pk->{cf_name};
+	}
+      };
+      [$relType, $relName, $fkName, $subTab->{cf_name}];
+    } @{$tab->{relationSpec}};
+  }
+}
+
+sub list_table_columns {
+  (my MY $self, my ($tabName, %opts)) = @_;
+  my Table $tab = $self->{table_dict}{$tabName}
+    or return;
+  $self->list_items(\%opts, $tab->{col_list});
+}
+
+sub info_table {
+  (my MY $self, my $name) = @_;
+  $self->{table_dict}{$name};
+}
+
+sub add_table {
+  (my MY $self, my ($name, $opts, @colpairs)) = @_;
+  if ($self->{table_dict}{$name}) {
+    croak "Duplicate definition of table $name";
+  }
+  my Table $tab = $self->Table->new(name => $name, lhexpand($opts));
+  push @{$self->{table_list}}, $self->{table_dict}{$name} = $tab;
+  while (@colpairs) {
+    # colName => [colSpec]
+    # [check => args]
+    unless (ref $colpairs[0]) {
+      my ($col, $desc) = splice @colpairs, 0, 2;
+      $self->add_table_column($tab, $col, ref $desc ? @$desc : $desc);
+    } else {
+      my ($method, @args) = @{shift @colpairs};
+      $method =~ s/^-//;
+      # XXX: [has_many => @tables]
+      # XXX: [unique => k1, k2..]
+      if (my ($relType, @relSpec) = $self->known_rels($method)) {
+	$self->add_table_relation($tab, $relType => \@relSpec, @args);
+      } else {
+	my $sub = $self->can("add_table_$method")
+	  or croak "Unknown table option '$method' for table $name";
+	$sub->($self, $tab, @args);
+      }
+    }
+  }
+
+  $tab;
+}
+
+# -opt は引数無フラグ、又は [-opt, ...] として可変長オプションに使う
+sub add_table_relation {
+  (my MY $self, my Table $tab, my ($relType, $relSpec, @subTabs)) = @_;
+  foreach my $item (@subTabs) {
+    unless (defined $item) {
+      croak "Undefined relation spec for table $tab->{cf_name}";
+    }
+    my ($relName, $fkName) = @$relSpec;
+    my Table $subTab = ref $item ? $self->add_table(@$item)
+      : $self->info_table($item);
+    $relName //= lc($subTab->{cf_name});
+    $fkName //= $subTab->{reference_dict}{$tab->{cf_name}};
+    push @{$tab->{relationSpec}}
+      , [$relType => $relName, $fkName, $subTab];
+    $self->add_table_backrel($tab, $relType, $subTab);
+ }
+}
+
+sub add_table_backrel {
+  (my MY $self, my Table $tab, my $relType, my Table $subTab) = @_;
+  my $sub = $self->can("backrel_of_$relType")
+    or return;
+  my $backRefColName = $subTab->{reference_dict}{$tab->{cf_name}}
+    or croak "No backref col from $subTab->{cf_name} to $tab->{cf_name}";
+  $sub->($self, $tab, $subTab->{col_dict}{$backRefColName}, $subTab);
 }
 
 sub add_table_column {
   (my MY $self, my Table $tab, my ($colName, $type)) = splice @_, 0, 4;
-  if ($tab->{colNames}{$colName}) {
+  if ($tab->{col_dict}{$colName}) {
     croak "Conflicting column name $colName for table $tab->{cf_name}";
+  }
+  if (ref $type) {
+    my Table $refTab = $self->info_table(my $refTabName = $type->[0]);
+    $tab->{reference_dict}{$refTabName} = $colName;
+    $type = (my Column $pk = $refTab->{pk})->{cf_type};
   }
   my ($colPkg, @opt, @rels) = $self->Column;
   while (@_) {
-    if ((my $key = shift) =~ /^-/) {
+    unless (defined (my $key = shift)) {
+      croak "Undefined colum spec for $tab->{cf_name}.$colName";
+    } elsif ($key =~ /^-/) {
       push @opt, $key => 1;
     } elsif (my ($relType, $relName, $fkName) = $self->known_rels($key)) {
       push @rels, [$relType, $relName, $fkName, shift]
@@ -263,7 +341,7 @@ sub add_table_column {
       push @opt, $key, shift;
     }
   }
-  push @{$tab->{Column}}, ($tab->{colNames}{$colName})
+  push @{$tab->{col_list}}, ($tab->{col_dict}{$colName})
     = (my Column $col) = $colPkg->new(@opt, name => $colName, type => $type);
 
   $tab->{pk} = $col if $col->{cf_primary_key};
@@ -278,11 +356,10 @@ sub add_table_column {
       }
     };
     push @{$tab->{relationSpec}}
-      , [$relType, $relName || $subTab->{cf_name}, $fkName, $subTab];
-    # XXX: belongs_to の自動設定は？
-    if (my $sub = $self->can("backrel_of_$relType")) {
-      $sub->($self, $tab, $col, $subTab)
-    }
+      , [$relType, $relName || $subTab->{cf_name}
+	 , $fkName // $col->{cf_name}
+	 , $subTab];
+    $self->add_table_backrel($tab, $relType, $subTab);
   }
   # XXX: Validation: name/option conflicts and others.
   $col;
@@ -294,7 +371,7 @@ sub backrel_of_has_one {shift->backrel_of_own(@_)}
 sub backrel_of_own {
   (my MY $self, my Table $owner, my Column $col, my Table $subTab) = @_;
   push @{$subTab->{relationSpec}}
-    , [belongs_to => $owner->{cf_name}, $col->{cf_name}, $owner];
+    , [belongs_to => lc($owner->{cf_name}), $col->{cf_name}, $owner];
 }
 
 {
@@ -321,7 +398,7 @@ sub sql_create_table {
   my $dbtype = $opts->{dbtype} || $schema->default_dbtype;
   my $sub = $schema->can($dbtype.'_sql_create_column')
     || $schema->can('sql_create_column');
-  foreach my Column $col (@{$tab->{Column}}) {
+  foreach my Column $col (@{$tab->{col_list}}) {
     push @cols, $sub->($schema, $tab, $col, $opts);
     push @indices, $col if $col->{cf_indexed};
   }
@@ -488,6 +565,13 @@ sub ymd_hms {
     $as_utc ? gmtime($_) : localtime($_)
   } $time;
   sprintf q{%04d-%02d-%02d %02d:%02d:%02d}, 1900+$y, $m+1, $d, $H, $M, $S;
+}
+
+sub lhexpand {
+  return unless defined $_[0];
+  ref $_[0] eq 'HASH' ? %{$_[0]}
+    : ref $_[0] eq 'ARRAY' ? @{$_[0]}
+      : croak "Invalid option: $_[0]";
 }
 
 1;

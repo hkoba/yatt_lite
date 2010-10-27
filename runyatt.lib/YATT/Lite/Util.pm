@@ -198,7 +198,7 @@ sub dofile_in {
   } elsif (not -r _) {
     croak "Can't read file: $file\n";
   }
-  ckeval("package $pkg; do '$file' or die \$\@");
+  ckeval("package $pkg; my \$result = do '$file'; die \$\@ if \$\@; \$result");
 }
 
 sub compile_file_in {
