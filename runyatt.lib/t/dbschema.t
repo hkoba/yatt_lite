@@ -25,14 +25,15 @@ my $DBNAME = shift || ':memory:';
 
 my @schema1
   = [Author => undef
-     , author_id => [int => -primary_key, -autoincrement
-		     , ['has_many:books:author_id'
-			=> [Book => undef
-			    , book_id => [int => -primary_key, -autoincrement]
-			    , author_id => [int => -indexed
-					    , [belongs_to => 'Author']]
-			    , name => 'text']]]
-     , name => 'text'];
+	, author_id => [int => -primary_key, -autoincrement
+			, ['has_many:books:author_id'
+			   => [Book => undef
+			       , book_id => [int => -primary_key
+					     , -autoincrement]
+			       , author_id => [int => -indexed
+					       , [belongs_to => 'Author']]
+			       , name => 'text']]]
+	, name => 'text'];
 
 {
   my $THEME = "[schema only]";

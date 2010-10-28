@@ -25,11 +25,12 @@ my $DBNAME = shift || ':memory:';
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [Author => undef
 	, author_id => [int => -primary_key, -autoincrement
-			, ['has_many:books'
+			, ['has_many:books:author_id'
 			   => [Book => undef
 			       , book_id => [int => -primary_key
 					     , -autoincrement]
-			       , author_id => [['Author'] => -indexed]
+			       , author_id => [int => -indexed
+					       , [belongs_to => 'Author']]
 			       , name => 'text']]]
 	, name => 'text']);
 

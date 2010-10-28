@@ -327,12 +327,15 @@ sub add_table_column {
   if (ref $type) {
     my Table $refTab = $self->get_table(@$type);
     my Column $pk = $refTab->{pk};
+    confess "PK is undef in $refTab->{cf_name}" unless $pk;
 
     $tab->{reference_dict}{$refTab->{cf_name}} = $colName;
     my $relName = $colName;
     $relName =~ s/_id$// or $relName = lc($refTab->{cf_name});
     my $fkName = $pk->{cf_name};
     $type = $pk->{cf_type};
+    confess "Can't determine encoder type $refTab->{cf_name}.$pk->{cf_name}"
+      unless $type;
 
     push @{$tab->{relationSpec}}
       , [belongs_to => $relName, $fkName, $refTab];
@@ -366,9 +369,11 @@ sub add_table_column {
   push @{$tab->{col_list}}, ($tab->{col_dict}{$colName})
     = (my Column $col) = $self->Column->new
       (@opt, name => $colName, type => $type);
-  $self->add_table_relation($tab, @$_) for @early_rels;
-
+  Carp::cluck "Column type $tab->{cf_name}.$colName is undef"
+      unless defined $type;
   $tab->{pk} = $col if $col->{cf_primary_key};
+
+  $self->add_table_relation($tab, @$_) for @early_rels;
 
   foreach my $rels (@rels) {
     my ($relType, $relName, $fkName, $relSpec) = @$rels;
