@@ -25,11 +25,12 @@ my $DBNAME = shift || ':memory:';
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [Author => undef
 	, author_id => [int => -primary_key, -autoincrement
-			, 'has_many:books'
-			=> [Book => undef
-			    , book_id => [int => -primary_key, -autoincrement]
-			    , author_id => [['Author'] => -indexed]
-			    , name => 'text']]
+			, ['has_many:books'
+			   => [Book => undef
+			       , book_id => [int => -primary_key
+					     , -autoincrement]
+			       , author_id => [['Author'] => -indexed]
+			       , name => 'text']]]
 	, name => 'text']);
 
 # -- MyDB1::Result::Author->has_many(books, MyDB1::Result::Book, author_id)
@@ -86,15 +87,16 @@ my $DBNAME = shift || ':memory:';
 	, [-has_many
 	   , [Address => undef
 	    , addrid => [integer => -primary_key]
-	    , owner =>  [['User']] # backref
+	    , owner =>  [int => [belongs_to => 'User', 'owner']]
 	    , country => 'text'
 	    , zip => 'text'
 	    , prefecture => 'text'
 	    , city => 'text'
-	    , address => 'text']
+	    , address => 'text']]
+	, [-has_many
 	   , [Entry => undef
 	      , eid => [integer => -primary_key]
-	      , owner => [['User']] # backref
+	      , owner => [int => [belongs_to => 'User', 'owner']]
 	      , title => 'text'
 	      , text  => 'text']]
        ]);

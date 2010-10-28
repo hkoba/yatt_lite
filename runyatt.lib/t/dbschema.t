@@ -9,6 +9,8 @@ sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use lib untaint_any("$FindBin::Bin/..");
 
+use YATT::Lite::Util qw(terse_dump);
+
 foreach my $req (qw(DBD::SQLite SQL::Abstract)) {
   unless (eval qq{require $req}) {
     plan skip_all => "$req is not installed."; exit;
@@ -24,11 +26,12 @@ my $DBNAME = shift || ':memory:';
 my @schema1
   = [Author => undef
      , author_id => [int => -primary_key, -autoincrement
-		     , 'has_many:books'
-		     => [Book => undef
-			 , book_id => [int => -primary_key, -autoincrement]
-			 , author_id => [['Author'] => -indexed]
-			 , name => 'text']]
+		     , ['has_many:books:author_id'
+			=> [Book => undef
+			    , book_id => [int => -primary_key, -autoincrement]
+			    , author_id => [int => -indexed
+					    , [belongs_to => 'Author']]
+			    , name => 'text']]]
      , name => 'text'];
 
 {
@@ -108,8 +111,10 @@ END
       , name => 'text'
       , [has_many => [Book => undef
 		      , book_id => [int => -primary_key, -autoincrement]
-		      , author_id => [['Author'] => -indexed]
-		      , name => 'text']]
+		      , author_id => [int => -indexed
+				     , [belongs_to => 'Author']]
+		      , name => 'text']
+	, 'author_id', {join_type => 'left'}]
      ]);
 
   is_deeply [$schema->list_tables], [qw(Author Book)]
@@ -133,4 +138,66 @@ END
   is_deeply [$schema->list_relations('Book')]
     , [[belongs_to => 'author', author_id => 'Author']]
       , "$THEME relations: Book belongs_to Author";
+}
+
+{
+  my $THEME = "[Encoded relation]";
+  my $schema = $CLASS->new
+    ([Book => undef
+      , book_id => [int => -primary_key, -autoincrement]
+      , author_id => [[Author => undef
+		       , author_id => [int => -primary_key, -autoincrement]
+		       , name => 'text']]
+      , name => 'text']
+     );
+
+  is_deeply [$schema->list_tables], [qw(Book Author)]
+    , "$THEME list_tables";
+
+  is_deeply [map {ref $_} $schema->list_tables(raw => 1)]
+    , [("${CLASS}::Table") x 2]
+      , "$THEME list_tables raw=>1";
+
+  is ref $schema->info_table('Author'), "${CLASS}::Table"
+    , "$THEME info_table Author";
+
+  is_deeply [map {[$_, $schema->list_table_columns($_)]} $schema->list_tables]
+    , [[Book => qw(book_id author_id name)], [Author => qw(author_id name)]]
+      , "$THEME list_table_columns";
+
+  is_deeply [$schema->list_relations('Author')]
+    , [[has_many => 'book', author_id => 'Book']]
+      , "$THEME relations: Author has_many Book";
+
+  is_deeply [$schema->list_relations('Book')]
+    , [[belongs_to => 'author', author_id => 'Author']]
+      , "$THEME relations: Book belongs_to Author";
+}
+
+{
+  my $THEME = "[Misc]";
+  my $schema = $CLASS->new
+    ([Account => undef
+      , aid => [int => -primary_key, -autoincrement]
+      , aname => [text => -unique]
+      , atype => [text => -indexed]]
+     # XXX: Enum(Asset, Liability, Income, Expense)
+
+     , [Description => undef
+	, did => [int => -primary_key, -autoincrement]
+	, dname => [text => -unique]]
+
+     , [Transaction => undef
+	, tid => [int => -primary_key, -autoincrement]
+	, at =>  [date => -indexed]
+	, debit_id => [['Account']]
+	, amt => 'int'
+	, credit_id => [['Account']]
+	, desc => [['Description'], -indexed]
+	, note => 'text'
+       ]);
+
+  # print join("", map {chomp;"$_;\n"} $schema->sql_create), "\n";
+  print terse_dump($schema->list_relations('Transaction')), "\n";
+  print terse_dump($schema->list_relations('Account')), "\n";
 }

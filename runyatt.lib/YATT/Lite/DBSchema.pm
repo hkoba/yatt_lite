@@ -63,7 +63,7 @@ sub new {
   my MY $self = $pack->SUPER::new(%opts);
   foreach my $item (@_) {
     if (ref $item) {
-      $self->add_table(@$item);
+      $self->get_table(@$item);
     } else {
       croak "Invalid schema item: $item";
     }
@@ -261,7 +261,8 @@ sub info_table {
   $self->{table_dict}{$name};
 }
 
-sub add_table {
+sub get_table {
+  return shift->info_table(@_) if @_ == 2;
   (my MY $self, my ($name, $opts, @colpairs)) = @_;
   if ($self->{table_dict}{$name}) {
     croak "Duplicate definition of table $name";
@@ -294,20 +295,18 @@ sub add_table {
 
 # -opt は引数無フラグ、又は [-opt, ...] として可変長オプションに使う
 sub add_table_relation {
-  (my MY $self, my Table $tab, my ($relType, $relSpec, @subTabs)) = @_;
-  foreach my $item (@subTabs) {
-    unless (defined $item) {
-      croak "Undefined relation spec for table $tab->{cf_name}";
-    }
-    my ($relName, $fkName) = @$relSpec;
-    my Table $subTab = ref $item ? $self->add_table(@$item)
-      : $self->info_table($item);
-    $relName //= lc($subTab->{cf_name});
-    $fkName //= $subTab->{reference_dict}{$tab->{cf_name}};
-    push @{$tab->{relationSpec}}
-      , [$relType => $relName, $fkName, $subTab];
-    $self->add_table_backrel($tab, $relType, $subTab);
- }
+  (my MY $self, my Table $tab
+   , my ($relType, $relSpec, $item, $fkName, $atts)) = @_;
+  unless (defined $item) {
+    croak "Undefined relation spec for table $tab->{cf_name}";
+  }
+  my Table $subTab = ref $item ? $self->get_table(@$item)
+    : $self->info_table($item);
+  my $relName = $relSpec->[0] // lc($subTab->{cf_name});
+  $fkName //= $relSpec->[1] // $subTab->{reference_dict}{$tab->{cf_name}};
+  push @{$tab->{relationSpec}}
+    , [$relType => $relName, $fkName, $subTab];
+  # $self->add_table_backrel($tab, $relType, $subTab);
 }
 
 sub add_table_backrel {
@@ -315,34 +314,59 @@ sub add_table_backrel {
   my $sub = $self->can("backrel_of_$relType")
     or return;
   my $backRefColName = $subTab->{reference_dict}{$tab->{cf_name}}
-    or croak "No backref col from $subTab->{cf_name} to $tab->{cf_name}";
+    or return;
   $sub->($self, $tab, $subTab->{col_dict}{$backRefColName}, $subTab);
 }
 
 sub add_table_column {
-  (my MY $self, my Table $tab, my ($colName, $type)) = splice @_, 0, 4;
+  (my MY $self, my Table $tab, my ($colName, $type, @colSpec)) = @_;
   if ($tab->{col_dict}{$colName}) {
     croak "Conflicting column name $colName for table $tab->{cf_name}";
   }
+  # $tab.$colName is encoded by $refTab.pk
   if (ref $type) {
-    my Table $refTab = $self->info_table(my $refTabName = $type->[0]);
-    $tab->{reference_dict}{$refTabName} = $colName;
-    $type = (my Column $pk = $refTab->{pk})->{cf_type};
+    my Table $refTab = $self->get_table(@$type);
+    my Column $pk = $refTab->{pk};
+
+    $tab->{reference_dict}{$refTab->{cf_name}} = $colName;
+    my $relName = $colName;
+    $relName =~ s/_id$// or $relName = lc($refTab->{cf_name});
+    my $fkName = $pk->{cf_name};
+    $type = $pk->{cf_type};
+
+    push @{$tab->{relationSpec}}
+      , [belongs_to => $relName, $fkName, $refTab];
+
+    push @{$refTab->{relationSpec}}
+      , [has_many => lc($tab->{cf_name}), $colName, $tab];
   }
-  my ($colPkg, @opt, @rels) = $self->Column;
-  while (@_) {
-    unless (defined (my $key = shift)) {
+  my (@opt, @early_rels, @rels);
+  while (@colSpec) {
+    unless (defined (my $key = shift @colSpec)) {
       croak "Undefined colum spec for $tab->{cf_name}.$colName";
+    } elsif (ref $key) {
+      my ($method, @args) = @$key;
+      $method =~ s/^-//;
+      # XXX: [has_many => @tables]
+      # XXX: [unique => k1, k2..]
+      if (my ($relType, @relSpec) = $self->known_rels($method)) {
+	push @early_rels, [$relType => \@relSpec, @args];
+	# $self->add_table_relation($tab, $relType => \@relSpec, @args);
+      } else {
+	croak "Unknown method $method";
+      }
     } elsif ($key =~ /^-/) {
       push @opt, $key => 1;
     } elsif (my ($relType, $relName, $fkName) = $self->known_rels($key)) {
-      push @rels, [$relType, $relName, $fkName, shift]
+      push @rels, [$relType, $relName, $fkName, shift @colSpec]
     } else {
-      push @opt, $key, shift;
+      push @opt, $key, shift @colSpec;
     }
   }
   push @{$tab->{col_list}}, ($tab->{col_dict}{$colName})
-    = (my Column $col) = $colPkg->new(@opt, name => $colName, type => $type);
+    = (my Column $col) = $self->Column->new
+      (@opt, name => $colName, type => $type);
+  $self->add_table_relation($tab, @$_) for @early_rels;
 
   $tab->{pk} = $col if $col->{cf_primary_key};
 
@@ -350,7 +374,7 @@ sub add_table_column {
     my ($relType, $relName, $fkName, $relSpec) = @$rels;
     my Table $subTab = do {
       if (ref $relSpec) {
-	$self->add_table(@$relSpec);
+	$self->get_table(@$relSpec);
       } else {
 	$self->{table_dict}{$relSpec} || croak "Unknown table $relSpec!";
       }
@@ -359,7 +383,7 @@ sub add_table_column {
       , [$relType, $relName || $subTab->{cf_name}
 	 , $fkName // $col->{cf_name}
 	 , $subTab];
-    $self->add_table_backrel($tab, $relType, $subTab);
+    # $self->add_table_backrel($tab, $relType, $subTab);
   }
   # XXX: Validation: name/option conflicts and others.
   $col;
@@ -436,7 +460,9 @@ sub sql_create_column {
 
 sub sqlite_sql_create_column {
   (my MY $schema, my Table $tab, my Column $col, my $opts) = @_;
-  if ($col->{cf_type} =~ /^int/i && $col->{cf_primary_key}) {
+  unless (defined $col->{cf_type}) {
+    croak "Column type is not yet defined! $tab->{cf_name}.$col->{cf_name}"
+  } elsif ($col->{cf_type} =~ /^int/i && $col->{cf_primary_key}) {
     "$col->{cf_name} integer primary key"
   } else {
     $schema->sql_create_column($tab, $col, $opts);
