@@ -176,6 +176,37 @@ END
 }
 
 {
+  my $THEME = "[many_to_many]";
+  my $schema = $CLASS->new
+    ([user => undef
+	, id => [integer => -primary_key, -autoincrement]
+	, name => 'text'
+	, ['has_many:user_address'
+	   => [user_address => undef
+	       , user => [int => [belongs_to => 'user']]
+	       , address => [int => [belongs_to =>
+				     [address => undef
+				      , id => [int => -primary_key]
+				      , street => 'text'
+				      , town => 'text'
+				      , area_code => 'text'
+				      , country => 'text'
+				      , ['has_many:user_address' => 'user']
+				      , ['many_to_many:users'
+					 => 'user_address', 'user']
+				     ]]]
+	       , [primary_key => qw(user address)]]]
+	, ['many_to_many:addresses'
+	   => 'user_address', 'address']
+       ]);
+
+  # print join("", map {chomp;"$_;\n"} $schema->sql_create), "\n";
+  foreach my $tabName (qw(user user_address address)) {
+    # print terse_dump($schema->list_relations($tabName)), "\n";
+  }
+}
+
+{
   my $THEME = "[Misc]";
   my $schema = $CLASS->new
     ([Account => undef

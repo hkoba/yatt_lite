@@ -50,7 +50,7 @@ sub buildns {
     *{globref($tabClass, 'ISA')} = ['DBIx::Class::Core'];
     $myPkg->add_inc($tabClass);
 
-    my Column $pk = $tab->{pk};
+    my Column $pk = $schema->info_table_pk($tab);
     my @comp = qw/Core/;
     push @comp, qw(PK::Auto) if $pk and $pk->{cf_autoincrement};
 
@@ -58,13 +58,19 @@ sub buildns {
     $tabClass->table($tab->{cf_name});
     $tabClass->add_columns(map {(my Column $col = $_)->{cf_name}}
 			   @{$tab->{col_list}});
-    $tabClass->set_primary_key($pk->{cf_name}) if $pk;
+    $tabClass->set_primary_key($schema->info_table_pk($tab)) if $pk;
   }
   # Relationship の設定と、 register_class の呼び出し。
   foreach my Table $tab (@{$schema->{table_list}}) {
     my $tabClass = $tab->{cf_package};
     foreach my $rel ($schema->list_relations($tab->{cf_name})) {
-      my ($relType, $relName, $fkName, $fTabName) = @$rel;
+      my ($relType, @relOpts) = @$rel;
+      if (my $sub = $myPkg->can("add_relation_$relType")) {
+	$sub->($myPkg, $schema, $tab, @relOpts);
+	next;
+      }
+
+      my ($relName, $fkName, $fTabName) = @relOpts;
       my $fTab = $schema->{table_dict}{$fTabName};
       # table の package 名が確定するまで、relation の設定を遅延させたいから。
       print STDERR <<END if $schema->{cf_verbose};
@@ -84,6 +90,22 @@ END
   }
 
   $schema;
+}
+
+sub add_relation_many_to_many {
+  (my $myPkg, my MY $schema, my Table $tab
+   , my ($relName, $fkName, $tabName)) = @_;
+  my $relType = 'many_to_many';
+  my $tabClass = $tab->{cf_package};
+  print STDERR <<END if $schema->{cf_verbose};
+-- $tabClass->$relType($relName, $tabName, $fkName)
+END
+  eval {
+    $tabClass->$relType($relName, $tabName, $fkName)
+  };
+  if ($@) {
+    die "Relationship Error in: $relType ($relName, $tabName, $fkName)".$@;
+  }
 }
 
 *deploy = *ensure_created; *deploy = *ensure_created;

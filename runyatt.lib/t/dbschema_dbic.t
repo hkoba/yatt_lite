@@ -116,3 +116,45 @@ my $DBNAME = shift || ':memory:';
 		       , owner => $foo->id})->id
      , 1, "Entry.create.id");
 }
+
+{
+  my $CLASS = 'MyDB3';
+  package MyDB3;
+  use YATT::Lite::DBSchema::DBIC
+    (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
+     , [user => undef
+	, id => [integer => -primary_key, -autoincrement]
+	, name => 'text'
+	, ['has_many:user_address'
+	   => [user_address => undef
+	       , user => [int => [belongs_to => 'user']]
+	       , address => [int => [belongs_to =>
+				     [address => undef
+				      , id => [int => -primary_key]
+				      , street => 'text'
+				      , town => 'text'
+				      , area_code => 'text'
+				      , country => 'text'
+				      , ['has_many:user_address' => 'user_address', 'address']
+				      , ['many_to_many:users'
+					 => 'user_address', 'user']
+				     ]]]
+	       , [primary_key => qw(user address)]]]
+	, ['many_to_many:addresses'
+	   => 'user_address', 'address']
+       ]);
+
+  package main;
+  my $schema = $CLASS->connect("dbi:SQLite:dbname=$DBNAME");
+  $schema->YATT_DBSchema->deploy;
+
+  is((my $user = $schema->resultset('user')->create({name => 'Foo'}))->id
+     , 1, "[$CLASS] user.create");
+  is((my $address = $user->add_to_addresses
+      ({country => 'United Kingdom'
+	, area_code => 'XYZ'
+	, town => 'London'
+	, street => 'Sesame'
+       }))->id
+    , 1, "[$CLASS] user.add_to_address");
+}

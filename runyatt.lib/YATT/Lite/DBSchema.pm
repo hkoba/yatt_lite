@@ -240,7 +240,8 @@ sub list_relations {
     map {
       (my ($relType, $relName, $fkName), my Table $subTab) = @$_;
       $fkName //= do {
-	if (my Column $pk = $subTab->{pk} || $tab->{pk}) {
+	if (my Column $pk = $self->info_table_pk($subTab)
+	    || $self->info_table_pk($tab)) {
 	  $pk->{cf_name};
 	}
       };
@@ -259,6 +260,18 @@ sub list_table_columns {
 sub info_table {
   (my MY $self, my $name) = @_;
   $self->{table_dict}{$name};
+}
+
+sub info_table_pk {
+  (my MY $self, my ($tabName, %opts)) = @_;
+  my Table $tab = ref $tabName ? $tabName : $self->{table_dict}{$tabName};
+  my $pkinfo = $tab->{pk};
+  return unless $pkinfo;
+  if (wantarray) {
+    $self->list_items(\%opts, ref $pkinfo eq 'ARRAY' ? $pkinfo : [$pkinfo]);
+  } else {
+    ref $pkinfo eq 'ARRAY' ? $pkinfo->[0] : $pkinfo
+  }
 }
 
 sub get_table {
@@ -291,6 +304,14 @@ sub get_table {
   }
 
   $tab;
+}
+
+sub add_table_primary_key {
+  (my MY $self, my Table $tab, my @args) = @_;
+  if ($tab->{pk} and @args) {
+    croak "Duplicate PK definition. old $tab->{pk}";
+  }
+  $tab->{pk} = [map {$tab->{col_dict}{$_}} @args];
 }
 
 # -opt は引数無フラグ、又は [-opt, ...] として可変長オプションに使う
@@ -391,7 +412,9 @@ sub backrel_of_own {
 }
 
 {
-  my %known_rels = qw(has_many 1 has_one 1 belongs_to 1);
+  my %known_rels = qw(has_many 1 has_one 1 belongs_to 1
+		      many_to_many 1 might_have 1
+		    );
   sub known_rels {
     (my MY $self, my $desc) = @_;
     my ($relType, $relName, $fkName) = split /:/, $desc, 3;
