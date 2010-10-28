@@ -25,7 +25,7 @@ my $DBNAME = shift || ':memory:';
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [Author => undef
 	, author_id => [int => -primary_key, -autoincrement
-			, ['has_many:books:author_id'
+			, ['has_many:books'
 			   => [Book => undef
 			       , book_id => [int => -primary_key
 					     , -autoincrement]
@@ -88,7 +88,7 @@ my $DBNAME = shift || ':memory:';
 	, [-has_many
 	   , [Address => undef
 	    , addrid => [integer => -primary_key]
-	    , owner =>  [int => [belongs_to => 'User', 'owner']]
+	    , owner =>  [int => [belongs_to => 'User']]
 	    , country => 'text'
 	    , zip => 'text'
 	    , prefecture => 'text'
@@ -97,7 +97,7 @@ my $DBNAME = shift || ':memory:';
 	, [-has_many
 	   , [Entry => undef
 	      , eid => [integer => -primary_key]
-	      , owner => [int => [belongs_to => 'User', 'owner']]
+	      , owner => [int => [belongs_to => 'User']]
 	      , title => 'text'
 	      , text  => 'text']]
        ]);

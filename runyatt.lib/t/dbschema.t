@@ -199,6 +199,6 @@ END
        ]);
 
   # print join("", map {chomp;"$_;\n"} $schema->sql_create), "\n";
-  print terse_dump($schema->list_relations('Transaction')), "\n";
-  print terse_dump($schema->list_relations('Account')), "\n";
+  # print terse_dump($schema->list_relations('Transaction')), "\n";
+  # print terse_dump($schema->list_relations('Account')), "\n";
 }

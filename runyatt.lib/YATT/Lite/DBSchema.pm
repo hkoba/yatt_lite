@@ -281,7 +281,7 @@ sub get_table {
       # XXX: [has_many => @tables]
       # XXX: [unique => k1, k2..]
       if (my ($relType, @relSpec) = $self->known_rels($method)) {
-	$self->add_table_relation($tab, $relType => \@relSpec, @args);
+	$self->add_table_relation($tab, undef, $relType => \@relSpec, @args);
       } else {
 	my $sub = $self->can("add_table_$method")
 	  or croak "Unknown table option '$method' for table $name";
@@ -295,7 +295,7 @@ sub get_table {
 
 # -opt は引数無フラグ、又は [-opt, ...] として可変長オプションに使う
 sub add_table_relation {
-  (my MY $self, my Table $tab
+  (my MY $self, my Table $tab, my Column $fkCol
    , my ($relType, $relSpec, $item, $fkName, $atts)) = @_;
   unless (defined $item) {
     croak "Undefined relation spec for table $tab->{cf_name}";
@@ -303,7 +303,8 @@ sub add_table_relation {
   my Table $subTab = ref $item ? $self->get_table(@$item)
     : $self->info_table($item);
   my $relName = $relSpec->[0] // lc($subTab->{cf_name});
-  $fkName //= $relSpec->[1] // $subTab->{reference_dict}{$tab->{cf_name}};
+  $fkName //= $relSpec->[1] // $fkCol->{cf_name}
+    // $subTab->{reference_dict}{$tab->{cf_name}};
   push @{$tab->{relationSpec}}
     , [$relType => $relName, $fkName, $subTab];
   # $self->add_table_backrel($tab, $relType, $subTab);
@@ -339,11 +340,15 @@ sub add_table_column {
 
     push @{$tab->{relationSpec}}
       , [belongs_to => $relName, $fkName, $refTab];
+    push @colSpec, -indexed;
 
     push @{$refTab->{relationSpec}}
       , [has_many => lc($tab->{cf_name}), $colName, $tab];
   }
-  my (@opt, @early_rels, @rels);
+  Carp::cluck "Column type $tab->{cf_name}.$colName is undef"
+      unless defined $type;
+
+  my (@opt, @rels);
   while (@colSpec) {
     unless (defined (my $key = shift @colSpec)) {
       croak "Undefined colum spec for $tab->{cf_name}.$colName";
@@ -353,15 +358,14 @@ sub add_table_column {
       # XXX: [has_many => @tables]
       # XXX: [unique => k1, k2..]
       if (my ($relType, @relSpec) = $self->known_rels($method)) {
-	push @early_rels, [$relType => \@relSpec, @args];
-	# $self->add_table_relation($tab, $relType => \@relSpec, @args);
+	push @rels, [$relType => \@relSpec, @args];
       } else {
 	croak "Unknown method $method";
       }
     } elsif ($key =~ /^-/) {
       push @opt, $key => 1;
-    } elsif (my ($relType, $relName, $fkName) = $self->known_rels($key)) {
-      push @rels, [$relType, $relName, $fkName, shift @colSpec]
+    } elsif (my ($relType, @relSpec) = $self->known_rels($key)) {
+      push @rels, [$relType, \@relSpec, shift @colSpec]
     } else {
       push @opt, $key, shift @colSpec;
     }
@@ -369,27 +373,10 @@ sub add_table_column {
   push @{$tab->{col_list}}, ($tab->{col_dict}{$colName})
     = (my Column $col) = $self->Column->new
       (@opt, name => $colName, type => $type);
-  Carp::cluck "Column type $tab->{cf_name}.$colName is undef"
-      unless defined $type;
   $tab->{pk} = $col if $col->{cf_primary_key};
 
-  $self->add_table_relation($tab, @$_) for @early_rels;
+  $self->add_table_relation($tab, $col, @$_) for @rels;
 
-  foreach my $rels (@rels) {
-    my ($relType, $relName, $fkName, $relSpec) = @$rels;
-    my Table $subTab = do {
-      if (ref $relSpec) {
-	$self->get_table(@$relSpec);
-      } else {
-	$self->{table_dict}{$relSpec} || croak "Unknown table $relSpec!";
-      }
-    };
-    push @{$tab->{relationSpec}}
-      , [$relType, $relName || $subTab->{cf_name}
-	 , $fkName // $col->{cf_name}
-	 , $subTab];
-    # $self->add_table_backrel($tab, $relType, $subTab);
-  }
   # XXX: Validation: name/option conflicts and others.
   $col;
 }
