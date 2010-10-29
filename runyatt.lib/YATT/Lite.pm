@@ -116,6 +116,7 @@ sub handle_yatt {
   # XXX: public に限定するのはどこで？ ここで？それとも find_自体？
   my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);
   unless ($part->public) {
+    # XXX: refresh する手もあるだろう。
     croak $self->error(q|Forbidden request '%s'|, terse_dump($mapped));
   }
   # XXX: 未知引数エラーがあったら？

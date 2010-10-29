@@ -1,0 +1,53 @@
+<!yatt:args title="html?" guest_ok="value/0">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+  <title>&yatt:title;</title>
+</head>
+<body>
+<div id="wrapper" style="width: 800px; margin-left: 50px;">
+<div id="topnav">
+  <h2 style="display: inline;"><a href="./">&yatt:title;</a></h2>
+</div>
+<center>
+<div id="body" style="text-align: left;">
+  <yatt:if "&yatt:is_logged_in();">
+    <div class="login">
+      ログイン中 | <a href="logout.do?nx=&yatt:CON:file();">ログアウト</a>
+    </div>
+    <yatt:body/>
+    <:yatt:else if="&yatt:guest_ok;"/>
+    <yatt:body/>
+    <:yatt:else/>
+    <h2>ログインが必要です</h2>
+    <form action="login.ydo" method="POST">
+      ユーザ名:<input type="text" name="user" size="10" /><br />
+      パスワード:<input type="password" name="password" size="10" /><br />
+      <input type="hidden" name="back" value="&yatt:CON:request_uri();" />
+      <input type="submit" name=":login" value="ログイン" /><br />
+      <a href="regist.yatt?back=&yatt:CON:file();">新規登録</a>
+      | <a href="resetpass.yatt">パスワードを忘れた</a>
+    </form>
+  </yatt:if>
+</div>
+</center>
+</div>
+</div>
+</body>
+</html>
+
+<!yatt:widget login style>
+<div class="login" style="&yatt:style;">
+  <yatt:if "&yatt:is_logged_in();">
+    ログイン中 | <a href="logout.do?nx=&yatt:CON:file();">ログアウト</a>
+    <:yatt:else/>
+    <form action="login.do" method="POST">
+      ユーザ名:<input type="text" name="user" size="10">
+      パスワード:<input type="password" name="password" size="10">
+      <input type="hidden" name="back" value="&yatt:CON:request_uri();">
+      <input type="submit" name=":login" value="ログイン" /><br />
+      <a href="regist.yatt?back=&yatt:CON:file();">新規登録</a>
+      | <a href="resetpass.yatt">パスワードを忘れた</a>
+    </form>
+  </yatt:if>
+</div>

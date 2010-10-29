@@ -236,6 +236,11 @@ if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
     if (($is_selinux)); then
 	x chcon -v -t httpd_sys_script_rw_t $datadir
     fi
+
+    if [[ -r $destdir/.htyattrc.pl ]]; then
+	# XXX: This can fail second time, mmm...
+	x $realbin/yatt.command --if_can setup
+    fi
 fi
 
 # Then activate it!

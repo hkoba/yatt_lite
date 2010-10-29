@@ -14,6 +14,11 @@ use YATT::Lite::Util::FindMethods;
 use YATT::Lite qw(*YATT);
 use YATT::Lite::Breakpoint;
 
+use Getopt::Long;
+
+GetOptions("if_can" => \ my $if_can)
+  or exit 1;
+
 my $dispatcher = do {
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
   if (-r $cgi) {
@@ -35,6 +40,7 @@ END
 
 my $command = shift;
 my $sub = $YATT->can("cmd_$command")
+  or ($if_can and exit)
   or die "No such command: $command\n";
 
 $sub->($dirhandler, @ARGV);

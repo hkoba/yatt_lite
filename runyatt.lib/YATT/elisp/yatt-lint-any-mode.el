@@ -23,7 +23,7 @@
 
 (defvar yatt-lint-any-registry
   ;; User may extend this.
-  '(("\\.yatt\\'"
+  '(("\\.\\(yatt\\|ytmpl\\)\\'"
      after yatt-lint-any-handle-yatt)
     ("\\.ydo\\'"
      after yatt-lint-any-handle-perl-action)
@@ -111,17 +111,17 @@
 
 
 (defun yatt-lint-any-handle-yattrc (buffer)
-  (yatt-lint-any-shell-command "scripts/yatt.lintrc" " "
-			       (buffer-file-name buffer)))
+  (yatt-lint-any-perl-error-by "scripts/yatt.lintrc" buffer))
 
 (defun yatt-lint-any-handle-perl-action (buffer)
-  (yatt-lint-any-shell-command "scripts/yatt.lintany" " "
-			       (buffer-file-name buffer)))
+  (yatt-lint-any-perl-error-by "scripts/yatt.lintany" buffer))
 
 (defun yatt-lint-any-handle-perl-module (buffer)
+  (yatt-lint-any-perl-error-by "scripts/yatt.lintpm" buffer))
+
+(defun yatt-lint-any-perl-error-by (command buffer)
   (plist-bind (rc err)
-      (yatt-lint-any-shell-command "scripts/yatt.lintpm" " "
-				   (buffer-file-name buffer))
+      (yatt-lint-any-shell-command command " " (buffer-file-name buffer))
     (when rc
       (let (match diag)
 	(cond ((setq match

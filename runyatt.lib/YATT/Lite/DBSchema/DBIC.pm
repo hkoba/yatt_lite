@@ -1,6 +1,7 @@
 package YATT::Lite::DBSchema::DBIC; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+use Carp;
 
 use base qw(YATT::Lite::DBSchema);
 use fields qw(DBIC DBIC_package);
@@ -23,6 +24,7 @@ sub import {
 }
 
 # use YATT::Lite::DBSchema::DBIC $pkg => @desc;
+#
 # $pkg                 ISA DBIC_SCHEMA (ISA DBIx::Class::Schema)
 # ${pkg}::Result::$tab ISA DBIx::Class::Core
 
@@ -71,6 +73,9 @@ sub buildns {
       }
 
       my ($relName, $fkName, $fTabName) = @relOpts;
+      unless (defined $fTabName) {
+	croak "Foreign table is empty for $tab->{cf_name} $relType $relName $fkName";
+      }
       my $fTab = $schema->{table_dict}{$fTabName};
       # table の package 名が確定するまで、relation の設定を遅延させたいから。
       print STDERR <<END if $schema->{cf_verbose};
@@ -92,6 +97,7 @@ END
   $schema;
 }
 
+# XXX: 上と被っているので、まとめるべし。
 sub add_relation_many_to_many {
   (my $myPkg, my MY $schema, my Table $tab
    , my ($relName, $fkName, $tabName)) = @_;
