@@ -6,8 +6,8 @@ use warnings FATAL => qw(all);
 use sigtrap die => qw(normal-signals);
 
 #----------------------------------------
-# Ensure ENV, for mod_fastcgi+FCGI.pm
-$ENV{PATH} ||= "/sbin:/usr/sbin:/bin:/usr/bin";
+# Ensure ENV, for mod_fastcgi+FCGI.pm and Taint check.
+$ENV{PATH} = "/sbin:/usr/sbin:/bin:/usr/bin";
 
 #----------------------------------------
 # To allow do 'runyatt.cgi', we should avoid using FindBin.
