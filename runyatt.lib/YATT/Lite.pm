@@ -69,11 +69,11 @@ sub map_request {
   my ($subpage, $action);
   # XXX: url_param
   foreach my $name (grep {defined} $con->param()) {
-    my ($sigil, $word) = $name =~ /^([\@!])(\w*)$/
+    my ($sigil, $word) = $name =~ /^([~!])(\w*)$/
       or next;
     my $new = length($word) ? $word : $con->param($sigil);
     given ($sigil) {
-      when ('@') {
+      when ('~') {
 	if (defined $subpage) {
 	  $self->error("Duplicate subpage request! %s vs %s"
 		       , $subpage, $new);
