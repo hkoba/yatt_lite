@@ -32,11 +32,10 @@ use YATT::Lite::DBSchema::DBIC
 		      , text  => 'text'], 'owner']]
       , login => 'text'
       , encpass => 'text'
-      , confirm_token => 'text'
       , tmppass => 'text'
       , tmppass_expire => 'datetime'
       , email => 'text'
-      , email_verified => 'int'
+      , confirm_token => ['text', -unique]
      ]
    );
 
@@ -156,20 +155,21 @@ sub has_auth_failure {
 sub add_user {
   my ($self, $login, $pass, $email) = @_;
 
-  # tmppass と expire を生成しないと
-  my $token = $self->make_password;
+  # XXX: Is this good token?
+  my $token = $self->encrypt_password
+    ($self->make_password, $login, $pass);
 
   my $newuser = $self->dbic->resultset('user')
     ->new({login => $login
 	   , email => $email
 	   , encpass => md5_hex($pass)
 	   , confirm_token => $token
+	   # XXX: tmppass_expire
 	  });
-  # XXX: ユーザ名重複のエラー処理.
 
   $newuser->insert;
 
-  ($newuser, $self->encrypt_password($token, $newuser->id, $pass));
+  ($newuser, $token);
 }
 
 # Stolen from Slash/Utility/Data/Data.pm:changePassword
@@ -181,8 +181,8 @@ sub add_user {
   }
 
   sub encrypt_password {
-    my ($self, $password, $uid, $salt) = @_;
-    md5_hex("$salt:$uid:$password");
+    my ($self, @rest) = @_;
+    md5_hex(join ":", reverse @rest);
   }
 }
 

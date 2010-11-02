@@ -36,9 +36,7 @@ my $email = $con->param_type
 my ($user, $token) = $this->YATT->add_user($login, $pass1, $email);
 
 # XXX: query 追加の API も用意すべきでは?
-my $url = $con->mkurl(undef, ['~confirm' => 1, token => $token]);
-
-$this->entity_set_logged_in(1, login => $login);
+my $url = $con->mkurl(undef, ['!confirm' => 1, token => $token]);
 
 my $back = $con->param('back') || 'index.yatt';
 
@@ -66,7 +64,23 @@ Content-type: text/plain; charset="utf-8"
   <a href="&yatt:back;">戻る</a>
 </yatt:envelope>
 
-<!yatt:page confirm token=!>
-<yatt:envelope guest_ok>
-  
+<!yatt:action confirm token=!>
+my ($this, $con) = @_;
+
+my $token = $con->param_type(token => word => 'Token should be a word.');
+
+my $user = $this->entity_resultset('user')->find({confirm_token => $token})
+  or die "Invalid token!";
+
+$user->confirm_token(undef);
+$user->update;
+
+$this->entity_set_logged_in(1, login => $user->login);
+
+$this->render_success($con, $user);
+
+<!yatt:widget success user>
+<yatt:envelope>
+  <h2>登録完了です</h2>
+  <a href="./">トップへ</a>
 </yatt:envelope>

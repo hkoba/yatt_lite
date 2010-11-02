@@ -27,6 +27,14 @@ BEGIN {
   }
 }
 
+sub commit {
+  my PROP $prop = (my $glob = shift)->prop;
+  if ($prop->{session}) {
+    $prop->{session}->flush;
+  }
+  $glob->SUPER::commit;
+}
+
 sub location {
   my PROP $prop = (my $glob = shift)->prop;
   (my $loc = ($prop->{cf_location} // '')) =~ s,/*$,/,;
