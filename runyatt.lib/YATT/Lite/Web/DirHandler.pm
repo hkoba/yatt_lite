@@ -31,6 +31,7 @@ sub new {
   }
   my @opts = do {
     if (-e (my $cf = "$_[0]/.htyattconfig.xhf")) {
+      # XXX: encoding?
       load_xhf($cf);
     } else { () }
   };
@@ -88,11 +89,12 @@ sub get_action_handler {
 #========================================
 use YATT::Lite::Web::Connection;
 sub Connection () {'YATT::Lite::Web::Connection'}
+sub ConnProp () {Connection}
 
 sub make_connection {
   (my MY $self, my ($fh, %opts)) = @_;
   $self->SUPER::make_connection(do {
-    if (delete $opts{is_gateway}) {
+    if ($opts{is_gateway}) {
       # buffered mode.
       (undef, parent_fh => $fh, header => sub {
 	 my ($con) = shift;

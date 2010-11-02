@@ -156,6 +156,7 @@ sub make_cgi {
     } else {
       croak "\n\nYATT mount point is not specified.";
     }
+    # XXX: /~user_dir の場合は $dir ne $root$loc じゃんか orz...
     ($root, $loc, $file, $trailer) = split_path($path, $self->document_dir($cgi));
   } else {
     my $path = shift;

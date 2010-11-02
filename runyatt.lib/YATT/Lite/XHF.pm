@@ -27,7 +27,8 @@ our $cc_tabsp = qr{[\ \t]};
 our %OPN = ('[' => \&organize_array, '{' => \&organize_hash);
 
 sub load_xhf {
-  MY->new(filename => @_)->read;
+  my ($fn, @rest) = @_;
+  MY->new(filename => $fn, encoding => 'utf8', @rest)->read;
 }
 
 sub parse_xhf {
