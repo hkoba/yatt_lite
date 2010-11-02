@@ -97,8 +97,9 @@ sub make_connection {
       (undef, parent_fh => $fh, header => sub {
 	 my ($con) = shift;
 	 $con->mkheader(-charset =>
-			$$self{cf_header_charset}
-			|| $$self{cf_output_encoding});
+			$$self{cf_header_charset} || $$self{cf_output_encoding}
+			, $con->list_baked_cookie
+		       );
        });
     } else {
       # direct mode.

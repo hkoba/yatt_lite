@@ -1,0 +1,14 @@
+my $i = 0;
+my $compiled_at = scalar localtime time;
+
+sub {
+  my ($this, $con) = @_;
+
+  $this->YATT->remove_session($con);
+
+  if (my $url = $con->param('nx') || $con->referer) {
+    $con->redirect($url);
+  } else {
+    print $con "OK(".$i++."; $compiled_at)\n";
+  }
+};

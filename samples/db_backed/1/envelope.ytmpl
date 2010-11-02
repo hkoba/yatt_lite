@@ -13,7 +13,7 @@
 <div id="body" style="text-align: left;">
   <yatt:if "&yatt:is_logged_in();">
     <div class="login">
-      ログイン中 | <a href="logout.do?nx=&yatt:CON:file();">ログアウト</a>
+      ログイン中 | <a href="logout.ydo?nx=&yatt:CON:file();">ログアウト</a>
     </div>
     <yatt:body/>
     <:yatt:else if="&yatt:guest_ok;"/>
@@ -21,7 +21,7 @@
     <:yatt:else/>
     <h2>ログインが必要です</h2>
     <form action="login.ydo" method="POST">
-      ユーザ名:<input type="text" name="user" size="10" /><br />
+      ユーザ名:<input type="text" name="login" size="10" /><br />
       パスワード:<input type="password" name="password" size="10" /><br />
       <input type="hidden" name="back" value="&yatt:CON:request_uri();" />
       <input type="submit" name=":login" value="ログイン" /><br />
@@ -39,7 +39,7 @@
 <!yatt:widget login style>
 <div class="login" style="&yatt:style;">
   <yatt:if "&yatt:is_logged_in();">
-    ログイン中 | <a href="logout.do?nx=&yatt:CON:file();">ログアウト</a>
+    ログイン中 | <a href="logout.ydo?nx=&yatt:CON:file();">ログアウト</a>
     <:yatt:else/>
     <form action="login.do" method="POST">
       ユーザ名:<input type="text" name="user" size="10">

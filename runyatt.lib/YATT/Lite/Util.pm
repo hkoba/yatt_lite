@@ -124,6 +124,7 @@ require Scalar::Util;
       $item;
     }
   }
+
   sub split_path {
     my ($path, $startDir) = @_;
     $startDir ||= '';
@@ -141,7 +142,7 @@ require Scalar::Util;
     } continue {
       $pos = pos($path);
     }
-    ($dir, $file, substr($path, $pos));
+    ($startDir, substr($dir, length($startDir)), $file, substr($path, $pos));
   }
 
   sub dict_order {

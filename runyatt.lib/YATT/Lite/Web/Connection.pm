@@ -2,7 +2,8 @@ package YATT::Lite::Web::Connection; sub PROP () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
-use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway);
+use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
+	      cf_root cf_location);
 use YATT::Lite::Util qw(globref url_encode);
 use Carp;
 use File::Basename;
@@ -11,19 +12,25 @@ use File::Basename;
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
-  foreach my $name (qw(param url_param request_method header)) {
+  foreach my $name (qw(param url_param request_method header referer)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
       $prop->{cf_cgi}->$name(@_);
     };
   }
-  foreach my $name (qw(file)) {
+  foreach my $name (qw(file subpath)) {
     my $cf = "cf_$name";
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
       $prop->{$cf};
     };
   }
+}
+
+sub location {
+  my PROP $prop = (my $glob = shift)->prop;
+  (my $loc = ($prop->{cf_location} // '')) =~ s,/*$,/,;
+  $loc;
 }
 
 # XXX: parameter の加減算も？
@@ -118,16 +125,19 @@ sub bake_cookie {
 
 sub set_cookie {
   my PROP $prop = (my $glob = shift)->prop;
-  my $name = shift;
-  $prop->{cookie}{$name} = $glob->bake_cookie($name, @_);
+  if (@_ == 1 and ref $_[0]) {
+    my $cookie = shift;
+    my $name = $cookie->name;
+    $prop->{cookie}{$name} = $cookie;
+  } else {
+    my $name = shift;
+    $prop->{cookie}{$name} = $glob->bake_cookie($name, @_);
+  }
 }
 
 sub list_baked_cookie {
   my PROP $prop = (my $glob = shift)->prop;
   my @cookie = values %{$prop->{cookie}} if $prop->{cookie};
-  if (my $sess = $prop->{session}) {
-    push @cookie, $glob->bake_cookie($sess->name, $sess->id);
-  }
   return unless @cookie;
   wantarray ? (-cookie => \@cookie) : \@cookie;
 }
@@ -161,7 +171,7 @@ sub param_type {
   };
 
   my $value = $prop->{cf_cgi}->param($name)
-    // return undef;
+    // croak "parameter '$name' is missing!";
 
   if ($value =~ $pat) {
     return $&; # Also for taint check.

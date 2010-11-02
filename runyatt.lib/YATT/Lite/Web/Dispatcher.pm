@@ -144,7 +144,7 @@ sub get_dirhandler {
 
 sub make_cgi {
   (my MY $self) = shift;
-  my ($cgi, $dir, $file, $trailer);
+  my ($cgi, $root, $loc, $file, $trailer);
   if ($self->is_gateway) {
     my $is_cgi_obj = ref $_[0] and $_[0]->can('param');
     $cgi = $is_cgi_obj ? shift : $self->new_cgi(@_);
@@ -156,7 +156,7 @@ sub make_cgi {
     } else {
       croak "\n\nYATT mount point is not specified.";
     }
-    ($dir, $file, $trailer) = split_path($path, $self->document_dir($cgi));
+    ($root, $loc, $file, $trailer) = split_path($path, $self->document_dir($cgi));
   } else {
     my $path = shift;
     unless (defined $path) {
@@ -171,11 +171,12 @@ sub make_cgi {
       $path = Cwd::abs_path($path) // die "No such file: $path\n";
     }
     # XXX: widget 直接呼び出しは？ cgi じゃなしに、直接パラメータ渡しは？ =>
-    ($dir, $file, $trailer) = split_path($path);
+    ($root, $loc, $file, $trailer) = split_path($path);
     $cgi = $self->new_cgi(@_);
   }
 
-  (cgi => $cgi, dir => $dir, file => $file, subpath => $trailer
+  (cgi => $cgi, dir => "$root$loc", file => $file, subpath => $trailer
+   , root => $root, location => $loc
    , is_gateway => $self->is_gateway);
 }
 

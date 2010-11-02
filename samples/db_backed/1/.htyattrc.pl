@@ -48,13 +48,9 @@ Entity resultset => sub {
 #========================================
 Entity sess => sub {
   my ($this) = shift;
-  my $sess = $this->YATT->get_session($CON);
-  if (@_ == 1) {
-    $sess->param(@_);
-  } else {
-    $sess->param(@_);
-    $sess;
-  }
+  my $sess = $this->YATT->get_session($CON)
+    or return undef;
+  $sess->param(@_);
 };
 
 Entity is_logged_in => sub {
@@ -64,7 +60,7 @@ Entity is_logged_in => sub {
 Entity set_logged_in => sub {
   my ($this, $value) = @_;
   if ($value) {
-    $this->YATT->load_session($CON);
+    $this->YATT->load_session($CON, 1);
   } else {
     $this->YATT->remove_session($CON);
   }
@@ -78,46 +74,63 @@ sub sid_name {'SID'}
 sub get_session {
   (my MY $self, my $con) = @_;
   my ConnProp $prop = $con->prop;
-  $self->load_session($con)
-    if $prop->{cf_cgi}->cookie($self->sid_name);
+  if (exists $prop->{session}) {
+    $prop->{session};
+  } else {
+    $self->load_session($con);
+  }
 }
 
 sub load_session {
-  (my MY $self, my $con) = @_;
+  (my MY $self, my ($con, $new)) = @_;
   my ConnProp $prop = $con->prop;
-  $prop->{session} ||= $self->load_session_for($con);
+  if ($new || $prop->{cf_cgi}->cookie($self->sid_name)) {
+    $prop->{session} = $self->_load_session($con, $new);
+  } else {
+    $prop->{session} = undef;
+  }
 }
 
+use YATT::Lite::Util qw(lexpand ostream);
 sub default_session_expire {'1d'}
-
-use YATT::Lite::Util qw(lexpand);
-sub load_session_for {
-  (my MY $self, my $con) = @_;
+sub _load_session {
+  (my MY $self, my ($con, $new)) = @_;
+  my $method = $new ? 'new' : 'load';
   my %opts = (name => $self->sid_name, lexpand($self->{cf_session_opts}));
   my $expire = delete($opts{expire}) // $self->default_session_expire;
-  my $sess = CGI::Session->new("driver:file", $con->cget('cgi'), undef, \%opts);
+  my $sess = CGI::Session->$method
+    ("driver:file", $con->cget('cgi'), undef, \%opts);
+
+  if (not $new and $sess->is_empty) {
+    # die "Session is empty!";
+    return
+  }
+
   # expire させたくない時は、 session_opts に expire: 0 を仕込むこと。
   $sess->expire($expire);
+
+  if ($new) {
+    # 本当に良いのかな?
+    $con->set_cookie($sess->cookie(-path => $con->location));
+  }
+
   $sess;
 }
 
 sub remove_session {
-  (my MY $self, my $cgi_or_con) = @_;
-  my @rm = ($self->sid_name, '', -expire => '-10y'); # 10年早いんだよっと。
-  if ($cgi_or_con->isa(ConnProp)) {
-    my ConnProp $prop = $cgi_or_con->prop;
-    my $sess = delete $prop->{session} or return;
-    $sess->delete;
-    $sess->flush;
-    $cgi_or_con->set_cookie(@rm);
-  } else {
-    # XXX でも、session ファイルが消されずに残るよね？
-    # delete, flush すれば、ファイルは消されるらしい。
-    my $sess = $self->load_session_for($cgi_or_con);
-    $sess->delete;
-    $sess->flush;
-    ConnProp->bake_cookie(@rm);
-  }
+  (my MY $self, my $con) = @_;
+  my $sess = $self->get_session($con)
+    or return;
+
+  my ConnProp $prop = $con->prop;
+  undef $prop->{session};
+
+  $sess->delete;
+  $sess->flush;
+  # -expire じゃなく -expires.
+  my @rm = ($self->sid_name, '', -expires => '-10y'
+	    , -path => $con->location); # 10年早いんだよっと。
+  $con->set_cookie(@rm);
 }
 
 #========================================
@@ -131,10 +144,8 @@ sub is_user {
 sub has_auth_failure {
   my ($self, $loginname, $plain_pass) = @_;
   my $user = $self->dbic->resultset('user')->single({login => $loginname})
-    or return 'No such user';
-  my $auth = $user->auth
-    or return 'No auth';
-  return 'Password mismatch' unless $auth->encpass eq md5_hex($plain_pass);
+    or return "No such user: $loginname";
+  return 'Password mismatch' unless $user->encpass eq md5_hex($plain_pass);
   return undef;
 }
 
@@ -172,6 +183,8 @@ sub add_user {
 }
 
 #========================================
+use YATT::Lite::XHF qw(parse_xhf);
+use YATT::Lite::Util qw(terse_dump);
 
 sub sendmail {
   my ($self, $con, $page, $widget_name, $to, @rest) = @_;
@@ -181,12 +194,21 @@ sub sendmail {
   my $sub = $page->can("render_$widget_name")
     or die "Unknown widget $widget_name";
 
-  require Mail::Send;
-  my $msg = new Mail::Send(To => $to);
+  $sub->($page, ostream(my $buffer), $to, @rest);
 
-  my $fh = $msg->open;
+  my ($header, $body) = split /(?:\r?\n){2,}/, $buffer, 2;
 
-  $sub->($page, $fh, $to, @rest);
+  # die terse_dump(parse_xhf($header));
+  my %header = parse_xhf($header);
+
+  require MIME::Lite;
+  my $msg = new MIME::Lite(map(($_, $header{$_}), qw(From To Subject))
+			   , Data => $body);
+  if (my $h = $header{'Content-type'}) {
+    $msg->attr('content-type', $h);
+  }
+
+  $msg->send;
 }
 
 #========================================
