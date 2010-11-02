@@ -58,9 +58,9 @@ Entity is_logged_in => sub {
 };
 
 Entity set_logged_in => sub {
-  my ($this, $value) = @_;
+  my ($this, $value, @rest) = @_;
   if ($value) {
-    $this->YATT->load_session($CON, 1);
+    $this->YATT->load_session($CON, 1, @rest);
   } else {
     $this->YATT->remove_session($CON);
   }
@@ -82,10 +82,10 @@ sub get_session {
 }
 
 sub load_session {
-  (my MY $self, my ($con, $new)) = @_;
+  (my MY $self, my ($con, $new, @rest)) = @_;
   my ConnProp $prop = $con->prop;
   if ($new || $prop->{cf_cgi}->cookie($self->sid_name)) {
-    $prop->{session} = $self->_load_session($con, $new);
+    $prop->{session} = $self->_load_session($con, $new, @rest);
   } else {
     $prop->{session} = undef;
   }
@@ -94,7 +94,7 @@ sub load_session {
 use YATT::Lite::Util qw(lexpand ostream);
 sub default_session_expire {'1d'}
 sub _load_session {
-  (my MY $self, my ($con, $new)) = @_;
+  (my MY $self, my ($con, $new, @rest)) = @_;
   my $method = $new ? 'new' : 'load';
   my %opts = (name => $self->sid_name, lexpand($self->{cf_session_opts}));
   my $expire = delete($opts{expire}) // $self->default_session_expire;
@@ -112,6 +112,10 @@ sub _load_session {
   if ($new) {
     # 本当に良いのかな?
     $con->set_cookie($sess->cookie(-path => $con->location));
+
+    while (my ($name, $value) = splice @rest, 0, 2) {
+      $sess->param($name, $value);
+    }
   }
 
   $sess;
@@ -165,7 +169,7 @@ sub add_user {
 
   $newuser->insert;
 
-  $self->encrypt_password($token, $newuser->id, $pass);
+  ($newuser, $self->encrypt_password($token, $newuser->id, $pass));
 }
 
 # Stolen from Slash/Utility/Data/Data.pm:changePassword

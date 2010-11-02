@@ -1,4 +1,6 @@
 <yatt:envelope>
+  Hello, &yatt:sess(login);!<br>
+
   <yatt:my sess:value="$this->YATT->get_session($CON)"/>
-  hello... &yatt:dump(:sess);
+  &yatt:dump(:sess);
 </yatt:envelope>

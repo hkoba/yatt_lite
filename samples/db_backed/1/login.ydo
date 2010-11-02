@@ -15,7 +15,7 @@ sub {
     die $err;
   }
 
-  $this->entity_set_logged_in(1);
+  $this->entity_set_logged_in(1, login => $login);
 
   if (my $url = $con->param('nx') || $con->referer) {
     $con->redirect($url);

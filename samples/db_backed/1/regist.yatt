@@ -33,12 +33,12 @@ my $email = $con->param_type
   ('email', qr{^[\w\.\-]+\@[\w\.\-]+$ }x
    , 'Email should be written like: username@domain.name');
 
-my $token = $this->YATT->add_user($login, $pass1, $email);
+my ($user, $token) = $this->YATT->add_user($login, $pass1, $email);
 
 # XXX: query 追加の API も用意すべきでは?
 my $url = $con->mkurl(undef, ['~confirm' => 1, token => $token]);
 
-$this->entity_set_logged_in(1);
+$this->entity_set_logged_in(1, login => $login);
 
 my $back = $con->param('back') || 'index.yatt';
 
