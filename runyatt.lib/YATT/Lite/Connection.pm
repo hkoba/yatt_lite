@@ -94,4 +94,25 @@ sub configure {
   }
 }
 
+sub commit {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (my $sub = $prop->{cf_header}) {
+    print {$$prop{cf_parent_fh}} $sub->($glob, @_)
+      unless $prop->{header_is_printed}++;
+  }
+  $glob->flush;
+}
+
+sub flush {
+  my PROP $prop = (my $glob = shift)->prop;
+  $glob->IO::Handle::flush();
+  if ($prop->{cf_parent_fh}) {
+    print {$prop->{cf_parent_fh}} $prop->{buffer};
+    $prop->{buffer} = '';
+    $prop->{cf_parent_fh}->IO::Handle::flush();
+    # XXX: flush 後は、 parent_fh の dup にするべき。
+    # XXX: でも、 multipart (server push) とか continue とかは？
+  }
+}
+
 1;

@@ -38,10 +38,24 @@ sub configparams {
 
 sub dispatch {
   (my MY $self, my $fh) = splice @_, 0, 2;
-  my ($con, @path) = $self->make_connection($fh, @_);
-  $self->run_dirhandler($con, @path);
+  my @params = $self->make_cgi(@_);
+  my $con = $self->run_dirhandler($fh, @params);
   $con->commit;
   $con;
+}
+
+sub run_dirhandler {
+  (my MY $self, my ($fh, %params)) = @_;
+  # dirhandler は必ず load することにする。 *.yatt だけでなくて *.ydo でも。
+  # 結局は機能集約モジュールが欲しくなるから。
+  # そのために、 dirhandler は死重を減らすよう、部分毎に delayed load する
+
+  my $dh = $self->get_dirhandler(untaint_any($params{dir}));
+  # XXX: cache のキーは相対パスか、絶対パスか?
+
+  my $con = $dh->make_connection($fh, %params);
+
+  $dh->handle($dh->trim_ext($params{file}), $con, $params{file});
 }
 
 sub runas {
@@ -128,13 +142,12 @@ sub get_dirhandler {
 # [2] $fh, $file, []/{}
 # [3] $fh, $file, k=v, k=v... のケース
 
-sub make_connection {
-  (my MY $self, my ($fh)) = splice @_, 0, 2;
+sub make_cgi {
+  (my MY $self) = shift;
   my ($cgi, $dir, $file, $trailer);
   if ($self->is_gateway) {
     my $is_cgi_obj = ref $_[0] and $_[0]->can('param');
-    $cgi = $is_cgi_obj ? shift
-      : $self->new_cgi(@_ ? $self->parse_params(\@_, {}) : ());
+    $cgi = $is_cgi_obj ? shift : $self->new_cgi(@_);
     my $path;
     if (nonempty($path = $cgi->path_translated)) {
       # ok
@@ -159,51 +172,27 @@ sub make_connection {
     }
     # XXX: widget 直接呼び出しは？ cgi じゃなしに、直接パラメータ渡しは？ =>
     ($dir, $file, $trailer) = split_path($path);
-    $cgi = $self->new_cgi(@_ == 1 && ref $_[0] ? $_[0]
-			  : $self->parse_params(\@_, {}));
+    $cgi = $self->new_cgi(@_);
   }
 
-  my $con = $self->ConnProp->new
-    (do {
-      if ($self->is_gateway) {
-	# buffered mode.
-	(undef, parent_fh => $fh, header => sub {
-	   my ($con) = shift;
-	   my $o = (my ConnProp $prop = $con->prop)->{session} || $cgi;
-	   $o->header($con->list_header
-		      , -charset =>
-		      $$self{cf_header_charset} || $$self{cf_output_encoding});
-	 });
-      } else {
-	# direct mode.
-	$fh
-      }
-    }, cgi => $cgi, file => $file, trailing_path => $trailer);
-
-  wantarray ? ($con, $dir, $file) : $con;
-}
-
-# XXX: @rest に関して迷いが残っている。
-sub run_dirhandler {
-  (my MY $self, my ($con, $dir, $file, @rest)) = @_;
-
-  # dirhandler は必ず load することにする。 *.yatt だけでなくて *.ydo でも。
-  # 結局は機能集約モジュールが欲しくなるから。
-  # そのために、 dirhandler は死重を減らすよう、部分毎に delayed load する
-
-  my $dh = $self->get_dirhandler(untaint_any($dir));
-  # XXX: cache のキーは相対パスか、絶対パスか?
-
-  $dh->handle($dh->trim_ext($file), $con, $file, @rest);
-
-  # XXX: Too much?
-  # $con->commit;
+  (cgi => $cgi, dir => $dir, file => $file, subpath => $trailer
+   , is_gateway => $self->is_gateway);
 }
 
 #========================================
 
 sub new_cgi {
-  shift; require CGI; CGI->new(@_);
+  my MY $self = shift;
+  my (@params) = do {
+    if (@_ > 1 or defined $_[0] and not ref $_[0]) {
+      $self->parse_params(\@_, {})
+    } elsif (defined $_[0]) {
+      $_[0];
+    } else {
+      ();
+    }
+  };
+  require CGI; CGI->new(@params);
   # shift; require CGI::Simple; CGI::Simple->new(@_);
 }
 

@@ -80,7 +80,7 @@ sub configparams {
 
   ((@base ? (base => \@base) : ())
    , $self->cf_delegate
-   (qw(output_encoding debug_cgen tmpl_cache at_done
+   (qw(output_encoding header_charset debug_cgen tmpl_cache at_done
        namespace only_parse error_handler))
    , die_in_error => ! YATT::Lite::Util::is_debugging());
 }

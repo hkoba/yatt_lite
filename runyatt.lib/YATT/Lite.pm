@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use 5.010;
 use Carp;
-use version; our $VERSION = qv('v0.0.2_2');
+use version; our $VERSION = qv('v0.0.2_3');
 
 #
 # YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。
@@ -34,6 +34,16 @@ sub default_export {(shift->SUPER::default_export, qw(*CON))}
 our $CON;
 sub symbol_CON { return *CON }
 sub CON { return $CON }
+
+#========================================
+# Abstract connection
+#========================================
+require YATT::Lite::Connection;
+sub Connection () {'YATT::Lite::Connection'}
+sub make_connection {
+  (my MY $self, my ($fh, @rest)) = @_;
+  $self->Connection->new($fh, @rest)
+}
 
 #========================================
 # file extension based handler dispatching.

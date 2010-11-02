@@ -13,6 +13,7 @@ use lib untaint_any
     . "/../../../../runyatt.lib"));
 
 use YATT::Lite::Breakpoint;
+use YATT::Lite::Util qw(ostream);
 use YATT::Lite::XHFTest2;
 use base qw(YATT::Lite::XHFTest2);
 
@@ -40,13 +41,13 @@ foreach my File $sect (@{$tests->{files}}) {
       next;
     }
 
-    my ($con, $dir, $file) = $dispatcher->make_connection
-      (undef, "./$item->{cf_FILE}"
-       , map {defined $_ ? $_ : ()} $item->{cf_PARAM});
+    my (@param) = $dispatcher->make_cgi
+      ("./$item->{cf_FILE}", $item->{cf_PARAM});
 
     $item->{cf_METHOD} //= 'GET';
 
-    eval {$dispatcher->run_dirhandler($con, $dir, $file)};
+    my $con = ostream(my $buffer);
+    eval {$dispatcher->run_dirhandler($con, @param)};
 
     if ($item->{cf_ERROR}) {
       like $@, qr{$item->{cf_ERROR}}
@@ -55,13 +56,13 @@ foreach my File $sect (@{$tests->{files}}) {
     }
 
     if ($item->{cf_METHOD} eq 'POST') {
-      like trimlast(nocr($con->buffer)), $tests->mkpat($item->{cf_HEADER})
+      like trimlast(nocr($buffer)), $tests->mkpat($item->{cf_HEADER})
 	, "[$sect_name] POST $item->{cf_FILE}";
     } elsif (ref $item->{cf_BODY}) {
-      like nocr($con->buffer), $tests->mkseqpat($item->{cf_BODY})
+      like nocr($buffer), $tests->mkseqpat($item->{cf_BODY})
 	, "[$sect_name] $item->{cf_METHOD} $item->{cf_FILE}";
     } else {
-      eq_or_diff trimlast(nocr($con->buffer)), $item->{cf_BODY}
+      eq_or_diff trimlast(nocr($buffer)), $item->{cf_BODY}
 	, "[$sect_name] $item->{cf_METHOD} $item->{cf_FILE}";
     }
   }

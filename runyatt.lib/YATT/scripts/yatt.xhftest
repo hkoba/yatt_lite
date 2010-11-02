@@ -16,7 +16,7 @@ use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::XHF;
-use YATT::Lite::Util qw(ckdo);
+use YATT::Lite::Util qw(ckdo ostream);
 
 {
   package TestSection;
@@ -112,11 +112,10 @@ sub mode_internal {
     $dir =~ s{/t$}{}; # $sect->{cf_file} is assumed t/*.xhf
     my $sect_name = basename($dir).';'.basename($sect->{cf_file});
     foreach my TestItem $item (@{$sect->{items}}) {
-      my ($con, $dir, $file) = $dispatcher->make_connection
-	(undef, "$dir/$item->{cf_FILE}"
-	 , map {defined $_ ? $_ : ()} $item->{cf_PARAM});
-      $dispatcher->run_dirhandler($con, $dir, $file);
-      eq_or_diff trimlast(nocr($con->buffer)), $item->{cf_BODY}
+      $dispatcher->run_dirhandler
+	(ostream(my $buffer)
+	 , $dispatcher->make_cgi("$dir/$item->{cf_FILE}", $item->{cf_PARAM}));
+      eq_or_diff trimlast(nocr($buffer)), $item->{cf_BODY}
 	, "[$sect_name] GET $item->{cf_FILE}";
     }
   }

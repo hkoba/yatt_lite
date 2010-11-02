@@ -5,6 +5,7 @@ use base qw(YATT::Lite);
 use fields qw(cf_dir
 	      cf_session_opts
 	      cf_output_encoding
+	      cf_header_charset
 	      cf_is_gateway
 
 	      Action
@@ -82,6 +83,28 @@ sub get_action_handler {
      });
   return unless defined $item and $item->[0];
   wantarray ? @$item : $item->[0];
+}
+
+#========================================
+use YATT::Lite::Web::Connection;
+sub Connection () {'YATT::Lite::Web::Connection'}
+
+sub make_connection {
+  (my MY $self, my ($fh, %opts)) = @_;
+  $self->SUPER::make_connection(do {
+    if (delete $opts{is_gateway}) {
+      # buffered mode.
+      (undef, parent_fh => $fh, header => sub {
+	 my ($con) = shift;
+	 $con->mkheader(-charset =>
+			$$self{cf_header_charset}
+			|| $$self{cf_output_encoding});
+       });
+    } else {
+      # direct mode.
+      $fh
+    }
+  }, %opts);
 }
 
 #========================================

@@ -17,6 +17,8 @@ require Scalar::Util;
 				  appname extname
 				  captured is_debugging callerinfo
 				  dofile_in compile_file_in
+				  url_encode url_decode
+				  ostream
 				));
   }
   use Carp;
@@ -239,11 +241,35 @@ BEGIN {
     }
     wantarray ? @result : $result[0];
   }
+}
 
-  sub callerinfo {
-    my ($pkg, $file, $line) = caller(shift // 1);
-    (file => $file, line => $line);
-  }
+# Verbatimly stolen from CGI::Simple
+sub url_decode {
+  my ( $self, $decode ) = @_;
+  return () unless defined $decode;
+  $decode =~ tr/+/ /;
+  $decode =~ s/%([a-fA-F0-9]{2})/ pack "C", hex $1 /eg;
+  return $decode;
+}
+
+sub url_encode {
+  my ( $self, $encode ) = @_;
+  return () unless defined $encode;
+  $encode
+    =~ s/([^A-Za-z0-9\-_.!~*'() ])/ uc sprintf "%%%02x",ord $1 /eg;
+  $encode =~ tr/ /+/;
+  return $encode;
+}
+
+sub callerinfo {
+  my ($pkg, $file, $line) = caller(shift // 1);
+  (file => $file, line => $line);
+}
+
+sub ostream {
+  my $fn = ref $_[0] ? $_[0] : \ ($_[0] //= "");
+  open my $fh, '>', $fn or die "Can't create output memory stream: $!";
+  $fh;
 }
 
 1;

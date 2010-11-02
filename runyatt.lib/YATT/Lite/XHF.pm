@@ -8,8 +8,8 @@ use fields qw(cf_FH cf_filename cf_string cf_tokens
 	      cf_skip_comment);
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(load_xhf);
-our @EXPORT = @EXPORT_OK;
+our @EXPORT = qw(load_xhf);
+our @EXPORT_OK = (@EXPORT, qw(parse_xhf));
 
 =head1 NAME
 
@@ -28,6 +28,10 @@ our %OPN = ('[' => \&organize_array, '{' => \&organize_hash);
 
 sub load_xhf {
   MY->new(filename => @_)->read;
+}
+
+sub parse_xhf {
+  MY->new(string => @_)->read;
 }
 
 *configure_file = \&configure_filename;

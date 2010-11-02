@@ -2,30 +2,10 @@ package YATT::Lite::Web::Connection; sub PROP () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
-use fields qw(cf_cgi cf_file cf_trailing_path);
-use YATT::Lite::Util qw(globref);
+use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway);
+use YATT::Lite::Util qw(globref url_encode);
 use Carp;
-
-sub commit {
-  my PROP $prop = (my $glob = shift)->prop;
-  if (my $sub = $prop->{cf_header}) {
-    print {$$prop{cf_parent_fh}} $sub->($glob)
-      unless $prop->{header_is_printed}++;
-  }
-  $glob->flush;
-}
-
-sub flush {
-  my PROP $prop = (my $glob = shift)->prop;
-  $glob->IO::Handle::flush();
-  if ($prop->{cf_parent_fh}) {
-    print {$prop->{cf_parent_fh}} $prop->{buffer};
-    $prop->{buffer} = '';
-    $prop->{cf_parent_fh}->IO::Handle::flush();
-    # XXX: flush 後は、 parent_fh の dup にするべき。
-    # XXX: でも、 multipart (server push) とか continue とかは？
-  }
-}
+use File::Basename;
 
 #----------------------------------------
 
@@ -46,10 +26,70 @@ BEGIN {
   }
 }
 
-sub cgi_url {
+# XXX: parameter の加減算も？
+# XXX: 絶対 path/相対 path の選択?
+# scheme
+# authority
+# path
+# query
+# fragment
+sub mkurl {
   my PROP $prop = (my $glob = shift)->prop;
-  $prop->{cf_cgi}->url(map {$_ => 1} @_);
+  my $opts = shift if @_ && ref $_[0] eq 'HASH';
+  my ($file, $param) = @_;
+
+  my $scheme = $prop->{cf_cgi}->protocol;
+  my $base = $prop->{cf_cgi}->server_name;
+  if (my $port = $prop->{cf_cgi}->server_port) {
+    $base .= ":$port"  unless ($scheme eq 'http' and $port == 80
+			       or $scheme eq 'https' and $port == 443);
+  }
+  my $req  = $glob->request_path;
+  my $dir  = dirname($req);
+  my $orig = basename($req);
+
+  my $path = $dir . '/' . do {
+    if (not defined $file or $file eq '') {
+      $orig;
+    } elsif ($file eq '.') {
+      ''
+    } else {
+      $file;
+    }
+  };
+
+  # XXX: /../ truncation
+  # XXX: If sep is '&', scalar ref quoting is required.
+  ($scheme . '://' . $base . $path . $glob->mkquery($param))
 }
+
+sub mkquery {
+  my ($self, $param, $sep) = @_;
+  $sep //= ';';
+
+  my @enc_param;
+  if (ref $param eq 'HASH') {
+    push @enc_param, $self->url_encode($_).'='.$self->url_encode($param->{$_})
+      for keys %$param;
+  } elsif (ref $param eq 'ARRAY') {
+    my @list = @$param;
+    while (my ($key, $value) = splice @list, 0, 2) {
+      push @enc_param, $self->url_encode($key).'='.$self->url_encode($value);
+    }
+  }
+
+  unless (@enc_param) {
+    wantarray ? () : '';
+  } else {
+    wantarray ? @enc_param : '?'.join($sep, @enc_param);
+  }
+}
+
+sub request_path {
+  (my $uri = shift->request_uri) =~ s/\?.*//;
+  $uri;
+}
+
 sub request_uri {
   my PROP $prop = (my $glob = shift)->prop;
   if (my $sub = $prop->{cf_cgi}->can('request_uri')) {
@@ -58,17 +98,30 @@ sub request_uri {
     $ENV{REQUEST_URI};
   }
 }
+
+#========================================
+
+sub mkheader {
+  my PROP $prop = (my $glob = shift)->prop;
+  # my $o = $prop->{session} || $cgi;
+  $prop->{cf_cgi}->header($glob->list_header, @_);
+}
+
+#----------------------------------------
+
 sub bake_cookie {
   my $glob = shift;		# not used.
   my ($name, $value) = splice @_, 0, 2;
   require CGI::Cookie;
   CGI::Cookie->new(-name => $name, -value => $value, @_);
 }
+
 sub set_cookie {
   my PROP $prop = (my $glob = shift)->prop;
   my $name = shift;
   $prop->{cookie}{$name} = $glob->bake_cookie($name, @_);
 }
+
 sub list_baked_cookie {
   my PROP $prop = (my $glob = shift)->prop;
   my @cookie = values %{$prop->{cookie}} if $prop->{cookie};
@@ -78,6 +131,7 @@ sub list_baked_cookie {
   return unless @cookie;
   wantarray ? (-cookie => \@cookie) : \@cookie;
 }
+
 sub redirect {
   my PROP $prop = (my $glob = shift)->prop;
   if ($prop->{header_is_printed}++) {
@@ -92,6 +146,8 @@ sub redirect {
   undef $$prop{cf_parent_fh};
   $glob;
 }
+
+#========================================
 
 sub param_type {
   my PROP $prop = (my $glob = shift)->prop;
