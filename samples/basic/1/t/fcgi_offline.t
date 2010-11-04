@@ -19,7 +19,8 @@ use lib untaint_any
   use base qw(YATT::Lite::Object File::Spec);
   use fields qw(res status ct content
 		sockfile
-		cf_rootdir cf_script
+		raw_result
+		cf_rootdir cf_fcgiscript
 	      ); # base form
 
   sub check_skip_reason {
@@ -44,6 +45,14 @@ use lib untaint_any
     Test::More::plan(skip_all => shift);
   }
 
+  sub which {
+    my ($pack, $exe) = @_;
+    foreach my $path ($pack->path) {
+      if (-x (my $fn = $pack->join($path, $exe))) {
+	return $fn;
+      }
+    }
+  }
 
   use IO::Socket::UNIX;
   use Fcntl;
@@ -73,7 +82,7 @@ use lib untaint_any
       # parent
       $sub->($self);
 
-      kill USR1 => $kid; # To shutdown FCGI script. TERM is ng.
+      kill USR1 => $kid; # To shutdown FCGI fcgiscript. TERM is ng.
       waitpid($kid, 0);
 
       unlink $self->{sockfile} if -e $self->{sockfile};
@@ -83,8 +92,10 @@ use lib untaint_any
       # child
       open STDIN, '<&', $sock or die "kid: Can't reopen STDIN: $!";
       close STDOUT;
-      exec $self->{cf_script};
-      die "Can't exec $self->{cf_script}: $!";
+      # XXX: -MDevel::Cover=$ENV{HARNESS_PERL_SWITCHES}
+      # XXX: Taint?
+      exec $self->{cf_fcgiscript};
+      die "Can't exec $self->{cf_fcgiscript}: $!";
     }
   }
 
@@ -97,7 +108,7 @@ use lib untaint_any
   #========================================
   package Test::FCGI::Client; sub MY () {__PACKAGE__}
   use base qw(Test::FCGI);
-  use fields qw(connection);
+  use fields qw(connection raw_error);
 
   sub fork_server {
     my $self = shift;
@@ -123,14 +134,14 @@ use lib untaint_any
     my $client = FCGI::Client::Connection->new
       (sock => $self->mkclientsock($self->{sockfile}));
 
-    my ($stdout, $stderr) = $client->request
+    ($self->{raw_result}, $self->{raw_error}) = $client->request
       ({REQUEST_METHOD    => uc($method)
 	, REQUEST_URI     => $path
 	, DOCUMENT_ROOT   => $self->{cf_rootdir}
 	, PATH_TRANSLATED => "$self->{cf_rootdir}$path"
 	, (@query ? (QUERY_STRING => join("&", @query)) : ())});
 
-    $self->parse_result($stdout);
+    $self->parse_result($self->{raw_result});
   }
 
   #========================================
@@ -147,8 +158,8 @@ use lib untaint_any
     $self->{wrapper} = MY->which('cgi-fcgi')
       or return 'cgi-fcgi is not installed';
 
-    unless (-x $self->{cf_script}) {
-      return 'fcgi script is not runnable';
+    unless (-x $self->{cf_fcgiscript}) {
+      return 'fcgi fcgiscript is not runnable';
     }
 
     return;
@@ -168,7 +179,8 @@ use lib untaint_any
     local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
     local $ENV{QUERY_STRING} = @query ? join("&", @query) : undef;
 
-    open2 my $read, my $write
+    # XXX: open3
+    my $kid = open2 my $read, my $write
       , $self->{wrapper}, qw(-bind -connect) => $self->{sockfile}
 	or die "Can't invoke $self->{wrapper}: $!";
     if ($is_post) {
@@ -176,25 +188,19 @@ use lib untaint_any
     }
     close $write;
 
+    #XXX: waitpid
     $self->parse_result(do {local $/; <$read>});
-  }
-
-  sub which {
-    my ($pack, $exe) = @_;
-    foreach my $path ($pack->path) {
-      if (-x (my $fn = $pack->join($path, $exe))) {
-	return $fn;
-      }
-    }
   }
 }
 
+# XXX: Automatic selection...
 my $CLASS = 'Test::FCGI::Client';
+# my $CLASS = 'Test::FCGI::via_cgi_fcgi';
 
 my $mech = $CLASS->new
   (map {
     (rootdir => $_
-     , script => "$_/cgi-bin/runyatt.fcgi")
+     , fcgiscript => "$_/cgi-bin/runyatt.fcgi")
   } File::Spec->rel2abs("$bindir/.."));
 
 if (my $reason = $mech->check_skip_reason) {
@@ -206,5 +212,8 @@ $mech->fork_server
      $mech->plan('no_plan');
      Test::More::ok(my $res = $mech->request(GET => '/index.yatt')
 		    , "res ok");
-     print map {"#<<$_>>\n"} split /\n/, $res->content;
+     Test::More::like($res->content, qr{<title>Hello World!</title>}
+		      , "title");
+     Test::More::like($res->content, qr{<div id="body"[^>]*>\s*RUOK\?</div>}
+		      , "div#body");
    });
