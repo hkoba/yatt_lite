@@ -16,19 +16,21 @@ use lib untaint_any
   use Test::Builder ();
   my $Test = Test::Builder->new;
 
-  use base qw(YATT::Lite::Object);
+  use base qw(YATT::Lite::Object File::Spec);
   use fields qw(res status ct content
+		sockfile
 		cf_rootdir cf_script
 	      ); # base form
 
-  package Test::FCGI::via_cgi_fcgi; sub MY () {__PACKAGE__}
-  use base qw(Test::FCGI File::Spec);
-  use fields qw(sockfile wrapper);
+  sub check_skip_reason {
+    my MY $self = shift;
 
-  use IO::Socket::UNIX;
-  use Fcntl;
-  use POSIX ":sys_wait_h";
-  use Time::HiRes qw(usleep);
+    unless (eval {require FCGI and require CGI::Fast}) {
+      return 'FCGI.pm is not installed';
+    }
+
+    return;
+  }
 
   sub plan {
     shift;
@@ -42,51 +44,17 @@ use lib untaint_any
     Test::More::plan(skip_all => shift);
   }
 
-  sub check_skip_reason {
-    my MY $self = shift;
 
-    unless (eval {require FCGI and require CGI::Fast}) {
-      return 'FCGI.pm is not installed';
-    }
+  use IO::Socket::UNIX;
+  use Fcntl;
+  use POSIX ":sys_wait_h";
+  use Time::HiRes qw(usleep);
 
-    $self->{wrapper} = MY->which('cgi-fcgi')
-      or return 'cgi-fcgi is not installed';
-
-    unless (-x $self->{cf_script}) {
-      return 'fcgi script is not runnable';
-    }
-
-    return;
-  }
-
-  sub mkpipe {
+  sub mkservsock {
     shift; new IO::Socket::UNIX(Local => shift, Listen => 5);
   }
-
-  use File::Basename;
-  use HTTP::Response;
-  use IPC::Open2;
-  sub request {
-    (my MY $self, my ($method, $path, @query)) = @_;
-    local $ENV{SERVER_SOFTWARE} = 'PERL_TEST_FCGI';
-    local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
-    my $is_post = (local $ENV{REQUEST_METHOD} = uc($method)
-		   =~ m{^(POST|PUT)$});
-    local $ENV{REQUEST_URI} = $path;
-    local $ENV{DOCUMENT_ROOT} = $self->{cf_rootdir};
-    local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
-    local $ENV{QUERY_STRING} = @query ? join("&", @query) : undef;
-
-    open2 my $read, my $write
-      , $self->{wrapper}, qw(-bind -connect) => $self->{sockfile}
-	or die "Can't invoke $self->{wrapper}: $!";
-    if ($is_post) {
-    }
-    close $write;
-
-    my $result = do {local $/; <$read>};
-    # print map {"#[[$_]]\n"} split /\n/, $result;
-    $self->{res} = HTTP::Response->parse($result);
+  sub mkclientsock {
+    shift; new IO::Socket::UNIX(Peer => shift);
   }
 
   sub fork_server {
@@ -97,7 +65,7 @@ use lib untaint_any
       die "Can't mkdir $sessdir: $!";
     }
 
-    my $sock = $self->mkpipe($self->{sockfile} = "$sessdir/socket");
+    my $sock = $self->mkservsock($self->{sockfile} = "$sessdir/socket");
 
     unless (defined(my $kid = fork)) {
       die "Can't fork: $!";
@@ -120,6 +88,97 @@ use lib untaint_any
     }
   }
 
+  sub parse_result {
+    my MY $self = shift;
+    # print map {"#[[$_]]\n"} split /\n/, $result;
+    $self->{res} = HTTP::Response->parse(shift);
+  }
+
+  #========================================
+  package Test::FCGI::Client; sub MY () {__PACKAGE__}
+  use base qw(Test::FCGI);
+  use fields qw(connection);
+
+  sub fork_server {
+    my $self = shift;
+    local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
+    $self->SUPER::fork_server(@_);
+  }
+
+  sub check_skip_reason {
+    my MY $self = shift;
+
+    my $reason = $self->SUPER::check_skip_reason;
+    return $reason if $reason;
+
+    unless (eval {require FCGI::Client}) {
+      return 'FCGI::Client is not installed';
+    }
+    return
+  }
+
+  sub request {
+    (my MY $self, my ($method, $path, @query)) = @_;
+    require FCGI::Client;
+    my $client = FCGI::Client::Connection->new
+      (sock => $self->mkclientsock($self->{sockfile}));
+
+    my ($stdout, $stderr) = $client->request
+      ({REQUEST_METHOD    => uc($method)
+	, REQUEST_URI     => $path
+	, DOCUMENT_ROOT   => $self->{cf_rootdir}
+	, PATH_TRANSLATED => "$self->{cf_rootdir}$path"
+	, (@query ? (QUERY_STRING => join("&", @query)) : ())});
+
+    $self->parse_result($stdout);
+  }
+
+  #========================================
+  package Test::FCGI::via_cgi_fcgi; sub MY () {__PACKAGE__}
+  use base qw(Test::FCGI File::Spec);
+  use fields qw(wrapper);
+
+  sub check_skip_reason {
+    my MY $self = shift;
+
+    my $reason = $self->SUPER::check_skip_reason;
+    return $reason if $reason;
+
+    $self->{wrapper} = MY->which('cgi-fcgi')
+      or return 'cgi-fcgi is not installed';
+
+    unless (-x $self->{cf_script}) {
+      return 'fcgi script is not runnable';
+    }
+
+    return;
+  }
+
+  use File::Basename;
+  use HTTP::Response;
+  use IPC::Open2;
+  sub request {
+    (my MY $self, my ($method, $path, @query)) = @_;
+    # local $ENV{SERVER_SOFTWARE} = 'PERL_TEST_FCGI';
+    local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
+    my $is_post = (local $ENV{REQUEST_METHOD} = uc($method)
+		   =~ m{^(POST|PUT)$});
+    local $ENV{REQUEST_URI} = $path;
+    local $ENV{DOCUMENT_ROOT} = $self->{cf_rootdir};
+    local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
+    local $ENV{QUERY_STRING} = @query ? join("&", @query) : undef;
+
+    open2 my $read, my $write
+      , $self->{wrapper}, qw(-bind -connect) => $self->{sockfile}
+	or die "Can't invoke $self->{wrapper}: $!";
+    if ($is_post) {
+      # write....
+    }
+    close $write;
+
+    $self->parse_result(do {local $/; <$read>});
+  }
+
   sub which {
     my ($pack, $exe) = @_;
     foreach my $path ($pack->path) {
@@ -130,9 +189,9 @@ use lib untaint_any
   }
 }
 
+my $CLASS = 'Test::FCGI::Client';
 
-
-my $mech = Test::FCGI::via_cgi_fcgi->new
+my $mech = $CLASS->new
   (map {
     (rootdir => $_
      , script => "$_/cgi-bin/runyatt.fcgi")
