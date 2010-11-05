@@ -18,7 +18,7 @@ use fields qw(DirHandler Action
 	      cf_debug_cgi
 	    );
 use YATT::Lite::Util qw(cached_in split_path
-			lexpand rootname extname untaint_any);
+			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
 
@@ -113,7 +113,7 @@ sub runas_fcgi {
     $self->init_by_env;
 
     if (-e "$dir/.htdebug_env") {
-      $self->printenv($fh);
+      $self->printenv($fh, $cgi);
       next;
     }
 
@@ -219,11 +219,15 @@ sub is_gateway {
 }
 
 sub printenv {
-  (my MY $self, my ($fh)) = @_;
+  (my MY $self, my ($fh, $cgi)) = @_;
   print $fh "\n\n";
   foreach my $name (sort keys %ENV) {
     print $fh $name, "\t", map(defined $_ ? $_ : "(undef)", $ENV{$name}), "\n"
       ;
+  }
+
+  if (defined $cgi and ref $cgi) {
+    print $fh "CGI:\n", terse_dump($cgi), "\n";
   }
 }
 

@@ -144,6 +144,7 @@ sub handle_ytmpl {
 
 sub trim_ext {
   my ($self, $fn) = @_;
+  croak "Undefined filename!" unless defined $fn;
   return undef unless $fn =~ s/\.(\w+$)//;
   $1;
 }

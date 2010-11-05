@@ -130,20 +130,8 @@ sub mechanized {
 	next;
       }
 
-      my $url = $tests->item_url($item);
-      my $res;
-      my $method = $item->{cf_METHOD} // 'GET';
-      given ($method) {
-	when ('GET') {
-	  $res = $mech->get($url);
-	}
-	when ('POST') {
-	  $res = $mech->post($url, $item->{cf_PARAM});
-	}
-	default {
-	  die "Unknown test method: $_\n";
-	}
-      }
+      my $method = $tests->item_method($item);
+      my $res = $tests->mech_request($mech, $item);
 
       if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
 	while (my ($key, $pat) = splice @header, 0, 2) {
@@ -168,12 +156,43 @@ sub mechanized {
   }
 }
 
+sub item_method {
+  (my Tests $tests, my ($item)) = @_;
+  $item->{cf_METHOD} // 'GET';
+}
+
+sub mech_request {
+  (my Tests $tests, my ($mech, $item)) = @_;
+  my $url = $tests->item_url($item);
+  given ($tests->item_method($item)) {
+    when ('GET') {
+      return $mech->get($url);
+    }
+    when ('POST') {
+      return $mech->post($url, $item->{cf_PARAM});
+    }
+    default {
+      die "Unknown test method: $_\n";
+    }
+  }
+}
+
 sub item_url {
   (my Tests $tests, my Item $item) = @_;
-  join '?', $tests->base_url . $item->{cf_FILE}
-    , ($item->{cf_PARAM} ? join('&', map {
-      "$_=".$item->{cf_PARAM}{$_}
-    } keys %{$item->{cf_PARAM}}) : ());
+  join '?', $tests->item_url_file($item), $tests->item_query($item);
+}
+
+sub item_url_file {
+  (my Tests $tests, my Item $item) = @_;
+  $tests->base_url . $item->{cf_FILE}
+}
+
+sub item_query {
+  (my Tests $tests, my Item $item) = @_;
+  return unless $item->{cf_PARAM};
+  join('&', map {
+    "$_=".$item->{cf_PARAM}{$_}
+  } keys %{$item->{cf_PARAM}});
 }
 
 #========================================

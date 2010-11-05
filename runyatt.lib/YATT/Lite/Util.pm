@@ -142,6 +142,9 @@ require Scalar::Util;
     } continue {
       $pos = pos($path);
     }
+    unless (defined $file) {
+      croak "Can't recognize target file for $path, startDir=$startDir";
+    }
     ($startDir, substr($dir, length($startDir)), $file, substr($path, $pos));
   }
 

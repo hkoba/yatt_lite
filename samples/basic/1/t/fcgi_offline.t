@@ -11,6 +11,63 @@ use lib untaint_any
    ($libdir = ($bindir = dirname(untaint_any($0)))
     . "/../../../../runyatt.lib"));
 
+my $CLASS = Test::FCGI::Auto->class
+  or Test::FCGI::Auto->skip_all
+  ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
+
+unless (eval {require Test::Differences}) {
+  $CLASS->skip_all('Test::Differences is not installed');
+}
+
+my $mech = $CLASS->new
+  (map {
+    (rootdir => $_
+     , fcgiscript => "$_/cgi-bin/runyatt.fcgi")
+  } File::Spec->rel2abs("$bindir/.."));
+
+if (my $reason = $mech->check_skip_reason) {
+  $mech->skip_all($reason);
+}
+
+sub MY () {__PACKAGE__}
+use YATT::Lite::Breakpoint;
+use YATT::Lite::XHFTest2;
+use base qw(YATT::Lite::XHFTest2);
+use YATT::Lite::Util qw(lexpand);
+
+use 5.010;
+
+$mech->fork_server
+  (sub {
+
+     my MY $tests = MY->load_tests([dir => "$bindir/.."
+				    , libdir => untaint_any
+				    (File::Spec->rel2abs($libdir))]
+				   , @ARGV ? @ARGV : $bindir);
+     $tests->enter;
+
+     $mech->plan($tests->test_plan);
+
+     $tests->mechanized($mech);
+
+   });
+
+sub base_url { shift; '/'; }
+
+sub ntests_per_item {
+  (my MY $tests, my Item $item) = @_;
+  lexpand($item->{cf_HEADER})/2
+    + (($item->{cf_BODY} || $item->{cf_ERROR}) ? 1 : 0);
+}
+
+sub mech_request {
+  (my MY $tests, my $mech, my Item $item) = @_;
+  my $method = $tests->item_method($item);
+  my $url = $tests->item_url_file($item);
+  $mech->request($method, $url, $item->{cf_PARAM});
+}
+
+#========================================
 {
   package Test::FCGI; sub MY () {__PACKAGE__}
   use Test::Builder ();
@@ -134,6 +191,7 @@ use lib untaint_any
 
   #========================================
   package Test::FCGI::Auto; sub MY () {__PACKAGE__}
+  use base qw(Test::FCGI);
   sub class {
     my $pack = shift;
     if (eval {require FCGI::Client}) {
@@ -165,6 +223,7 @@ use lib untaint_any
     return
   }
 
+  use YATT::Lite::Util qw(terse_dump);
   sub request {
     (my MY $self, my ($method, $path, $query)) = @_;
     require FCGI::Client;
@@ -180,11 +239,22 @@ use lib untaint_any
       if ($env->{REQUEST_METHOD} eq 'GET') {
 	$env->{QUERY_STRING} = $self->encode_querystring($query);
       } elsif ($env->{REQUEST_METHOD} eq 'POST') {
-	push @content, $self->encode_querystring($query);
+	$env->{CONTENT_TYPE} = 'application/x-www-form-urlencoded';
+	push @content, $self->encode_querystring($query, '&');
       }
     }
+
+    # print STDERR "# REQ: ", terse_dump($env, @content), "\n";
+
     ($self->{raw_result}, $self->{raw_error}) = $client->request
       ($env, @content);
+
+    # print STDERR "# ANS: ", terse_dump($self->{raw_result}, $self->{raw_error}), "\n";
+
+    unless (defined $self->{raw_result}) {
+      $self->{res} = undef;
+      return;
+    }
 
     # Protocol 先頭行を保管する
     my $res = do {
@@ -197,16 +267,6 @@ use lib untaint_any
       }
     };
     $self->parse_result($res);
-  }
-
-  sub get {
-    (my MY $self, my $url) = @_;
-    $self->request(GET => $url);
-  }
-
-  sub post {
-    (my MY $self, my ($url, $param)) = @_;
-    $self->request(POST => $url);
   }
 
   #========================================
@@ -244,6 +304,8 @@ use lib untaint_any
     local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
     local $ENV{QUERY_STRING} = $self->encode_querystring($query)
       unless $is_post;
+    local $ENV{CONTENT_TYPE} = 'application/x-www-form-urlencoded'
+      if $is_post;
 
     # XXX: open3
     my $kid = open2 my $read, my $write
@@ -257,53 +319,4 @@ use lib untaint_any
     #XXX: waitpid
     $self->parse_result(do {local $/; <$read>});
   }
-}
-
-my $CLASS = Test::FCGI::Auto->class
-  or Test::FCGI::Auto->skip_all
-  ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
-
-unless (eval {require Test::Differences}) {
-  $CLASS->skip_all('Test::Differences is not installed');
-}
-
-my $mech = $CLASS->new
-  (map {
-    (rootdir => $_
-     , fcgiscript => "$_/cgi-bin/runyatt.fcgi")
-  } File::Spec->rel2abs("$bindir/.."));
-
-if (my $reason = $mech->check_skip_reason) {
-  $mech->skip_all($reason);
-}
-
-sub MY () {__PACKAGE__}
-use YATT::Lite::Breakpoint;
-use YATT::Lite::XHFTest2;
-use base qw(YATT::Lite::XHFTest2);
-use YATT::Lite::Util qw(lexpand);
-
-use 5.010;
-
-$mech->fork_server
-  (sub {
-
-     my MY $tests = MY->load_tests([dir => "$bindir/.."
-				    , libdir => untaint_any
-				    (File::Spec->rel2abs($libdir))]
-				   , @ARGV ? @ARGV : $bindir);
-     $tests->enter;
-
-     $mech->plan($tests->test_plan);
-
-     $tests->mechanized($mech);
-
-   });
-
-sub base_url { shift; '/'; }
-
-sub ntests_per_item {
-  (my MY $tests, my Item $item) = @_;
-  lexpand($item->{cf_HEADER})/2
-    + (($item->{cf_BODY} || $item->{cf_ERROR}) ? 1 : 0);
 }

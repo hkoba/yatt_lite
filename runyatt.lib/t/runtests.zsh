@@ -11,10 +11,14 @@ setopt extendedglob
 bindir=$(cd $0:h; print $PWD)
 cd $0:h:h:h
 
-zparseopts -D -A opts C=o_cover T=o_taint -brew:: || true
+zparseopts -D -A opts C=o_cover T=o_taint -samples -brew:: || true
 
-# If no **/*.t is specified:
-if [[ -z $argv[(r)(*/)#*.t] ]]; then
+if (($+opts[--samples])); then
+    # Test samples only.
+    argv=(samples/**/t/*.t(*N,@N))
+
+elif [[ -z $argv[(r)(*/)#*.t] ]]; then
+    # If no **/*.t is specified:
     # To make relative path invocation happier.
     argv=($0:h:h:t/t/*.t(N))
     if [[ -d samples ]]; then
