@@ -110,8 +110,8 @@ sub flush {
     print {$prop->{cf_parent_fh}} $prop->{buffer};
     $prop->{buffer} = '';
     $prop->{cf_parent_fh}->IO::Handle::flush();
-    # XXX: flush ¸å¤Ï¡¢ parent_fh ¤Î dup ¤Ë¤¹¤ë¤Ù¤­¡£
-    # XXX: ¤Ç¤â¡¢ multipart (server push) ¤È¤« continue ¤È¤«¤Ï¡©
+    # XXX: flush å¾Œã¯ã€ parent_fh ã® dup ã«ã™ã‚‹ã¹ãã€‚
+    # XXX: ã§ã‚‚ã€ multipart (server push) ã¨ã‹ continue ã¨ã‹ã¯ï¼Ÿ
   }
 }
 

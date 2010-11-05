@@ -35,7 +35,7 @@ sub buildns {
   # DBIC->YATT_DBSchema holds YATT::Lite::DBSchema::DBIC instance.
   *{globref($DBIC, 'YATT_DBSchema')} = sub {
     my $dbic = shift;
-    # Class method ¤È¤·¤Æ¸Æ¤ó¤À¤È¤­¤Ï, schema ¤Ë set ¤·¤Ê¤¤¡£
+    # Class method ã¨ã—ã¦å‘¼ã‚“ã ã¨ãã¯, schema ã« set ã—ãªã„ã€‚
     $schema->{DBIC} ||= $dbic if defined $dbic and ref $dbic; # XXX: weaken??
     $schema;
   };
@@ -45,8 +45,8 @@ sub buildns {
   $myPkg->add_inc($DBIC);
 
   foreach my Table $tab (@{$schema->{table_list}}) {
-    # XXX: Àµ³Î¤Ë¤Ï rowClass ¤è¤Í¡¢¤³¤ì¤Ã¤Æ¡£
-    # XXX: ¤¸¤ã¤¡ ResultSet ¤ÎÊı¤Ïºî¤é¤Ê¤¯¤Æ¤è¤¤¤Î¤«?
+    # XXX: æ­£ç¢ºã«ã¯ rowClass ã‚ˆã­ã€ã“ã‚Œã£ã¦ã€‚
+    # XXX: ã˜ã‚ƒã ResultSet ã®æ–¹ã¯ä½œã‚‰ãªãã¦ã‚ˆã„ã®ã‹?
     my $tabClass = $tab->{cf_package}
       = join('::', $DBIC, Result => $tab->{cf_name});
     *{globref($tabClass, 'ISA')} = ['DBIx::Class::Core'];
@@ -62,7 +62,7 @@ sub buildns {
 			   @{$tab->{col_list}});
     $tabClass->set_primary_key($schema->info_table_pk($tab)) if $pk;
   }
-  # Relationship ¤ÎÀßÄê¤È¡¢ register_class ¤Î¸Æ¤Ó½Ğ¤·¡£
+  # Relationship ã®è¨­å®šã¨ã€ register_class ã®å‘¼ã³å‡ºã—ã€‚
   foreach my Table $tab (@{$schema->{table_list}}) {
     my $tabClass = $tab->{cf_package};
     foreach my $rel ($schema->list_relations($tab->{cf_name})) {
@@ -77,7 +77,7 @@ sub buildns {
 	croak "Foreign table is empty for $tab->{cf_name} $relType $relName $fkName";
       }
       my $fTab = $schema->{table_dict}{$fTabName};
-      # table ¤Î package Ì¾¤¬³ÎÄê¤¹¤ë¤Ş¤Ç¡¢relation ¤ÎÀßÄê¤òÃÙ±ä¤µ¤»¤¿¤¤¤«¤é¡£
+      # table ã® package åãŒç¢ºå®šã™ã‚‹ã¾ã§ã€relation ã®è¨­å®šã‚’é…å»¶ã•ã›ãŸã„ã‹ã‚‰ã€‚
       print STDERR <<END if $schema->{cf_verbose};
 -- $tabClass->$relType($relName, $fTab->{cf_package}, @{[
 defined $fkName ? $fkName : 'undef']})
@@ -90,14 +90,14 @@ END
 	  .$fTab->{cf_package}.": $@";
       }
     }
-    # register_class ¤Ï Relationship ÀßÄê¤¬ºÑ¤ó¤Ç¤«¤é¤¸¤ã¤Ê¤¤¤È¥À¥á?
+    # register_class ã¯ Relationship è¨­å®šãŒæ¸ˆã‚“ã§ã‹ã‚‰ã˜ã‚ƒãªã„ã¨ãƒ€ãƒ¡?
     $DBIC->register_class($tab->{cf_name}, $tabClass);
   }
 
   $schema;
 }
 
-# XXX: ¾å¤ÈÈï¤Ã¤Æ¤¤¤ë¤Î¤Ç¡¢¤Ş¤È¤á¤ë¤Ù¤·¡£
+# XXX: ä¸Šã¨è¢«ã£ã¦ã„ã‚‹ã®ã§ã€ã¾ã¨ã‚ã‚‹ã¹ã—ã€‚
 sub add_relation_many_to_many {
   (my $myPkg, my MY $schema, my Table $tab
    , my ($relName, $fkName, $tabName)) = @_;
@@ -125,7 +125,7 @@ sub ensure_created {
      }, $self)
 }
 
-# XXX: delegate ¤Ï¡¢¤ä¤ê¤¹¤®¤À¤Ã¤¿¤«¤â¤·¤ì¤Ê¤¤¡£
+# XXX: delegate ã¯ã€ã‚„ã‚Šã™ãã ã£ãŸã‹ã‚‚ã—ã‚Œãªã„ã€‚
 sub add_delegate {
   my ($pack, $name) = @_;
   *{globref($pack, $name)} = sub {

@@ -34,18 +34,18 @@ sub buildns {
   my MY $self = shift;
   my $appns = $self->SUPER::buildns(@_);
 
-  # MyApp ¤¬ DirHandler ¤ò·Ñ¾µ¤·¤Æ¤¤¤Ê¤±¤ì¤Ð¡¢²Ã¤¨¤ë
+  # MyApp ãŒ DirHandler ã‚’ç¶™æ‰¿ã—ã¦ã„ãªã‘ã‚Œã°ã€åŠ ãˆã‚‹
   unless ($appns->isa(my $default = $self->default_dirhandler)) {
     $self->add_isa($appns, $default);
   }
 
-  # instns ¤Ë¤Ï MY ¤òÄêµÁ¤·¤Æ¤ª¤¯¡£
+  # instns ã«ã¯ MY ã‚’å®šç¾©ã—ã¦ãŠãã€‚
   my $my = globref($appns, 'MY');
   unless (*{$my}{CODE}) {
     *$my = sub () { $appns };
   }
 
-  # Entity ¤â¡¢¸Æ¤Ù¤ë¤è¤¦¤Ë¤·¤Æ¤ª¤¯¡£
+  # Entity ã‚‚ã€å‘¼ã¹ã‚‹ã‚ˆã†ã«ã—ã¦ãŠãã€‚
   my $ent = globref($appns, 'Entity');
   unless (*{$ent}{CODE}) {
     require YATT::Lite::Entities;
@@ -60,11 +60,11 @@ sub buildns {
 sub load {
   (my MY $self, my MY $sys, my $name) = @_;
 
-  # MyApp ¤ò»È¤¤¤¿¤¤¤È¤­¤Ï... Runenv->new(basens => 'MyApp') ¤Ç¡£
-  my $appns = $self->buildns; # MyApp::INST$n ¤òºî¤ë. ¿Æ¤Ï?
+  # MyApp ã‚’ä½¿ã„ãŸã„ã¨ãã¯... Runenv->new(basens => 'MyApp') ã§ã€‚
+  my $appns = $self->buildns; # MyApp::INST$n ã‚’ä½œã‚‹. è¦ªã¯?
 
-  # $appns ¤Ï DirHandler ¤Ç Facade ¤À¤«¤é¡¢ trans ¤Ç¤Ï¤Ê¤¤¤³¤È¤ËÃí°Õ¡£
-  # trans ¤Ë¥á¥ó¥Ð¡¼¤òÂ­¤¹¾ì¹ç¤Ï¡¢facade ¤Ë¤âÂ­¤·¤Æ¡¢¤«¤Ä cf_delegate ¤·¤Æ¤ª¤«¤Ê¤¤¤È¤À¤á¡£
+  # $appns ã¯ DirHandler ã§ Facade ã ã‹ã‚‰ã€ trans ã§ã¯ãªã„ã“ã¨ã«æ³¨æ„ã€‚
+  # trans ã«ãƒ¡ãƒ³ãƒãƒ¼ã‚’è¶³ã™å ´åˆã¯ã€facade ã«ã‚‚è¶³ã—ã¦ã€ã‹ã¤ cf_delegate ã—ã¦ãŠã‹ãªã„ã¨ã ã‚ã€‚
   $appns->new($name
 	      , vfs => [dir => $name, encoding => $self->{cf_tmpl_encoding}]
 	      , package => $appns->rootns_for($appns)
