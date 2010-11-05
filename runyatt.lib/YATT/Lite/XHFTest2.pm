@@ -113,6 +113,70 @@ sub load_file {
 }
 
 #========================================
+use 5.010;
+
+sub mechanized {
+  (my Tests $tests, my $mech) = @_;
+  foreach my File $sect (@{$tests->{files}}) {
+    my $dir = $tests->{cf_dir};
+    my $sect_name = $tests->file_title($sect);
+    foreach my Item $item (@{$sect->{items}}) {
+
+      if (my $action = $item->{cf_ACTION}) {
+	my ($method, @args) = @$action;
+	my $sub = $tests->can("action_$method")
+	  or die "No such action: $method";
+	$sub->($tests, @args);
+	next;
+      }
+
+      my $url = $tests->item_url($item);
+      my $res;
+      my $method = $item->{cf_METHOD} // 'GET';
+      given ($method) {
+	when ('GET') {
+	  $res = $mech->get($url);
+	}
+	when ('POST') {
+	  $res = $mech->post($url, $item->{cf_PARAM});
+	}
+	default {
+	  die "Unknown test method: $_\n";
+	}
+      }
+
+      if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
+	while (my ($key, $pat) = splice @header, 0, 2) {
+	  like $res->header($key), qr{$pat}s
+	    , "[$sect_name] HEADER $key of $method $item->{cf_FILE}";
+	}
+      }
+
+      if ($item->{cf_BODY}) {
+	if (ref $item->{cf_BODY}) {
+	  like nocr($mech->content), $tests->mkseqpat($item->{cf_BODY})
+	    , "[$sect_name] BODY of $method $item->{cf_FILE}";
+	} else {
+	  eq_or_diff trimlast(nocr($mech->content)), $item->{cf_BODY}
+	    , "[$sect_name] BODY of $method $item->{cf_FILE}";
+	}
+      } elsif ($item->{cf_ERROR}) {
+	like $mech->content, qr{$item->{cf_ERROR}}
+	  , "[$sect_name] ERROR of $method $item->{cf_FILE}";
+      }
+    }
+  }
+}
+
+sub item_url {
+  (my Tests $tests, my Item $item) = @_;
+  join '?', $tests->base_url . $item->{cf_FILE}
+    , ($item->{cf_PARAM} ? join('&', map {
+      "$_=".$item->{cf_PARAM}{$_}
+    } keys %{$item->{cf_PARAM}}) : ());
+}
+
+#========================================
 sub action_remove {
   my Tests $tests = shift;
   my @files = glob(shift);

@@ -94,7 +94,11 @@ use lib untaint_any
       close STDOUT;
       # XXX: -MDevel::Cover=$ENV{HARNESS_PERL_SWITCHES}
       # XXX: Taint?
-      exec $self->{cf_fcgiscript};
+      my @opts = qw(-T);
+      if (my $switch = $ENV{HARNESS_PERL_SWITCHES}) {
+	push @opts, split " ", $switch;
+      }
+      exec $^X, @opts, $self->{cf_fcgiscript};
       die "Can't exec $self->{cf_fcgiscript}: $!";
     }
   }
@@ -105,7 +109,22 @@ use lib untaint_any
     $self->{res} = HTTP::Response->parse(shift);
   }
 
+  sub content {
+    my MY $self = shift;
+    $self->{res}->content;
+  }
+
   #========================================
+  package Test::FCGI::Auto; sub MY () {__PACKAGE__}
+  sub class {
+    my $pack = shift;
+    if (eval {require FCGI::Client}) {
+      'Test::FCGI::Client';
+    } elsif ($pack->which('cgi-fcgi')) {
+      'Test::FCGI::via_cgi_fcgi';
+    }
+  }
+
   package Test::FCGI::Client; sub MY () {__PACKAGE__}
   use base qw(Test::FCGI);
   use fields qw(connection raw_error);
@@ -141,7 +160,27 @@ use lib untaint_any
 	, PATH_TRANSLATED => "$self->{cf_rootdir}$path"
 	, (@query ? (QUERY_STRING => join("&", @query)) : ())});
 
-    $self->parse_result($self->{raw_result});
+    # Protocol 先頭行を保管する
+    my $res = do {
+      if ($self->{raw_result} =~ m{^HTTP/\d+\.\d+ \d+ }) {
+	$self->{raw_result}
+      } elsif ($self->{raw_result} =~ /^Status: (\d+ .*)/) {
+	"HTTP/1.0 $1\x0d\x0a$self->{raw_result}"
+      } else {
+	"HTTP/1.0 200 Faked OK\x0d\x0a$self->{raw_result}"
+      }
+    };
+    $self->parse_result($res);
+  }
+
+  sub get {
+    (my MY $self, my $url) = @_;
+    $self->request(GET => $url);
+  }
+
+  sub post {
+    (my MY $self, my ($url, $param)) = @_;
+    $self->request(POST => $url);
   }
 
   #========================================
@@ -193,9 +232,13 @@ use lib untaint_any
   }
 }
 
-# XXX: Automatic selection...
-my $CLASS = 'Test::FCGI::Client';
-# my $CLASS = 'Test::FCGI::via_cgi_fcgi';
+my $CLASS = Test::FCGI::Auto->class
+  or Test::FCGI::Auto->skip_all
+  ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
+
+unless (eval {require Test::Differences}) {
+  $CLASS->skip_all('Test::Differences is not installed');
+}
 
 my $mech = $CLASS->new
   (map {
@@ -207,13 +250,33 @@ if (my $reason = $mech->check_skip_reason) {
   $mech->skip_all($reason);
 }
 
+sub MY () {__PACKAGE__}
+use YATT::Lite::Breakpoint;
+use YATT::Lite::XHFTest2;
+use base qw(YATT::Lite::XHFTest2);
+use YATT::Lite::Util qw(lexpand);
+
+use 5.010;
+
 $mech->fork_server
   (sub {
-     $mech->plan('no_plan');
-     Test::More::ok(my $res = $mech->request(GET => '/index.yatt')
-		    , "res ok");
-     Test::More::like($res->content, qr{<title>Hello World!</title>}
-		      , "title");
-     Test::More::like($res->content, qr{<div id="body"[^>]*>\s*RUOK\?</div>}
-		      , "div#body");
+
+     my MY $tests = MY->load_tests([dir => "$bindir/.."
+				    , libdir => untaint_any
+				    (File::Spec->rel2abs($libdir))]
+				   , @ARGV ? @ARGV : $bindir);
+     $tests->enter;
+
+     $mech->plan($tests->test_plan);
+
+     $tests->mechanized($mech);
+
    });
+
+sub base_url { shift; '/'; }
+
+sub ntests_per_item {
+  (my MY $tests, my Item $item) = @_;
+  lexpand($item->{cf_HEADER})/2
+    + (($item->{cf_BODY} || $item->{cf_ERROR}) ? 1 : 0);
+}
