@@ -240,7 +240,9 @@ sub mech_request {
 	$env->{QUERY_STRING} = $self->encode_querystring($query);
       } elsif ($env->{REQUEST_METHOD} eq 'POST') {
 	$env->{CONTENT_TYPE} = 'application/x-www-form-urlencoded';
-	push @content, $self->encode_querystring($query, '&');
+	my $enc = $self->encode_querystring($query);
+	push @content, $enc;
+	$env->{CONTENT_LENGTH} = length($enc);
       }
     }
 
@@ -306,13 +308,16 @@ sub mech_request {
       unless $is_post;
     local $ENV{CONTENT_TYPE} = 'application/x-www-form-urlencoded'
       if $is_post;
+    my $enc = $self->encode_querystring($query);
+    local $ENV{CONTENT_LENGTH} = length $enc
+      if $is_post;
 
     # XXX: open3
     my $kid = open2 my $read, my $write
       , $self->{wrapper}, qw(-bind -connect) => $self->{sockfile}
 	or die "Can't invoke $self->{wrapper}: $!";
     if ($is_post) {
-      print $write $self->encode_querystring($query);
+      print $write $enc;
     }
     close $write;
 
