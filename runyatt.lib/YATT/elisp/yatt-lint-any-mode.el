@@ -31,6 +31,8 @@
      after yatt-lint-any-handle-yattrc)
     ("\\.pm\\'"
      after yatt-lint-any-handle-perl-module)
+    ("\\.\\(pl\\|t\\)\\'"
+     after yatt-lint-any-handle-perl-script)
     )
   "Auto lint filename mapping for yatt and related files.")
 
@@ -111,13 +113,19 @@
 
 
 (defun yatt-lint-any-handle-yattrc (buffer)
-  (yatt-lint-any-perl-error-by "scripts/yatt.lintrc" buffer))
+  (yatt-lint-any-perl-error-by
+   (yatt-lint-cmdfile "scripts/yatt.lintrc") buffer))
 
 (defun yatt-lint-any-handle-perl-action (buffer)
-  (yatt-lint-any-perl-error-by "scripts/yatt.lintany" buffer))
+  (yatt-lint-any-perl-error-by
+   (yatt-lint-cmdfile "scripts/yatt.lintany") buffer))
 
 (defun yatt-lint-any-handle-perl-module (buffer)
-  (yatt-lint-any-perl-error-by "scripts/yatt.lintpm" buffer))
+  (yatt-lint-any-perl-error-by
+   (yatt-lint-cmdfile "scripts/yatt.lintpm") buffer))
+
+(defun yatt-lint-any-handle-perl-script (buffer)
+  (yatt-lint-any-perl-error-by "perl -wc " buffer))
 
 (defun yatt-lint-any-perl-error-by (command buffer)
   (plist-bind (rc err)
@@ -134,12 +142,15 @@
 ;;========================================
 ;; Other utils
 ;;========================================
-(defun yatt-lint-any-shell-command (cmdfile &rest args)
-  (let ((tmpbuf (generate-new-buffer " *yatt-lint-temp*"))
-	(cmd (concat yatt-lint-any-YATT-dir "/" cmdfile))
-	rc err)
+(defun yatt-lint-cmdfile (cmdfile)
+  (let ((cmd (concat yatt-lint-any-YATT-dir "/" cmdfile)))
     (unless (file-exists-p cmd)
       (error "Can't find yatt command: %s" cmdfile))
+    cmd))
+
+(defun yatt-lint-any-shell-command (cmd &rest args)
+  (let ((tmpbuf (generate-new-buffer " *yatt-lint-temp*"))
+	rc err)
     (unwind-protect
 	(setq rc (shell-command (apply #'concat cmd args) tmpbuf))
       (setq err (with-current-buffer tmpbuf (buffer-string)))
