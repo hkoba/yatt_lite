@@ -114,6 +114,24 @@ use lib untaint_any
     $self->{res}->content;
   }
 
+
+  use Carp;
+  use YATT::Lite::Util qw(url_encode);
+  sub encode_querystring {
+    (my MY $self, my ($query, $sep)) = @_;
+    if (not defined $query or not ref $query) {
+      $query
+    } elsif (ref $query eq 'HASH') {
+      join($sep // ';'
+	   , map {
+	     $self->url_encode($_) . '='
+	       . $self->url_encode($query->{$_})
+	   } keys %$query);
+    } else {
+      croak "Not implemented type of PARAM!";
+    }
+  }
+
   #========================================
   package Test::FCGI::Auto; sub MY () {__PACKAGE__}
   sub class {
@@ -148,17 +166,25 @@ use lib untaint_any
   }
 
   sub request {
-    (my MY $self, my ($method, $path, @query)) = @_;
+    (my MY $self, my ($method, $path, $query)) = @_;
     require FCGI::Client;
     my $client = FCGI::Client::Connection->new
       (sock => $self->mkclientsock($self->{sockfile}));
 
-    ($self->{raw_result}, $self->{raw_error}) = $client->request
-      ({REQUEST_METHOD    => uc($method)
+    my $env = {REQUEST_METHOD    => uc($method)
 	, REQUEST_URI     => $path
 	, DOCUMENT_ROOT   => $self->{cf_rootdir}
-	, PATH_TRANSLATED => "$self->{cf_rootdir}$path"
-	, (@query ? (QUERY_STRING => join("&", @query)) : ())});
+	, PATH_TRANSLATED => "$self->{cf_rootdir}$path"};
+    my @content;
+    if (defined $query) {
+      if ($env->{REQUEST_METHOD} eq 'GET') {
+	$env->{QUERY_STRING} = $self->encode_querystring($query);
+      } elsif ($env->{REQUEST_METHOD} eq 'POST') {
+	push @content, $self->encode_querystring($query);
+      }
+    }
+    ($self->{raw_result}, $self->{raw_error}) = $client->request
+      ($env, @content);
 
     # Protocol 先頭行を保管する
     my $res = do {
@@ -208,7 +234,7 @@ use lib untaint_any
   use HTTP::Response;
   use IPC::Open2;
   sub request {
-    (my MY $self, my ($method, $path, @query)) = @_;
+    (my MY $self, my ($method, $path, $query)) = @_;
     # local $ENV{SERVER_SOFTWARE} = 'PERL_TEST_FCGI';
     local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
     my $is_post = (local $ENV{REQUEST_METHOD} = uc($method)
@@ -216,14 +242,15 @@ use lib untaint_any
     local $ENV{REQUEST_URI} = $path;
     local $ENV{DOCUMENT_ROOT} = $self->{cf_rootdir};
     local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
-    local $ENV{QUERY_STRING} = @query ? join("&", @query) : undef;
+    local $ENV{QUERY_STRING} = $self->encode_querystring($query)
+      unless $is_post;
 
     # XXX: open3
     my $kid = open2 my $read, my $write
       , $self->{wrapper}, qw(-bind -connect) => $self->{sockfile}
 	or die "Can't invoke $self->{wrapper}: $!";
     if ($is_post) {
-      # write....
+      print $write $self->encode_querystring($query);
     }
     close $write;
 
