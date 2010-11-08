@@ -10,7 +10,8 @@ my $libdir;
 use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
-use YATT::Lite qw(*YATT);
+use CGI;
+use YATT::Lite qw(*YATT *CON);
 use YATT::Lite::Util::CmdLine qw(parse_opts parse_params);
 use YATT::Lite::Breakpoint;
 # XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
@@ -43,7 +44,7 @@ my @command;
     my $trans = $dirhandler->open_trans;
 
     my ($part, $sub, $pkg) = $trans->find_part_handler(basename($file));
-    
+    # XXX: cgi mode.
     push @command, [$dirhandler, $file, $sub, $pkg
 		    , $part->reorder_hash_params(\%param)];
   }
@@ -54,9 +55,8 @@ my @command;
 foreach my $cmd (@command) {
   my ($dirhandler, $file, $sub, $this, @args) = @$cmd;
   local $YATT = $dirhandler;
-  # XXX: make_connection?
-  # XXX: cgi mode.
-  $sub->($this, \*STDOUT, @args);
+  local $CON = $dirhandler->make_connection(\*STDOUT, cgi => CGI->new({}));
+  $sub->($this, $CON, @args);
 }
 
 # exit 1 if $nerror;
