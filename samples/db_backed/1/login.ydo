@@ -17,7 +17,7 @@ sub {
 
   $this->entity_set_logged_in(1, login => $login);
 
-  if (my $url = $con->param('nx') || $con->referer) {
+  if (my $url = $con->param('back') || $con->referer) {
     $con->redirect($url);
   } else {
     print $con "OK(".$i++."; $compiled_at)\n";

@@ -8,7 +8,8 @@ use base qw(YATT::Lite::Object);
 use fields qw(files cf_dir cf_libdir);
 use YATT::Lite::Types
   (export_default => 1
-   , [File => -fields => [qw(cf_file items)]]
+   , [File => -fields => [qw(cf_file items
+			     cf_REQUIRE cf_USE_COOKIE)]]
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
 			     cf_PARAM cf_HEADER cf_BODY cf_ERROR)]]);
 
@@ -21,7 +22,7 @@ use Test::Differences;
 use File::Basename;
 use List::Util qw(sum);
 
-use YATT::Lite::Util qw(untaint_any);
+use YATT::Lite::Util qw(lexpand untaint_any);
 
 push @EXPORT, qw(plan is is_deeply like eq_or_diff sum);
 
@@ -46,6 +47,13 @@ sub test_plan {
   my Tests $self = shift;
   unless ($self->{files} and @{$self->{files}}) {
     return skip_all => "No t/*.xhf are defined";
+  }
+  foreach my File $file (@{$self->{files}}) {
+    foreach my $req (lexpand($file->{cf_REQUIRE})) {
+      unless (eval qq{require $req}) {
+	return skip_all => "$req is not installed.";
+      }
+    }
   }
   (tests => $self->ntests);
 }
@@ -208,11 +216,13 @@ sub action_remove {
 
 #========================================
 sub trimlast {
+  return undef unless defined $_[0];
   $_[0] =~ s/\s+$/\n/g;
   $_[0];
 }
 
 sub nocr {
+  return undef unless defined $_[0];
   $_[0] =~ s|\r||g;
   $_[0];
 }

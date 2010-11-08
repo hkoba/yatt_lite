@@ -67,3 +67,14 @@ foreach my File $sect (@{$tests->{files}}) {
     }
   }
 }
+
+sub test_plan {
+  my MY $self = shift;
+  # XXX: This is overkill!
+  foreach my File $file (@{$self->{files}}) {
+    if ($file->{cf_USE_COOKIE}) {
+      return skip_all => "Cookie is not yet supported in offline.t";
+    }
+  }
+  $self->SUPER::test_plan;
+}

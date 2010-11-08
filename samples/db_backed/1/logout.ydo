@@ -6,7 +6,7 @@ sub {
 
   $this->YATT->remove_session($con);
 
-  if (my $url = $con->param('nx') || $con->referer) {
+  if (my $url = $con->param('back') || $con->referer) {
     $con->redirect($url);
   } else {
     print $con "OK(".$i++."; $compiled_at)\n";

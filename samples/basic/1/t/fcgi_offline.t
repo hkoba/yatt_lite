@@ -81,7 +81,7 @@ sub mech_request {
   my $Test = Test::Builder->new;
 
   use base qw(YATT::Lite::Object File::Spec);
-  use fields qw(res status ct content
+  use fields qw(res status ct content cookie_jar last_request
 		sockfile
 		raw_result
 		cf_rootdir cf_fcgiscript
@@ -170,14 +170,36 @@ sub mech_request {
   sub parse_result {
     my MY $self = shift;
     # print map {"#[[$_]]\n"} split /\n/, $result;
-    $self->{res} = HTTP::Response->parse(shift);
+    my $res = $self->{res} = HTTP::Response->parse(shift);
+    if (defined $res) {
+      $res->request($self->{last_request});
+      $self->{cookie_jar} //= do {
+	require HTTP::Cookies;
+	HTTP::Cookies->new();
+      };
+      $self->{cookie_jar}->extract_cookies($res);
+    }
+    $res;
+  }
+
+  sub bake_cookies {
+    my MY $self = shift;
+    return unless $self->{cookie_jar};
+    $self->{cookie_jar}->add_cookie_header($self->{last_request});
+    $self->{last_request}->header('Cookie');
+  }
+
+  # Poor-man's emulation of WWW::Mechanize.
+  # These members are readonly from client.
+  # ($self->cookie_jar($x) has no results)
+  sub cookie_jar {
+    my MY $self = shift; $self->{cookie_jar};
   }
 
   sub content {
     my MY $self = shift;
     defined $self->{res} ? $self->{res}->content : undef;
   }
-
 
   use Carp;
   use YATT::Lite::Util qw(url_encode);
@@ -251,6 +273,16 @@ sub mech_request {
 	push @content, $enc;
 	$env->{CONTENT_LENGTH} = length($enc);
       }
+    }
+
+    $self->{last_request} = do {
+      require HTTP::Request;
+      my $req = HTTP::Request->new($env->{REQUEST_METHOD}
+				   , "http://localhost$path");
+    };
+
+    if (my $cookies = $self->bake_cookies()) {
+      $env->{HTTP_COOKIE} = $cookies;
     }
 
     # print STDERR "# REQ: ", terse_dump($env, @content), "\n";
