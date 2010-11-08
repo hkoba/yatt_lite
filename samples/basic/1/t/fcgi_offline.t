@@ -37,16 +37,23 @@ use YATT::Lite::Util qw(lexpand);
 
 use 5.010;
 
+my MY $tests = MY->load_tests([dir => "$bindir/.."
+			       , libdir => untaint_any
+			       (File::Spec->rel2abs($libdir))]
+			      , @ARGV ? @ARGV : $bindir);
+$tests->enter;
+
+my @plan = $tests->test_plan;
+# skip_all should be called before fork.
+if (@plan and $plan[0] eq 'skip_all') {
+  $mech->plan(@plan);
+}
+
 $mech->fork_server
   (sub {
 
-     my MY $tests = MY->load_tests([dir => "$bindir/.."
-				    , libdir => untaint_any
-				    (File::Spec->rel2abs($libdir))]
-				   , @ARGV ? @ARGV : $bindir);
-     $tests->enter;
-
-     $mech->plan($tests->test_plan);
+     # test plan should be configured after fork.
+     $mech->plan(@plan);
 
      $tests->mechanized($mech);
 

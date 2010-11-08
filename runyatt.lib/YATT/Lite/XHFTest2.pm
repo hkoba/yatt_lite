@@ -45,7 +45,7 @@ sub enter {
 sub test_plan {
   my Tests $self = shift;
   unless ($self->{files} and @{$self->{files}}) {
-    return skip_all => "No t/*.xhf is defined";
+    return skip_all => "No t/*.xhf are defined";
   }
   (tests => $self->ntests);
 }
