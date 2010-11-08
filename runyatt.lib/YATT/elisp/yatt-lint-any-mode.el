@@ -92,7 +92,7 @@
 ;;========================================
 (defun yatt-lint-any-handle-yatt (buffer)
   (plist-bind (rc err)
-      (yatt-lint-any-shell-command "scripts/yatt.lint" " "
+      (yatt-lint-any-shell-command (yatt-lint-cmdfile "scripts/yatt.lint") " "
 				   (buffer-file-name buffer))
     (when rc
       (let (match diag)

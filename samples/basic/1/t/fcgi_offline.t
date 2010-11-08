@@ -175,7 +175,7 @@ sub mech_request {
 
   sub content {
     my MY $self = shift;
-    $self->{res}->content;
+    defined $self->{res} ? $self->{res}->content : undef;
   }
 
 
@@ -265,7 +265,7 @@ sub mech_request {
       return;
     }
 
-    # Protocol ÀèÆ¬¹Ô¤òÊİ´É¤¹¤ë
+    # Protocol å…ˆé ­è¡Œã‚’ä¿ç®¡ã™ã‚‹
     my $res = do {
       if ($self->{raw_result} =~ m{^HTTP/\d+\.\d+ \d+ }) {
 	$self->{raw_result}

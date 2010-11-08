@@ -9,9 +9,12 @@ sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use lib untaint_any("$FindBin::Bin/..");
 
-foreach my $req (qw(DBD::SQLite DBIx::Class SQL::Abstract)) {
-  unless (eval qq{require $req}) {
-    plan skip_all => "$req is not installed."; exit;
+BEGIN {
+  # Because use YATT::Lite::DBSchema::DBIC loads DBIx::Class::Schema.
+  foreach my $req (qw(DBD::SQLite DBIx::Class::Schema SQL::Abstract)) {
+    unless (eval qq{require $req}) {
+      plan skip_all => "$req is not installed."; exit;
+    }
   }
 }
 plan qw(no_plan);

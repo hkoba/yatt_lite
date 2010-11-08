@@ -135,8 +135,12 @@ sub mechanized {
 
       if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
 	while (my ($key, $pat) = splice @header, 0, 2) {
-	  like $res->header($key), qr{$pat}s
-	    , "[$sect_name] HEADER $key of $method $item->{cf_FILE}";
+	  my $title = "[$sect_name] HEADER $key of $method $item->{cf_FILE}";
+	  if ($res) {
+	    like $res->header($key), qr{$pat}s, $title;
+	  } else {
+	    fail "$title - no \$res";
+	  }
 	}
       }
 

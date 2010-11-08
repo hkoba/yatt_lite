@@ -1,0 +1,23 @@
+#wrapper {
+    width: 40em;
+    margin-left: 5em;
+    background-color: #fefff3;
+}
+
+#topnav h2 {
+    border-left: solid #de9 5px;
+    border-bottom: solid #de9 1px;
+}
+
+.login {
+    float: right;
+    text-align: right;
+}
+
+div#body {
+    text-align: left;
+}
+
+th {
+    text-align: left;
+}

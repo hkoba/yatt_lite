@@ -7,13 +7,15 @@ use FindBin;
 BEGIN {$FindBin::Bin = untaint_any($FindBin::Bin)}
 use lib "$FindBin::Bin/..";
 
-use Test::More qw(no_plan);
+use Test::More;
 
-ok(chdir $FindBin::Bin, 'chdir to test dir');
+chdir $FindBin::Bin
+  or die "chdir to test dir failed: $!";
 
 use File::Find;
 
-my %prereq;
+my %prereq
+  = ('YATT::Lite::DBSchema::DBIC' => ['DBIx::Class::Schema']);
 
 my %ignore; map ++$ignore{$_}, ();
 
@@ -32,16 +34,7 @@ find {
   push @modules, untaint_any($name);
 }}, untaint_any('../YATT');
 
-sub fgrep {
-  my ($pattern, $file) = @_;
-  open my $fh, '<', $file or die "Can't open $file: $!";
-  my @result;
-  while (defined(my $line = <$fh>)) {
-    next unless $line =~ $pattern;
-    push @result, $line;
-  }
-  @result;
-}
+plan tests => 3 * @modules;
 
 foreach my $mod (@modules) {
  SKIP: {
@@ -58,4 +51,15 @@ foreach my $mod (@modules) {
     ok scalar fgrep(qr/^use warnings FATAL/, $modules{$mod})
       , "is warnings $mod";
   }
+}
+
+sub fgrep {
+  my ($pattern, $file) = @_;
+  open my $fh, '<', $file or die "Can't open $file: $!";
+  my @result;
+  while (defined(my $line = <$fh>)) {
+    next unless $line =~ $pattern;
+    push @result, $line;
+  }
+  @result;
 }
