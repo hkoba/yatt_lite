@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 REQUIRE[
 - DBIx::Class::Schema
+- CGI::Session
 ]
 USE_COOKIE: 1
 

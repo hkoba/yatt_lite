@@ -155,7 +155,7 @@ sub mech_request {
     } else {
       # child
       open STDIN, '<&', $sock or die "kid: Can't reopen STDIN: $!";
-      close STDOUT;
+      open STDOUT, '>&', $sock or die "kid: Can't reopen STDOUT: $!";
       # XXX: -MDevel::Cover=$ENV{HARNESS_PERL_SWITCHES}
       # XXX: Taint?
       my @opts = qw(-T);
@@ -360,6 +360,7 @@ sub mech_request {
     }
     close $write;
 
+    #XXX: Status line?
     #XXX: waitpid
     $self->parse_result(do {local $/; <$read>});
   }
