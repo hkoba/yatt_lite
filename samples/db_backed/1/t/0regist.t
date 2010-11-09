@@ -43,6 +43,10 @@ if (my $reason = $mech->check_skip_reason) {
   $mech->skip_all($reason);
 }
 
+do_sqlite("$bindir/../data/.htdata.db", <<END);
+delete from user where login = 'hkoba'
+END
+
 my $email_fn = "$bindir/../data/.htdebug.eml";
 
 unlink $email_fn if -e $email_fn;
@@ -153,14 +157,14 @@ http://localhost//regist.yatt?!confirm=1;token=\E(?<token>[0-9a-f]+)\Q
 If you have received this mail without having requested it,
 please dispose this mail.
 \E}) {
+  my $token = $+{token};
+
   ok(1, $theme);
 
-  print "# token=$+{token}\n";
-
   $mech->request(GET => '/regist.yatt', {'!confirm' => 1
-					 , token => $+{token}});
+					 , token => $token});
 
-  eq_or_diff($mech->content_nocr, <<'END', 'confirm');
+  eq_or_diff($mech->content_nocr, <<'END', "confirm token=$token");
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
@@ -200,4 +204,13 @@ sub read_file {
   my $data = <$fh>;
   $data =~ s/\r//g;
   $data;
+}
+
+sub do_sqlite {
+  my ($fn, $sql) = @_;
+  require DBI;
+  my $dbh = DBI->connect("dbi:SQLite:dbname=$fn", undef, undef
+			 , {PrintError => 0, RaiseError => 1, AutoCommit => 0});
+  $dbh->do($sql);
+  $dbh->commit;
 }
