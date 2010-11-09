@@ -24,6 +24,28 @@ sub just_new {
   ($self, $self->configure(@_));
 }
 
+our $loading_file;
+sub _loading_file {
+  return "\n  (loaded from unknown file)" unless defined $loading_file;
+  sprintf qq|\n  loaded from file '%s'|, $loading_file;
+}
+sub _with_loading_file {
+  my ($self, $fn, $method) = @_[0 .. 2];
+  local $loading_file = $fn;
+  if (ref $method eq 'CODE') {
+    $method->(@_[3 .. $#_]);
+  } else {
+    $self->$method(@_[3 .. $#_]);
+  }
+}
+
+# To hide from subclass. (Might harm localization?)
+my $NO_SUCH_CONFIG_ITEM = sub {
+  my ($self, $name) = @_;
+  "No such config item $name in class " . ref($self)
+    . $self->_loading_file;
+};
+
 sub configure {
   my $self = shift;
   my (@task);
@@ -36,7 +58,7 @@ sub configure {
     if (my $sub = $self->can("configure_$name")) {
       push @task, [$sub, $value];
     } elsif (not exists $fields->{"cf_$name"}) {
-      confess "No such config item $name in class " . ref $self;
+      confess $NO_SUCH_CONFIG_ITEM->($self, $name);
     } else {
       $self->{"cf_$name"} = $value;
     }
@@ -62,7 +84,7 @@ sub cf_delegate {
   map {
     my ($from, $to) = ref $_ ? @$_ : ($_, $_);
     unless (exists $fields->{"cf_$from"}) {
-      confess "No such config item $from in class " . ref $self;
+      confess $NO_SUCH_CONFIG_ITEM->($self, $from);
     }
     $to => $self->{"cf_$from"}
   } @_;
@@ -74,7 +96,7 @@ sub cf_delegate_defined {
   map {
     my ($from, $to) = ref $_ ? @$_ : ($_, $_);
     unless (exists $fields->{"cf_$from"}) {
-      confess "No such config item $from in class " . ref $self;
+      confess $NO_SUCH_CONFIG_ITEM->($self, $from);
     }
     defined $self->{"cf_$from"} ? ($to => $self->{"cf_$from"}) : ()
   } @_;

@@ -109,15 +109,17 @@ use YATT::Lite::XHF;
 sub Parser {'YATT::Lite::XHF'}
 sub load_file {
   my ($pack, $fn) = splice @_, 0, 2;
-  my File $file = $pack->File->new(file => $fn);
-  my $parser = $pack->Parser->new(file => $fn);
-  if (my @global = $parser->read) {
-    $file->configure(@global);
-  }
-  while (my @config = $parser->read) {
-    push @{$file->{items}}, $pack->Item->new(@config);
-  }
-  $file;
+  _with_loading_file {$pack} $fn, sub {
+    my File $file = $pack->File->new(file => $fn);
+    my $parser = $pack->Parser->new(file => $fn);
+    if (my @global = $parser->read) {
+      $file->configure(@global);
+    }
+    while (my @config = $parser->read) {
+      push @{$file->{items}}, $pack->Item->new(@config);
+    }
+    $file;
+  };
 }
 
 #========================================

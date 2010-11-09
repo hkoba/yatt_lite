@@ -200,19 +200,11 @@ sub sendmail {
 
   $sub->($page, ostream(my $buffer), $to, @rest);
 
-  my ($header, $body) = split /(?:\r?\n){2,}/, $buffer, 2;
+  require Email::Simple;
+  require Email::Sender::Simple;
+  my $msg = Email::Simple->new($buffer);
 
-  # die terse_dump(parse_xhf($header));
-  my %header = parse_xhf($header);
-
-  require MIME::Lite;
-  my $msg = new MIME::Lite(map(($_, $header{$_}), qw(From To Subject))
-			   , Data => $body);
-  if (my $h = $header{'Content-type'}) {
-    $msg->attr('content-type', $h);
-  }
-
-  $msg->send;
+  Email::Sender::Simple->send($msg);
 }
 
 #========================================

@@ -21,8 +21,8 @@
     </tr>
     <tr>
       <td colspan="2">
-	<input type="hidden" name="back" value="&yatt:back;"/>
-	<input type="submit" name="!regist"/>
+        <input type="hidden" name="back" value="&yatt:back;"/>
+        <input type="submit" name="!regist"/>
       </td>
     </tr>
   </table>
@@ -72,16 +72,23 @@ To: &yatt:to;
 Subject: Confirm
 Content-type: text/plain; charset="utf-8"
 
-ご登録ありがとうございます。以下のリンクをクリックすれば、登録完了です。
+ご登録、ありがとうございます。登録を承認する場合は
+下のリンクをクリックしてください。
+
+Thank you for registration. To confirm your registration,
+please click following link:
 
 &yatt:url;
 
 心当たりの無い方は、このメールは破棄してください。
 
+If you have received this mail without having requested it,
+please dispose this mail.
+
 <!yatt:widget sent back>
 <yatt:envelope guest_ok>
-  <h2>Email を送信しました。</h2>
-  <a href="&yatt:back;">戻る</a>
+  <h2>Confirmation Email is Sent to you.</h2>
+  <a href="&yatt:back;">back</a>
 </yatt:envelope>
 
 <!yatt:action confirm token=!>
@@ -101,6 +108,6 @@ $this->render_success($con, $user);
 
 <!yatt:widget success user>
 <yatt:envelope>
-  <h2>登録完了です</h2>
-  <a href="./">トップへ</a>
+  <h2>Welcome! Your registration is successfully completed.</h2>
+  <a href="./">Top</a>
 </yatt:envelope>

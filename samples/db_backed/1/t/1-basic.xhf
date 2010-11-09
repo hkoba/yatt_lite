@@ -2,8 +2,11 @@
 REQUIRE[
 - DBIx::Class::Schema
 - CGI::Session
+- Email::Simple
+- Email::Sender
 ]
 USE_COOKIE: 1
+
 
 FILE: index.yatt
 HEADER[

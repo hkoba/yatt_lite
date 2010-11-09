@@ -1,0 +1,313 @@
+# -*- coding: utf-8 -*-
+use strict;
+use warnings FATAL => qw(all);
+
+# For future Test::FCGI::Mechanize...
+
+use Test::Builder ();
+my $Test = Test::Builder->new;
+
+{
+  package YATT::Lite::TestFCGI; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::Object File::Spec);
+  use fields qw(res status ct content cookie_jar last_request
+		sockfile
+		raw_result
+		cf_rootdir cf_fcgiscript
+		kidpid
+	      );		# base form
+
+  sub check_skip_reason {
+    my MY $self = shift;
+
+    unless (eval {require FCGI and require CGI::Fast}) {
+      return 'FCGI.pm is not installed';
+    }
+
+    return;
+  }
+
+  sub plan {
+    shift;
+    require Test::More;
+    Test::More::plan(@_);
+  }
+
+  sub skip_all {
+    shift;
+    require Test::More;
+    Test::More::plan(skip_all => shift);
+  }
+
+  sub which {
+    my ($pack, $exe) = @_;
+    foreach my $path ($pack->path) {
+      if (-x (my $fn = $pack->join($path, $exe))) {
+	return $fn;
+      }
+    }
+  }
+
+  use IO::Socket::UNIX;
+  use Fcntl;
+  use POSIX ":sys_wait_h";
+  use Time::HiRes qw(usleep);
+
+  sub mkservsock {
+    shift; new IO::Socket::UNIX(Local => shift, Listen => 5);
+  }
+  sub mkclientsock {
+    shift; new IO::Socket::UNIX(Peer => shift);
+  }
+
+  sub fork_server {
+    (my MY $self) = @_;
+
+    my $sessdir  = MY->tmpdir . "/fcgitest$$";
+    unless (mkdir $sessdir, 0700) {
+      die "Can't mkdir $sessdir: $!";
+    }
+
+    my $sock = $self->mkservsock($self->{sockfile} = "$sessdir/socket");
+
+    unless (defined($self->{kidpid} = fork)) {
+      die "Can't fork: $!";
+    } elsif (not $self->{kidpid}) {
+      # child
+      open STDIN, '<&', $sock or die "kid: Can't reopen STDIN: $!";
+      open STDOUT, '>&', $sock or die "kid: Can't reopen STDOUT: $!";
+      # XXX: -MDevel::Cover=$ENV{HARNESS_PERL_SWITCHES}
+      # XXX: Taint?
+      my @opts = qw(-T);
+      if (my $switch = $ENV{HARNESS_PERL_SWITCHES}) {
+	push @opts, split " ", $switch;
+      }
+      exec $^X, @opts, $self->{cf_fcgiscript};
+      die "Can't exec $self->{cf_fcgiscript}: $!";
+    }
+  }
+
+  DESTROY {
+    (my MY $self) = @_;
+    if ($self->{kidpid}) {
+      # Shutdown FCGI fcgiscript. TERM is ng.
+      kill USR1 => $self->{kidpid};
+      waitpid($self->{kidpid}, 0);
+    
+      unlink $self->{sockfile} if -e $self->{sockfile};
+      rmdir dirname($self->{sockfile});
+    }
+  }
+
+  sub parse_result {
+    my MY $self = shift;
+    # print map {"#[[$_]]\n"} split /\n/, $result;
+    my $res = $self->{res} = HTTP::Response->parse(shift);
+    if (defined $res) {
+      $res->request($self->{last_request});
+      $self->{cookie_jar} //= do {
+	require HTTP::Cookies;
+	HTTP::Cookies->new();
+      };
+      $self->{cookie_jar}->extract_cookies($res);
+    }
+    $res;
+  }
+
+  sub bake_cookies {
+    my MY $self = shift;
+    return unless $self->{cookie_jar};
+    $self->{cookie_jar}->add_cookie_header($self->{last_request});
+    $self->{last_request}->header('Cookie');
+  }
+
+  # Poor-man's emulation of WWW::Mechanize.
+  # These members are readonly from client.
+  # ($self->cookie_jar($x) has no results)
+  sub cookie_jar {
+    my MY $self = shift; $self->{cookie_jar};
+  }
+
+  sub content {
+    my MY $self = shift;
+    defined $self->{res} ? $self->{res}->content : undef;
+  }
+
+  use Carp;
+  use YATT::Lite::Util qw(url_encode);
+  sub encode_querystring {
+    (my MY $self, my ($query, $sep)) = @_;
+    if (not defined $query or not ref $query) {
+      $query
+    } elsif (ref $query eq 'HASH') {
+      join($sep // ';'
+	   , map {
+	     $self->url_encode($_) . '='
+	       . $self->url_encode($query->{$_})
+	     } keys %$query);
+    } else {
+      croak "Not implemented type of PARAM!";
+    }
+  }
+}
+
+#========================================
+{
+  package
+    YATT::Lite::TestFCGI::Auto; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::TestFCGI);
+
+  sub class {
+    my $pack = shift;
+    if (eval {require FCGI::Client}) {
+      'YATT::Lite::TestFCGI::FCGIClient';
+    } elsif ($pack->which('cgi-fcgi')) {
+      'YATT::Lite::TestFCGI::cgi_fcgi';
+    }
+  }
+}
+
+{
+  package
+    YATT::Lite::TestFCGI::FCGIClient; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::TestFCGI);
+  use fields qw(connection raw_error);
+
+  sub fork_server {
+    my $self = shift;
+    local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
+    $self->SUPER::fork_server(@_);
+  }
+
+  sub check_skip_reason {
+    my MY $self = shift;
+
+    my $reason = $self->SUPER::check_skip_reason;
+    return $reason if $reason;
+
+    unless (eval {require FCGI::Client}) {
+      return 'FCGI::Client is not installed';
+    }
+    return
+  }
+
+  use YATT::Lite::Util qw(terse_dump);
+  sub request {
+    (my MY $self, my ($method, $path, $query)) = @_;
+    require FCGI::Client;
+    my $client = FCGI::Client::Connection->new
+      (sock => $self->mkclientsock($self->{sockfile}));
+
+    my $env = {REQUEST_METHOD    => uc($method)
+	       , REQUEST_URI     => $path
+	       , DOCUMENT_ROOT   => $self->{cf_rootdir}
+	       , PATH_TRANSLATED => "$self->{cf_rootdir}$path"};
+    my @content;
+    if (defined $query) {
+      if ($env->{REQUEST_METHOD} eq 'GET') {
+	$env->{QUERY_STRING} = $self->encode_querystring($query);
+      } elsif ($env->{REQUEST_METHOD} eq 'POST') {
+	$env->{CONTENT_TYPE} = 'application/x-www-form-urlencoded';
+	my $enc = $self->encode_querystring($query);
+	push @content, $enc;
+	$env->{CONTENT_LENGTH} = length($enc);
+      }
+    }
+
+    $self->{last_request} = do {
+      require HTTP::Request;
+      my $req = HTTP::Request->new($env->{REQUEST_METHOD}
+				   , "http://localhost$path");
+    };
+
+    if (my $cookies = $self->bake_cookies()) {
+      $env->{HTTP_COOKIE} = $cookies;
+    }
+
+    # print STDERR "# REQ: ", terse_dump($env, @content), "\n";
+
+    ($self->{raw_result}, $self->{raw_error}) = $client->request
+      ($env, @content);
+
+    # print STDERR "# ANS: ", terse_dump($self->{raw_result}, $self->{raw_error}), "\n";
+
+    unless (defined $self->{raw_result}) {
+      $self->{res} = undef;
+      return;
+    }
+
+    # Status line を補う。
+    my $res = do {
+      if ($self->{raw_result} =~ m{^HTTP/\d+\.\d+ \d+ }) {
+	$self->{raw_result}
+      } elsif ($self->{raw_result} =~ /^Status: (\d+ .*)/) {
+	"HTTP/1.0 $1\x0d\x0a$self->{raw_result}"
+      } else {
+	"HTTP/1.0 200 Faked OK\x0d\x0a$self->{raw_result}"
+      }
+    };
+    $self->parse_result($res);
+  }
+
+}
+
+#========================================
+{
+  package
+    YATT::Lite::TestFCGI::cgi_fcgi; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::TestFCGI);
+  use fields qw(wrapper);
+
+  sub check_skip_reason {
+    my MY $self = shift;
+
+    my $reason = $self->SUPER::check_skip_reason;
+    return $reason if $reason;
+
+    $self->{wrapper} = MY->which('cgi-fcgi')
+      or return 'cgi-fcgi is not installed';
+
+    unless (-x $self->{cf_fcgiscript}) {
+      return 'fcgi fcgiscript is not runnable';
+    }
+
+    return;
+  }
+
+  use File::Basename;
+  use HTTP::Response;
+  use IPC::Open2;
+
+  sub request {
+    (my MY $self, my ($method, $path, $query)) = @_;
+    # local $ENV{SERVER_SOFTWARE} = 'PERL_TEST_FCGI';
+    local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
+    my $is_post = (local $ENV{REQUEST_METHOD} = uc($method)
+		   =~ m{^(POST|PUT)$});
+    local $ENV{REQUEST_URI} = $path;
+    local $ENV{DOCUMENT_ROOT} = $self->{cf_rootdir};
+    local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
+    local $ENV{QUERY_STRING} = $self->encode_querystring($query)
+      unless $is_post;
+    local $ENV{CONTENT_TYPE} = 'application/x-www-form-urlencoded'
+      if $is_post;
+    my $enc = $self->encode_querystring($query);
+    local $ENV{CONTENT_LENGTH} = length $enc
+      if $is_post;
+
+    # XXX: open3
+    my $kid = open2 my $read, my $write
+      , $self->{wrapper}, qw(-bind -connect) => $self->{sockfile}
+	or die "Can't invoke $self->{wrapper}: $!";
+    if ($is_post) {
+      print $write $enc;
+    }
+    close $write;
+
+    #XXX: Status line?
+    #XXX: waitpid
+    $self->parse_result(do {local $/; <$read>});
+  }
+}
+
+1;
