@@ -52,6 +52,7 @@ my $Test = Test::Builder->new;
   use Fcntl;
   use POSIX ":sys_wait_h";
   use Time::HiRes qw(usleep);
+  use File::Basename;
 
   sub mkservsock {
     shift; new IO::Socket::UNIX(Local => shift, Listen => 5);
@@ -90,12 +91,16 @@ my $Test = Test::Builder->new;
   DESTROY {
     (my MY $self) = @_;
     if ($self->{kidpid}) {
+      # print STDERR "# shutting down $self->{kidpid}\n";
       # Shutdown FCGI fcgiscript. TERM is ng.
       kill USR1 => $self->{kidpid};
       waitpid($self->{kidpid}, 0);
-    
-      unlink $self->{sockfile} if -e $self->{sockfile};
-      rmdir dirname($self->{sockfile});
+
+      if (-e $self->{sockfile}) {
+	# print STDERR "# removing sockfile $self->{sockfile}\n";
+	unlink $self->{sockfile};
+	rmdir dirname($self->{sockfile});
+      }
     }
   }
 
@@ -131,6 +136,16 @@ my $Test = Test::Builder->new;
   sub content {
     my MY $self = shift;
     defined $self->{res} ? $self->{res}->content : undef;
+  }
+
+  sub content_nocr {
+    my MY $self = shift;
+    defined (my $res = $self->content)
+      or return undef;
+
+    $res =~ s/\r//g;
+    $res =~ s/\n+$/\n/;
+    $res;
   }
 
   use Carp;
@@ -191,9 +206,12 @@ my $Test = Test::Builder->new;
     return
   }
 
+  use Carp;
   use YATT::Lite::Util qw(terse_dump);
   sub request {
     (my MY $self, my ($method, $path, $query)) = @_;
+    croak "Should run fork_server before request" unless $self->{kidpid};
+
     require FCGI::Client;
     my $client = FCGI::Client::Connection->new
       (sock => $self->mkclientsock($self->{sockfile}));

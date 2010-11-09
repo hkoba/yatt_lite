@@ -190,6 +190,12 @@ sub add_user {
 use YATT::Lite::XHF qw(parse_xhf);
 use YATT::Lite::Util qw(terse_dump);
 
+sub output_file {
+  my ($fn) = @_;
+  open my $fh, '>', $fn or die "Can't open file '$fn': $!";
+  $fh;
+}
+
 sub sendmail {
   my ($self, $con, $page, $widget_name, $to, @rest) = @_;
   if (grep {not defined $_} $widget_name, $to) {
@@ -198,13 +204,23 @@ sub sendmail {
   my $sub = $page->can("render_$widget_name")
     or die "Unknown widget $widget_name";
 
-  $sub->($page, ostream(my $buffer), $to, @rest);
+  my $transport = $ENV{EMAIL_SENDER_TRANSPORT};
+  my $is_debug = defined $transport && $transport eq 'YATT_TEST';
 
-  require Email::Simple;
-  require Email::Sender::Simple;
-  my $msg = Email::Simple->new($buffer);
+  my $fh = $is_debug ? output_file("$self->{cf_datadir}/.htdebug.eml")
+    : ostream(my $buffer);
 
-  Email::Sender::Simple->send($msg);
+  $sub->($page, $fh, $to, @rest);
+
+  if ($is_debug) {
+    return 'ok';
+  } else {
+    require Email::Simple;
+    require Email::Sender::Simple;
+    my $msg = Email::Simple->new($buffer);
+
+    Email::Sender::Simple->send($msg);
+  }
 }
 
 #========================================

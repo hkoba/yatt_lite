@@ -4,7 +4,10 @@ use warnings FATAL => qw(all);
 use fields qw(buffer header header_is_printed cookie session
 	      cf_header cf_parent_fh cf_handler cf_system cf_db
 	      cf_is_error
-	      cf_encoding);
+	      cf_encoding
+	      stash
+	      debug_stash
+	    );
 use YATT::Lite::Util qw(globref);
 use Carp;
 

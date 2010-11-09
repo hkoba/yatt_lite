@@ -13,13 +13,14 @@ use lib untaint_any
    ($libdir = ($bindir = dirname(untaint_any($0)))
     . "/../../../../runyatt.lib"));
 
+use YATT::Lite::Breakpoint;
+use YATT::Lite::XHFTest2;
+
 sub MY () {__PACKAGE__}
 use base qw(YATT::Lite::XHFTest2);
 use YATT::Lite::Util qw(lexpand);
-use YATT::Lite::TestFCGI;
 
-use YATT::Lite::Breakpoint;
-use YATT::Lite::XHFTest2;
+use YATT::Lite::TestFCGI;
 
 my $CLASS = YATT::Lite::TestFCGI::Auto->class
   or YATT::Lite::TestFCGI::Auto->skip_all
