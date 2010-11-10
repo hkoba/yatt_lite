@@ -30,6 +30,11 @@ unless (eval {require Test::Differences}) {
   $CLASS->skip_all('Test::Differences is not installed');
 }
 
+unless (-d "$bindir/../cgi-bin"
+	and grep {-x "$bindir/../cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
+  $CLASS->skip_all("Can't find cgi-bin/runyatt.cgi");
+}
+
 my $mech = $CLASS->new
   (map {
     (rootdir => $_
