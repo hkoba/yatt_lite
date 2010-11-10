@@ -145,6 +145,7 @@ require Scalar::Util;
     unless (defined $file) {
       croak "Can't recognize target file for $path, startDir=$startDir";
     }
+    $dir .= "/" if $dir ne '/';
     ($startDir, substr($dir, length($startDir)), $file, substr($path, $pos));
   }
 

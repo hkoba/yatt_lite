@@ -161,8 +161,12 @@ sub ensure_created_on {
   foreach my Table $table (@{$schema->{table_list}}) {
     next if $schema->has_table($table->{cf_name}, $dbh);
     foreach my $create ($schema->sql_create_table($table)) {
-      print STDERR "-- $table->{cf_name} --\n$create\n\n"
-	if $schema->{cf_verbose};
+      unless ($schema->{cf_verbose}) {
+      } elsif ($schema->{cf_verbose} >= 2) {
+	print STDERR "-- $table->{cf_name} --\n$create\n\n"
+      } elsif ($schema->{cf_verbose}) {
+	print STDERR "CREATE TABLE $table->{cf_name}\n";
+      }
       $dbh->do($create);
     }
   }

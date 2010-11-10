@@ -15,7 +15,7 @@ sub new {
 
 sub mkdir {
   (my MY $self, my ($fn)) = @_;
-  my $real = join '/', grep {defined} $self->{basedir}, $fn;
+  my $real = $_[2] = join '/', grep {defined} $self->{basedir}, $fn;
   unless (-d $real) {
     CORE::mkdir($real) or die "Can't mkdir $real: $!";
     print "# o mkdir $real\n" unless $self->{cf_quiet};

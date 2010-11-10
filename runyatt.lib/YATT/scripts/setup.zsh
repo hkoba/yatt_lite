@@ -3,7 +3,8 @@
 set -e
 setopt err_return
 function die { echo 1>&2 $*; return 1 }
-autoload colors; colors
+autoload colors;
+[[ -t 1 ]] && colors
 
 #========================================
 # FindBin equivalent. (Depends on GNU readlink)
@@ -166,8 +167,10 @@ fi
 
 if [[ $destdir = $document_root/* ]]; then
     location=${destdir#$document_root}
+    cgi_bin_perm=775
 elif [[ $destdir = $HOME/public_html/* ]]; then
     location=/~$USER${destdir#$HOME/public_html}
+    cgi_bin_perm=755; # for suexec
 else
     die Can\'t extract URL from destdir=$destdir.
 fi
@@ -180,6 +183,7 @@ cgi_loc=$location/cgi-bin
 
 # Create library directory and link yatt in it.
 x mkdir -p $cgi_bin/$driver_name.lib
+x chmod -c 2$cgi_bin_perm $cgi_bin
 mkfile $cgi_bin/$driver_name.lib/.htaccess <<EOF
 deny from all
 EOF
@@ -193,7 +197,7 @@ if (($is_selinux)); then
     # XXX: Only if user ownes original.
     # XXX: httpd_sys vs httpd_user
     # XXX: semanage fcontext -a -t $type
-    x chcon -vR -t httpd_sys_content_t $driver_path.*(/) || true
+    x chcon -R -t httpd_sys_content_t $driver_path.*(/) || true
 fi
 
 # Create custom DirHandler.
@@ -216,7 +220,7 @@ EOF
 fi
 
 # Copy driver cgi and link fcgi.
-x cp -vu $driver_path.cgi $cgi_bin/
+x install -t $cgi_bin/ -m $cgi_bin_perm $driver_path.cgi
 if (($is_selinux)); then
     x chcon -v -t httpd_sys_script_exec_t $cgi_bin/$driver_name.cgi || true
 fi
@@ -239,7 +243,7 @@ if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
 
     if [[ -r $destdir/.htyattrc.pl ]]; then
 	# XXX: This can fail second time, mmm...
-	x $realbin/yatt.command --if_can setup
+	x $realbin/yatt.command -d $destdir --if_can setup
     fi
 fi
 

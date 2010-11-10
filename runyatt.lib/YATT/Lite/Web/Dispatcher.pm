@@ -157,7 +157,11 @@ sub make_cgi {
       croak "\n\nYATT mount point is not specified.";
     }
     # XXX: /~user_dir の場合は $dir ne $root$loc じゃんか orz...
-    ($root, $loc, $file, $trailer) = split_path($path, $self->document_dir($cgi));
+    return (cgi => $cgi
+     , $self->split_path_url($path, $cgi->path_info // '/'
+			    , $self->document_dir($cgi))
+     , is_gateway => $self->is_gateway);
+
   } else {
     my $path = shift;
     unless (defined $path) {
@@ -179,6 +183,36 @@ sub make_cgi {
   (cgi => $cgi, dir => "$root$loc", file => $file, subpath => $trailer
    , root => $root, location => $loc
    , is_gateway => $self->is_gateway);
+}
+
+# XXX: kludge! redundant!
+sub split_path_url {
+  (my MY $self, my ($path_translated, $path_info, $document_root)) = @_;
+
+  my @info = do {
+    if ($path_info =~ s{^(/~[^/]+)(?=/)}{}) {
+      my $user = $1;
+      my ($root, $loc, $file, $trailer)
+	= split_path($path_translated
+		     , substr($path_translated, 0
+			      , length($path_translated) - length($path_info))
+		    );
+      (dir => "$root$loc", file => $file, subpath => $trailer
+       , root => $root, location => "$user$loc");
+    } else {
+      my ($root, $loc, $file, $trailer)
+	= split_path($path_translated, $document_root);
+      (dir => "$root$loc", file => $file, subpath => $trailer
+       , root => $root, location => $loc);
+    }
+  };
+
+  if (wantarray) {
+    @info
+  } else {
+    my %info = @info;
+    \%info;
+  }
 }
 
 #========================================

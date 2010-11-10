@@ -262,7 +262,7 @@ END
 		   , 'render_', @_);
     };
     eq_or_diff lines(3, catch {
-      let {$yatt} error_handler => $eh, sub {
+      cf_let {$yatt} [error_handler => $eh], sub {
 	$yatt->add_to(synerr => q{<!yatt:foo>});
       };
     }), <<END, "$theme $SUB syntax error is handled by error page";
@@ -272,7 +272,7 @@ line: 1<br>
 END
 
     eq_or_diff lines(3, catch {
-      let {$yatt} error_handler => $eh, sub {
+      cf_let {$yatt} [error_handler => $eh], sub {
 	$yatt->find_product(perl => $yatt->add_to(cgenerr => q{&yatt:foo;}));
       };
     }), <<END, "$theme $SUB cgen error is handled by error page";

@@ -64,7 +64,8 @@ sub configure_string {
 
 sub read {
   my MY $self = shift;
-  return $self->let(@_, \&read) if @_;
+  my ($keys, $values) = $self->cf_bindings(@_);
+  local @{$self}{@$keys} = @$values; # XXX: configure_ZZZ hook is not applied.
   local $/ = "";
   my $fh = $$self{cf_FH};
   my @tokens;

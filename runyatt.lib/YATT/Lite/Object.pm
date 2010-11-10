@@ -103,16 +103,28 @@ sub cf_delegate_defined {
 }
 
 # Or, say, with_option.
-sub let {
+# XXX: configure_ZZZ hook is not applied.
+sub cf_let {
+  (my MY $self, my ($binding, $task)) = splice @_, 0, 3;
+  my ($keys, $values) = $self->cf_bindings(@$binding);
+  local @{$self}{@$keys} = @$values;
+  if (ref $task) {
+    $task->($self, @_);
+  } else {
+    $self->$task(@_);
+  }
+}
+
+sub cf_bindings {
   my MY $self = shift;
-  my $callback = pop;
-  carp "\n\nUsage: \$obj->let(key => value, ..., sub {})" if @_ % 2;
+  carp "Odd number of key value bindings" if @_ % 2;
   my (@keys, @values);
-  while (my ($key, $value) = splice @_) {
+  while (my ($key, $value) = splice @_, 0, 2) {
+    # XXX: key check!
+    # XXX: task extraction!
     push @keys, "cf_$key"; push @values, $value;
   }
-  local @{$self}{@keys} = @values;
-  $callback->($self);
+  (\@keys, \@values);
 }
 
 1;

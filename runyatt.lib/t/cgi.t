@@ -122,6 +122,44 @@ END
   }
 }
 
+$i++;
+{
+  #========================================
+  # Other internal tests. Especially for CGI path setup.
+
+  my $docs = "t$i.docs";
+  $dig->mkdir($docs, my $realdir);
+  $dig->mkdir("$docs/d1");
+
+  $dig->add("$docs/index.yatt", 'top');
+  $dig->add("$docs/d1/f1.yatt", 'in_d1');
+
+  my $mux = new YATT::Lite::Web::Dispatcher->new
+    (basens => myapp($i), , mount => "$BASE/$docs");
+
+  my $P_T = "$realdir/index.yatt/foo/bar";
+  my $R_URI = '/~hkoba/index.yatt/foo/bar';
+
+  is_deeply scalar $mux->split_path_url($P_T, $R_URI)
+    , {location => '/~hkoba/'
+       , root => $realdir
+       , dir => "$realdir/"
+       , file => 'index.yatt'
+       , subpath => '/foo/bar'}
+      , 'split_path_url: UserDir';
+
+  $R_URI = '/index.yatt/foo/bar';
+
+  is_deeply scalar $mux->split_path_url($P_T, $R_URI, $realdir)
+    , {location => '/'
+       , root => $realdir
+       , dir => "$realdir/"
+       , file => 'index.yatt'
+       , subpath => '/foo/bar'}
+      , 'split_path_url: systemwide www';
+}
+
+
 sub captured_runas {
   my ($obj, $header, $as, @args) = @_;
   open my $fh, ">", \ (my $buf = "") or die $!;

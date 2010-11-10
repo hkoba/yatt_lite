@@ -16,7 +16,8 @@ use YATT::Lite::Breakpoint;
 
 use Getopt::Long;
 
-GetOptions("if_can" => \ my $if_can)
+GetOptions("if_can" => \ my $if_can
+	  , "d=s" => \ my $o_dir)
   or exit 1;
 
 my $dispatcher = do {
@@ -28,7 +29,7 @@ my $dispatcher = do {
   }
 };
 
-local $YATT = my $dirhandler = $dispatcher->get_dirhandler('.');
+local $YATT = my $dirhandler = $dispatcher->get_dirhandler($o_dir // '.');
 
 unless (@ARGV) {
   die <<END, join("\n", map {"  $_"} FindMethods($YATT, sub {s/^cmd_//}))."\n";
