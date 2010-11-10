@@ -24,6 +24,10 @@ my $Test = Test::Builder->new;
       return 'FCGI.pm is not installed';
     }
 
+    if (ref $self and not -x $self->{cf_fcgiscript}) {
+      return "Can't find cgi-bin/runyatt.cgi"
+    }
+
     return;
   }
 

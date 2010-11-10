@@ -14,6 +14,11 @@ use lib untaint_any
    ($libdir = ($bindir = dirname(untaint_any($0)))
     . "/../../../../runyatt.lib"));
 
+unless (-d "$bindir/../cgi-bin"
+	and grep {-x "$bindir/../cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
+  plan skip_all => "Can't find cgi-bin/runyatt.cgi";
+}
+
 do_sqlite("$bindir/../data/.htdata.db", <<END);
 delete from user where login = 'hkoba'
 END
