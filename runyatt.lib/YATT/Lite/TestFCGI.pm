@@ -77,6 +77,7 @@ my $Test = Test::Builder->new;
       # child
       open STDIN, '<&', $sock or die "kid: Can't reopen STDIN: $!";
       open STDOUT, '>&', $sock or die "kid: Can't reopen STDOUT: $!";
+      open STDERR, '>&', $sock or die "kid: Can't reopen STDERR: $!";
       # XXX: -MDevel::Cover=$ENV{HARNESS_PERL_SWITCHES}
       # XXX: Taint?
       my @opts = qw(-T);
@@ -246,6 +247,11 @@ my $Test = Test::Builder->new;
 
     ($self->{raw_result}, $self->{raw_error}) = $client->request
       ($env, @content);
+
+    if (defined $self->{raw_error} and $self->{raw_error} ne '') {
+      print STDERR map {"# ERR: $_\n"} split /\r?\n/, $self->{raw_error};
+      die "error occured: " . terse_dump($method, $path, $query);
+    }
 
     # print STDERR "# ANS: ", terse_dump($self->{raw_result}, $self->{raw_error}), "\n";
 
