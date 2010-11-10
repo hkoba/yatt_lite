@@ -77,7 +77,7 @@ my $Test = Test::Builder->new;
       # child
       open STDIN, '<&', $sock or die "kid: Can't reopen STDIN: $!";
       open STDOUT, '>&', $sock or die "kid: Can't reopen STDOUT: $!";
-      open STDERR, '>&', $sock or die "kid: Can't reopen STDERR: $!";
+      # open STDERR, '>&', $sock or die "kid: Can't reopen STDERR: $!";
       # XXX: -MDevel::Cover=$ENV{HARNESS_PERL_SWITCHES}
       # XXX: Taint?
       my @opts = qw(-T);
