@@ -229,17 +229,17 @@ sub sendmail {
 sub dbic {
   my MY $self = shift;
   $self->{dbic} //= do {
-    unless (defined $self->{cf_dbname} and $self->{cf_dbname} ne '') {
-      die "dbname is undef!";
-    }
-    
-    $self->DBIC->connect($self->dbi_dsn);
+    my ($dbi, $user, $pass) = $self->dbi_dsn;
+    $self->DBIC->connect
+      ($dbi, $user, $pass
+       , {PrintError => 0, RaiseError => 1, AutoCommit => 0});
   };
 }
 
 sub dbi_dsn {
   my MY $self = shift;
-  "dbi:mysql:database=$self->{cf_dbname}";
+  my $dsn = "dbi:mysql:database=$self->{cf_dbname}";
+  wantarray ? ($dsn, $self->{cf_dbuser}, $self->{cf_dbpass}) : $dsn;
 }
 
 sub cmd_setup {
@@ -248,11 +248,10 @@ sub cmd_setup {
     require File::Path;
     File::Path::make_path($self->{cf_datadir}, {mode => 02775, verbose => 1});
   }
-  # XXX: more verbosity.
-  # XXX: Should be idempotent.
-  # $self->dbic->YATT_DBSchema->deploy;
-  $self->DBIC->YATT_DBSchema->cf_let([verbose => 1]
-				     , connect_sqlite => $self->{cf_dbname});
+  $self->DBIC->YATT_DBSchema->cf_let
+    ([verbose => $ENV{VERBOSE} // 1, auto_create => 1
+      , coltype_map => {text => 'varchar(80)'}]
+     , connect_to => $self->dbi_dsn);
 }
 
 #========================================

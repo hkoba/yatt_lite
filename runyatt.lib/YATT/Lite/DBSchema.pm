@@ -16,6 +16,7 @@ use fields (qw(table_list table_dict dbtype cf_DBH
 	       cf_no_header
 	       cf_auto_create
 	       cf_as_base
+	       cf_coltype_map
 
 	       cf_after_dbinit
 	       cf_group_writable
@@ -88,6 +89,17 @@ sub parse_import {
   }
 }
 
+#########################################
+sub after_connect {
+  my MY $self = shift;
+  $self->ensure_created_on($self->{cf_DBH}) if $self->{cf_auto_create};
+}
+
+sub dbinit_sqlite {
+  (my MY $self, my $sqlite_fn) = @_;
+  chmod 0664, $sqlite_fn if $self->{cf_group_writable} // 1;
+}
+
 #========================================
 
 sub has_connection {
@@ -114,36 +126,42 @@ sub dbh {
 }
 
 sub connect_to {
-  (my MY $schema, my ($dbtype)) = splice @_, 0, 2;
-  if (my $sub = $schema->can("connect_to_$dbtype")) {
+  (my MY $schema, my ($dbtype, @args)) = @_;
+  if ($dbtype =~ /^dbi:(\w+):/i) {
+    $schema->connect_to_dbi($dbtype, @args);
+  } elsif (my $sub = $schema->can("connect_to_$dbtype")) {
     $schema->{dbtype} = $dbtype;
-    $sub->($schema, @_);
+    $sub->($schema, @args);
   } else {
     croak sprintf("%s: Unknown dbtype: %s", MY, $dbtype);
   }
 }
 
 sub connect_to_sqlite {
-  (my MY $schema, my ($dbname, $rwflag)) = @_;
-  my $ro = defined $rwflag && $rwflag =~ /ro/i;
-  my $dbi_dsn = "dbi:SQLite:dbname=$dbname";
-  $schema->{cf_auto_create} = 1;
-  $schema->connect_to_dbi
-    ($dbi_dsn, undef, undef
-     , RaiseError => 1, PrintError => 0, AutoCommit => $ro);
+  (my MY $schema, my ($sqlite_fn, %opts)) = @_;
+  # XXX: Adapt begin immediate transaction, for SQLITE_BUSY
+  my $ro = delete($opts{RO}) // 0;
+  my $dbi_dsn = "dbi:SQLite:dbname=$sqlite_fn";
+  my $first_time = not -e $sqlite_fn;
+  $schema->{dbtype} //= 'sqlite';
+  $schema->configure(%opts) if %opts;
+  $schema->{cf_auto_create} //= 1;
+  $schema->connect_to_dbi($dbi_dsn, undef, undef, AutoCommit => $ro);
+  $schema->dbinit_sqlite($sqlite_fn) if $first_time;
+  $schema;
 }
 
 sub connect_to_dbi {
-  (my MY $schema, my ($dbi_dsn, $user, $auth, %param)) = @_;
-  map {$param{$$_[0]} = $$_[1] unless defined $param{$$_[0]}}
-    ([RaiseError => 1], [PrintError => 0], [AutoCommit => 0]);
-  require DBI;
-  if ($dbi_dsn =~ m{^dbi:(\w+):}) {
-    $schema->configure(dbtype => lc($1));
+  (my MY $schema, my ($dbi_dsn, $user, $auth, %opts)) = @_;
+  my %attr;
+  foreach ([RaiseError => 1], [PrintError => 0], [AutoCommit => 0]) {
+    $attr{$$_[0]} = delete($opts{$$_[0]}) // $$_[1];
   }
-  my $dbh = $schema->{cf_DBH} = DBI->connect($dbi_dsn, $user, $auth, \%param);
-  $schema->create if $schema->{cf_auto_create};
-  $dbh;
+  $schema->configure(%opts) if %opts;
+  require DBI;
+  my $dbh = $schema->{cf_DBH} = DBI->connect($dbi_dsn, $user, $auth, \%attr);
+  $schema->after_connect;
+  $schema;
 }
 
 #
@@ -332,16 +350,6 @@ sub add_table_relation {
     // $subTab->{reference_dict}{$tab->{cf_name}};
   push @{$tab->{relationSpec}}
     , [$relType => $relName, $fkName, $subTab];
-  # $self->add_table_backrel($tab, $relType, $subTab);
-}
-
-sub add_table_backrel {
-  (my MY $self, my Table $tab, my $relType, my Table $subTab) = @_;
-  my $sub = $self->can("backrel_of_$relType")
-    or return;
-  my $backRefColName = $subTab->{reference_dict}{$tab->{cf_name}}
-    or return;
-  $sub->($self, $tab, $subTab->{col_dict}{$backRefColName}, $subTab);
 }
 
 sub add_table_column {
@@ -406,15 +414,6 @@ sub add_table_column {
   $col;
 }
 
-sub backrel_of_has_many {shift->backrel_of_own(@_)}
-sub backrel_of_has_one {shift->backrel_of_own(@_)}
-
-sub backrel_of_own {
-  (my MY $self, my Table $owner, my Column $col, my Table $subTab) = @_;
-  push @{$subTab->{relationSpec}}
-    , [belongs_to => lc($owner->{cf_name}), $col->{cf_name}, $owner];
-}
-
 {
   my %known_rels = qw(has_many 1 has_one 1 belongs_to 1
 		      many_to_many 1 might_have 1
@@ -466,12 +465,13 @@ sub sql_create_table {
 # XXX: text => varchar(80)
 sub map_coltype {
   (my MY $schema, my $typeName) = @_;
+  $schema->{cf_coltype_map}{$typeName} // $typeName;
 }
 
 sub sql_create_column {
   (my MY $schema, my Table $tab, my Column $col, my $opts) = @_;
   join(" ", $col->{cf_name}
-       , $col->{cf_type}
+       , $schema->map_coltype($col->{cf_type})
        , ($col->{cf_primary_key} ? "primary key" : ())
        , ($col->{cf_unique} ? "unique" : ())
        , ($col->{cf_autoincrement} ? "autoincrement" : ()));
@@ -512,47 +512,6 @@ sub foreach_tables_do {
 }
 
 ########################################
-
-sub connect_dbi {
-  my MY $self = shift;
-  require DBI;
-  $self->{cf_DBH} = DBI->connect(@_);
-  $self->after_connect;
-  $self;
-}
-
-sub after_connect {
-  my MY $self = shift;
-  if ($self->{cf_auto_create} // 1) {
-    $self->ensure_created_on($self->{cf_DBH});
-  }
-}
-
-sub connect_sqlite {
-  my MY $self = shift;
-  my ($sqlite_fn, %opts) = @_;
-  $self->{dbtype} = 'sqlite';
-  my $first_time = not -e $sqlite_fn;
-  $self->connect_dbi
-    ("dbi:SQLite:dbname=$sqlite_fn", undef, undef
-     , {PrintError => 0, RaiseError => 1, AutoCommit => 1});
-
-  $self->dbinit_sqlite($sqlite_fn) if $first_time;
-  # XXX: $opts{RO} か否かで transaction の種類を
-  $self;
-}
-
-sub dbinit_sqlite {
-  (my MY $self, my $sqlite_fn) = @_;
-  chmod 0664, $sqlite_fn if $self->{cf_group_writable} // 1;
-  if (my $hook = $self->{cf_after_dbinit}) {
-    if (ref $hook eq 'CODE') {
-      $hook->($self, $sqlite_fn);
-    } else {
-      $hook->after_dbinit;
-    }
-  }
-}
 
 sub add_inc {
   my ($pack, $callpack) = @_;

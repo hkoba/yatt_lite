@@ -245,7 +245,7 @@ sub cmd_setup {
   # XXX: Should be idempotent.
   # $self->dbic->YATT_DBSchema->deploy;
   $self->DBIC->YATT_DBSchema->cf_let([verbose => 1]
-				     , connect_sqlite => $self->{cf_dbname});
+				     , connect_to_sqlite => $self->{cf_dbname});
 }
 
 #========================================
