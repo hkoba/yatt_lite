@@ -4,6 +4,8 @@ use warnings FATAL => qw(all);
 use Carp;
 use fields;
 
+use YATT::Lite::XHF qw(read_file_xhf);
+
 require YATT::Lite::Util;
 
 sub new {
@@ -24,9 +26,26 @@ sub just_new {
   ($self, $self->configure(@_));
 }
 
+sub cf_by_file {
+  (my MY $self, my $fn) = @_[0..1];
+  my ($ext) = $fn =~ m{\.(\w+)$};
+  $self->cf_by_filetype($ext, $fn, @_[3..$#_]);
+}
+
+sub cf_by_filetype {
+  (my MY $self, my ($ext, $fn)) = @_[0..2];
+  $ext //= 'xhf';
+  my $sub = $self->can("read_file_$ext")
+    or croak "Unknown config file type: $fn";
+  $self->_with_loading_file
+    ($fn, sub {
+       $self->configure($sub->($self, $fn));
+     });
+}
+
 our $loading_file;
 sub _loading_file {
-  return "\n  (loaded from unknown file)" unless defined $loading_file;
+  return "\n  loaded from (unknown file)" unless defined $loading_file;
   sprintf qq|\n  loaded from file '%s'|, $loading_file;
 }
 sub _with_loading_file {

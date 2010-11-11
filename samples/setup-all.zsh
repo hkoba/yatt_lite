@@ -12,9 +12,9 @@ if (($+o_save_password)); then
     print -n "Enter DB password for samples "
     read -s pass
     cat > .htdbpass <<EOF
-testdb: $testdb
-testuser: $testuser
-testpassword: $pass
+dbname: $testdb
+dbuser: $testuser
+dbpass: $pass
 EOF
 
     print "DB password is saved in $PWD/.htdbpass"

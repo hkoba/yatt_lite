@@ -8,7 +8,7 @@ use fields qw(cf_FH cf_filename cf_string cf_tokens
 	      cf_skip_comment);
 
 use Exporter qw(import);
-our @EXPORT = qw(load_xhf);
+our @EXPORT = qw(read_file_xhf);
 our @EXPORT_OK = (@EXPORT, qw(parse_xhf));
 
 =head1 NAME
@@ -26,8 +26,8 @@ our $cc_tabsp = qr{[\ \t]};
 
 our %OPN = ('[' => \&organize_array, '{' => \&organize_hash);
 
-sub load_xhf {
-  my ($fn, @rest) = @_;
+sub read_file_xhf {
+  my ($pack, $fn, @rest) = @_;
   MY->new(filename => $fn, encoding => 'utf8', @rest)->read;
 }
 
@@ -62,6 +62,7 @@ sub configure_string {
   $self;
 }
 
+# XXX: Should be renamed to read_all?
 sub read {
   my MY $self = shift;
   my ($keys, $values) = $self->cf_bindings(@_);

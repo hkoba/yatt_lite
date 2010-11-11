@@ -79,7 +79,6 @@ Entity mh_files => sub {
   }
 };
 
-use YATT::Lite::XHF;
 Entity mh_load => sub {
   my ($this, $fnum) = @_;
   my MY $yatt = MY->YATT; # To make sure strict check occurs.
@@ -87,7 +86,7 @@ Entity mh_load => sub {
   unless (-r $fn) {
     die "Can't read '$fn'\n";
   }
-  load_xhf($fn);
+  $yatt->read_file_xhf($fn);
 };
 
 sub escape_nl {

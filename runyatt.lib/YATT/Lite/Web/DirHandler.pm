@@ -18,24 +18,24 @@ use YATT::Lite::Util qw(cached_in ckeval
 use YATT::Lite::XHF;
 
 sub new {
-  my $pack = shift;
+  my ($pack, $dir, @args) = @_;
   # XXX: .htyattrc.pl は？
-  unless (defined $_[0]) {
+  unless (defined $dir) {
     confess "dir is undef!";
   }
-  unless (-d $_[0]) {
-    confess "No such directory '$_[0]'";
+  unless (-d $dir) {
+    confess "No such directory '$dir'";
   }
-  if (-e (my $rc = "$_[0]/.htyattrc.pl")) {
+  if (-e (my $rc = "$dir/.htyattrc.pl")) {
     dofile_in($pack, $rc);
   }
-  my @opts = do {
-    if (-e (my $cf = "$_[0]/.htyattconfig.xhf")) {
-      # XXX: encoding?
-      load_xhf($cf);
-    } else { () }
-  };
-  $pack->SUPER::new(dir => @_, @opts);
+  if (-e (my $cf = "$dir/.htyattconfig.xhf")) {
+    _with_loading_file {$pack} $cf, sub {
+      $pack->SUPER::new(dir => $dir, @args, $pack->read_file_xhf($cf));
+    };
+  } else {
+    $pack->SUPER::new(dir => $dir, @args);
+  }
   # XXX: refresh は？ <= 現状では DirHandler 側のが呼ばれる。
 }
 
