@@ -46,8 +46,68 @@
   :global nil
   (let ((hook 'after-save-hook) (fn 'yatt-lint-any-after))
     (if yatt-lint-any-mode
-	(add-hook hook fn nil nil)
+	(progn
+	  (add-hook hook fn nil nil)
+	  (make-variable-buffer-local 'yatt-lint-any-driver-path))
       (remove-hook hook fn nil))))
+
+(defvar yatt-lint-any-driver-path nil
+  "runyatt.lib path for this buffer.")
+
+(defun yatt-lint-any-find-driver (&optional reload)
+  "Find and cache runyatt.lib path."
+  (or
+   (and (not reload) yatt-lint-any-driver-path)
+   (setq yatt-lint-any-driver-path
+	 (let ((htaccess ".htaccess")
+	       action driver libdir)
+	   (cond ((and (file-exists-p htaccess)
+		       (setq action (yatt-lint-any-htaccess-find htaccess
+				     "Action" "x-yatt-handler"))
+		       (file-exists-p
+			(setq libdir (yatt-lint-any-action-libdir action))))
+		  (concat libdir "/YATT")
+		  )
+		 ((file-exists-p "cgi-bin/runyatt.cgi")
+		  "cgi-bin/runyatt.lib/YATT")
+		 )))))
+
+(defun yatt-lint-any-htaccess-find (file config &rest keys)
+  (save-excursion
+    (save-match-data
+      (save-window-excursion
+	(let ((pat (concat "^" (combine-and-quote-strings (cons config keys)
+							  "\\s-+")
+			   "\\s-+"))
+	      found)
+	  (find-file file)
+	  (goto-char 0)
+	  (block loop
+	    (while (setq found (re-search-forward pat))
+	      (end-of-line)
+	      (return-from loop (buffer-substring found (point))))
+	    )
+	  )))))
+
+'(yatt-lint-any-action-libdir
+ (yatt-lint-any-htaccess-find
+  ".htaccess" "Action" "x-yatt-handler")
+ t)
+
+(defun yatt-lint-any-action-libdir (action &optional systype)
+  "Resolve action location(url) to real path.
+Currently only RHEL is supported."
+  (save-match-data
+    (let* ((user)
+	   (driver-path
+	    (cond ((string-match "^/~\\([^/]+\\)" action)
+		   (concat "/home/"
+			   (match-string 1 action)
+			   "/public_html"
+			   (substring action (match-end 0))))
+		  (t
+		   (concat "/var/www/html" action)))))
+      (concat (file-name-sans-extension driver-path) ".lib"))))
 
 (defun yatt-lint-any-after ()
   "lint after file save."
@@ -73,11 +133,12 @@
       (funcall handler buffer)
     (unless (eq rc 0)
       (beep))
-    (when (and file line)
-      (when (and (not (equal (expand-file-name file) (buffer-file-name buffer)))
+    (when (and file
+	       (not (equal (expand-file-name file) (buffer-file-name buffer)))
 	       (not (equal file "-")))
 	(message "opening error file: %s" file)
 	(find-file-other-window file))
+    (when (and file line)
       (goto-line (string-to-number line)))
     (message "%s"
 	     (cond ((> (length err) 0)
@@ -136,16 +197,25 @@
 		     (yatt-lint-any-match
 		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
 		      err 'file 1 'line 2))
-	       (setq diag (substring err 0 (plist-get match 'pos)))))
-	(append `(rc ,rc err ,diag) match)))))
+	       (setq diag (substring err 0 (plist-get match 'pos)))
+	       )
+	      ((setq match
+		     (yatt-lint-any-match
+		      "^\\([^\n]+\\)\n  loaded from \\(file '\\([^']+\\)'\\|(unknown file)\\)?"
+		      err 'diag 1 'file 3))
+	       (setq diag (plist-get match 'diag))
+	       ))
+	(append `(rc ,rc err ,(or diag err)) match)))))
 
 ;;========================================
 ;; Other utils
 ;;========================================
-(defun yatt-lint-cmdfile (cmdfile)
-  (let ((cmd (concat yatt-lint-any-YATT-dir "/" cmdfile)))
-    (unless (file-exists-p cmd)
-      (error "Can't find yatt command: %s" cmdfile))
+(defun yatt-lint-cmdfile (cmdfile &optional nocheck)
+  (let ((cmd (concat (or (yatt-lint-any-find-driver)
+			 yatt-lint-any-YATT-dir) "/" cmdfile)))
+    (if (and (not nocheck)
+	     (not (file-exists-p cmd)))
+	(error "Can't find yatt command: %s" cmdfile))
     cmd))
 
 (defun yatt-lint-any-shell-command (cmd &rest args)
@@ -154,6 +224,7 @@
     (unwind-protect
 	(setq rc (shell-command (apply #'concat cmd args) tmpbuf))
       (setq err (with-current-buffer tmpbuf (buffer-string)))
+      ;; (message "error=(((%s)))" err)
       (kill-buffer tmpbuf))
     `(rc ,rc err ,err)))
 
