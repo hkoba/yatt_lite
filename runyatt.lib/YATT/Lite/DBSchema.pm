@@ -176,6 +176,7 @@ sub create {
 
 sub ensure_created_on {
   (my MY $schema, my $dbh) = @_;
+  my $nchanges;
   foreach my Table $table (@{$schema->{table_list}}) {
     next if $schema->has_table($table->{cf_name}, $dbh);
     foreach my $create ($schema->sql_create_table($table)) {
@@ -186,8 +187,10 @@ sub ensure_created_on {
 	print STDERR "CREATE TABLE $table->{cf_name}\n";
       }
       $dbh->do($create);
+      $nchanges++;
     }
   }
+  $dbh->commit if $nchanges and not $dbh->{AutoCommit};
 }
 
 sub has_table {
