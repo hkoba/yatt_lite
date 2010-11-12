@@ -18,7 +18,10 @@ else
     destdir=$PWD
 fi
 
-[[ -d $destdir ]] || mkdir -vp $destdir
+if [[ -d $destdir ]]; then
+    mkdir -vp $destdir
+    echo deny from all > $destdir
+fi
 
 # To make symlink relative...
 function relative_link {
