@@ -1,12 +1,14 @@
 #!/bin/zsh
 
 set -e
+setopt extendedglob
 
 function die { echo 1>&2 $*; exit 1 }
 
 cd $0:h:h:h:h
 [[ -d runyatt.lib ]] || die "Can't find runyatt.lib!"
 [[ -r runyatt.lib/YATT/Lite.pm ]] || die "Can't find YATT::Lite!"
+origdir=$PWD
 
 #version=$(perl -Irunyatt.lib -MYATT::Lite -le 'print YATT::Lite->VERSION')
 version=$(
@@ -14,36 +16,38 @@ version=$(
 	'print MM->parse_version(shift)' runyatt.lib/YATT/Lite.pm
 )
 
-clean=(
-    runyatt.lib/t/vfs.d
-)
-
 main=(
     -name _build -prune
     -o -name cover_db -prune
     -o -name .git -prune
+    -o -name \*.bak -prune
+    -o -name \*~ -prune
 )
 
-samples=(
-    -type l -prune
-    -o -name .htaccess -prune
-    -o -name \*.cgi -prune
-)
+tmpdir=/tmp/_build_yatt_lite$$
+mkdir -p $tmpdir
 
-rm -rf $clean
-mkdir -p _build
-rm -rf _build/YATT-Lite-$version
+build=$tmpdir/YATT-Lite-$version
+{
+    git clone $PWD $tmpdir/yatt_lite
 
-echo MANIFEST > MANIFEST
-find . $main -o -name samples -prune -o -print >> MANIFEST
-find samples $samples -o -print >> MANIFEST
+    cd $tmpdir/yatt_lite
 
-cpio -pd _build/YATT-Lite-$version < MANIFEST
-tar zcvf _build/YATT-Lite-$version.tar.gz -C _build YATT-Lite-$version
+    [[ -r MANIFEST ]] || echo MANIFEST > MANIFEST
+    print -l *~*.bak(.) > MANIFEST
+    find *(/) $main -o -print >> MANIFEST
 
-rm -rf _build/YATT-Lite-$version
+    sort MANIFEST > $origdir/MANIFEST
 
-if [[ -d ~/rpmbuild/SOURCES ]]; then
-    mv -vu _build/YATT-Lite-$version.tar.gz ~/rpmbuild/SOURCES
-    rmdir _build
-fi
+    cpio -pd $build < $origdir/MANIFEST
+    sed -i "s/^Version: .*/Version: $version/" \
+	$build/vendor/redhat/perl-YATT-Lite.spec
+
+    tar zcvf $build.tar.gz -C $tmpdir YATT-Lite-$version
+
+    if [[ -d ~/rpmbuild/SOURCES ]]; then
+	mv -vu $build.tar.gz ~/rpmbuild/SOURCES
+    fi
+} always {
+    rm -rf $tmpdir
+}
