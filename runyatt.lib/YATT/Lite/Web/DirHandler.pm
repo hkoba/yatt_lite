@@ -4,7 +4,6 @@ use warnings FATAL => qw(all);
 use base qw(YATT::Lite);
 use fields qw(cf_dir
 	      cf_session_opts
-	      cf_output_encoding
 	      cf_header_charset
 	      cf_is_gateway
 

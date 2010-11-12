@@ -55,6 +55,7 @@ my @command;
 foreach my $cmd (@command) {
   my ($dirhandler, $file, $sub, $this, @args) = @$cmd;
   local $YATT = $dirhandler;
+  $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $CON = $dirhandler->make_connection(\*STDOUT, cgi => CGI->new({}));
   $sub->($this, $CON, @args);
 }

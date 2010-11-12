@@ -69,7 +69,7 @@
     :submode yatt-declaration-mode
     :face yatt-declaration-submode-face
     :include-front t :include-back t
-    :front "^<![a-z]+:"
+    :front "^<!\\sw+:"
     :back ">\n")))
 
 ;;========================================
@@ -81,10 +81,10 @@
 	(fn (buffer-file-name))
 	sym start finish)
     (dolist (part (yatt-mode-multipart-list))
-      (setq sym (car part) start (cadr part) finish (caddr part))
+      (setq sym (caar part) start (cadr part) finish (caddr part))
       (case sym
-	(!yatt:widget)
-	(!yatt:action
+	(widget)
+	(action
 	 ;; XXX: mmm-ify-region は良くないかも。 interactive だと。
 	 (mmm-make-region 'cperl-mode start finish
 			  :face 'yatt-action-submode-face)
@@ -102,7 +102,7 @@
 		 next)
 	(reg (car regions) (car regions))
 	(next (cdr regions) (cdr regions))
-	(section `(default ,(cadr (car regions))))
+	(section `((default) ,(cadr (car regions))))
 	reg)
       ;; 次が無いなら、最後の section を詰めて返す
       ((not next)
@@ -118,9 +118,19 @@
 (defun yatt-mode-decltype (region)
   (let* ((min (cadr region)) (max (caddr region))
 	 (start (next-single-property-change min 'face (current-buffer) max))
-	 (end (next-single-property-change start 'face (current-buffer) max)))
+	 (end (next-single-property-change start 'face (current-buffer) max))
+	 (decl (buffer-substring-no-properties start end))
+	 pos
+	 )
     ;; XXX: !yatt: で始まらなかったら?
-    (intern (buffer-substring-no-properties start end))))
+    (save-match-data
+      (cond ((setq pos (string-match ":" decl))
+	     (list
+	      (intern (substring decl (1+ pos)))
+	      (substring decl 1 pos)
+	      ))
+	    (t
+	     (list nil nil decl))))))
 
 ;;========================================
 

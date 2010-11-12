@@ -11,6 +11,7 @@ use version; our $VERSION = qv('v0.0.2_3');
 use base qw(YATT::Lite::Object);
 use fields qw(YATT
 	      cf_vfs cf_base
+	      cf_output_encoding
 	      cf_tmpl_encoding cf_package cf_nsbuilder
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
 	      cf_die_in_error cf_error_handler
@@ -43,6 +44,21 @@ sub Connection () {'YATT::Lite::Connection'}
 sub make_connection {
   (my MY $self, my ($fh, @rest)) = @_;
   $self->Connection->new($fh, @rest)
+}
+
+#========================================
+# Output encoding
+#========================================
+sub fconfigure_encoding {
+  my MY $self = shift;
+  return unless $self->{cf_output_encoding};
+  my $enc = "encoding($self->{cf_output_encoding})";
+  require PerlIO;
+  foreach my $fh (@_) {
+    next if grep {$_ eq $enc} PerlIO::get_layers($fh);
+    binmode($fh, ":$enc");
+  }
+  $self;
 }
 
 #========================================

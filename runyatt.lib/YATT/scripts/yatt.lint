@@ -27,6 +27,7 @@ my $nerror = 0;
 foreach my $fn (@ARGV) {
   my $dir = dirname($fn);
   my $dirhandler = $dispatcher->get_dirhandler($dir);
+  $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   $dirhandler->configure
     (error_handler => sub {
        my YATT::Lite::Error $err = shift;
