@@ -109,6 +109,7 @@ runyatt.lib/t/xhf/lite/6-entpath.xhf
 runyatt.lib/t/xhf/lite/7-foreach.xhf
 runyatt.ytmpl
 runyatt.ytmpl/.gitignore
+runyatt.ytmpl/.htaccess
 runyatt.ytmpl/std.ytmpl
 runyatt.ytmpl/std.ytmpl/.gitignore
 runyatt.ytmpl/std.ytmpl/envelope.ytmpl
@@ -179,6 +180,8 @@ samples/basic/5/t/offline.t
 samples/basic/5/varerr.yatt
 samples/basic/6
 samples/basic/6/.gitignore
+samples/basic/6/.htyattconfig.xhf
+samples/basic/6/index.yatt
 samples/db_backed
 samples/db_backed/1
 samples/db_backed/1/.gitignore

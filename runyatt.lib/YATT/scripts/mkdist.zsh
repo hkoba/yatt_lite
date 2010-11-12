@@ -57,7 +57,7 @@ build=$tmpdir/YATT-Lite-$version
 		grep '%_gpg_name' ~/.rpmmacros > /dev/null; then
 		opts+=(--sign)
 	    fi
-	    rpmbuild -ta $opts ~/rpmbuild/SOURCES/$build:t.tar.gz
+	    LANG=C rpmbuild -ta $opts ~/rpmbuild/SOURCES/$build:t.tar.gz
 	fi
     else
 	mkdir _build
