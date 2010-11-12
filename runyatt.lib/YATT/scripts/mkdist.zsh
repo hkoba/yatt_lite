@@ -29,24 +29,39 @@ mkdir -p $tmpdir
 
 build=$tmpdir/YATT-Lite-$version
 {
+    # Make clean copy.
     git clone $PWD $tmpdir/yatt_lite
 
     cd $tmpdir/yatt_lite
 
+    # Build MANIFEST
     [[ -r MANIFEST ]] || echo MANIFEST > MANIFEST
     print -l *~*.bak(.) > MANIFEST
     find *(/) $main -o -print >> MANIFEST
-
     sort MANIFEST > $origdir/MANIFEST
 
+    # Build dist
     cpio -pd $build < $origdir/MANIFEST
     sed -i "s/^Version: .*/Version: $version/" \
 	$build/vendor/redhat/perl-YATT-Lite.spec
 
+    # Archive
     tar zcvf $build.tar.gz -C $tmpdir YATT-Lite-$version
 
+    # Package or just copy.
     if [[ -d ~/rpmbuild/SOURCES ]]; then
 	mv -vu $build.tar.gz ~/rpmbuild/SOURCES
+	if (($+commands[rpmbuild])); then
+	    opts=()
+	    if [[ -r ~/.rpmmacros ]] &&
+		grep '%_gpg_name' ~/.rpmmacros > /dev/null; then
+		opts+=(--sign)
+	    fi
+	    rpmbuild -ta $opts ~/rpmbuild/SOURCES/$build:t.tar.gz
+	fi
+    else
+	mkdir _build
+	mv -vu $build.tar.gz _build
     fi
 } always {
     rm -rf $tmpdir
