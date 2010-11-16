@@ -494,10 +494,11 @@ sub add_args {
     } else {
       ($type, $dflag, $default) = split m{([|/?!])}, $desc || '', 2;
     };
-    my $var = $self->mkvar($type, $argName, nextArgNo($part)
-			   , $lno, $node_type, $dflag
-			   , defined $default
-			   ? $self->_parse_text_entities($default) : undef);
+    my $var = $self->mkvar_at($self->{startln}
+			      , $type, $argName, nextArgNo($part)
+			      , $lno, $node_type, $dflag
+			      , defined $default
+			      ? $self->_parse_text_entities($default) : undef);
 
     if ($node_type == TYPE_ATT_NESTED) {
       # XXX: [delegate:type ...], [code  ...] の ... が来る
@@ -544,8 +545,9 @@ sub add_arg_of_type_delegate {
     next if $widget->{arg_dict}{$argName};
     $delegate_vars{$argName} = my $orig = $delegate->{arg_dict}{$argName};
     # clone して argno と lineno を変える。
-    $widget->{arg_dict}{$argName} = my $clone = $self->mkvar(@$orig)
-      ->argno(nextArgNo($widget))->lineno($widget->{cf_startln});
+    $widget->{arg_dict}{$argName} = my $clone
+      = $self->mkvar_at($widget->{cf_startln}, @$orig)
+	->argno(nextArgNo($widget))->lineno($widget->{cf_startln});
     # XXX: lineno を widget の startln にするのは手抜き。本来は直前の arg のものを使うべき。
     push @{$widget->{arg_order}}, $argName;
   }
@@ -569,11 +571,17 @@ sub re_name {
 #========================================
 sub synerror_at {
   (my MY $self, my $ln) = splice @_, 0, 2;
-  my %opts
-    = ($$self{cf_path} ? (tmpl_file => $$self{cf_path}) : ()
-       , defined $ln ? (tmpl_line => $ln) : ()
-       , depth => 2);
-  $self->{cf_vfs}->error(\%opts, @_);
+  my %opts = ($self->_tmpl_file_line($ln), depth => 2);
+  $self->_error(\%opts, @_);
+}
+sub _error {
+  my MY $self = shift;
+  $self->{cf_vfs}->error(@_);
+}
+sub _tmpl_file_line {
+  (my MY $self, my $ln) = @_;
+  ($$self{cf_path} ? (tmpl_file => $$self{cf_path}) : ()
+   , defined $ln ? (tmpl_line => $ln) : ());
 }
 #========================================
 sub is_ident {

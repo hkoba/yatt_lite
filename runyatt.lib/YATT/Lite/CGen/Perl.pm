@@ -70,9 +70,9 @@ use YATT::Lite::Constants;
     # XXX: calling convention 周り, body の code 型
     local $self->{scope} = $self->mkscope
       ({}, $widget->{var_dict}, $widget->{arg_dict} ||= {}
-       , {this => $self->mkvar(text => 'this')
-	  , 'CON' => $self->mkvar(text => 'CON')
-	  , '_' => $self->mkvar(text => '_')}
+       , {this => $self->mkvar_at(undef, text => 'this')
+	  , 'CON' => $self->mkvar_at(undef, text => 'CON')
+	  , '_' => $self->mkvar_at(undef, text => '_')}
        , $self->{scope});
     local $self->{curtoks} = [@{$widget->{tree}}];
     ($self->sync_curline($widget->{cf_startln})
@@ -677,7 +677,8 @@ sub feed_arg_spec {
       if (my $sub = $self->can("_macro_my_$typename")) {
 	$sub->($self, $node, $name, $valNode);
       } else {
-	my $var = $self->{scope}[0]{$name} = $self->mkvar($typename, $name)
+	my $var = $self->{scope}[0]{$name}
+	  = $self->mkvar_at(undef, $typename, $name)
 	  or die $self->generror("Unknown type '%s' for variable '%s'"
 				 , $typename, $name);
 	# typename == source の時が問題だ。
@@ -707,13 +708,13 @@ sub feed_arg_spec {
   }
   sub _macro_my_code {
     (my MY $self, my ($node, $name, $valNode)) = @_;
-    my $var = $self->{scope}[0]{$name} = $self->mkvar(code => $name);
+    my $var = $self->{scope}[0]{$name} = $self->mkvar_at(undef, code => $name);
     local $self->{curtoks} = [@{argValue($valNode)}];
     'my '.$self->as_lvalue($var).' = '.q|sub {| . $self->as_print('}');
   }
   sub _macro_my_source {
     (my MY $self, my ($node, $name, $valNode)) = @_;
-    my $var = $self->{scope}[0]{$name} = $self->mkvar(text => $name);
+    my $var = $self->{scope}[0]{$name} = $self->mkvar_at(undef, text => $name);
     'my '.$self->as_lvalue($var).' = '
       .join(q|."\n".|, map {qparen($_)}
 	    split /\n/, $self->{curtmpl}->node_body_source($node));
@@ -746,7 +747,7 @@ sub feed_arg_spec {
       if ($my) {
 	my ($x, @type) = lexpand($my->[NODE_PATH]);
 	my $varname = $my->[NODE_VALUE];
-	$local{$varname} = $self->mkvar($type[0] || '' => $varname);
+	$local{$varname} = $self->mkvar_at(undef, $type[0] || '' => $varname);
 	'my $' . $varname;
       } else {
 	# _ は？ entity 自体に処理させるか…

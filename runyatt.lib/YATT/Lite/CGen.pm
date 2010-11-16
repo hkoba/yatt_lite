@@ -103,10 +103,18 @@ sub generror {
   my MY $self = shift;
   my Template $tmpl = $self->{curtmpl};
   my ($pkg, $file, $line) = caller;
-  my %opts
-    = (tmpl_file => $tmpl->{cf_path} // $tmpl->{cf_name}
-       , tmpl_line => $self->{curline}, callerinfo());
-  $self->{cf_vfs}->error(\%opts, @_);
+  my %opts = ($self->_tmpl_file_line($self->{curline}), callerinfo());
+  $self->_error(\%opts, @_);
+}
+sub _error {
+  my MY $self = shift;
+  $self->{cf_vfs}->error(@_);
+}
+sub _tmpl_file_line {
+  (my MY $self, my $ln) = @_;
+  my Template $tmpl = $self->{curtmpl};
+  (tmpl_file => $tmpl->{cf_path} // $tmpl->{cf_name}
+   , defined $ln ? (tmpl_line => $ln) : ());
 }
 
 sub add_curline {

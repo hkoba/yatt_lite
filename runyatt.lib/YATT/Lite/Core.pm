@@ -323,8 +323,8 @@ sub create_file {
     }
     $widget->{arg_dict}{body} ||= do {
       # lineno も入れるべきかも。 $widget->{cf_bodyln} あたり.
-      my $var = $parser->mkvar(code => 'body'
-			       , scalar @{$widget->{arg_order} ||= []});
+      my $var = $parser->mkvar_at(undef, code => 'body'
+				  , scalar @{$widget->{arg_order} ||= []});
       push @{$widget->{arg_order}}, 'body';
       $var;
     };

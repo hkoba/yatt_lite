@@ -65,6 +65,14 @@ IN:
  moe
 ERROR: ^No such variable 'z' at file \S+ line 10,
 
+
+TITLE: Unknown type
+IN:
+ <!yatt:args foo=bar>
+ <h2>&yatt:foo;</h2>
+ERROR: ^Unknown type 'bar' for variable 'foo' at file \S+ line 1,
+
+
 TITLE: empty element.
 # x のエラーメッセージを作るときに y の行番号が計算される
 IN:
