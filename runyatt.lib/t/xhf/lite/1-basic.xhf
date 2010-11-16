@@ -514,3 +514,36 @@ OUT:
  <b><ul>bar(foo)</ul>
  </b>
  
+
+TITLE: attr (default)
+IN:
+ <!yatt:args class=attr>
+ <div&yatt:class;></div>
+PARAM[
+- foo
+]
+OUT:
+ <div class="foo"></div>
+
+PARAM[
+- 
+]
+OUT:
+ <div></div>
+
+
+TITLE: attr(other,value)
+IN:
+ <!yatt:args color=attr:class>
+ <div&yatt:color(bar,baz);></div>
+PARAM[
+- foo
+]
+OUT:
+ <div class="foo bar baz"></div>
+
+PARAM[
+]
+OUT:
+ <div class="bar baz"></div>
+# In case of missing value

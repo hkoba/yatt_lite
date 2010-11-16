@@ -532,6 +532,13 @@ use YATT::Lite::Constants;
     $$esc_later = 0;
     $self->as_lvalue_html($var);
   }
+  sub as_expr_var_attr {
+    (my MY $self, my ($esc_later, $var, $name)) = @_;
+    # $$esc_later = 0;
+    (undef, my $attname) = @{$var->type};
+    sprintf(q{YATT::Lite::Util::named_attr('%s', $%s)}
+	    , $attname // $name, $name);
+  }
   sub as_expr_call {
     (my MY $self, my ($esc_later, $name)) = splice @_, 0, 3;
     # XXX: 受け側が print か、それとも一般の式か。 print なら \ すべき。
@@ -539,8 +546,7 @@ use YATT::Lite::Constants;
     if (my $var = $self->find_callable_var($name)) {
       # code 引数の中の引数のデフォルト値の中に、改行が有ったら？？
       # XXX: body の引数宣言が無い場合に <yatt:body/> は、ちゃんと呼び出せるか?
-      return \ sprintf q{$%1$s && $%1$s->(%2$s)}, $name
-	, scalar $self->gen_entlist(undef, @_);
+      return $self->as_expr_call_var($var, $name, @_);
     }
 
     my Template $tmpl = $self->{curtmpl};
@@ -550,6 +556,22 @@ use YATT::Lite::Constants;
     my $call = sprintf '$this->entity_%s(%s)', $name
       , scalar $self->gen_entlist(undef, @_);
     $call;
+  }
+  sub as_expr_call_var {
+    (my MY $self, my ($var, $name, @args)) = @_;
+    if (my $sub = $self->can("as_expr_call_var_" . $var->type->[0])) {
+      $sub->($self, $var, $name, @args);
+    } else {
+      \ sprintf q{$%1$s && $%1$s->(%2$s)}, $name
+	, scalar $self->gen_entlist(undef, @args);
+    }
+  }
+  sub as_expr_call_var_attr {
+    (my MY $self, my ($var, $name, @args)) = @_;
+    (undef, my $attname) = @{$var->type};
+    sprintf q|YATT::Lite::Util::named_attr('%s', %s)|
+      , $attname // $name
+	, join ", ", '$'.$name, $self->gen_entlist(undef, @args);
   }
   sub as_expr_invoke {
     (my MY $self, my ($esc_later, $name)) = splice @_, 0, 3;

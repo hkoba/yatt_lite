@@ -7,12 +7,14 @@ use fields qw(type_alias known_types);
 use YATT::Lite::VarTypes qw(:type);
 use YATT::Lite::Util qw(lexpand default);
 
+# XXX: Should integrated to VarTypes.
 sub default_arg_type {'text'}
 sub default_type_alias {
   qw(value scalar flag scalar
      expr code);
 }
 
+# XXX: Should integrated to VarTypes.
 sub known_types {
   qw(text html attr
      list scalar code
@@ -27,6 +29,9 @@ sub after_new {
   $self;
 }
 
+# Note: To use mkvar_at(), derived class must implement
+# _error() and _tmpl_file_line().
+# Currently, YATT::Lite::LRXML and YATT::Lite::CGen.
 sub mkvar_at {
   (my MY $self, my ($lineno, $type, $name, @args)) = @_;
   ($type, my @subtype) = ref $type ? lexpand($type) : split /:/, $type || '';
@@ -40,6 +45,7 @@ sub mkvar_at {
 		      , $type, $name);
   }
 
+  # XXX: This behavior should be changed.
   # 未知の型の時は undef を返す。エラー情報が足りないまま raise するよりはマシ。
   # (subclass で override して使うのが良いかも)
   my $sub = $self->can("t_$type")

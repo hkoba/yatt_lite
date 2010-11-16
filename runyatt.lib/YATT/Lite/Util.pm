@@ -19,6 +19,7 @@ require Scalar::Util;
 				  dofile_in compile_file_in
 				  url_encode url_decode
 				  ostream
+				  named_attr
 				));
   }
   use Carp;
@@ -246,6 +247,13 @@ BEGIN {
     }
     wantarray ? @result : $result[0];
   }
+}
+
+sub named_attr {
+  my $attname = shift;
+  my @result = grep {defined $_ && $_ ne ''} @_;
+  return '' unless @result;
+  \ sprintf(q{ %s="%s"}, $attname, join ' ', map {escape($_)} @result);
 }
 
 # Verbatimly stolen from CGI::Simple

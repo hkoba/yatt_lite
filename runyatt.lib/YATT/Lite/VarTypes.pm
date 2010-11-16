@@ -63,7 +63,8 @@ BEGIN {
 
 BEGIN {
   # export する理由は無い?
-  our @types = (qw(text list attr)
+  our @types = (qw(text list)
+		, [attr => {callable => 1}]
 		, [scalar => {flag => 1}]
 		, [html => {already_escaped => 1}]
 		, [code => {callable => 1}, qw(widget)]
