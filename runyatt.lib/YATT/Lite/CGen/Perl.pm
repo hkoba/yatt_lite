@@ -396,6 +396,9 @@ use YATT::Lite::Constants;
     return qparen($value) unless ref $value;
     $self->as_text(@$value);
   }
+  sub as_cast_to_attr {
+    shift->as_cast_to_text(@_);
+  }
   sub as_cast_to_html {
     (my MY $self, my ($var, $value)) = @_;
     unless (ref $value) {

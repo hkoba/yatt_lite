@@ -515,7 +515,7 @@ OUT:
  </b>
  
 
-TITLE: attr (default)
+TITLE: attr (simple case: attName == varName)
 IN:
  <!yatt:args class=attr>
  <div&yatt:class;></div>
@@ -530,6 +530,20 @@ PARAM[
 ]
 OUT:
  <div></div>
+
+
+TITLE: attr with default value
+IN:
+ <!yatt:args type=attr?text name=attr! value=attr! size=attr?10>
+ <input &yatt:type; &yatt:name; &yatt:value; &yatt:size;/>
+PARAM[
+- 
+- q1
+- foo<h2>
+- 
+]
+OUT:
+ <input  type="text"  name="q1"  value="foo&lt;h2&gt;"  size="10"/>
 
 
 TITLE: attr(other,value)
