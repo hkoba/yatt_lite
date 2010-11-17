@@ -20,7 +20,7 @@ fi
 
 if [[ -d $destdir ]]; then
     mkdir -vp $destdir
-    echo deny from all > $destdir
+    echo deny from all > $destdir/.htaccess
 fi
 
 # To make symlink relative...

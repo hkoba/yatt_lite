@@ -92,7 +92,7 @@ sub ConnProp () {Connection}
 
 sub make_connection {
   (my MY $self, my ($fh, %opts)) = @_;
-  $self->SUPER::make_connection(do {
+  my @opts = do {
     if ($opts{is_gateway}) {
       # buffered mode.
       (undef, parent_fh => $fh, header => sub {
@@ -106,7 +106,10 @@ sub make_connection {
       # direct mode.
       $fh
     }
-  }, %opts);
+  };
+  push @opts, encoding => $$self{cf_output_encoding}
+    if $$self{cf_output_encoding};
+  $self->SUPER::make_connection(@opts, %opts);
 }
 
 #========================================

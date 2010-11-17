@@ -107,6 +107,7 @@ sub list_xhf {
 
 use YATT::Lite::XHF;
 sub Parser {'YATT::Lite::XHF'}
+# XXX: Currently, all t/*.xhf is loaded as binary (not Wide char).
 sub load_file {
   my ($pack, $fn) = splice @_, 0, 2;
   _with_loading_file {$pack} $fn, sub {
@@ -223,10 +224,15 @@ sub trimlast {
   $_[0];
 }
 
+use Encode qw(is_utf8 encode);
 sub nocr {
   return undef unless defined $_[0];
   $_[0] =~ s|\r||g;
-  $_[0];
+  if (is_utf8($_[0])) {
+    encode(utf8 => $_[0]);
+  } else {
+    $_[0];
+  }
 }
 
 1;

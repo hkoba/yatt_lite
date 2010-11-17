@@ -2,6 +2,7 @@
 sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+use 5.010;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use File::Basename;
@@ -47,11 +48,17 @@ foreach my File $sect (@{$tests->{files}}) {
     $item->{cf_METHOD} //= 'GET';
 
     my $con = ostream(my $buffer);
-    eval {$dispatcher->run_dirhandler($con, @param)};
+    eval {$dispatcher->run_dirhandler($con, @param)->commit};
 
     if ($item->{cf_ERROR}) {
       like $@, qr{$item->{cf_ERROR}}
 	, "[$sect_name] ERROR $item->{cf_METHOD} $item->{cf_FILE}";
+      next;
+    } elsif (ref $@ eq 'SCALAR' and ${$@} eq 'DONE') {
+      # Request is completed.
+    } elsif ($@) {
+      Test::More::fail $item->{cf_FILE};
+      Test::More::diag $@;
       next;
     }
 

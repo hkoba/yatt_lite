@@ -26,6 +26,8 @@ sub build_fh_for {
   unless (defined $_[0]) {
     my $enc = $$prop{cf_encoding} ? ":encoding($$prop{cf_encoding})" : '';
     open $_[0], ">$enc", \ ($prop->{buffer} = "") or die $!;
+  } elsif ($$prop{cf_encoding}) {
+    binmode $_[0], ":encoding($$prop{cf_encoding})";
   }
   bless $_[0], $class;
   *{$_[0]} = $prop;
