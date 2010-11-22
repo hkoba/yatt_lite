@@ -11,7 +11,7 @@ sub mh_alloc_newfh {
   (my MY $yatt) = @_;
   my ($fnum, $lockfh) = $yatt->mh_lastfnum(1);
 
-  my ($fh, $fname);
+  my ($fname);
   do {
     $fname = "$yatt->{cf_datadir}/.ht_" . ++$fnum;
   } while (-e $fname);
@@ -21,7 +21,7 @@ sub mh_alloc_newfh {
   print $lockfh $fnum, "\n";
   truncate $lockfh, tell($lockfh);
 
-  open $fh, '>', $fname
+  open my $fh, '>', $fname
     or die "Can't open newfile '$fname': $!";
 
   wantarray ? ($fh, $fname, $fnum) : $fh;
@@ -81,7 +81,7 @@ Entity mh_files => sub {
 
 Entity mh_load => sub {
   my ($this, $fnum) = @_;
-  my MY $yatt = MY->YATT; # To make sure strict check occurs.
+  my MY $yatt = $this->YATT; # To make sure strict field check occurs.
   my $fn = "$yatt->{cf_datadir}/.ht_$fnum";
   unless (-r $fn) {
     die "Can't read '$fn'\n";
