@@ -168,9 +168,11 @@ fi
 if [[ $destdir = $document_root/* ]]; then
     location=${destdir#$document_root}
     cgi_bin_perm=775
+    install_type=sys
 elif [[ $destdir = $HOME/public_html/* ]]; then
     location=/~$USER${destdir#$HOME/public_html}
     cgi_bin_perm=755; # for suexec
+    install_type=user
 else
     die Can\'t extract URL from destdir=$destdir.
 fi
@@ -197,7 +199,7 @@ if (($is_selinux)); then
     # XXX: Only if user ownes original.
     # XXX: httpd_sys vs httpd_user
     # XXX: semanage fcontext -a -t $type
-    x chcon -R -t httpd_sys_content_t $driver_path.*(/) || true
+    x chcon -R -t httpd_${install_type}_content_t $driver_path.*(/) || true
 fi
 
 # Create custom DirHandler.
@@ -222,7 +224,7 @@ fi
 # Copy driver cgi and link fcgi.
 x install -t $cgi_bin/ -m $cgi_bin_perm $driver_path.cgi
 if (($is_selinux)); then
-    x chcon -v -t httpd_sys_script_exec_t $cgi_bin/$driver_name.cgi || true
+    x chcon -v -t httpd_${install_type}_script_exec_t $cgi_bin/$driver_name.cgi || true
 fi
 x ln -vnsf $driver_name.cgi $cgi_bin/$driver_name.fcgi
 
@@ -238,7 +240,7 @@ if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
     fi
     mkfile $datadir/.htaccess <<<"deny from all"
     if (($is_selinux)); then
-	x chcon -v -t httpd_sys_script_rw_t $datadir
+	x chcon -v -t httpd_${install_type}_script_rw_t $datadir
     fi
 
     if [[ -r $destdir/.htyattrc.pl ]]; then
