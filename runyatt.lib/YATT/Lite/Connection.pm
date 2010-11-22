@@ -15,10 +15,15 @@ sub prop { my $glob = shift; \%{*$glob}; }
 sub build_prop {
   my $class = shift;
   my PROP $prop = fields::new($class);
+  my @task;
   while (my ($name, $value) = splice @_, 0, 2) {
-    $prop->{"cf_$name"} = $value;
+    if (my $sub = $class->can("configure_$name")) {
+      push @task, [$sub, $value];
+    } else {
+      $prop->{"cf_$name"} = $value;
+    }
   }
-  $prop;
+  wantarray ? ($prop, @task) : $prop;
 }
 
 sub build_fh_for {
@@ -37,7 +42,9 @@ sub build_fh_for {
 sub new {
   my ($class, $self) = splice @_, 0, 2;
   require IO::Handle;
-  $class->build_fh_for($class->build_prop(@_), $self);
+  my ($prop, @task) = $class->build_prop(@_);
+  $class->build_fh_for($prop, $self);
+  $_->[0]->($self, $_->[1]) for @task;
   $self->after_new;
   $self;
 }

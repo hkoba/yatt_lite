@@ -7,6 +7,7 @@ use fields qw(cf_dir
 	      cf_header_charset
 	      cf_is_gateway
 
+	      cf_no_array_param
 	      Action
 	    );
 
@@ -109,6 +110,7 @@ sub make_connection {
   };
   push @opts, encoding => $$self{cf_output_encoding}
     if $$self{cf_output_encoding};
+  push @opts, use_array_param => 1 unless $$self{cf_no_array_param};
   $self->SUPER::make_connection(@opts, %opts);
 }
 

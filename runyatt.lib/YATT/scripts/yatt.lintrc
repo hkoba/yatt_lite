@@ -12,6 +12,8 @@ my $libdir;
 use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
+sub fgrep (&@);
+
 use YATT::Lite::Breakpoint;
 # XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
@@ -25,9 +27,24 @@ my $dispatcher = do {
 
 foreach my $path (@ARGV) {
   my $fn = basename($path);
-  unless ($fn eq '.htyattrc.pl' or $fn eq '.htyattconfig.xhf') {
+  if ($fn eq '.htyattrc.pl') {
+    unless (fgrep {/^\s*use strict\s*;/} $path) {
+      die "[use strict] is missing! in $fn\n";
+    }
+  } elsif ($fn eq '.htyattconfig.xhf') {
+    # XXX:
+  } else {
     croak "Not for yatt: $fn";
   }
   my $dir = dirname($path);
   my $dirhandler = $dispatcher->get_dirhandler($dir);
+}
+
+sub fgrep (&@) {
+  my ($sub, $fn) = @_;
+  open my $fh, '<', $fn or die "Can't open '$fn': $!";
+  local $_;
+  while (<$fh>) {
+    return 1 if $sub->();
+  }
 }

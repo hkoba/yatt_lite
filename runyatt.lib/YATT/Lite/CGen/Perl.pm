@@ -819,6 +819,27 @@ sub entmacro_if {
     , map {ref $_ ? $$_ : $_} $cond, $then, $else || q{''};
 }
 
+sub entmacro_ifeq {
+  (my MY $self, my $node) = @_;
+  my ($val, $what, $then, $else) = $self->gen_entlist(undef, entx($node));
+  sprintf q|do {((%s // '') eq (%s // '')) ? (%s) : (%s)}|
+    , map {ref $_ ? $$_ : $_} $val, $what, $then, $else || q{''};
+}
+
+sub entmacro_value_checked {
+  (my MY $self, my $node) = @_;
+  my (@list) = $self->gen_entlist(undef, entx($node));
+  sprintf q|YATT::Lite::Util::value_checked(%s)|
+    , join ", ", map {ref $_ ? $$_ : $_} @list;
+}
+
+sub entmacro_value_selected {
+  (my MY $self, my $node) = @_;
+  my (@list) = $self->gen_entlist(undef, entx($node));
+  sprintf q|YATT::Lite::Util::value_selected(%s)|
+    , join ", ", map {ref $_ ? $$_ : $_} @list;
+}
+
 sub entmacro_lexpand {
   (my MY $self, my $node) = @_;
   q|@{|.$self->gen_entpath(undef, entx($node)).q|}|;

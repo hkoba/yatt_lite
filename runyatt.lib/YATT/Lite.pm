@@ -19,6 +19,7 @@ use fields qw(YATT
 	      cf_rc_script
 	      cf_tmpl_cache
 	      cf_at_done
+	      cf_dont_map_args
 	    );
 
 # Entities を多重継承する理由は import も継承したいから。
@@ -95,9 +96,10 @@ sub map_request {
   my ($subpage, $action);
   # XXX: url_param
   foreach my $name (grep {defined} $con->param()) {
-    my ($sigil, $word) = $name =~ /^([~!])(\w*)$/
+    my ($sigil, $word) = $name =~ /^([~!])(\1|\w*)$/
       or next;
-    my $new = length($word) ? $word : $con->param($sigil);
+    my $new = $word eq $sigil ? $con->param($sigil) : $word;
+    # Note: $word may eq ''. This is for render_/action_.
     given ($sigil) {
       when ('~') {
 	if (defined $subpage) {
@@ -146,7 +148,7 @@ sub handle_yatt {
     croak $self->error(q|Forbidden request '%s'|, terse_dump($mapped));
   }
   # XXX: 未知引数エラーがあったら？
-  $sub->($pkg, $con, $part->isa($trans->Action)
+  $sub->($pkg, $con, $self->{cf_dont_map_args} || $part->isa($trans->Action)
 	 ? ()
 	 : $part->reorder_cgi_params($con));
   $con;

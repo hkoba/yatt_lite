@@ -3,7 +3,9 @@ use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
 use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
-	      cf_root cf_location);
+	      cf_root cf_location
+	      cf_use_array_param
+	    );
 use YATT::Lite::Util qw(globref url_encode);
 use Carp;
 use File::Basename;
@@ -25,6 +27,24 @@ BEGIN {
       $prop->{$cf};
     };
   }
+}
+
+sub configure_cgi {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_cgi} = my $cgi = shift;
+  $glob->convert_array_param($cgi) if $prop->{cf_use_array_param};
+}
+
+sub convert_array_param {
+  my ($glob, $cgi) = @_;
+  foreach my $name ($cgi->param) {
+    (my $newname = $name) =~ s{^\*|\[\]$}{}
+      or next;
+    my %hash; $hash{$_} = 1 for $cgi->param($name);
+    $cgi->delete($name);
+    $cgi->param($newname, \%hash);
+  }
+  $cgi;
 }
 
 sub commit {

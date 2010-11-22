@@ -235,13 +235,19 @@ BEGIN {
       push @result, do {
 	unless (defined $str) {
 	  $ESCAPE_UNDEF;
-	} elsif (ref $str eq 'SCALAR') {
-	  # PASS Thru. (Already escaped)
-	  $$str;
-	} else {
+	} elsif (not ref $str) {
 	  my $copy = $str;
 	  $copy =~ s{([<>&\"\'])}{$escape{$1}}g;
 	  $copy;
+	} elsif (ref $str eq 'SCALAR') {
+	  # PASS Thru. (Already escaped)
+	  $$str;
+	} elsif (my $sub = UNIVERSAL::can($str, 'as_escaped')) {
+	  $sub->($str);
+	} else {
+	  # XXX: Is this secure???
+	  # XXX: Should be JSON?
+	  terse_dump($str);
 	}
       };
     }
@@ -249,11 +255,44 @@ BEGIN {
   }
 }
 
+{
+  package
+    YATT::Lite::Util::named_attr;
+  use overload qw("" as_string);
+  sub as_string {
+    shift->[-1];
+  }
+  sub as_escaped {
+    sprintf q{ %s="%s"}, $_[0][0], $_[0][1];
+  }
+}
+
 sub named_attr {
   my $attname = shift;
   my @result = grep {defined $_ && $_ ne ''} @_;
   return '' unless @result;
-  \ sprintf(q{ %s="%s"}, $attname, join ' ', map {escape($_)} @result);
+  bless [$attname, join ' ', map {escape($_)} @result]
+    , 'YATT::Lite::Util::named_attr';
+}
+
+sub value_checked  { _value_checked($_[0], $_[1], checked => '') }
+sub value_selected { _value_checked($_[0], $_[1], selected => '') }
+
+sub _value_checked {
+  my ($value, $hash, $then, $else) = @_;
+  sprintf q|value="%s"%s|, escape($value)
+    , _if_checked($hash, $value, $then, $else);
+}
+
+sub _if_checked {
+  my ($in, $value, $then, $else) = @_;
+  $else //= '';
+  return $else unless defined $in;
+  if (ref $in ? $in->{$value // ''} : ($in eq $value)) {
+    " $then"
+  } else {
+    $else;
+  }
 }
 
 # Verbatimly stolen from CGI::Simple
