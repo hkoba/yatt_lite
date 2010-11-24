@@ -18,7 +18,7 @@ else
     destdir=$PWD
 fi
 
-if [[ -d $destdir ]]; then
+if ! [[ -d $destdir ]]; then
     mkdir -vp $destdir
     echo deny from all > $destdir/.htaccess
 fi
