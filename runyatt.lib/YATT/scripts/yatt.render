@@ -4,10 +4,20 @@ use warnings FATAL => qw(all);
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
 
+use FindBin;
 use File::Basename;
 sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
 my $libdir;
-use lib $libdir = updir(3, MY->rel2abs(__FILE__));
+use lib $libdir = do {
+  if (-l __FILE__) {
+    # If $script is symlink, symlink-resolved path is used as $libdir
+    require FindBin; import FindBin;
+    updir(2, ($FindBin::RealBin, $FindBin::RealBin)[0]);
+  } else {
+    # Otherwise, just use updir 3 of runyatt.lib/YATT/scripts/$script
+    updir(3, MY->rel2abs(__FILE__))
+  }
+};
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use CGI;
@@ -40,6 +50,7 @@ my @command;
     MY->parse_params(\@ARGV, \%param);
 
     my $dir = dirname($file);
+    $dir =~ s,/*$,/,;
     my $dirhandler = $dispatcher->get_dirhandler($dir);
     my $trans = $dirhandler->open_trans;
 
