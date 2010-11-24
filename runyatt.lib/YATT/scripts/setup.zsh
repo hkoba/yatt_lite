@@ -30,6 +30,7 @@ opt_spec=(
     x=o_xtrace
     n=o_dryrun
     y=o_yn
+    q=o_quiet
 
     --
     -myapp::
@@ -43,6 +44,7 @@ opt_spec=(
 zparseopts -D -A opts $opt_spec
 
 [[ -n $o_xtrace ]] && set -x
+if [[ -z $o_quiet ]]; then o_verbose=(-v); else o_verbose=(); fi
 
 if ! ((ARGC)); then
     die Usage: $0:t '[-n | -x]' DESTDIR
@@ -60,7 +62,9 @@ fi
 # utils.
 #========================================
 function x {
-    print -- $bg[cyan]"$@"$bg[default]
+    if [[ -z $o_quiet ]]; then
+	print -- $bg[cyan]"$@"$bg[default]
+    fi
     if [[ -z $o_dryrun ]]; then
 	"$@"
     fi
@@ -76,16 +80,22 @@ function find_pat {
 
 function mkfile {
     zparseopts -D m:=mode
-    echo $bg[cyan]mkfile $1 "$bg[default] as:"
-    echo "$bg[blue]=============$bg[default]"
-    if [[ -z $o_dryrun ]]; then
-	tee $1
-    else
-	cat
+    if [[ -z $o_quiet ]]; then
+	echo $bg[cyan]mkfile $1 "$bg[default] as:"
+	echo "$bg[blue]=============$bg[default]"
     fi
-    echo "$bg[blue]=============$bg[default]"
+    if [[ -n $o_dryrun ]]; then
+	cat
+    elif [[ -n $o_quiet ]]; then
+	cat > $1
+    else
+	tee $1
+    fi
+    if [[ -z $o_quiet ]]; then
+	echo "$bg[blue]=============$bg[default]"
+    fi
     if [[ -n $mode ]]; then
-	x chmod -v $mode[-1] $1
+	x chmod $o_verbose $mode[-1] $1
     fi
 }
 
@@ -186,18 +196,18 @@ cgi_loc=$location/cgi-bin
 # Create library directory and link yatt in it.
 x mkdir -p $cgi_bin/$driver_name.lib
 x chmod -c 2$cgi_bin_perm $cgi_bin
+# XXX: httpd_${install_type}_htaccess_t
 mkfile $cgi_bin/$driver_name.lib/.htaccess <<EOF
 deny from all
 EOF
-x ln -vnsf $driver_path.lib/YATT $cgi_bin/$driver_name.lib/YATT
+x ln $o_verbose -nsf $driver_path.lib/YATT $cgi_bin/$driver_name.lib/YATT
 mkfile $cgi_bin/.htaccess <<EOF
 Options +ExecCGI
 EOF
-x ln -vnsf $driver_path.ytmpl $cgi_bin/
+x ln $o_verbose -nsf $driver_path.ytmpl $cgi_bin/
 
 if (($is_selinux)); then
     # XXX: Only if user ownes original.
-    # XXX: httpd_sys vs httpd_user
     # XXX: semanage fcontext -a -t $type
     x chcon -R -t httpd_${install_type}_content_t $driver_path.*(/) || true
 fi
@@ -224,23 +234,23 @@ fi
 # Copy driver cgi and link fcgi.
 x install -t $cgi_bin/ -m $cgi_bin_perm $driver_path.cgi
 if (($is_selinux)); then
-    x chcon -v -t httpd_${install_type}_script_exec_t $cgi_bin/$driver_name.cgi || true
+    x chcon $o_verbose -t httpd_${install_type}_script_exec_t $cgi_bin/$driver_name.cgi || true
 fi
-x ln -vnsf $driver_name.cgi $cgi_bin/$driver_name.fcgi
+x ln $o_verbose -nsf $driver_name.cgi $cgi_bin/$driver_name.fcgi
 
 # Prepare data saving directory.
 # XXX: Should verify *NON* accessibility of this datadir.
 if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
     datadir=${opts[--datadir][2,-1]:-$destdir/data}
     if [[ -d $datadir ]]; then
-	x chmod -v 2775 $datadir
-	x chgrp -v $APACHE_RUN_GROUP $datadir
+	x chmod $o_verbose 2775 $datadir
+	x chgrp $o_verbose $APACHE_RUN_GROUP $datadir
     else
 	x install -m 2775 -g $APACHE_RUN_GROUP -d $datadir
     fi
     mkfile $datadir/.htaccess <<<"deny from all"
     if (($is_selinux)); then
-	x chcon -v -t httpd_${install_type}_script_rw_t $datadir
+	x chcon $o_verbose -t httpd_${install_type}_script_rw_t $datadir
     fi
 
     if [[ -r $destdir/.htyattrc.pl ]]; then
@@ -251,7 +261,7 @@ fi
 
 # Then activate it!
 if [[ -r $destdir/dot.htaccess ]]; then
-    x cp -v $destdir/dot.htaccess $destdir/.htaccess
+    x cp $o_verbose $destdir/dot.htaccess $destdir/.htaccess
     x sed -i -e "s|@DRIVER@|$cgi_loc/$driver_name.cgi|" $destdir/.htaccess
 else
     # Mapping *.ytmpl(private template) to x-yatt-handler is intentional.

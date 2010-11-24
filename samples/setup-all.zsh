@@ -21,5 +21,5 @@ EOF
 fi
 
 for f in **/t; do
-  ../runyatt.lib/YATT/scripts/setup.zsh $f:h
+  ../runyatt.lib/YATT/scripts/setup.zsh -q $f:h
 done
