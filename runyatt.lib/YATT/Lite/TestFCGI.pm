@@ -169,6 +169,18 @@ my $Test = Test::Builder->new;
       croak "Not implemented type of PARAM!";
     }
   }
+
+  sub is_coverage_mode {
+    my ($pack) = @_;
+    my $symtab = (my $root = \%::);
+    foreach my $ns (qw(Devel:: Cover::)) {
+      my $glob = $symtab->{$ns}
+	or return 0;
+      $symtab = *{$glob}{HASH}
+	or return 0;
+    }
+    return 1;
+  }
 }
 
 #========================================
@@ -219,7 +231,8 @@ my $Test = Test::Builder->new;
 
     require FCGI::Client;
     my $client = FCGI::Client::Connection->new
-      (sock => $self->mkclientsock($self->{sockfile}));
+      (sock => $self->mkclientsock($self->{sockfile})
+       , timeout => ($self->is_coverage_mode ? 120 : 10));
 
     my $env = {REQUEST_METHOD    => uc($method)
 	       , REQUEST_URI     => $path
