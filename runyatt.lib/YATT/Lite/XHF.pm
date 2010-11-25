@@ -91,7 +91,7 @@ sub tokenize {
       next if $token eq '';
     }
 
-    unless ($token =~ s{^($cc_name*) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
+    unless ($token =~ s{^((?:[~!])?$cc_name*(?:\[\])?) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
       croak "Invalid XHF token: $token in $_[0]"
     }
     my ($name, $sigil, $tabsp, $eol) = ($1, $2, $3, $4);

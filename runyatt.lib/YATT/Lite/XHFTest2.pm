@@ -143,10 +143,11 @@ sub mechanized {
 
       my $method = $tests->item_method($item);
       my $res = $tests->mech_request($mech, $item);
+      my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
 
       if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
 	while (my ($key, $pat) = splice @header, 0, 2) {
-	  my $title = "[$sect_name] HEADER $key of $method $item->{cf_FILE}";
+	  my $title = "[$sect_name] $T HEADER $key of $method $item->{cf_FILE}";
 	  if ($res) {
 	    like $res->header($key), qr{$pat}s, $title;
 	  } else {
@@ -158,14 +159,14 @@ sub mechanized {
       if ($item->{cf_BODY}) {
 	if (ref $item->{cf_BODY}) {
 	  like nocr($mech->content), $tests->mkseqpat($item->{cf_BODY})
-	    , "[$sect_name] BODY of $method $item->{cf_FILE}";
+	    , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
 	} else {
 	  eq_or_diff trimlast(nocr($mech->content)), $item->{cf_BODY}
-	    , "[$sect_name] BODY of $method $item->{cf_FILE}";
+	    , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
 	}
       } elsif ($item->{cf_ERROR}) {
 	like $mech->content, qr{$item->{cf_ERROR}}
-	  , "[$sect_name] ERROR of $method $item->{cf_FILE}";
+	  , "[$sect_name] $T ERROR of $method $item->{cf_FILE}";
       }
     }
   }
@@ -202,25 +203,12 @@ sub item_url_file {
   $tests->base_url . $item->{cf_FILE}
 }
 
-use YATT::Lite::Util qw(url_encode_kv);
+use YATT::Lite::Util qw(encode_query);
 sub item_query {
   (my Tests $tests, my Item $item) = @_;
   my $param = $item->{cf_PARAM}
     or return;
-#  require URI;
-#  my $url = URI->new('http:');
-#  $url->query_form($item->{cf_PARAM});
-#  $url->query;
-  if (ref $param eq 'HASH') {
-    join('&', map { $tests->url_encode_kv($_, $param->{$_}) } keys %$param)
-  } else {
-    my @param = @$param;
-    my @res;
-    while (my ($k, $v) = splice @param, 0, 2) {
-      push @res, $tests->url_encode_kv($k, $v);
-    }
-    join('&', @res);
-  }
+  $tests->encode_query($item->{cf_PARAM});
 }
 
 #========================================

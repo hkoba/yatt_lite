@@ -39,7 +39,7 @@ my $mech = $CLASS->new
   (map {
     (rootdir => $_
      , fcgiscript => "$_/cgi-bin/runyatt.fcgi")
-  } File::Spec->rel2abs("$bindir/.."));
+  } dirname(File::Spec->rel2abs($bindir)));
 
 if (my $reason = $mech->check_skip_reason) {
   $mech->skip_all($reason);

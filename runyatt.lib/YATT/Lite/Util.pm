@@ -18,7 +18,7 @@ require Scalar::Util;
 				  captured is_debugging callerinfo
 				  dofile_in compile_file_in
 				  url_encode url_decode
-				  url_encode_kv
+				  url_encode_kv encode_query
 				  ostream
 				  named_attr
 				));
@@ -317,6 +317,29 @@ sub url_encode {
 sub url_encode_kv {
   my ($self, $k, $v) = @_;
   url_encode($self, $k) . '=' . url_encode($self, $v);
+}
+
+sub encode_query {
+  my ($self, $param, $sep) = @_;
+#  require URI;
+#  my $url = URI->new('http:');
+#  $url->query_form($item->{cf_PARAM});
+#  $url->query;
+  return $param unless ref $param;
+  join $sep // ';', do {
+    if (ref $param eq 'HASH') {
+      map {
+	url_encode_kv($self, $_, $param->{$_});
+      } keys %$param
+    } else {
+      my @param = @$param;
+      my @res;
+      while (my ($k, $v) = splice @param, 0, 2) {
+	push @res, url_encode_kv($self, $k, $v);
+      }
+      @res;
+    }
+  };
 }
 
 sub callerinfo {

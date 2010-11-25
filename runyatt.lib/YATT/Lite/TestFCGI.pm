@@ -154,22 +154,7 @@ my $Test = Test::Builder->new;
   }
 
   use Carp;
-  use YATT::Lite::Util qw(url_encode);
-  sub encode_querystring {
-    (my MY $self, my ($query, $sep)) = @_;
-    if (not defined $query or not ref $query) {
-      $query
-    } elsif (ref $query eq 'HASH') {
-      join($sep // ';'
-	   , map {
-	     $self->url_encode($_) . '='
-	       . $self->url_encode($query->{$_})
-	     } keys %$query);
-    } else {
-      croak "Not implemented type of PARAM!";
-    }
-  }
-
+  use YATT::Lite::Util qw(encode_query);
   sub is_coverage_mode {
     my ($pack) = @_;
     my $symtab = (my $root = \%::);
@@ -241,10 +226,10 @@ my $Test = Test::Builder->new;
     my @content;
     if (defined $query) {
       if ($env->{REQUEST_METHOD} eq 'GET') {
-	$env->{QUERY_STRING} = $self->encode_querystring($query);
+	$env->{QUERY_STRING} = $self->encode_query($query);
       } elsif ($env->{REQUEST_METHOD} eq 'POST') {
 	$env->{CONTENT_TYPE} = 'application/x-www-form-urlencoded';
-	my $enc = $self->encode_querystring($query);
+	my $enc = $self->encode_query($query);
 	push @content, $enc;
 	$env->{CONTENT_LENGTH} = length($enc);
       }
@@ -328,11 +313,11 @@ my $Test = Test::Builder->new;
     local $ENV{REQUEST_URI} = $path;
     local $ENV{DOCUMENT_ROOT} = $self->{cf_rootdir};
     local $ENV{PATH_TRANSLATED} = "$self->{cf_rootdir}$path";
-    local $ENV{QUERY_STRING} = $self->encode_querystring($query)
+    local $ENV{QUERY_STRING} = $self->encode_query($query)
       unless $is_post;
     local $ENV{CONTENT_TYPE} = 'application/x-www-form-urlencoded'
       if $is_post;
-    my $enc = $self->encode_querystring($query);
+    my $enc = $self->encode_query($query);
     local $ENV{CONTENT_LENGTH} = length $enc
       if $is_post;
 

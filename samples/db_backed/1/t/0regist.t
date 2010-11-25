@@ -2,6 +2,7 @@
 use strict;
 use warnings FATAL => qw(all);
 use utf8;
+use sigtrap die => qw(normal-signals);
 
 use Test::Differences;
 use Test::More;
