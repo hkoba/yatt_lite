@@ -202,12 +202,25 @@ sub item_url_file {
   $tests->base_url . $item->{cf_FILE}
 }
 
+use YATT::Lite::Util qw(url_encode_kv);
 sub item_query {
   (my Tests $tests, my Item $item) = @_;
-  return unless $item->{cf_PARAM};
-  join('&', map {
-    "$_=".$item->{cf_PARAM}{$_}
-  } keys %{$item->{cf_PARAM}});
+  my $param = $item->{cf_PARAM}
+    or return;
+#  require URI;
+#  my $url = URI->new('http:');
+#  $url->query_form($item->{cf_PARAM});
+#  $url->query;
+  if (ref $param eq 'HASH') {
+    join('&', map { $tests->url_encode_kv($_, $param->{$_}) } keys %$param)
+  } else {
+    my @param = @$param;
+    my @res;
+    while (my ($k, $v) = splice @param, 0, 2) {
+      push @res, $tests->url_encode_kv($k, $v);
+    }
+    join('&', @res);
+  }
 }
 
 #========================================

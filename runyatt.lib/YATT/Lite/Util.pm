@@ -18,6 +18,7 @@ require Scalar::Util;
 				  captured is_debugging callerinfo
 				  dofile_in compile_file_in
 				  url_encode url_decode
+				  url_encode_kv
 				  ostream
 				  named_attr
 				));
@@ -311,6 +312,11 @@ sub url_encode {
     =~ s/([^A-Za-z0-9\-_.!~*'() ])/ uc sprintf "%%%02x",ord $1 /eg;
   $encode =~ tr/ /+/;
   return $encode;
+}
+
+sub url_encode_kv {
+  my ($self, $k, $v) = @_;
+  url_encode($self, $k) . '=' . url_encode($self, $v);
 }
 
 sub callerinfo {
