@@ -51,10 +51,16 @@ if [[ -n $o_cover ]]; then
     echo "[[Coverage mode]]"
     cover_db=$bindir/cover_db
     charset=utf-8
-
-    harness+=(-MDevel::Cover=-db,$cover_db)
+    ignore=(
+	-ignore_re '^/usr/local/'
+	-ignore_re '\.t$'
+    )
+    harness+=(-MDevel::Cover=-db,$cover_db,${(j/,/)ignore})
 fi
 
+if [[ -n $HARNESS_PERL_SWITCHES ]]; then
+    print HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
+fi
 if [[ -n $o_taint ]]; then
     ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
 else
@@ -64,7 +70,7 @@ fi
 : ${docroot:=/var/www/html}
 if [[ -n $o_cover ]] && [[ -d $cover_db ]]; then
     # ``t/cover'' is modified to accpet charset option.
-    $bindir/cover -charset $charset -ignore_re '\.t$' $cover_db
+    $bindir/cover -charset $charset $ignore $cover_db
 
     chmod a+rx $cover_db $cover_db/**/*(/N)
     cat <<EOF > $cover_db/.htaccess
