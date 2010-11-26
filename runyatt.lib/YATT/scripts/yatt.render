@@ -1,10 +1,9 @@
 #!/usr/bin/perl -w
 use strict;
 use warnings FATAL => qw(all);
+
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
-
-use FindBin;
 use File::Basename;
 sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
 my $libdir;

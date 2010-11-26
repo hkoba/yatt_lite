@@ -20,7 +20,7 @@ if (($+opts[--samples])); then
 elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     # If no **/*.t is specified:
     # To make relative path invocation happier.
-    argv=($0:h:h:t/t/*.t(N))
+    argv=($0:h:h:t/t/**/*.t(N))
     if [[ -d samples ]]; then
 	argv+=(samples/**/t/*.t(*N,@N))
     fi
