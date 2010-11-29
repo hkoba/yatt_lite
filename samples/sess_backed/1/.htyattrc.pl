@@ -75,11 +75,11 @@ sub _session_start {
     return
   }
 
-  # expire ¤µ¤»¤¿¤¯¤Ê¤¤»þ¤Ï¡¢ session_opts ¤Ë expire: 0 ¤ò»Å¹þ¤à¤³¤È¡£
+  # expire ã•ã›ãŸããªã„æ™‚ã¯ã€ session_opts ã« expire: 0 ã‚’ä»•è¾¼ã‚€ã“ã¨ã€‚
   $sess->expire($expire);
 
   if ($new) {
-    # ËÜÅö¤ËÎÉ¤¤¤Î¤«¤Ê?
+    # æœ¬å½“ã«è‰¯ã„ã®ã‹ãª?
     $CON->set_cookie($sess->cookie(-path => $CON->location));
 
     # Make sure session is clean state.
@@ -111,9 +111,9 @@ sub session_destroy {
 
   $sess->delete;
   $sess->flush;
-  # -expire ¤¸¤ã¤Ê¤¯ -expires.
+  # -expire ã˜ã‚ƒãªã -expires.
   my @rm = ($self->sid_name, '', -expires => '-10y'
-	    , -path => $CON->location); # 10Ç¯Áá¤¤¤ó¤À¤è¤Ã¤È¡£
+	    , -path => $CON->location); # 10å¹´æ—©ã„ã‚“ã ã‚ˆã£ã¨ã€‚
   $CON->set_cookie(@rm);
 }
 
