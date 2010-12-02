@@ -93,6 +93,17 @@ END
 		 , qr{^Status: \s 302 \s (?:Moved|Found)\r?\n
 		    Location: \s http://localhost/bar/\r?\n}x]
 
+	      , ['bar.yatt', 'CON methods', <<'END', <<'END', $text_html_sjis]
+&yatt:CON:mkurl();
+&yatt:CON:mkurl(=undef);
+&yatt:CON:mkurl(foo.yatt);
+&yatt:CON:mkurl(.);
+END
+http://localhost/bar.yatt
+http://localhost/bar.yatt
+http://localhost/foo.yatt
+http://localhost/
+END
 	     );
 
   foreach my $test (@test) {
@@ -105,6 +116,7 @@ END
     {
       local $ENV{REDIRECT_STATUS} = 200;
       local $ENV{PATH_TRANSLATED} = "$BASE/$docs/$fn";
+      local $ENV{REQUEST_URI} = "/$fn";
       is captured_runas($mux, \ (my $header), cgi => ()), $result
 	, "$theme $fn $title - redirected";
       like $header, $header_re
@@ -114,6 +126,7 @@ END
       local $ENV{DOCUMENT_ROOT} = $BASE;
       local $ENV{SCRIPT_NAME} = "/t$i.cgi";
       local $ENV{PATH_INFO} = "/$fn";
+      local $ENV{REQUEST_URI} = "/$fn"; #XXX "$ENV{SCRIPT_NAME}$ENV{PATH_INFO}";
       is captured_runas($mux, \ (my $header), cgi => ()), $result
 	, "$theme $fn $title - mounted";
       like $header, $header_re

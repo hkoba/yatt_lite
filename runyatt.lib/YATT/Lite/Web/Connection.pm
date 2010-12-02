@@ -8,7 +8,6 @@ use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
 	    );
 use YATT::Lite::Util qw(globref url_encode);
 use Carp;
-use File::Basename;
 
 #----------------------------------------
 
@@ -80,10 +79,10 @@ sub mkurl {
 			       or $scheme eq 'https' and $port == 443);
   }
   my $req  = $glob->request_path;
-  my $dir  = dirname($req);
-  my $orig = basename($req);
+  (my $dir  = $req) =~ s{([^/]+)$}{};
+  my $orig = $1 // '';
 
-  my $path = $dir . '/' . do {
+  my $path = $dir . do {
     if (not defined $file or $file eq '') {
       $orig;
     } elsif ($file eq '.') {
