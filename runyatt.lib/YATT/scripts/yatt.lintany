@@ -23,11 +23,25 @@ my $dispatcher = do {
   do $cgi;
 };
 
+sub fgrep (&@);
+
 my $nerror = 0;
 foreach my $fn (@ARGV) {
+  unless (fgrep {/^\s*use strict\s*;/} $fn) {
+    die "[use strict] is missing! in $fn\n";
+  }
   my $dir = dirname($fn);
   my $dirhandler = $dispatcher->get_dirhandler($dir);
   my $action = $dirhandler->get_action_handler(basename($fn));
 }
 
 exit 1 if $nerror;
+
+sub fgrep (&@) {
+  my ($sub, $fn) = @_;
+  open my $fh, '<', $fn or die "Can't open '$fn': $!";
+  local $_;
+  while (<$fh>) {
+    return 1 if $sub->();
+  }
+}
