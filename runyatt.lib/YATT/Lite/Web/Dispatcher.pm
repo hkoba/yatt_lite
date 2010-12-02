@@ -220,12 +220,17 @@ sub split_path_url {
 sub new_cgi {
   my MY $self = shift;
   my (@params) = do {
-    if (@_ > 1 or defined $_[0] and not ref $_[0]) {
+    unless (@_) {
+      ()
+    } elsif (@_ > 1 or defined $_[0] and not ref $_[0]) {
       $self->parse_params(\@_, {})
-    } elsif (defined $_[0]) {
-      $_[0];
-    } else {
+    } elsif (not defined $_[0]) {
       ();
+    } elsif (ref $_[0] eq 'ARRAY') {
+      my %hash = @{$_[0]};
+      \%hash;
+    } else {
+      $_[0];
     }
   };
   require CGI; CGI->new(@params);

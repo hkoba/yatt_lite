@@ -669,41 +669,10 @@ METHOD: POST
 PARAM[
 !regist: Proceed
 ]
-BODY:
- <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
- <html>
- <head>
-   <title>Thank you! (Example of session based input restoration)</title>
-   <link rel="stylesheet" type="text/css" href="main.css">
- </head>
- <body>
- <div id="wrapper">
-   <div id="header">
-     <h2>Thank you! <span class="theme">(Example of session based input restoration)</span></h2>
-   </div>
- 
-   <div id="body">
-   Your request is successfully saved as:<br>
- <b>/var/www/html/yatt_lite/samples/sess_backed/1//data/.ht_1</b>,<br>
- which is only visible to local user.<br>
- 
- <a href="./">back</a>
-   </div>
- 
-   <div style="clear: both;">
-     <pre>
- 
-     </pre>
-   </div>
- 
-   <div id="footer">
-     Powered by YATT::Lite.
-   </div>
- 
- </div>
- </div>
- </body>
- </html>
+BODY[
+- <title>Thank you! \(Example of session based input restoration\)</title>
+- saved as:<br>\n<b>(?:/[^/]+)*/samples/sess_backed/1//data/.ht_1</b>,<br>
+]
 
 ACTION[
 remove: data/.ht_*

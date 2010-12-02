@@ -98,7 +98,9 @@ sub map_request {
   foreach my $name (grep {defined} $con->param()) {
     my ($sigil, $word) = $name =~ /^([~!])(\1|\w*)$/
       or next;
-    my $new = $word eq $sigil ? $con->param($sigil) : $word;
+    # If $name in ('~~', '!!'), use value.
+    my $new = $word eq $sigil ? $con->param($name) : $word;
+    # else use $word from ~$word.
     # Note: $word may eq ''. This is for render_/action_.
     given ($sigil) {
       when ('~') {

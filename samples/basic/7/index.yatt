@@ -1,0 +1,15 @@
+<h2>request sigil mapping</h2>
+<form method="POST">
+<input type="text" name="foo" size="10">
+<input type="submit" name="~" value="show this">
+<input type="submit" name="~bar" value="show bar">
+<input type="submit" name="!baz" value="do baz">
+</form>
+
+<!yatt:page bar>
+<h2>page bar</h2>
+
+
+<!yatt:action baz>
+my ($this, $con) = @_;
+print $con "OK";

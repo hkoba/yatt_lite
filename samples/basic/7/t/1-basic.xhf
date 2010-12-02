@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+
+FILE: index.yatt
+BODY:
+ <h2>request sigil mapping</h2>
+ <form method="POST">
+ <input type="text" name="foo" size="10">
+ <input type="submit" name="~" value="show this">
+ <input type="submit" name="~bar" value="show bar">
+ <input type="submit" name="!baz" value="do baz">
+ </form>
+
+
+FILE: index.yatt
+TITLE: ~=any -> default page
+PARAM[
+~: show this
+]
+BODY:
+ <h2>request sigil mapping</h2>
+ <form method="POST">
+ <input type="text" name="foo" size="10">
+ <input type="submit" name="~" value="show this">
+ <input type="submit" name="~bar" value="show bar">
+ <input type="submit" name="!baz" value="do baz">
+ </form>
+
+
+FILE: index.yatt
+TITLE: ~page=any
+PARAM[
+~bar: show bar
+]
+BODY:
+ <h2>page bar</h2>
+
+FILE: index.yatt
+TITLE: ~~=page
+PARAM[
+~~: bar
+]
+BODY:
+ <h2>page bar</h2>
+
+
+FILE: index.yatt
+METHOD: POST
+TITLE: !baz=any
+PARAM[
+!baz: any
+]
+BODY: OK
+
+FILE: index.yatt
+METHOD: POST
+TITLE: !!=baz
+PARAM[
+!!: baz
+]
+BODY: OK

@@ -20,7 +20,7 @@ YATT::Lite::XHF - Extended Header Fields format.
 use YATT::Lite::Util;
 use YATT::Lite::Util::Enum _ => [qw(NAME SIGIL VALUE)];
 
-our $cc_name  = qr{\w|[\.\-/]};
+our $cc_name  = qr{\w|[\.\-/~!]};
 our $cc_sigil = qr{[:\#,\-\[\]\{\}]};
 our $cc_tabsp = qr{[\ \t]};
 
@@ -91,7 +91,7 @@ sub tokenize {
       next if $token eq '';
     }
 
-    unless ($token =~ s{^((?:[~!])?$cc_name*(?:\[\])?) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
+    unless ($token =~ s{^($cc_name*(?:\[\])?) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
       croak "Invalid XHF token: $token in $_[0]"
     }
     my ($name, $sigil, $tabsp, $eol) = ($1, $2, $3, $4);
