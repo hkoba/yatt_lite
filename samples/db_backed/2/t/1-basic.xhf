@@ -1,1 +1,17 @@
-../../1/t/1-basic.xhf
+# -*- coding: utf-8 -*-
+REQUIRE[
+- DBIx::Class::Schema
+- DBD::mysql
+- CGI::Session
+- Email::Simple
+- Email::Sender
+]
+USE_COOKIE: 1
+FILE_READABLE[
+- .htdbpass
+]
+
+# Include can be case insensitive. Its argument can be an array.
+include[
+- basic.inc.xhf
+]

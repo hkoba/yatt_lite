@@ -9,7 +9,9 @@ use fields qw(files cf_dir cf_libdir);
 use YATT::Lite::Types
   (export_default => 1
    , [File => -fields => [qw(cf_file items
-			     cf_REQUIRE cf_USE_COOKIE)]]
+			     cf_REQUIRE cf_USE_COOKIE
+			     cf_FILE_READABLE
+			   )]]
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
 			     cf_PARAM cf_HEADER cf_BODY cf_ERROR)]]);
 
@@ -49,6 +51,12 @@ sub test_plan {
     return skip_all => "No t/*.xhf are defined";
   }
   foreach my File $file (@{$self->{files}}) {
+    foreach my $fn (lexpand $file->{cf_FILE_READABLE}) {
+      # Note: This assumes $tests->test_plan is called after $tests->enter.
+      unless (-r $fn) {
+	return skip_all => "FILE $fn is not readable"
+      }
+    }
     foreach my $req (lexpand($file->{cf_REQUIRE})) {
       unless (eval qq{require $req}) {
 	return skip_all => "$req is not installed.";
@@ -109,7 +117,11 @@ use YATT::Lite::XHF;
 sub Parser {'YATT::Lite::XHF'}
 # XXX: Currently, all t/*.xhf is loaded as binary (not Wide char).
 sub load_file {
-  my ($pack, $fn) = splice @_, 0, 2;
+  shift->load_file_into([], @_);
+}
+
+sub load_file_into {
+  my ($pack, $array, $fn) = splice @_, 0, 3;
   _with_loading_file {$pack} $fn, sub {
     my File $file = $pack->File->new(file => $fn);
     my $parser = $pack->Parser->new(file => $fn);
@@ -117,10 +129,21 @@ sub load_file {
       $file->configure(@global);
     }
     while (my @config = $parser->read) {
-      push @{$file->{items}}, $pack->Item->new(@config);
+      if (@config == 2 and $config[0] =~ /^include$/i) {
+	$pack->load_file_into($file->{items} //= [], $pack->resolve_in($fn, $_))
+	  for lexpand $config[1];
+      } else {
+	push @{$file->{items}}, $pack->Item->new(@config);
+      }
     }
+    push @$array, @{$file->{items}};
     $file;
   };
+}
+
+sub resolve_in {
+  my ($pack, $origfn, $newfn) = @_;
+  dirname($origfn) . '/' . $newfn;
 }
 
 #========================================
