@@ -140,7 +140,13 @@ my $Test = Test::Builder->new;
 
   sub content {
     my MY $self = shift;
-    defined $self->{res} ? $self->{res}->content : undef;
+    unless (defined $self->{res}) {
+      undef;
+    } elsif (ref $self->{res}) {
+      $self->{res}->content;
+    } else {
+      $self->{res};
+    }
   }
 
   sub content_nocr {
@@ -211,7 +217,7 @@ my $Test = Test::Builder->new;
   use Carp;
   use YATT::Lite::Util qw(terse_dump);
   sub request {
-    (my MY $self, my ($method, $path, $query)) = @_;
+    (my MY $self, my ($method, $path, $query, $want_error)) = @_;
     croak "Should run fork_server before request" unless $self->{kidpid};
 
     require FCGI::Client;
@@ -251,6 +257,10 @@ my $Test = Test::Builder->new;
       ($env, @content);
 
     if (defined $self->{raw_error} and $self->{raw_error} ne '') {
+      if ($want_error) {
+	$self->{res} = $self->{raw_error};
+	return;
+      }
       print STDERR map {"# ERR: $_\n"} split /\r?\n/, $self->{raw_error};
       die "error occured: " . terse_dump($method, $path, $query);
     }

@@ -45,6 +45,10 @@ sub handle {
   my MY $self = shift;
   chdir($self->{cf_dir})
     or die "Can't chdir '$self->{cf_dir}': $!";
+  # XXX: ここに $SIG{__WARN__} の処理を。 FATAL か、又は...
+  $SIG{__WARN__} = sub {
+    die $self->make_error(2, {reason => $_[0]});
+  };
   $self->SUPER::handle(@_);
 }
 

@@ -4,7 +4,7 @@ use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Object);
 
 use fields qw(cf_file cf_line cf_tmpl_file cf_tmpl_line
-	      cf_format cf_args);
+	      cf_reason cf_format cf_args);
 use overload qw("" message);
 use YATT::Lite::Util qw(lexpand);
 
@@ -15,9 +15,15 @@ sub message {
 
 sub reason {
   my Error $error = shift;
-  sprintf $error->{cf_format}, map {
-    defined $_ ? $_ : '(undef)'
-  } lexpand($error->{cf_args});
+  if ($error->{cf_reason}) {
+    $error->{cf_reason};
+  } elsif ($error->{cf_format}) {
+    sprintf $error->{cf_format}, map {
+      defined $_ ? $_ : '(undef)'
+    } lexpand($error->{cf_args});
+  } else {
+    "Unknown!"
+  }
 }
 
 sub place {

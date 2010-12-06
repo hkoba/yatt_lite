@@ -1,0 +1,4 @@
+# -*- coding: utf-8 -*-
+
+FILE: index.yatt
+ERROR: ^Use of uninitialized value in concatenation \(\.\) or string at (?:/[^/]+)*/8/cgi-bin/runyatt.lib/t_undef_error.pm line 10.

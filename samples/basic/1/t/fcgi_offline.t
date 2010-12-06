@@ -8,10 +8,19 @@ sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use File::Basename;
 use File::Spec;
 my ($bindir, $libdir);
-use lib untaint_any
-  (File::Spec->rel2abs
-   ($libdir = ($bindir = dirname(untaint_any($0)))
-    . "/../../../../runyatt.lib"));
+BEGIN {
+  # To allow keeping relative dir.
+  $bindir = untaint_any(dirname($0));
+  if (-x "$bindir/../cgi-bin/runyatt.cgi"
+      and -d (my $dn = "$bindir/../cgi-bin/runyatt.lib")) {
+    $libdir = $dn;
+  } else {
+    require Test::More;
+    Test::More::plan(skip_all => 'Not yet setup');
+  }
+}
+use lib untaint_any(File::Spec->rel2abs($libdir));
+# print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::XHFTest2;
@@ -76,7 +85,7 @@ sub mech_request {
   (my MY $tests, my $mech, my Item $item) = @_;
   my $method = $tests->item_method($item);
   my $url = $tests->item_url_file($item);
-  $mech->request($method, $url, $item->{cf_PARAM});
+  $mech->request($method, $url, $item->{cf_PARAM}, $item->{cf_ERROR});
 }
 
 # Local Variables: #
