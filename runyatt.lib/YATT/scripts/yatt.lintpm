@@ -22,12 +22,13 @@ sub file_module {
   local $/;
   local $_ = <$fh>;
   # XXX: 複数書いて有る場合、 basename が一致するものを
-  while (/^\s*package\s+([\w:]+);/sm) {
+  while (/^\s*package\s+([\w:]+);/smg) {
     my ($modname) = $1;
     if (rootname(basename($fn)) eq ((split /::/, $modname)[-1])) {
       return $modname;
     }
   }
+  return;
 }
 
 sub inc_opt {
