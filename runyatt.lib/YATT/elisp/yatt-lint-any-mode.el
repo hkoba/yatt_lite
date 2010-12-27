@@ -223,7 +223,12 @@ Currently only RHEL is supported."
 	rc err)
     (unwind-protect
 	(setq rc (shell-command (apply #'concat cmd args) tmpbuf))
-      (setq err (with-current-buffer tmpbuf (buffer-string)))
+      (setq err (with-current-buffer tmpbuf
+		  ;; To remove last \n
+		  (goto-char (point-max))
+		  (skip-chars-backward "\n")
+		  (delete-region (point) (point-max))
+		  (buffer-string)))
       ;; (message "error=(((%s)))" err)
       (kill-buffer tmpbuf))
     `(rc ,rc err ,err)))
