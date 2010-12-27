@@ -175,11 +175,11 @@ instead?" \
     destdir=$destdir:h
 fi
 
-if [[ $destdir = $document_root/* ]]; then
+if [[ $destdir = $document_root(|/*) ]]; then
     location=${destdir#$document_root}
     cgi_bin_perm=775
     install_type=sys
-elif [[ $destdir = $HOME/public_html/* ]]; then
+elif [[ $destdir = $HOME/public_html(|/*) ]]; then
     location=/~$USER${destdir#$HOME/public_html}
     cgi_bin_perm=755; # for suexec
     install_type=user
@@ -248,7 +248,7 @@ if [[ -d $destdir/data ]] || (($+opts[--datadir])); then
     else
 	x install -m 2775 -g $APACHE_RUN_GROUP -d $datadir
     fi
-    mkfile $datadir/.htaccess <<<"deny from all"
+    mkfile -m 644 $datadir/.htaccess <<<"deny from all"
     if (($is_selinux)); then
 	x chcon $o_verbose -t httpd_${install_type}_script_rw_t $datadir
     fi
