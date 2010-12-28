@@ -31,8 +31,11 @@ sub mh_lastfnum {
   (my MY $yatt) = shift;
   my $lockfh = $yatt->mh_openlock(@_);
   my $num = <$lockfh>;
-  chomp($num) if defined $num;
-  $num //= 0;
+  if (defined $num and $num =~ /^\d+/) {
+    $num = $&;
+  } else {
+    $num = 0;
+  }
   wantarray ? ($num, $lockfh) : $num;
 }
 
@@ -86,7 +89,7 @@ Entity mh_load => sub {
   unless (-r $fn) {
     die "Can't read '$fn'\n";
   }
-  $yatt->read_file_xhf($fn);
+  $yatt->read_file_xhf($fn, binary => 1);
 };
 
 sub escape_nl {

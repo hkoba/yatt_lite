@@ -5,11 +5,13 @@ use Carp;
 
 use base qw(YATT::Lite::Object);
 use fields qw(cf_FH cf_filename cf_string cf_tokens
-	      cf_skip_comment);
+	      cf_skip_comment cf_binary);
 
 use Exporter qw(import);
 our @EXPORT = qw(read_file_xhf);
 our @EXPORT_OK = (@EXPORT, qw(parse_xhf));
+
+use Encode qw(encode);
 
 =head1 NAME
 
@@ -73,9 +75,11 @@ sub read {
  LOOP: {
     do {
       defined (my $para = <$fh>) or last LOOP;
-      @tokens = $self->tokenize
-	(untaint_unless_tainted($self->{cf_filename} // $self->{cf_string}
-				, $para));
+      $para = untaint_unless_tainted
+	($self->{cf_filename} // $self->{cf_string}
+	 , $para);
+      $para = encode(utf8 => $para) if $self->{cf_binary};
+      @tokens = $self->tokenize($para);
     } until (not $self->{cf_skip_comment} or @tokens);
   }
   $self->organize(@tokens);
