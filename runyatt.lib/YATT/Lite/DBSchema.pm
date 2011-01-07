@@ -183,7 +183,7 @@ sub ensure_created_on {
       unless ($schema->{cf_verbose}) {
       } elsif ($schema->{cf_verbose} >= 2) {
 	print STDERR "-- $table->{cf_name} --\n$create\n\n"
-      } elsif ($schema->{cf_verbose}) {
+      } elsif ($schema->{cf_verbose} and $create =~ /^create table /i) {
 	print STDERR "CREATE TABLE $table->{cf_name}\n";
       }
       $dbh->do($create);
@@ -317,11 +317,10 @@ sub get_table {
       my ($method, @args) = @{shift @colpairs};
       $method =~ s/^-//;
       # XXX: [has_many => @tables]
-      # XXX: [unique => k1, k2..]
       if (my ($relType, @relSpec) = $self->known_rels($method)) {
 	$self->add_table_relation($tab, undef, $relType => \@relSpec, @args);
       } else {
-	my $sub = $self->can("add_table_$method")
+	my $sub = $self->can("add_table_\L$method")
 	  or croak "Unknown table option '$method' for table $name";
 	$sub->($self, $tab, @args);
       }
@@ -337,6 +336,12 @@ sub add_table_primary_key {
     croak "Duplicate PK definition. old $tab->{pk}";
   }
   $tab->{pk} = [map {$tab->{col_dict}{$_}} @args];
+}
+
+sub add_table_unique {
+  (my MY $self, my Table $tab, my @cols) = @_;
+  # XXX: 重複検査
+  push @{$tab->{chk_unique}}, [@cols];
 }
 
 # -opt は引数無フラグ、又は [-opt, ...] として可変長オプションに使う
