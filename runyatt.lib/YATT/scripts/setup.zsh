@@ -202,7 +202,7 @@ deny from all
 EOF
 x ln $o_verbose -nsf $driver_path.lib/YATT $cgi_bin/$driver_name.lib/YATT
 mkfile $cgi_bin/.htaccess <<EOF
-Options +ExecCGI
+Options +ExecCGI -Indexes -Includes
 EOF
 x ln $o_verbose -nsf $driver_path.ytmpl $cgi_bin/
 
