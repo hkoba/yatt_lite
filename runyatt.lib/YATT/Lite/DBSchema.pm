@@ -37,7 +37,7 @@ use YATT::Lite::Types
 			       cf_autoincrement
 			     )]]]);
 
-use YATT::Lite::Util qw(coalesce globref ckeval terse_dump);
+use YATT::Lite::Util qw(coalesce globref ckeval terse_dump lexpand);
 
 #========================================
 # Class Hierarchy in case of 'package YourSchema; use YATT::Lite::DBSchema':
@@ -517,6 +517,118 @@ sub foreach_tables_do {
     } $code->($tab, $opts);
    }
   wantarray ? @result : join(";\n", @result);
+}
+
+########################################
+sub to_encode {
+  (my MY $self, my $tabName, my $keyCol, my $rowidCol) = @_;
+
+  my $to_find = $self->to_find($tabName, $keyCol, $rowidCol);
+  my $to_ins = $self->to_insert($tabName, $keyCol);
+
+  sub {
+    my ($value) = @_;
+    $to_find->($value) || $to_ins->($value);
+  };
+}
+
+# to_fetchall は別途用意する
+sub to_find {
+  (my MY $self, my ($tabName, $keyCol, $rowidCol)) = @_;
+  my $sql = $self->sql_to_find($tabName, $keyCol, $rowidCol);
+  print STDERR "-- $sql\n" if $self->{cf_verbose};
+  my $sth;
+  sub {
+    my ($value) = @_;
+    $sth ||= $self->dbh->prepare($sql);
+    $sth->execute($value);
+    my ($rowid) = $sth->fetchrow_array
+      or return;
+    $rowid;
+  };
+}
+
+sub to_fetch {
+  (my MY $self, my ($tabName, $keyColList, $resColList)) = @_;
+  my $sql = $self->sql_to_fetch($tabName, $keyColList, $resColList);
+  print STDERR "-- $sql\n" if $self->{cf_verbose};
+  my $sth;
+  sub {
+    my (@value) = @_;
+    $sth ||= $self->dbh->prepare($sql);
+    $sth->execute(@value);
+    $sth;
+  };
+}
+
+sub to_insert {
+  (my MY $self, my ($tabName, @fields)) = @_;
+  my $sql = $self->sql_to_insert($tabName, @fields);
+  print STDERR "-- $sql\n" if $self->{cf_verbose};
+  my $sth;
+  sub {
+    my (@value) = @_;
+    $sth ||= $self->dbh->prepare($sql);
+    # print STDERR "-- inserting @value to $sql\n";
+    $sth->execute(@value);
+    $self->dbh->last_insert_id('', '', '', '');
+  };
+}
+
+sub sql_to_find {
+  (my MY $self, my ($tabName, $keyCol, $rowidCol)) = @_;
+  my Table $tab = $self->{table_dict}{$tabName}
+    or croak "No such table: $tabName";
+  # XXX: col name check.
+  $rowidCol ||= $self->rowid_col($tab);
+  <<END;
+select $rowidCol from $tabName where $keyCol = ?
+END
+}
+
+sub sql_to_fetch {
+  (my MY $self, my ($tabName, $keyColList, $resColList, %opts)) = @_;
+  my $group_by = delete $opts{group_by};
+  my $order_by = delete $opts{order_by};
+  my Table $tab = $self->{table_dict}{$tabName}
+    or croak "No such table: $tabName";
+  # XXX: col name check... いや、式かもしれないし。
+  my $cols = $resColList ? join(", ", lexpand $resColList) : '*';
+  my $where = do {
+    unless (ref $keyColList) {
+      "$keyColList = ?"
+    } elsif (ref $keyColList eq 'ARRAY') {
+      join " AND ", map {"$_ = ?"} @$keyColList
+    } else {
+      die "Not yet implemented!";
+    }
+  };
+  if ($group_by) {
+    $where .= " GROUP BY $group_by";
+  }
+  if ($order_by) {
+    $where .= " ORDER BY $order_by";
+  }
+  <<END;
+select $cols from $tabName where $where
+END
+}
+
+sub sql_to_insert {
+  (my MY $self, my ($tabName, @fields)) = @_;
+  sprintf qq{insert into $tabName(%s) values(%s)}
+    , join(", ", @fields)
+      , join(", ", map {'?'} @fields);
+}
+
+sub default_rowid_col { 'rowid' }
+sub rowid_col {
+  (my MY $schema, my Table $tab) = @_;
+  if (my Column $pk = $tab->{pk}) {
+    $pk->{cf_name}
+  } else {
+    $schema->default_rowid_col;
+  }
 }
 
 ########################################

@@ -91,6 +91,25 @@ END
   is_deeply $schema->dbh->selectall_arrayref
     (q|select name from sqlite_master where type = 'table'|)
       , [['Author'], ['Book']], "$THEME dbschema create worked";
+
+  # to_insert, to_find returns sub which directly returns interest.
+  my $ins_auth = $schema->to_insert(Author => 'name');
+  my $ins_book = $schema->to_insert(Book => qw(author_id name));
+  my $sel_auth = $schema->to_find(Author => 'name');
+  is $ins_auth->('Foo'), 1, 'Foo is inserted';
+  is $ins_book->(1, "Foo's 1st book"), 1, "Foo's 1st book is inserted";
+  is $ins_book->(1, "Foo's 2nd book"), 2, "Foo's 2nd book is inserted";
+  is $sel_auth->('Foo'), 1, 'Foo is found in Authors';
+
+  # to_fetch returns sub which returns sth.
+  is_deeply $schema->to_fetch(Book => author_id => 'name')
+    ->(1)->fetchall_arrayref
+      , [["Foo's 1st book"], ["Foo's 2nd book"]], "fetchall arrayref";
+  is_deeply $schema->to_fetch(Book => author_id => [book_id => 'name']
+			      , order_by => 'book_id')
+    ->(1)->fetchall_arrayref
+      , [[1, "Foo's 1st book"]
+	 , [2, "Foo's 2nd book"]], "fetchall arrayref, many cols";
 }
 
 {
