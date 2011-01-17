@@ -110,6 +110,11 @@ END
     ->(1)->fetchall_arrayref
       , [[1, "Foo's 1st book"]
 	 , [2, "Foo's 2nd book"]], "fetchall arrayref, many cols";
+
+  my $enc_auth = $schema->to_encode(Author => 'name');
+
+  is $enc_auth->('Bar'), 2, "enc_auth(Foo) == 1";
+  is $enc_auth->('Foo'), 1, "enc_auth(Bar) == 2";
 }
 
 {
