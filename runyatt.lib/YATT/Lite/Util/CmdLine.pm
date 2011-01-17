@@ -60,6 +60,15 @@ sub run {
     $sub->($app, @$list);
   } elsif ($sub = $app->can($cmd)) {
     my @res = $sub->($app, @$list);
+    if (not @res
+	or @res == 1 and not $res[0]) {
+      exit 1;
+    } elsif (@res == 1 and $res[0] eq 1) {
+      # nop
+    } else {
+      require YATT::Lite::Util;
+      print ref $_ ? YATT::Lite::Util::terse_dump($_) : $_, "\n" for @res;
+    }
   } else {
     die "$0: Unknown subcommand '$cmd'\n"
   }
