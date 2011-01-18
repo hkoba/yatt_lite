@@ -521,14 +521,14 @@ sub foreach_tables_do {
 
 ########################################
 sub to_encode {
-  (my MY $self, my $tabName, my $keyCol, my $rowidCol) = @_;
+  (my MY $self, my $tabName, my $keyCol, my @otherCols) = @_;
 
-  my $to_find = $self->to_find($tabName, $keyCol, $rowidCol);
-  my $to_ins = $self->to_insert($tabName, $keyCol);
+  my $to_find = $self->to_find($tabName, $keyCol);
+  my $to_ins = $self->to_insert($tabName, $keyCol, @otherCols);
 
   sub {
-    my ($value) = @_;
-    $to_find->($value) || $to_ins->($value);
+    my ($value, @rest) = @_;
+    $to_find->($value) || $to_ins->($value, @rest);
   };
 }
 
