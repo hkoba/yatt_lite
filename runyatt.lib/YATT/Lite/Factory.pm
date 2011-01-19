@@ -59,9 +59,24 @@ sub buildns {
 # with fresh namespace.
 sub load {
   (my MY $self, my MY $sys, my $name) = @_;
+  if (-e (my $cf = "$name/.htyattconfig.xhf")) {
+    _with_loading_file {$self} $cf, sub {
+      my @spec = $self->read_file_xhf($cf);
+      my ($appns, @args) = $self->buildspec($name, \@spec);
+      $appns->new($name, @args, @spec);
+    };
+  } else {
+    my ($appns, @args) = $self->buildspec($name);
+    $appns->new($name, @args);
+  }
+}
 
+sub buildspec {
+  (my MY $self, my ($name, $args)) = @_;
   # MyApp を使いたいときは... Runenv->new(basens => 'MyApp') で。
-  my $appns = $self->buildns; # MyApp::INST$n を作る. 親は?
+  my $appns = $self->buildns(undef, undef
+			     , $self->cutval_from($args, 'baseclass'));
+  # MyApp::INST$n を作る. 親は?
 
   # $appns は DirHandler で Facade だから、 trans ではないことに注意。
   # trans にメンバーを足す場合は、facade にも足して、かつ cf_delegate しておかないとだめ。
@@ -73,13 +88,7 @@ sub load {
 	      }
 	      , $self->configparams);
 
-  if (-e (my $cf = "$name/.htyattconfig.xhf")) {
-    _with_loading_file {$self} $cf, sub {
-      $appns->new($name, @args, $self->read_file_xhf($cf));
-    };
-  } else {
-    $appns->new($name, @args);
-  }
+  ($appns, @args);
 }
 
 sub configparams {
@@ -91,6 +100,19 @@ sub configparams {
    (qw(output_encoding header_charset debug_cgen tmpl_cache at_done
        namespace only_parse error_handler))
    , die_in_error => ! YATT::Lite::Util::is_debugging());
+}
+
+sub cutval_from {
+  my ($pack, $list, $key) = @_;
+  if ($list) {
+    for (my $i = 0; $i < @$list; $i += 2) {
+      if (defined $list->[$i] and $list->[$i] eq $key) {
+	(undef, my $value) = splice @$list, $i, 2;
+	return $value;
+      }
+    }
+  }
+  return undef;
 }
 
 1;

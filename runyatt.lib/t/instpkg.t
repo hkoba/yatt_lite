@@ -16,12 +16,13 @@ sub NSBuilder () {'YATT::Lite::NSBuilder'}
 {
   my $builder = NSBuilder->new;
   sub Foo::bar {'baz'}
-  is my $pkg = $builder->buildns(INST => 'Foo'), NSBuilder.'::INST1', "inst1";
+  is my $pkg = $builder->buildns(INST => 'Foo'), 'Foo::INST1', "inst1";
   is $pkg->bar, "baz", "$pkg->bar";
 }
 
 {
   my $CLS = myapp();
+  is $CLS, 'MyTest_instpkg', "sanity check of test logic itself";
   my $builder = NSBuilder->new(basens => $CLS);
   sub MyTest_instpkg::bar {'BARRR'}
   is my $pkg = $builder->buildns, "${CLS}::INST1", "$CLS inst1";
@@ -32,7 +33,7 @@ sub NSBuilder () {'YATT::Lite::NSBuilder'}
 
   sub MyTest_instpkg::EntNS::bar {'barrrr'}
   my $cache = $builder->tmplcache;
-  $cache->{foo} ||= $builder->buildns(EntNS => 'MyTest_instpkg::EntNS');
+  $cache->{foo} ||= $builder->buildns(EntNS => $CLS, 'MyTest_instpkg::EntNS');
   is $cache->{foo}, "${CLS}::EntNS1", "$CLS tmpl1";
   is $cache->{foo}->bar, 'barrrr', "tmplpkg";
 }

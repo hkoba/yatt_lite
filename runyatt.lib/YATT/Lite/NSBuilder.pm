@@ -16,8 +16,7 @@ use YATT::Lite::Util qw(lexpand);
   use Carp;
   use YATT::Lite::Util qw(ckeval);
   our %SEEN_NS;
-  use fields qw(cf_basens basens_loaded subns path2tmplpkg
-		cf_baseclass);
+  use fields qw(cf_basens basens_loaded subns path2tmplpkg);
   sub default_basens {__PACKAGE__}
   sub after_new {
     (my MY $self) = @_;
@@ -27,30 +26,29 @@ use YATT::Lite::Util qw(lexpand);
     }
   }
   sub default_subns {'INST'}
+  sub default_dirhandler {'YATT::Lite'}
   sub buildns {
-    (my MY $self, my ($subns)) = splice @_, 0, 2;
-    my $base = @_ ? shift : $self->{cf_basens};
-    unless ($self->{basens_loaded}{$base}++) {
-      (my $modfn = $base) =~ s|::|/|g;
+    (my MY $self, my ($subns, $basens, $baseclass)) = @_;
+    $subns ||= $self->default_subns;
+    $basens ||= $self->{cf_basens};
+    my $newns = sprintf q{%s::%s%d}, $basens, $subns, ++$self->{subns}{$subns};
+    unless ($self->{basens_loaded}{$basens}++) {
+      (my $modfn = $basens) =~ s|::|/|g;
       local $@;
-      eval qq{require $base};
+      eval qq{require $basens};
       unless ($@) {
-	# $base.pm is loaded successfully.
+	# $basens.pm is loaded successfully.
       } elsif ($@ =~ m{^Can't locate $modfn}) {
-	# $base.pm can be missing.
-	if ($self->{cf_baseclass}) {
-	  $self->add_isa($base, lexpand($self->{cf_baseclass}));
-	}
+	# $basens.pm can be missing.
+	$self->add_isa($basens
+		       , lexpand($baseclass || $self->default_dirhandler));
       } else {
 	die $@;
       }
       # XXX: エラーにするモードも欲しいのでは？
       # XXX: MyApp が存在しないなら、 add_isa とか、
     }
-    $subns ||= $self->default_subns;
-    my $newns = sprintf q{%s::%s%d}, $self->{cf_basens}
-      , $subns, ++$self->{subns}{$subns};
-    $self->add_isa($newns, lexpand($base)) if defined $base;
+    $self->add_isa($newns, lexpand($baseclass || $basens));
     $newns;
   }
   sub add_isa {
