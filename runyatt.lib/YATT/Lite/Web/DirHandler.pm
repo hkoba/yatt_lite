@@ -15,8 +15,6 @@ use Carp;
 use YATT::Lite::Util qw(cached_in ckeval
 			dofile_in compile_file_in
 		      );
-use YATT::Lite::XHF;
-
 sub new {
   my ($pack, $dir, @args) = @_;
   # XXX: .htyattrc.pl は？
@@ -29,13 +27,7 @@ sub new {
   if (-e (my $rc = "$dir/.htyattrc.pl")) {
     dofile_in($pack, $rc);
   }
-  if (-e (my $cf = "$dir/.htyattconfig.xhf")) {
-    _with_loading_file {$pack} $cf, sub {
-      $pack->SUPER::new(dir => $dir, @args, $pack->read_file_xhf($cf));
-    };
-  } else {
-    $pack->SUPER::new(dir => $dir, @args);
-  }
+  $pack->SUPER::new(dir => $dir, @args);
   # XXX: refresh は？ <= 現状では DirHandler 側のが呼ばれる。
 }
 

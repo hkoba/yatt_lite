@@ -16,7 +16,8 @@ use YATT::Lite::Util qw(lexpand);
   use Carp;
   use YATT::Lite::Util qw(ckeval);
   our %SEEN_NS;
-  use fields qw(cf_basens basens_loaded subns path2tmplpkg);
+  use fields qw(cf_basens basens_loaded subns path2tmplpkg
+		cf_baseclass);
   sub default_basens {__PACKAGE__}
   sub after_new {
     (my MY $self) = @_;
@@ -33,7 +34,16 @@ use YATT::Lite::Util qw(lexpand);
       (my $modfn = $base) =~ s|::|/|g;
       local $@;
       eval qq{require $base};
-      die $@ unless not $@ or $@ =~ m{^Can't locate $modfn};
+      unless ($@) {
+	# $base.pm is loaded successfully.
+      } elsif ($@ =~ m{^Can't locate $modfn}) {
+	# $base.pm can be missing.
+	if ($self->{cf_baseclass}) {
+	  $self->add_isa($base, lexpand($self->{cf_baseclass}));
+	}
+      } else {
+	die $@;
+      }
       # XXX: エラーにするモードも欲しいのでは？
       # XXX: MyApp が存在しないなら、 add_isa とか、
     }

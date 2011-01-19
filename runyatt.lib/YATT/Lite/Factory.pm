@@ -23,7 +23,7 @@ use fields qw(
 
 use YATT::Lite::Entities qw(build_entns);
 use YATT::Lite::Util qw(lexpand globref);
-
+use YATT::Lite::XHF;
 
 sub after_new {
   (my MY $self) = @_;
@@ -65,13 +65,21 @@ sub load {
 
   # $appns は DirHandler で Facade だから、 trans ではないことに注意。
   # trans にメンバーを足す場合は、facade にも足して、かつ cf_delegate しておかないとだめ。
-  $appns->new($name
-	      , vfs => [dir => $name, encoding => $self->{cf_tmpl_encoding}]
+
+  my @args = (vfs => [dir => $name, encoding => $self->{cf_tmpl_encoding}]
 	      , package => $appns->rootns_for($appns)
 	      , nsbuilder => sub {
 		build_entns(TMPL => $appns, $appns->EntNS);
 	      }
 	      , $self->configparams);
+
+  if (-e (my $cf = "$name/.htyattconfig.xhf")) {
+    _with_loading_file {$self} $cf, sub {
+      $appns->new($name, @args, $self->read_file_xhf($cf));
+    };
+  } else {
+    $appns->new($name, @args);
+  }
 }
 
 sub configparams {
