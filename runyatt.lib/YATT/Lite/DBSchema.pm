@@ -35,7 +35,10 @@ use YATT::Lite::Types
 			       cf_indexed
 			       cf_primary_key
 			       cf_autoincrement
-			     )]]]);
+			     )]]]
+
+   , [QBuilder => fields => [qw(selects joins)]]
+);
 
 use YATT::Lite::Util qw(coalesce globref ckeval terse_dump lexpand);
 
@@ -367,6 +370,7 @@ sub add_table_column {
   }
   # $tab.$colName is encoded by $refTab.pk
   if (ref $type) {
+    # XXX: この機能、廃止する予定よね? 構造だけに語らしめようとすると、後で解釈に幅が出てしまうから。
     my Table $refTab = $self->get_table(@$type);
     my Column $pk = $refTab->{pk};
     confess "PK is undef in $refTab->{cf_name}" unless $pk;
@@ -549,8 +553,8 @@ sub to_find {
 }
 
 sub to_fetch {
-  (my MY $self, my ($tabName, $keyColList, $resColList)) = @_;
-  my $sql = $self->sql_to_fetch($tabName, $keyColList, $resColList);
+  (my MY $self, my ($tabName, $keyColList, $resColList, @rest)) = @_;
+  my $sql = $self->sql_to_fetch($tabName, $keyColList, $resColList, @rest);
   print STDERR "-- $sql\n" if $self->{cf_verbose};
   my $sth;
   sub {
@@ -595,10 +599,15 @@ sub sql_to_fetch {
   # XXX: col name check... いや、式かもしれないし。
   my $cols = $resColList ? join(", ", lexpand $resColList) : '*';
   my $where = do {
-    unless (ref $keyColList) {
+    unless (defined $keyColList) {
+      undef;
+    } elsif (not ref $keyColList) {
       "$keyColList = ?"
     } elsif (ref $keyColList eq 'ARRAY') {
       join " AND ", map {"$_ = ?"} @$keyColList
+    } elsif (ref $keyColList eq 'SCALAR') {
+      # RAW SQL
+      $$keyColList;
     } else {
       die "Not yet implemented!";
     }
@@ -609,10 +618,9 @@ sub sql_to_fetch {
   if ($order_by) {
     $where .= " ORDER BY $order_by";
   }
-  <<END;
-select $cols from $tabName where $where
-END
+  qq|select $cols from $tabName| . (defined $where ? " where $where" : "");
 }
+
 
 sub sql_to_insert {
   (my MY $self, my ($tabName, @fields)) = @_;
