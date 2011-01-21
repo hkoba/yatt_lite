@@ -35,7 +35,7 @@ my $DBNAME = shift || ':memory:';
 			       , author_id => [int => -indexed
 					       , [belongs_to => 'Author']]
 			       , name => 'text']]]
-	, name => 'text']);
+	, name => [text => -indexed]]);
 
 # -- MyDB1::Result::Author->has_many(books, MyDB1::Result::Book, author_id)
 # -- MyDB1::Result::Book->belongs_to(Author, MyDB1::Result::Author, author_id)
@@ -49,6 +49,15 @@ my $DBNAME = shift || ':memory:';
 
   is((my $foo = $author->create({name => 'Foo'}))->id
      , 1, "Author create name=Foo");
+
+  is $foo->in_storage, 1, "created author is in_storage";
+  isnt $author->find({name => 'Foo'}), $foo
+    , "author->find returns different instance";
+
+  {
+    is $schema->to_find(Author => 'name')->('Foo')
+      , $foo->id, "to_find returns same id";
+  }
 
   is $book->create({name => "Foo's 1st book", author_id => $foo->id})->id
     , 1, "Book create Foo's 1st";
@@ -74,6 +83,38 @@ my $DBNAME = shift || ':memory:';
   #  , 2, "Foo's books: author->search_rel";
   is $author->search_related(books => {'me.name' => 'Foo'})->count
     , 2, "Foo's books: author->search_rel";
+
+  #----------------------------------------
+  {
+    my $aid = 3; # next (expected) author id
+    my $bid = 4; # next (expected) book id
+
+    my $ins_auth = $schema->to_insert(Author => 'name');
+    my $ins_book = $schema->to_insert(Book => qw(author_id name));
+    my $sel_auth = $schema->to_find(Author => 'name');
+
+    is $ins_auth->('Qux'), $aid, 'Qux is inserted';
+    is $ins_book->($aid, "Qux's 1st book"), $bid
+      , "Qux's 1st book is inserted";
+    is $ins_book->($aid, "Qux's 2nd book"), $bid+1
+      , "Qux's 2nd book is inserted";
+    is $sel_auth->('Qux'), $aid, 'Qux is found in Authors';
+
+    # to_fetch returns sub which returns sth.
+    is_deeply $schema->to_fetch(Book => author_id => 'name')
+      ->($aid)->fetchall_arrayref
+	, [["Qux's 1st book"], ["Qux's 2nd book"]], "fetchall arrayref";
+    is_deeply $schema->to_fetch(Book => author_id => [book_id => 'name']
+				, order_by => 'book_id')
+      ->($aid)->fetchall_arrayref
+	, [[$bid, "Qux's 1st book"]
+	   , [$bid+1, "Qux's 2nd book"]], "fetchall arrayref, many cols";
+
+    my $enc_auth = $schema->to_encode(Author => 'name');
+
+    is $enc_auth->('Quxx'), $aid+1, "enc_auth(new Quxx) == $aid+1";
+    is $enc_auth->('Qux'), $aid, "enc_auth(known Qux) == $aid";
+  }
 }
 
 {

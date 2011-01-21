@@ -144,6 +144,86 @@ foreach my $name (keys %DBIx::Class::Schema::) {
 {
   package YATT::Lite::DBSchema::DBIC::DBIC_SCHEMA;
   use base qw(DBIx::Class::Schema);
+  use Carp;
+  # XXX: Should this hold (weakened) ref to DBSchema?
+
+  # Aid to migrate from YATT_DBSchema->to_zzz methods.
+  sub to_find {
+    my ($dbic, $tabName, $keyCol, $rowidCol) = @_;
+    my $rs = $dbic->resultset($tabName);
+    unless (defined $keyCol) {
+      sub { $rs->find(@_) }
+    } elsif (not defined $rowidCol) {
+      sub {
+	my ($value) = @_;
+	my $row = $rs->find({$keyCol => $value})
+	  or return undef;
+	$row->id;
+      };
+    } else {
+      sub {
+	my ($value) = @_;
+	my $row = $rs->find({$keyCol => $value})
+	  or return undef;
+	$row->get_column($rowidCol);
+      };
+    }
+  }
+
+  sub to_insert {
+    my ($dbic, $tabName, @fields) = @_;
+    my $rs = $dbic->resultset($tabName);
+    unless (my ($pkCol, @morePkCol) = $rs->result_source->primary_columns) {
+      # If primary key is not defined, row obj is returned.
+      $dbic->to_insert_obj($tabName, @fields);
+    } elsif (@morePkCol) {
+      croak "table '$tabName' has multiple pk col, use to_insert_obj() please!";
+    } else {
+      sub {
+	my %rec;
+	@rec{@fields} = @_;
+	my $row = $rs->new(\%rec)->insert;
+	$row->get_column($pkCol);
+      }
+    }
+  }
+
+  # This returns row object, not primary key.
+  sub to_insert_obj {
+    my ($dbic, $tabName, @fields) = @_;
+    my $rs = $dbic->resultset($tabName);
+    sub {
+      my %rec;
+      @rec{@fields} = @_;
+      $rs->new(\%rec)->insert;
+    };
+  }
+
+  sub to_encode {
+    my ($dbic, $tabName, $keyCol, @otherCols) = @_;
+    my $to_find = $dbic->to_find($tabName, $keyCol);
+    my $to_ins = $dbic->to_insert($tabName, $keyCol, @otherCols);
+
+    sub {
+      my ($value, @rest) = @_;
+      $to_find->($value) || $to_ins->($value, @rest);
+    };
+  }
+
+  sub to_fetch {
+    my ($dbic, $tabName, $keyColList, $resColList, @rest) = @_;
+    my $sql = $dbic->YATT_DBSchema
+      ->sql_to_fetch($tabName, $keyColList, $resColList, @rest);
+    my $storage = $dbic->storage;
+    # XXX: dbh_do
+    my $sth;
+    sub {
+      my (@value) = @_;
+      $sth ||= $storage->dbh->prepare($sql);
+      $sth->execute(@value);
+      $sth;
+    }
+  }
 }
 
 1;
