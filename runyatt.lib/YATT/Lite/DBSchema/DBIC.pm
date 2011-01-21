@@ -11,11 +11,11 @@ require DBIx::Class::Core;
 sub DBIC_SCHEMA {'YATT::Lite::DBSchema::DBIC::DBIC_SCHEMA'}
 
 use YATT::Lite::Types
-  ([Table => -fields => [qw(cf_package)]]
-   , ['Column'] # To import type aliases.
+  ([Table => -fields => [qw(cf_package cf_components)]]
+   , [Column => -fields => [qw(cf_dbic_opts)]]
   );
 
-use YATT::Lite::Util qw(globref);
+use YATT::Lite::Util qw(globref lexpand);
 
 sub import {
   my ($pack) = shift;
@@ -53,13 +53,21 @@ sub buildns {
     $myPkg->add_inc($tabClass);
 
     my Column $pk = $schema->info_table_pk($tab);
-    my @comp = qw/Core/;
+    my @comp = (qw/Core/, lexpand($tab->{cf_components}));
     push @comp, qw(PK::Auto) if $pk and $pk->{cf_autoincrement};
 
     $tabClass->load_components(@comp);
     $tabClass->table($tab->{cf_name});
-    $tabClass->add_columns(map {(my Column $col = $_)->{cf_name}}
-			   @{$tab->{col_list}});
+    {
+      my @colSpecs;
+      foreach my Column $col (@{$tab->{col_list}}) {
+	# dbic_opts;
+	my %dbic_opts = (data_type => $col->{cf_type}
+			 , map(defined $_ ? %$_ : (), $col->{cf_dbic_opts}));
+	push @colSpecs, $col->{cf_name} => \%dbic_opts;
+      }
+      $tabClass->add_columns(@colSpecs);
+    }
     $tabClass->set_primary_key($schema->info_table_pk($tab)) if $pk;
   }
   # Relationship の設定と、 register_class の呼び出し。
