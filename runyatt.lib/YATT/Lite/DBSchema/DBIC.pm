@@ -58,6 +58,7 @@ sub buildns {
 
     $tabClass->load_components(@comp);
     $tabClass->table($tab->{cf_name});
+    my @constraints = lexpand($tab->{chk_unique});
     {
       my @colSpecs;
       foreach my Column $col (@{$tab->{col_list}}) {
@@ -65,10 +66,17 @@ sub buildns {
 	my %dbic_opts = (data_type => $col->{cf_type}
 			 , map(defined $_ ? %$_ : (), $col->{cf_dbic_opts}));
 	push @colSpecs, $col->{cf_name} => \%dbic_opts;
+	push @constraints, [$col->{cf_name}] if $col->{cf_unique};
       }
       $tabClass->add_columns(@colSpecs);
     }
     $tabClass->set_primary_key($schema->info_table_pk($tab)) if $pk;
+    foreach my $uniq (@constraints) {
+      print STDERR <<END if $schema->{cf_verbose};
+-- $tabClass->add_unique_constraint([@{[join ", ", @$uniq]}])
+END
+      $tabClass->add_unique_constraint($uniq);
+    }
   }
   # Relationship の設定と、 register_class の呼び出し。
   foreach my Table $tab (@{$schema->{table_list}}) {
@@ -159,8 +167,51 @@ foreach my $name (keys %DBIx::Class::Schema::) {
   sub to_find {
     my ($dbic, $tabName, $keyCol, $rowidCol) = @_;
     my $rs = $dbic->resultset($tabName);
+    my $dbh = $dbic->storage->dbh;
     unless (defined $keyCol) {
       sub { $rs->find(@_) }
+    } elsif (ref $keyCol eq 'ARRAY') {
+      my (@sql, @cols, @atts);
+      foreach (@$keyCol) {
+	push @atts, $_ and next if ref $_ eq 'HASH';
+	push @sql, do {
+	  if (ref $_) {
+	    my ($col, @comp) = @$_;
+	    unless (@comp) {
+	      push @cols, $col;
+	      $col . ' = ?';
+	    } elsif (@comp == 1) {
+	      $dbh->quote_identifier($col) . ' = ' . $dbh->quote($comp[0]);
+	    } elsif (@comp % 2 == 0) {
+	      my @sql = $dbh->quote_identifier($col);
+	      while (my ($kw, $value) = splice @comp, 0, 2) {
+		push @sql, $kw, $dbh->quote($value);
+	      }
+	      join " ", @sql;
+	    } else {
+	      croak "Invalid column spec: $col, @comp";
+	    }
+	  } elsif (/\?/) {
+	    my ($col) = /^(\w+)/
+	      or croak "Can't extract colname from colspec: $_";
+	    push @cols, $col;
+	    $_;
+	  } else {
+	    push @cols, $_;
+	    $dbh->quote_identifier($_) . ' = ?';
+	  }
+	}
+      }
+      my $sql = join " AND ", @sql;
+      sub {
+	my (@value) = @_;
+	unless (@value == @cols) {
+	  croak "bind param length mismatch for $sql!(@{[scalar @value]})";
+	}
+	my $row = $rs->search(\ [$sql, zip(\@cols, \@value)], @atts)->single
+	  or return undef;
+	$row->id;
+      };
     } elsif (not defined $rowidCol) {
       sub {
 	my ($value) = @_;
@@ -231,6 +282,14 @@ foreach my $name (keys %DBIx::Class::Schema::) {
       $sth->execute(@value);
       $sth;
     }
+  }
+
+  sub zip {
+    my @res;
+    for (my $i = 0; $i < @{$_[0]}; $i++) {
+      push @res, [map {$_->[$i]} @_];
+    }
+    wantarray ? @res : \@res;
   }
 }
 
