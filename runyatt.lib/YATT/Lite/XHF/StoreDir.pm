@@ -22,7 +22,7 @@ sub after_new {
 
 sub create {
   my MY $self = shift;
-
+  my $dump = $self->dump_xhf(@_) if @_;
   my ($fnum, $lockfh) = $self->lastfnum(1);
   my ($fname);
   do {
@@ -37,11 +37,11 @@ sub create {
   open my $fh, '>', $fname
     or die "Can't open newfile '$fname': $!";
 
-  if (@_) {
-    print $fh $self->dump_xhf(@_);
+  if (defined $dump) {
+    print $fh $dump;
     return $fnum;
   } else {
-    wantarray ? ($fh, $fname, $fnum) : $fh;
+    wantarray ? ($fh, $fnum, $fname) : $fh;
   }
 }
 
