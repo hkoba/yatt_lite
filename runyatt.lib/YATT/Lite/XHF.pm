@@ -9,7 +9,7 @@ use fields qw(cf_FH cf_filename cf_string cf_tokens
 
 use Exporter qw(import);
 our @EXPORT = qw(read_file_xhf);
-our @EXPORT_OK = (@EXPORT, qw(parse_xhf));
+our @EXPORT_OK = (@EXPORT, qw(parse_xhf $cc_name));
 
 use Encode qw(encode);
 
@@ -23,10 +23,13 @@ use YATT::Lite::Util;
 use YATT::Lite::Util::Enum _ => [qw(NAME SIGIL VALUE)];
 
 our $cc_name  = qr{\w|[\.\-/~!]};
-our $cc_sigil = qr{[:\#,\-\[\]\{\}]};
+our $cc_sigil = qr{[:\#,\-=\[\]\{\}]};
 our $cc_tabsp = qr{[\ \t]};
 
-our %OPN = ('[' => \&organize_array, '{' => \&organize_hash);
+our %OPN = ('[' => \&organize_array, '{' => \&organize_hash
+	    , '=' => \&organize_expr);
+our %CLO = (']' => 1, '}' => 1);
+our %NO_NAME = (%CLO, '-' => 1);
 
 sub read_file_xhf {
   my ($pack, $fn, @rest) = @_;
@@ -103,19 +106,27 @@ sub tokenize {
     # Comment fields are ignored.
     $ncomments++, next if $sigil eq "#";
 
+    if ($NO_NAME{$sigil} and $name ne '') {
+      croak "Invalid XHF token('$sigil' should not have name '$name')"
+    }
+
+    if ($CLO{$sigil}) {
+      undef $name;
+    }
+
     # Line continuation.
     $token =~ s/\n[\ \t]/\n/g;
 
     unless (defined $eol) {
       # Values are trimmed unless $eol
       $token =~ s/^\s+|\s+$//gs;
-    } elsif ($sigil eq '{') {
+    } else {
       # Deny:  name{ foo
       # Allow: name[ foo
       croak "Invalid XHF token(container with value): "
 	. join("", grep {defined $_} $name, $sigil, $tabsp, $token)
-	  if $token ne "";
-    } else {
+	  if $sigil eq '{' and $token ne "";
+
       # Trim leading space for $tabsp eq "\n".
       $token =~ s/^[\ \t]//;
     }
@@ -133,10 +144,10 @@ sub organize {
   my @result;
   while (@_) {
     my $desc = shift;
-    push @result, $desc->[_NAME];
+    push @result, $desc->[_NAME] if $desc->[_NAME] ne '';
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
       # sigil がある時、value を無視して、良いのか?
-      push @result, $sub->($reader, \@_);
+      push @result, $sub->($reader, \@_, $desc);
     } else {
       push @result, $desc->[_VALUE];
     }
@@ -149,16 +160,17 @@ sub organize {
   }
 }
 
+# '[' block
 sub organize_array {
   (my MY $reader, my ($tokens, $first)) = @_;
   my @result;
   push @result, $first->[_VALUE] if defined $first and $first->[_VALUE] ne '';
   while (@$tokens) {
     my $desc = shift @$tokens;
+    last unless defined $desc->[_NAME];
     if ($desc->[_NAME] ne '') {
       push @result, $desc->[_NAME];
     }
-    last if $desc->[_SIGIL] eq ']';
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
       # sigil がある時、value があったらどうするかは、子供次第。
       push @result, $sub->($reader, $tokens, $desc);
@@ -169,6 +181,7 @@ sub organize_array {
   \@result;
 }
 
+# '{' block.
 sub organize_hash {
   (my MY $reader, my ($tokens, $first)) = @_;
   die "Invalid XHF hash block beginning! ". join("", @$first)
@@ -176,14 +189,48 @@ sub organize_hash {
   my %result;
   while (@$tokens) {
     my $desc = shift @$tokens;
-    if (my $sub = $OPN{$desc->[_SIGIL]}) {
-      # sigil がある時、value を無視して、良いのか?
-      $desc->[_VALUE] = $sub->($reader, $tokens);
+    last unless defined $desc->[_NAME];
+    if ($desc->[_SIGIL] eq '-') {
+      # Should treat two lines as one key value pair.
+      unless (@$tokens) {
+	croak "Invalid XHF hash:"
+	  ." key '- $desc->[_VALUE]' doesn't have value!";
+      }
+      my $valdesc = shift @$tokens;
+      my $value = do {
+	if (my $sub = $OPN{$valdesc->[_SIGIL]}) {
+	  $sub->($reader, $tokens, $valdesc);
+	} elsif ($valdesc->[_SIGIL] eq '-') {
+	  $valdesc->[_VALUE];
+	} else {
+	  croak "Invalid XHF hash value:"
+	    . " key '$desc->[_VALUE]' has invalid sigil '$valdesc->[_SIGIL]'";
+	}
+      };
+      $reader->add_value($result{$desc->[_VALUE]}, $value);
+    } else {
+      if (my $sub = $OPN{$desc->[_SIGIL]}) {
+	# sigil がある時、value を無視して、良いのか?
+	$desc->[_VALUE] = $sub->($reader, $tokens, $desc);
+      }
+      $reader->add_value($result{$desc->[_NAME]}, $desc->[_VALUE]);
     }
-    last if $desc->[_SIGIL] eq '}';
-    $reader->add_value($result{$desc->[_NAME]}, $desc->[_VALUE]);
   }
   \%result;
+}
+
+# '=' value
+sub _undef {undef}
+our %EXPR = (null => \&_undef, 'undef' => \&_undef);
+sub organize_expr {
+  (my MY $reader, my ($tokens, $first)) = @_;
+  if ((my $val = $first->[_VALUE]) =~ s/^\#(\w+)\s*//) {
+    my $sub = $EXPR{$1}
+      or croak "Invalid XHF keyword: '= #$1'";
+    $sub->($reader, $val, $tokens);
+  } else {
+    croak "Not yet implemented XHF token: '@$first'";
+  }
 }
 
 sub add_value {
