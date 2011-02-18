@@ -179,6 +179,25 @@ sub entity_dump {
   YATT::Lite::Util::terse_dump(@_);
 }
 
+sub entity_render {
+  my ($this, $method) = splice @_, 0, 2;
+  my $sub = $this->can("render_$method")
+    or die "No such method: $method";
+  require YATT::Lite::Util;
+  $sub->($this, YATT::Lite::Util::ostream(my $buffer), @_);
+  \ $buffer;
+}
+
+sub entity_can_render {
+  my ($this, $widget) = @_;
+  $this->can("render_$widget");
+}
+
+sub entity_uc { shift; uc($_[0]) }
+sub entity_ucfirst { shift; ucfirst($_[0]) }
+sub entity_lc { shift; lc($_[0]) }
+sub entity_lcfirst { shift; lcfirst($_[0]) }
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 

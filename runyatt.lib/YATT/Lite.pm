@@ -141,7 +141,7 @@ sub handle_yatt {
   my $trans = $self->open_trans;
 
   my $mapped = $self->map_request($con, $file);
-  # $self->dump(@mapped, [$con->param]);
+  # $self->dump($mapped, [$con->param]);
 
   # XXX: public に限定するのはどこで？ ここで？それとも find_自体？
   my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);

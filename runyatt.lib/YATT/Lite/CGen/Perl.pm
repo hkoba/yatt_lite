@@ -17,7 +17,6 @@ use YATT::Lite::Constants;
   #========================================
   package YATT::Lite::CGen::Perl; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::CGen);
-  sub qparen ($);
   use YATT::Lite::Util qw(lexpand numLines globref);
   use Carp;
   #========================================
@@ -53,7 +52,7 @@ use YATT::Lite::Constants;
     push @stats, $self->generate_inheritance($tmpl);
     push @stats, "use utf8; " if $$tmpl{cf_utf8};
     push @stats, q|no warnings qw(redefine); | if $$tmpl{cf_age}++;
-    #$str .= sprintf q|sub name {%s} |, qparen($$tmpl{cf_name} // '');
+    #$str .= sprintf q|sub name {%s} |, qtext($$tmpl{cf_name} // '');
     @stats
   }
   sub generate_page {
@@ -169,7 +168,7 @@ use YATT::Lite::Constants;
       unless (ref $node) {
 	# text node の末尾が改行で終わっている場合、 明示的に "\n" を生成する
 	my $has_nl = $node =~ s/\r?\n\Z//s;
-	push @queue, qparen($node) if $node ne ''; # 削ったら空になるかも。
+	push @queue, qtext($node) if $node ne ''; # 削ったら空になるかも。
 	$self->{curline} += numLines($node);
 	$self->{curline}++ if $has_nl;
 	push @queue, q{"\n"} if $has_nl
@@ -203,7 +202,7 @@ use YATT::Lite::Constants;
     while (@_) {
       my $node = shift;
       unless (ref $node) {
-	push @result, ($text_quote ? qparen($node) : $node);
+	push @result, ($text_quote ? qtext($node) : $node);
 	$self->{curline} += numLines($node);
 	next;
       }
@@ -246,7 +245,7 @@ use YATT::Lite::Constants;
     (my MY $self, my $node) = @_;
     my $path = $node->[NODE_PATH];
     if (my $alt = $self->altgen($path->[0])) {
-      qparen($alt->($node));
+      qtext($alt->($node));
     } elsif (@$path == 2
 	and my $macro = $self->can("macro_" . join "_", @$path)
 	|| $self->can("macro_$path->[-1]")) {
@@ -393,7 +392,7 @@ use YATT::Lite::Constants;
   }
   sub as_cast_to_text {
     (my MY $self, my ($var, $value)) = @_;
-    return qparen($value) unless ref $value;
+    return qtext($value) unless ref $value;
     $self->as_text(@$value);
   }
   sub as_cast_to_attr {
@@ -403,7 +402,7 @@ use YATT::Lite::Constants;
     (my MY $self, my ($var, $value)) = @_;
     unless (ref $value) {
       $self->{curline} += numLines($value);
-      return qparen($value);
+      return qtext($value);
     }
     join '.', shift->gen_by(\@AS_TEXT, 1, 1, @$value);
   }
@@ -607,12 +606,12 @@ use YATT::Lite::Constants;
     if ($name =~ /^\w+$/) {
       "{$name}"
     } else {
-      '{'.qparen($name).'}';
+      '{'.qtext($name).'}';
     }
   }
   sub as_expr_text {
     (my MY $self, my ($esc_later, $expr)) = @_;
-    qparen($expr);
+    qqvalue($expr);
   }
   #========================================
 }
@@ -741,7 +740,7 @@ sub feed_arg_spec {
     (my MY $self, my ($node, $name, $valNode)) = @_;
     my $var = $self->{scope}[0]{$name} = $self->mkvar_at(undef, text => $name);
     'my '.$self->as_lvalue($var).' = '
-      .join(q|."\n".|, map {qparen($_)}
+      .join(q|."\n".|, map {qtext($_)}
 	    split /\n/, $self->{curtmpl}->node_body_source($node));
   }
 

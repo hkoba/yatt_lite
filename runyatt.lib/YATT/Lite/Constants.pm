@@ -42,7 +42,7 @@ sub lxnest {
 sub nx {
   @{$_[0]}[(NODE_PATH + ($_[1] // 0)) .. $#{$_[0]}];
 }
-sub paren_escape ($) {
+sub bar_escape ($) {
   unless (defined $_[0]) {
     Carp::confess "Undefined text";
   }
@@ -50,11 +50,11 @@ sub paren_escape ($) {
   $cp =~ s{([\|\\])}{\\$1}g;
   $cp;
 }
-sub qparen ($) {
-  'q|'.paren_escape($_[0]).'|'
+sub qtext ($) {
+  'q|'.bar_escape($_[0]).'|'
 }
 sub qqvalue ($) {
-  'q'.qparen($_[0]);
+  'q'.qtext($_[0]);
 }
 
 sub node_path {
