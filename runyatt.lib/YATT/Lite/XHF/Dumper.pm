@@ -21,10 +21,13 @@ sub _dump_pairs {
   while (@_) {
     if (@_ == 1 or not defined $_[0] or ref $_[0]) {
       push @buffer, _dump_value(shift, '-');
-    } elsif ($_[0] !~ m{^$cc_name*$}) {
-      push @buffer, '-' . escape(shift), _dump_value(shift, '-');
-    } else {
+    } elsif ($_[0] =~ m{^$cc_name+$}
+	     or $_[0] eq '' and defined $_[1]) {
+      # ('', 'bar') => ": bar"
       push @buffer, shift() . _dump_value(shift, ':');
+    } else {
+      # ('', undef) => "-\n= #null"
+      push @buffer, '-' . escape(shift), _dump_value(shift, '-');
     }
   }
   join "\n", @buffer;

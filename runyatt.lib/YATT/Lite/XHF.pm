@@ -29,7 +29,8 @@ our $cc_tabsp = qr{[\ \t]};
 our %OPN = ('[' => \&organize_array, '{' => \&organize_hash
 	    , '=' => \&organize_expr);
 our %CLO = (']' => 1, '}' => 1);
-our %NO_NAME = (%CLO, '-' => 1);
+our %NAME_LESS = (%CLO, '-' => 1);
+our %ALLOW_EMPTY_NAME = (':' => 1);
 
 sub read_file_xhf {
   my ($pack, $fn, @rest) = @_;
@@ -106,7 +107,7 @@ sub tokenize {
     # Comment fields are ignored.
     $ncomments++, next if $sigil eq "#";
 
-    if ($NO_NAME{$sigil} and $name ne '') {
+    if ($NAME_LESS{$sigil} and $name ne '') {
       croak "Invalid XHF token('$sigil' should not have name '$name')"
     }
 
@@ -144,7 +145,8 @@ sub organize {
   my @result;
   while (@_) {
     my $desc = shift;
-    push @result, $desc->[_NAME] if $desc->[_NAME] ne '';
+    push @result, $desc->[_NAME] if $desc->[_NAME] ne ''
+      or $ALLOW_EMPTY_NAME{$desc->[_SIGIL]};
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
       # sigil がある時、value を無視して、良いのか?
       push @result, $sub->($reader, \@_, $desc);
