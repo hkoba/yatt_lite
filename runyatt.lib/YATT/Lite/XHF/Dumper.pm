@@ -21,8 +21,8 @@ sub _dump_pairs {
   while (@_) {
     if (@_ == 1 or not defined $_[0] or ref $_[0]) {
       push @buffer, _dump_value(shift, '-');
-    } elsif ($_[0] !~ m{^$cc_name+$}) {
-      push @buffer, "- " . escape(shift), _dump_value(shift, '-');
+    } elsif ($_[0] !~ m{^$cc_name*$}) {
+      push @buffer, '-' . escape(shift), _dump_value(shift, '-');
     } else {
       push @buffer, shift() . _dump_value(shift, ':');
     }

@@ -52,6 +52,8 @@ END
 foo: bar
 baz: qux
 END
+
+     , undef
      , [<<END, "foo bar" => 'baz']
 - foo bar
 - baz
@@ -94,14 +96,22 @@ foo: bar
 END
     );
 
-plan tests => 2 + 2*@tests;
+plan tests => 2 + 3*grep(defined $_, @tests);
 
 use_ok($LOADER);
 use_ok($DUMPER);
 
+sub breakpoint {}
+
 foreach my $data (@tests) {
+  unless (defined $data) {
+    breakpoint();
+    next;
+  }
+
   my ($exp, @data) = @$data;
   my $title = join(", ", Data::Dumper->new(\@data)->Terse(1)->Indent(0)->Dump);
   eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "dump: $title";
   is_deeply [$LOADER->new(string => $got)->read], \@data, "read: $title";
+  is_deeply [$LOADER->new(string => $exp)->read], \@data, "read_exp: $title";
 }
