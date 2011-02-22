@@ -20,6 +20,7 @@ use fields qw(YATT
 	      cf_tmpl_cache
 	      cf_at_done
 	      cf_dont_map_args
+	      cf_dont_debug_param
 	    );
 
 # Entities を多重継承する理由は import も継承したいから。
@@ -141,7 +142,10 @@ sub handle_yatt {
   my $trans = $self->open_trans;
 
   my $mapped = $self->map_request($con, $file);
-  # $self->dump($mapped, [$con->param]);
+  if (not $self->{cf_dont_debug_param}
+      and -e ".htdebug_param") {
+    $self->dump($mapped, [map {[$_ => $con->param($_)]} $con->param]);
+  }
 
   # XXX: public に限定するのはどこで？ ここで？それとも find_自体？
   my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);
