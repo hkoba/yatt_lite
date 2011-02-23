@@ -23,7 +23,8 @@ use fields (qw(table_list table_dict dbtype cf_DBH
 	     ));
 
 use YATT::Lite::Types
-  ([Item => fields => [qw(cf_name)]
+  ([Item => fields => [qw(not_configured
+			  cf_name)]
     , [Table => fields => [qw(pk chk_unique
 			      chk_index chk_check
 			      col_list col_dict
@@ -72,6 +73,7 @@ sub new {
       croak "Invalid schema item: $item";
     }
   }
+  $self->verify_schema;
   $self;
 }
 
@@ -287,7 +289,12 @@ sub list_table_columns {
 
 sub info_table {
   (my MY $self, my $name) = @_;
-  $self->{table_dict}{$name};
+  $self->{table_dict}{$name} //= do {
+    push @{$self->{table_list}}
+      , my Table $tab = $self->Table->new(name => $name);
+    $tab->{not_configured} = 1;
+    $tab;
+  };
 }
 
 sub info_table_pk {
@@ -303,13 +310,15 @@ sub info_table_pk {
 }
 
 sub get_table {
-  return shift->info_table(@_) if @_ == 2;
-  (my MY $self, my ($name, $opts, @colpairs)) = @_;
-  if ($self->{table_dict}{$name}) {
+  my MY $self = shift;
+  my ($name, $opts, @colpairs) = @_;
+  my Table $tab = $self->info_table($name);
+  return $tab if @_ == 1;
+  if ($tab and not $tab->{not_configured}) {
     croak "Duplicate definition of table $name";
   }
-  my Table $tab = $self->Table->new(name => $name, lhexpand($opts));
-  push @{$self->{table_list}}, $self->{table_dict}{$name} = $tab;
+  $tab->{not_configured} = 0;
+  $tab->configure(lhexpand($opts)) if $opts;
   while (@colpairs) {
     # colName => [colSpec]
     # [check => args]
@@ -370,25 +379,7 @@ sub add_table_column {
   }
   # $tab.$colName is encoded by $refTab.pk
   if (ref $type) {
-    # XXX: この機能、廃止する予定よね? 構造だけに語らしめようとすると、後で解釈に幅が出てしまうから。
-    my Table $refTab = $self->get_table(@$type);
-    my Column $pk = $refTab->{pk};
-    confess "PK is undef in $refTab->{cf_name}" unless $pk;
-
-    $tab->{reference_dict}{$refTab->{cf_name}} = $colName;
-    my $relName = $colName;
-    $relName =~ s/_id$// or $relName = lc($refTab->{cf_name});
-    my $fkName = $pk->{cf_name};
-    $type = $pk->{cf_type};
-    confess "Can't determine encoder type $refTab->{cf_name}.$pk->{cf_name}"
-      unless $type;
-
-    push @{$tab->{relationSpec}}
-      , [belongs_to => $relName, $fkName, $refTab];
-    push @colSpec, -indexed;
-
-    push @{$refTab->{relationSpec}}
-      , [has_many => lc($tab->{cf_name}), $colName, $tab];
+    croak "Deprecated column spec in $tab->{cf_name}.$colName";
   }
   Carp::cluck "Column type $tab->{cf_name}.$colName is undef"
       unless defined $type;
@@ -424,6 +415,21 @@ sub add_table_column {
 
   # XXX: Validation: name/option conflicts and others.
   $col;
+}
+
+sub verify_schema {
+  (my MY $self) = @_;
+  my @not_configured;
+  foreach my Table $tab (lexpand($self->{table_list})) {
+    if ($tab->{not_configured}) {
+      push @not_configured, $tab->{cf_name};
+      next;
+    }
+    # foreach my Column $col (lexpand($tab->{col_list})) { }
+  }
+  if (@not_configured) {
+    croak "Some tables are not configure, possibly spellmiss!: @not_configured";
+  }
 }
 
 {
