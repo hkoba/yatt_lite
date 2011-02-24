@@ -52,9 +52,17 @@ sub parse_params {
 sub run {
   my ($pack, $list, $alias) = @_;
 
-  my $app = $pack->new(parse_opts($pack, $list, $alias));
-
+  my @opts = parse_opts($pack, $list, $alias);
+  my $app = do {
+    if (ref $pack) {
+      $pack->configure(@opts);
+      $pack;
+    } else {
+      $pack->new(@opts);
+    }
+  };
   my $cmd = shift @$list || 'help';
+  $app->configure(parse_opts($pack, \@_, $alias));
 
   if (my $sub = $app->can("cmd_$cmd")) {
     $sub->($app, @$list);
@@ -71,6 +79,9 @@ sub run {
     }
   } else {
     die "$0: Unknown subcommand '$cmd'\n"
+  }
+  if (my $sub = $app->can('DESTROY')) {
+    $sub->($app);
   }
 }
 

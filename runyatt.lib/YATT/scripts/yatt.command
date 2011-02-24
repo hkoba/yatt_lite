@@ -14,6 +14,8 @@ use YATT::Lite::Util::FindMethods;
 use YATT::Lite qw(*YATT);
 use YATT::Lite::Breakpoint;
 
+require YATT::Lite::Util::CmdLine;
+
 use Getopt::Long;
 
 GetOptions("if_can" => \ my $if_can
@@ -39,9 +41,11 @@ Available commands are:
 END
 }
 
-my $command = shift;
-my $sub = $YATT->can("cmd_$command")
-  or ($if_can and exit)
-  or die "No such command: $command\n";
-
-$sub->($dirhandler, @ARGV);
+my $command = $ARGV[0];
+if ($YATT->can("cmd_$command") || $YATT->can($command)) {
+  YATT::Lite::Util::CmdLine::run($YATT, \@ARGV);
+} elsif ($if_can) {
+  exit
+} else {
+  die "No such command: $command\n";
+}

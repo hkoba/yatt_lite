@@ -29,7 +29,9 @@ use YATT::Lite::Types
 			      chk_index chk_check
 			      col_list col_dict
 			      relationSpec
-			      reference_dict)]]
+			      reference_dict
+			      initializer
+			    )]]
     , [Column => fields => [qw(cf_type
 			       cf_hidden
 			       cf_unique
@@ -181,9 +183,10 @@ sub create {
 
 sub ensure_created_on {
   (my MY $schema, my $dbh) = @_;
-  my $nchanges;
+  my (@created);
   foreach my Table $table (@{$schema->{table_list}}) {
     next if $schema->has_table($table->{cf_name}, $dbh);
+    push @created, $table;
     foreach my $create ($schema->sql_create_table($table)) {
       unless ($schema->{cf_verbose}) {
       } elsif ($schema->{cf_verbose} >= 2) {
@@ -192,10 +195,44 @@ sub ensure_created_on {
 	print STDERR "CREATE TABLE $table->{cf_name}\n";
       }
       $dbh->do($create);
-      $nchanges++;
     }
   }
-  $dbh->commit if $nchanges and not $dbh->{AutoCommit};
+  if (@created) {
+    foreach my Table $tab (@created) {
+      $schema->ensure_table_populated($dbh, $tab);
+    }
+    $dbh->commit unless $dbh->{AutoCommit};
+  }
+  @created;
+}
+
+sub ensure_table_populated {
+  (my MY $schema, my $dbh, my Table $tab) = @_;
+  foreach my $init (lexpand($tab->{initializer})) {
+    my ($colSpec, @values) = @$init;
+    my $sql = $schema->sql_to_insert($tab->{cf_name}, @$colSpec);
+    my $ins = $dbh->prepare($sql);
+    foreach my $record (@values) {
+      if (grep {ref $_ eq 'SCALAR'} @$record) {
+	my ($sql, $values) = $schema->sql_and_values_to_insert_expr
+	  ($tab->{cf_name}, $colSpec, $record);
+	my @vals = $schema->expand_codevalue($tab, $values);
+	print STDERR $sql, "\n -- (", join(",", @vals), ")\n"
+	  if $schema->{cf_verbose};
+	$dbh->do($sql, undef, @vals);
+      } else {
+	my @vals = $schema->expand_codevalue($tab, $record);
+	print STDERR $sql, "\n -- (", join(",", @vals), ")\n"
+	  if $schema->{cf_verbose};
+	$ins->execute(@vals);
+      }
+    }
+  }
+}
+
+sub expand_codevalue {
+  (my MY $schema, my $tab, my $record) = @_;
+  map {ref $_ ? $_->($schema, $tab) : $_} @$record;
 }
 
 sub has_table {
@@ -317,7 +354,7 @@ sub get_table {
   if ($tab and not $tab->{not_configured}) {
     croak "Duplicate definition of table $name";
   }
-  $tab->{not_configured} = 0;
+  delete $tab->{not_configured};
   $tab->configure(lhexpand($opts)) if $opts;
   while (@colpairs) {
     # colName => [colSpec]
@@ -415,6 +452,11 @@ sub add_table_column {
 
   # XXX: Validation: name/option conflicts and others.
   $col;
+}
+
+sub add_table_values {
+  (my MY $self, my Table $tab, my ($colspec, @values)) = @_;
+  push @{$tab->{initializer}}, [$colspec, @values];
 }
 
 sub verify_schema {
@@ -630,10 +672,28 @@ sub sql_to_fetch {
 
 sub sql_to_insert {
   (my MY $self, my ($tabName, @fields)) = @_;
-  sprintf qq{insert into $tabName(%s) values(%s)}
+  sprintf qq{INSERT INTO $tabName(%s) VALUES(%s)}
     , join(", ", @fields)
       , join(", ", map {'?'} @fields);
 }
+
+sub sql_and_values_to_insert_expr {
+  (my MY $self, my ($tabName, $colNames, $valsOrExprs)) = @_;
+  my (@values);
+  my @exprs = map {
+    if (ref $_) {
+      $$_;
+    } else {
+      push @values, $_;
+      '?'
+    }
+  } @$valsOrExprs;
+  my $sql = sprintf qq{INSERT INTO $tabName(%s) VALUES(%s)}
+    , join(", ", @$colNames), join(", ", @exprs);
+
+  ($sql, \@values);
+}
+
 
 sub default_rowid_col { 'rowid' }
 sub rowid_col {
@@ -654,33 +714,6 @@ sub add_inc {
 }
 
 ########################################
-
-sub run {
-  my $pack = shift;
-  $pack->cmd_help unless @_;
-  my MY $obj = $pack->new(MY->parse_opts(\@_));
-  my $cmd = shift || "help";
-  $obj->configure(MY->parse_opts(\@_));
-  my $method = "cmd_$cmd";
-  if (my $sub = $obj->can("cmd_$cmd")) {
-    $sub->($obj, @_);
-  } elsif ($sub = $obj->can($cmd)) {
-    my @res = $sub->($obj, @_);
-    exit 1 unless @res;
-    unless (@res == 1 and defined $res[0] and $res[0] eq "1") {
-      if (grep {defined $_ && ref $_} @res) {
-	require Data::Dumper;
-	print Data::Dumper->new([$_])->Indent(0)->Terse(1)->Dump
-	  , "\n" for @res;
-      } else {
-	print join("\n", @res), "\n";
-      }
-    }
-  } else {
-    croak "No such method $cmd for $pack\n";
-  }
-  $obj->DESTROY; # To make sure committed.
-}
 
 sub cmd_help {
   my ($self) = @_;
