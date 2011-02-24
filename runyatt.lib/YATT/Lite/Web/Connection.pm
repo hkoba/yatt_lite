@@ -198,25 +198,25 @@ sub param_type {
   };
 
   my $value = $prop->{cf_cgi}->param($name)
-    // croak "parameter '$name' is missing!";
+    // die "Parameter '$name' is missing!\n";
 
   if ($value =~ $pat) {
     return $&; # Also for taint check.
   } elsif ($diag) {
     croak ref $diag eq 'CODE' ? $diag->($value) : $diag;
   } else {
-    croak "parameter $name is not a type $type!";
+    die "Parameter '$name' should be $type!: '$value'\n";
   }
 }
 
-# These should be easily extendable from .htyattrc.pl
+# XXX: These should be easily extendable from .htyattrc.pl
 
-sub re_integer {
-  qr{^[1-9]\d*$};
-}
+sub re_integer { qr{^[1-9]\d*$}; }
 
-sub re_word {
-  qr{^\w+$};
-}
+sub re_word { qr{^\w+$}; }
+
+sub re_nonempty { qr{\S.*} }
+
+sub re_any { qr{^.*$} }
 
 1;
