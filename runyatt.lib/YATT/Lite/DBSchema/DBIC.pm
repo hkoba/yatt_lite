@@ -52,12 +52,23 @@ sub buildns {
     *{globref($tabClass, 'ISA')} = ['DBIx::Class::Core'];
     $myPkg->add_inc($tabClass);
 
-    my Column $pk = $schema->info_table_pk($tab);
+    my Column $pk;
     my @comp = (qw/Core/, lexpand($tab->{cf_components}));
-    push @comp, qw(PK::Auto) if $pk and $pk->{cf_autoincrement};
 
-    $tabClass->load_components(@comp);
-    $tabClass->table($tab->{cf_name});
+    if ($tab->{cf_view}) {
+      $tabClass->load_components(@comp);
+      $tabClass->table_class('DBIx::Class::ResultSource::View');
+      # ------------- (order is important!) ----------------
+      $tabClass->table($tab->{cf_name});
+      $tabClass->result_source_instance->view_definition($tab->{cf_view});
+      $tabClass->result_source_instance->is_virtual($tab->{cf_virtual} ? 1 : 0);
+    } else {
+      $pk = $schema->info_table_pk($tab);
+      push @comp, qw(PK::Auto) if $pk and $pk->{cf_autoincrement};
+      $tabClass->load_components(@comp);
+      $tabClass->table($tab->{cf_name});
+    }
+
     my @constraints = lexpand($tab->{chk_unique});
     {
       my @colSpecs;

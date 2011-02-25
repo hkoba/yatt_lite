@@ -202,3 +202,55 @@ my $DBNAME = shift || ':memory:';
        }))->id
     , 1, "[$CLASS] user.add_to_address");
 }
+
+{
+  my $CLASS = 'MyDB4';
+  package MyDB4;
+  use YATT::Lite::DBSchema::DBIC
+    (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
+     , [ticket => undef
+	, tn => [int => -primary_key, -autoincrement]
+	, at => 'datetime'
+	, title => 'text'
+	, description => 'text'
+	, [values => [qw(at title)]
+	   , ['2010-01-01T09:00', '1st ticket']
+	   , ['2010-01-02T15:00', '2nd ticket']
+	  ]
+       ]
+
+     , [chng => undef
+	, cn => [int => -primary_key, -autoincrement]
+	, at => 'datetime'
+	, comment => 'text'
+	, [values => [qw(at comment)]
+	   , ['2010-01-01T12:00', '1st chng']
+	   , ['2010-01-02T18:00', '2nd chng']
+	  ]
+       ]
+
+     , [timeline => {view => <<SQL}
+select tn as num, 'ticket' as type, at, title from ticket
+union all
+select cn as num, 'chng' as type, at, comment as title from chng
+SQL
+	, num => 'int'
+	, type => 'text'
+	, at => 'datetime'
+	, title => 'text'
+       ]
+    );
+
+  package main;
+  my $schema = $CLASS->connect("dbi:SQLite:dbname=$DBNAME");
+  $schema->YATT_DBSchema->deploy;
+
+  is_deeply [map {[$_->num, $_->type, $_->at, $_->title]}
+	     $schema->resultset('timeline')
+	     ->search(undef, {order_by => 'at'})->all]
+    , [[1, ticket => '2010-01-01T09:00', '1st ticket']
+       , [1, chng => '2010-01-01T12:00', '1st chng']
+       , [2, ticket => '2010-01-02T15:00', '2nd ticket']
+       , [2, chng => '2010-01-02T18:00', '2nd chng']
+      ], "$CLASS timeline";
+}
