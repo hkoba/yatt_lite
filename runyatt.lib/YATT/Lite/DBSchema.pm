@@ -28,7 +28,7 @@ use YATT::Lite::Types
     , [Table => fields => [qw(pk chk_unique
 			      chk_index chk_check
 			      col_list col_dict
-			      relationSpec
+			      relation_list relation_dict
 			      reference_dict
 			      initializer
 			      cf_view cf_virtual
@@ -329,7 +329,7 @@ sub list_relations {
   my Table $tab = $self->{table_dict}{$tabName}
     or return;
   if ($opts{raw}) {
-    @{$tab->{relationSpec}}
+    @{$tab->{relation_list}}
   } else {
     map {
       (my ($relType, $relName, $fkName), my Table $subTab) = @$_;
@@ -340,7 +340,7 @@ sub list_relations {
 	}
       };
       [$relType, $relName, $fkName, $subTab->{cf_name}];
-    } @{$tab->{relationSpec}};
+    } @{$tab->{relation_list}};
   }
 }
 
@@ -432,8 +432,12 @@ sub add_table_relation {
   my $relName = $relSpec->[0] // lc($subTab->{cf_name});
   $fkName //= $relSpec->[1] // $fkCol->{cf_name}
     // $subTab->{reference_dict}{$tab->{cf_name}};
-  push @{$tab->{relationSpec}}
-    , [$relType => $relName, $fkName, $subTab];
+  if ($tab->{relation_dict}{$relName}) {
+    croak "Conflicting relation! $tab->{cf_name}.$relName";
+  }
+  push @{$tab->{relation_list}}
+    , $tab->{relation_dict}{$relName}
+      = [$relType => $relName, $fkName, $subTab];
 }
 
 sub add_table_column {

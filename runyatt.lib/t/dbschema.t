@@ -251,9 +251,9 @@ END
      , [Transaction => undef
 	, tid => [int => -primary_key, -autoincrement]
 	, at =>  [date => -indexed]
-	, debit_id => [int => -indexed, [-belongs_to, 'Account']]
+	, debit_id => [int => -indexed, ['-belongs_to:debit', 'Account']]
 	, amt => 'int'
-	, credit_id => [int => -indexed, [-belongs_to, 'Account']]
+	, credit_id => [int => -indexed, ['-belongs_to:credit', 'Account']]
 	, desc => [int => -indexed, [-belongs_to, 'Description']]
 	, note => 'text'
        ]);
