@@ -186,7 +186,7 @@ sub create {
 
 sub ensure_created_on {
   (my MY $schema, my $dbh) = @_;
-  my (@created);
+  my (@created, $other_changes);
   foreach my Table $table ($schema->list_tables(raw => 1)) {
     next if $schema->has_table($table->{cf_name}, $dbh);
     push @created, $table;
@@ -202,12 +202,18 @@ sub ensure_created_on {
   }
   foreach my Table $view ($schema->list_views(raw => 1)) {
     next if $schema->has_view($view->{cf_name}, $dbh);
-    $dbh->do("CREATE VIEW $view->{cf_name} AS $view->{cf_view}");
+    if ($schema->{cf_verbose}) {
+      print STDERR "CREATE VIEW $view->{cf_name}\n";
+    }
+    $dbh->do("CREATE VIEW $view->{cf_name}\nAS $view->{cf_view}");
+    $other_changes++;
   }
   if (@created) {
     foreach my Table $tab (@created) {
       $schema->ensure_table_populated($dbh, $tab);
     }
+  }
+  if (@created or $other_changes) {
     $dbh->commit unless $dbh->{AutoCommit};
   }
   @created;
