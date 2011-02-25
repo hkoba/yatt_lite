@@ -31,6 +31,7 @@ use YATT::Lite::Types
 			      relationSpec
 			      reference_dict
 			      initializer
+			      cf_view cf_virtual
 			    )]]
     , [Column => fields => [qw(cf_type
 			       cf_hidden
@@ -176,15 +177,17 @@ sub connect_to_dbi {
 #
 sub create {
   (my MY $schema, my @spec) = @_;
+  # $schema->dbh() will call ensure_created_on when auto_create is on.
   my $dbh = $schema->dbh(@spec ? \@spec : ());
-  $schema->ensure_created_on($dbh);
+  #
+  $schema->ensure_created_on($dbh) unless $schema->{cf_auto_create};
   $schema;
 }
 
 sub ensure_created_on {
   (my MY $schema, my $dbh) = @_;
   my (@created);
-  foreach my Table $table (@{$schema->{table_list}}) {
+  foreach my Table $table ($schema->list_tables(raw => 1)) {
     next if $schema->has_table($table->{cf_name}, $dbh);
     push @created, $table;
     foreach my $create ($schema->sql_create_table($table)) {
@@ -196,6 +199,10 @@ sub ensure_created_on {
       }
       $dbh->do($create);
     }
+  }
+  foreach my Table $view ($schema->list_views(raw => 1)) {
+    next if $schema->has_view($view->{cf_name}, $dbh);
+    $dbh->do("CREATE VIEW $view->{cf_name} AS $view->{cf_view}");
   }
   if (@created) {
     foreach my Table $tab (@created) {
@@ -235,23 +242,27 @@ sub expand_codevalue {
   map {ref $_ ? $_->($schema, $tab) : $_} @$record;
 }
 
-sub has_table {
-  (my MY $schema, my ($table, $dbh)) = @_;
+sub has_table { shift->has_type(table => @_); }
+sub has_view  { shift->has_type(view => @_); }
+
+sub has_type {
+  (my MY $schema, my ($type, $table, $dbh)) = @_;
   if ($$schema{dbtype}
-      and my $sub = $schema->can("has_table_$$schema{dbtype}")) {
-    $sub->($schema, $table, $dbh);
+      and my $sub = $schema->can("$$schema{dbtype}_has_type")) {
+    $sub->($schema, $type, $table, $dbh);
   } else {
     $dbh ||= $schema->dbh;
-    $dbh->tables("", "", $table, 'TABLE');
+    $dbh->tables("", "", $table, uc($type));
   }
 }
 
-sub has_table_sqlite {
-  (my MY $schema, my ($table, $dbh)) = @_;
-  my ($name) = $dbh->selectrow_array(<<'END', undef, $table) or return undef;
-select name from sqlite_master where type = 'table' and name = ?
+sub sqlite_has_type {
+  (my MY $schema, my ($type, $name, $dbh)) = @_;
+  my ($found) = $dbh->selectrow_array(<<'END', undef, $type, $name)
+select name from sqlite_master where type = ? and name = ?
 END
-  $name;
+    or return undef;
+  $found;
 }
 
 sub tables {
@@ -283,18 +294,28 @@ sub drop {
 
 #========================================
 
-sub list_items {
-  (my MY $self, my $opts, my $itemlist) = @_;
-  if ($opts->{raw}) {
-    @$itemlist
-  } else {
-    map {(my Item $item = $_)->{cf_name}} @$itemlist
-  }
+sub _list_items {
+  (my MY $self, my $opts) = splice @_, 0, 2;
+  $opts->{raw} ? @_ : map {
+    my Item $item = $_;
+    $item->{cf_name}
+  } @_;
 }
 
 sub list_tables {
   (my MY $self, my %opts) = @_;
-  $self->list_items(\%opts, $self->{table_list});
+  $self->_list_items(\%opts, grep {
+    my Table $tab = $_;
+    not $tab->{cf_view}
+  } @{$self->{table_list}});
+}
+
+sub list_views {
+  (my MY $self, my %opts) = @_;
+  $self->_list_items(\%opts, grep {
+    my Table $tab = $_;
+    $tab->{cf_view}
+  } @{$self->{table_list}});
 }
 
 sub list_relations {
@@ -321,7 +342,7 @@ sub list_table_columns {
   (my MY $self, my ($tabName, %opts)) = @_;
   my Table $tab = $self->{table_dict}{$tabName}
     or return;
-  $self->list_items(\%opts, $tab->{col_list});
+  $self->_list_items(\%opts, @{$tab->{col_list}});
 }
 
 sub info_table {
@@ -340,7 +361,7 @@ sub info_table_pk {
   my $pkinfo = $tab->{pk};
   return unless $pkinfo;
   if (wantarray) {
-    $self->list_items(\%opts, ref $pkinfo eq 'ARRAY' ? $pkinfo : [$pkinfo]);
+    $self->_list_items(\%opts, ref $pkinfo eq 'ARRAY' ? @$pkinfo : $pkinfo);
   } else {
     ref $pkinfo eq 'ARRAY' ? $pkinfo->[0] : $pkinfo
   }

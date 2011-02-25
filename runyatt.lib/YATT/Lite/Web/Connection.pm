@@ -205,7 +205,8 @@ sub param_type {
   } elsif ($diag) {
     croak ref $diag eq 'CODE' ? $diag->($value) : $diag;
   } else {
-    die "Parameter '$name' should be $type!: '$value'\n";
+    # Just for default message. Production code should provide $diag.
+    die "Parameter '$name' must match $type!: '$value'\n";
   }
 }
 

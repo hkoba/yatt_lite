@@ -170,9 +170,14 @@ END
   my $schema = $CLASS->new
     ([Book => undef
       , book_id => [int => -primary_key, -autoincrement]
-      , author_id => [[Author => undef
-		       , author_id => [int => -primary_key, -autoincrement]
-		       , name => 'text']]
+      , author_id => [int => -indexed
+		      # XXX: [-encoded_by] == [-belongs_to <=> -has_many]
+		      , [-belongs_to
+			 , [Author => undef
+			    , author_id => [int => -primary_key, -autoincrement]
+			    , name => 'text'
+			    , [-has_many => 'Book', 'author_id']
+			   ]]]
       , name => 'text']
      );
 
@@ -246,14 +251,67 @@ END
      , [Transaction => undef
 	, tid => [int => -primary_key, -autoincrement]
 	, at =>  [date => -indexed]
-	, debit_id => [['Account']]
+	, debit_id => [int => -indexed, [-belongs_to, 'Account']]
 	, amt => 'int'
-	, credit_id => [['Account']]
-	, desc => [['Description'], -indexed]
+	, credit_id => [int => -indexed, [-belongs_to, 'Account']]
+	, desc => [int => -indexed, [-belongs_to, 'Description']]
 	, note => 'text'
        ]);
 
   # print join("", map {chomp;"$_;\n"} $schema->sql_create), "\n";
   # print terse_dump($schema->list_relations('Transaction')), "\n";
   # print terse_dump($schema->list_relations('Account')), "\n";
+}
+
+{
+  my $THEME = "[View (real)]";
+  my $schema = $CLASS->new
+    ([ticket => undef
+      , tn => [int => -primary_key, -autoincrement]
+      , at => 'datetime'
+      , title => 'text'
+      , description => 'text'
+      , [values => [qw(at title)]
+	 , ['2010-01-01T09:00', '1st ticket']
+	 , ['2010-01-02T15:00', '2nd ticket']
+	 ]
+     ]
+
+     , [chng => undef
+	, cn => [int => -primary_key, -autoincrement]
+	, at => 'datetime'
+	, comment => 'text'
+	, [values => [qw(at comment)]
+	   , ['2010-01-01T12:00', '1st chng']
+	   , ['2010-01-02T18:00', '2nd chng']
+	  ]
+       ]
+
+     , [timeline => {view => <<SQL}
+select tn as num, 'ticket' as type, at, title from ticket
+union all
+select cn as num, 'chng' as type, at, comment as title from chng
+SQL
+	, num => 'int'
+	, type => 'text'
+	, at => 'datetime'
+	, title => 'text'
+       ]
+    );
+
+  is_deeply [$schema->list_tables], [qw(ticket chng)]
+    , "$THEME list_tables";
+
+  is_deeply [$schema->list_views], [qw(timeline)]
+    , "$THEME list_views";
+
+  $schema->create(sqlite => $DBNAME);
+
+  is_deeply $schema->dbh->selectall_arrayref
+    ('select * from timeline order by at')
+      , [[1, ticket => '2010-01-01T09:00', '1st ticket']
+	 , [1, chng => '2010-01-01T12:00', '1st chng']
+	 , [2, ticket => '2010-01-02T15:00', '2nd ticket']
+	 , [2, chng => '2010-01-02T18:00', '2nd chng']
+	], "$THEME timeline";
 }
