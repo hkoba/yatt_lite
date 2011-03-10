@@ -104,13 +104,20 @@ sub is_done {
 sub runas_fcgi {
   (my MY $self, my $fh) = splice @_, 0, 2;
   require CGI::Fast;
-  # init...
-  my $progname = $0;
-  my $dir = dirname($progname);
-  my $age = -M $progname;
+  # In suexec fcgi, $0 will not be absolute path.
+  my $progname = $0 if $0 =~ m{^/};
+  my ($dir, $age);
   $self->{cf_at_done} = sub {die \"DONE"};
   while (defined (my $cgi = new CGI::Fast)) {
     $self->init_by_env;
+    unless (defined $progname) {
+      $progname = $ENV{SCRIPT_FILENAME}
+	or die "\n\nSCRIPT_FILENAME is empty!\n";
+    }
+    unless (defined $dir) {
+      $dir = dirname($progname);
+      $age = -M $progname;
+    }
 
     if (-e "$dir/.htdebug_env") {
       $self->printenv($fh, $cgi);

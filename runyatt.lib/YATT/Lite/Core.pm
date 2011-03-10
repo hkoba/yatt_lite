@@ -284,11 +284,9 @@ sub create_file {
   }
   sub YATT::Lite::Core::Template::reset {
     (my Template $tmpl) = @_;
+    $tmpl->YATT::Lite::VFS::File::reset;
     undef $tmpl->{product};
     undef $tmpl->{parse_ok};
-    undef $tmpl->{Item};
-    undef $tmpl->{cf_string};
-    undef $tmpl->{cf_base};
     # delpkg($tmpl->{cf_package}); # No way to avoid redef error.
   }
   sub YATT::Lite::Core::Template::refresh {

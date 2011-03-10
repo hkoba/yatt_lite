@@ -54,7 +54,6 @@ MyTest_cgi_1::INST1::ROOT::foo
 BBB
 END
 
-	      , 'BREAK'
 	      , ['foo.ydo', '1st', <<'END', <<'END', $text_html_sjis]
 sub {
   my ($sys, $fh) = @_;
@@ -80,6 +79,16 @@ sub {
 }
 END
 okok
+END
+
+	      , 'BREAK'
+	      , ['foo.yatt', '3rd', <<END, <<END, $text_html_sjis]
+XXX<yatt:foobar/>ZZZ
+<!yatt:widget foobar>
+yyy
+END
+XXXyyy
+ZZZ
 END
 
 	      # XXX: session cookie 周りは?

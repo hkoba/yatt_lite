@@ -167,6 +167,13 @@ use Carp;
   }
   #========================================
   # 実験用、ダミーのパーサー
+  sub YATT::Lite::VFS::File::reset {
+    (my File $file) = @_;
+    undef $file->{partlist};
+    undef $file->{Item};
+    undef $file->{cf_string};
+    undef $file->{cf_base};
+  }
   sub YATT::Lite::VFS::Dir::refresh {}
   sub YATT::Lite::VFS::File::refresh {
     (my vfs_file $file, my VFS $vfs) = @_;
