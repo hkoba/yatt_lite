@@ -134,20 +134,22 @@ require Scalar::Util;
     unless ($path =~ m{^\Q$startDir\E}gxs) {
       die "Can't split_path: prefix mismatch: $startDir vs $path";
     }
+
     my ($dir, $pos, $file) = ($startDir, pos($path));
+    # *DO NOT* initialize $file. This loop relies on undefined-ness of $file.
     while ($path =~ m{\G/+([^/]*)}gcxs and -e "$dir/$1" and not defined $file) {
       if (-d _) {
 	$dir .= "/$1";
       } else {
 	$file = $1;
+	# *DO NOT* last. To match one more time.
       }
     } continue {
       $pos = pos($path);
     }
-    unless (defined $file) {
-      croak "Can't recognize target file for $path, startDir=$startDir";
-    }
-    $dir .= "/" if $dir ne '/';
+
+    $file //= '';
+    $dir .= "/" if $dir !~ m{/$};
     ($startDir, substr($dir, length($startDir)), $file, substr($path, $pos));
   }
 

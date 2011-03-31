@@ -198,6 +198,13 @@ sub entity_ucfirst { shift; ucfirst($_[0]) }
 sub entity_lc { shift; lc($_[0]) }
 sub entity_lcfirst { shift; lcfirst($_[0]) }
 
+sub entity_strftime {
+  my ($this, $fmt, $sec, $is_uts) = @_;
+  $sec //= time;
+  require POSIX;
+  POSIX::strftime($fmt, $is_uts ? gmtime($sec) : localtime($sec));
+}
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 

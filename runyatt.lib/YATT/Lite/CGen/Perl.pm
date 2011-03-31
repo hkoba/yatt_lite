@@ -733,7 +733,7 @@ sub feed_arg_spec {
   sub _macro_my_code {
     (my MY $self, my ($node, $name, $valNode)) = @_;
     my $var = $self->{scope}[0]{$name} = $self->mkvar_at(undef, code => $name);
-    local $self->{curtoks} = [@{argValue($valNode)}];
+    local $self->{curtoks} = [lexpand(argValue($valNode))];
     'my '.$self->as_lvalue($var).' = '.q|sub {| . $self->as_print('}');
   }
   sub _macro_my_source {

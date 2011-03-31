@@ -69,7 +69,8 @@ sub configure {
   my $self = shift;
   my (@task);
   my $fields = YATT::Lite::Util::fields_hash($self);
-  while (my ($name, $value) = splice @_, 0, 2) {
+  my @params = @_ == 1 && ref $_[0] eq 'HASH' ? %{$_[0]} : @_;
+  while (my ($name, $value) = splice @params, 0, 2) {
     unless (defined $name) {
       croak "Undefined name given for @{[ref($self)]}->configure(name=>value)!";
     }

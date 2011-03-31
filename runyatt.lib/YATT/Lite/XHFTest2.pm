@@ -63,7 +63,7 @@ sub test_plan {
       }
     }
   }
-  (tests => $self->ntests);
+  (tests => $self->ntests(@_));
 }
 
 use YATT::Lite::Util qw(ckdo);
@@ -75,7 +75,7 @@ sub load_dispatcher {
 
 sub ntests {
   my Tests $tests = shift;
-  sum(map {$tests->ntests_per_file($_)} @{$tests->{files}});
+  sum(@_, map {$tests->ntests_per_file($_)} @{$tests->{files}});
 }
 
 sub ntests_per_file {
@@ -198,6 +198,14 @@ sub mechanized {
 sub item_method {
   (my Tests $tests, my ($item)) = @_;
   $item->{cf_METHOD} // 'GET';
+}
+
+sub http_request {
+  (my Tests $tests, my Item $item) = @_;
+  require HTTP::Request::Common;
+  my $builder = HTTP::Request::Common->can($item->{cf_METHOD});
+  $builder->($tests->item_url($item)
+	     , defined $item->{cf_PARAM} ? $item->{cf_PARAM} : ());
 }
 
 sub mech_request {

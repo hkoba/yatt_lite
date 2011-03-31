@@ -17,7 +17,7 @@ use fields qw(DirHandler Action
 	      cf_is_gateway cf_document_root
 	      cf_debug_cgi
 	    );
-use YATT::Lite::Util qw(cached_in split_path
+use YATT::Lite::Util qw(cached_in split_path catch
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
@@ -33,6 +33,91 @@ sub configparams {
   ($self->SUPER::configparams
    , is_gateway => $self->is_gateway)
 }
+
+#========================================
+# PSGI Adaptor
+#========================================
+{
+  sub Env () {"YATT::Lite::Web::Dispatcher::PSGI_ENV"}
+  package YATT::Lite::Web::Dispatcher::PSGI_ENV;
+  use fields qw(
+REQUEST_METHOD
+SCRIPT_NAME
+PATH_INFO
+REQUEST_URI
+QUERY_STRING
+SERVER_NAME
+SERVER_PORT
+SERVER_PROTOCOL
+HTTP_USER_AGENT
+HTTP_REFERER
+HTTP_COOKIE
+HTTP_FORWARDED
+HTTP_HOST
+HTTP_PROXY_CONNECTION
+HTTP_ACCEPT
+psgi.version
+psgi.url_scheme
+psgi.input
+psgi.errors
+psgi.multithread
+psgi.multiprocess
+psgi.run_once
+psgi.nonblocking
+psgi.streaming
+psgix.session
+psgix.session.options
+psgix.logger
+);
+}
+
+sub call {
+  (my MY $self, my Env $env) = @_;
+  my $path_translated = $self->{cf_document_root} . $env->{PATH_INFO};
+
+  # To support $con->param and other cgi compat methods.
+  my $req = Plack::Request->new($env);
+
+  my ($root, $loc, $file, $trailer)
+    = split_path($path_translated, $self->{cf_document_root});
+
+  # Default index file.
+  $file = 'index.yatt' if $file eq '';
+
+  my @params = (cgi => $req, psgi => $env
+		, dir => my $dir = "$root$loc"
+		, file => $file
+		, subpath => $trailer
+		, root => $root, location => $loc);
+
+  my ($dh, $con, $err);
+  if ($err = catch {$dh = $self->get_dirhandler(untaint_any($dir))}) {
+    return [404, [], ["Not found", $err]];
+  } elsif ($err = catch {$con = $dh->make_connection(undef, @params)}) {
+    # XXX: どんな時に？
+    return [400, [], ["Bad request", $err]];
+  } elsif ($err = catch {$dh->handle($dh->trim_ext($file), $con, $file)}) {
+    # XXX: $con から status を取り出せないか?
+    [500, [], ["Internal Server error\n", $err]];
+  } else {
+    # XXX: headers.
+    $con->flush;
+    [200, ['Content-Type', 'text/html'], [$con->buffer]];
+  }
+}
+
+sub to_app {
+  (my MY $self) = @_;
+  require Plack::Request;
+  $self->init_by_env;
+  unless (defined $self->{cf_document_root}) {
+    croak "document_root is empty!";
+  }
+  $self->prepare_app;
+  return sub { $self->call(@_) }
+}
+
+sub prepare_app { return }
 
 #========================================
 

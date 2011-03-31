@@ -3,6 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
 use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
+	      cf_psgi
 	      cf_root cf_location
 	      cf_use_array_param
 	    );
