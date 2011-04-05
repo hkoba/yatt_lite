@@ -53,6 +53,22 @@ foo: bar
 baz: qux
 END
 
+     , [<<END, foo => "bar\nbaz\n"]
+foo:
+ bar
+ baz
+END
+
+     , [<<END, foo => "bar\n\n", baz => "qux\n\n\n"]
+foo:
+ bar
+ 
+baz:
+ qux
+ 
+ 
+END
+
      , undef
      , [<<END, "foo bar" => 'baz']
 - foo bar

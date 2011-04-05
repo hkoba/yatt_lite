@@ -50,7 +50,13 @@ sub _dump_value {
 
 sub escape {
   my ($str) = @_;
-  my $sep = $str =~ /^\s+|\s+$/s ? "\n" : " ";
+  my $sep = do {
+    if ($str =~ s/\n$// or $str =~ /^\s+|\s+$/s) {
+      "\n "
+    } else {
+      " "
+    }
+  };
   $str =~ s/\n/\n /g;
   $sep . $str;
 }
