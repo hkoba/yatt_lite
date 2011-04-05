@@ -217,8 +217,8 @@ sub re_integer { qr{^[1-9]\d*$}; }
 
 sub re_word { qr{^\w+$}; }
 
-sub re_nonempty { qr{\S.*} }
+sub re_nonempty { qr{\S.*}s }
 
-sub re_any { qr{^.*$} }
+sub re_any { qr{^.*$}s }
 
 1;
