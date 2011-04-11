@@ -15,7 +15,7 @@ use YATT::Lite::Types
    , [Column => -fields => [qw(cf_dbic_opts)]]
   );
 
-use YATT::Lite::Util qw(globref lexpand);
+use YATT::Lite::Util qw(globref lexpand terse_dump);
 
 sub import {
   my ($pack) = shift;
@@ -106,8 +106,7 @@ END
       my $fTab = $schema->{table_dict}{$fTabName};
       # table の package 名が確定するまで、relation の設定を遅延させたいから。
       print STDERR <<END if $schema->{cf_verbose};
--- $tabClass->$relType($relName, $fTab->{cf_package}, @{[
-defined $fkName ? $fkName : 'undef']})
+-- $tabClass->$relType($relName, $fTab->{cf_package}, @{[terse_dump($fkName)]})
 END
       eval {
 	$tabClass->$relType($relName, $fTab->{cf_package}, $fkName);
@@ -131,7 +130,7 @@ sub add_relation_many_to_many {
   my $relType = 'many_to_many';
   my $tabClass = $tab->{cf_package};
   print STDERR <<END if $schema->{cf_verbose};
--- $tabClass->$relType($relName, $tabName, $fkName)
+-- $tabClass->$relType($relName, $tabName, @{[terse_dump($fkName)]})
 END
   eval {
     $tabClass->$relType($relName, $tabName, $fkName)

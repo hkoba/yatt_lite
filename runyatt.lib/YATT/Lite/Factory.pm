@@ -10,6 +10,8 @@ use fields qw(
 	      cf_tmpl_cache
 	      cf_tmpldirs
 
+	      cf_binary_config
+
 	      cf_tmpl_encoding cf_output_encoding
 	      cf_header_charset
 	      cf_debug_cgen
@@ -61,7 +63,7 @@ sub load {
   (my MY $self, my MY $sys, my $name) = @_;
   if (-e (my $cf = "$name/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
-      my @spec = $self->read_file_xhf($cf);
+      my @spec = $self->read_file_xhf($cf, binary => $self->{cf_binary_config});
       my ($appns, @args) = $self->buildspec($name, \@spec);
       $appns->new($name, @args, @spec);
     };

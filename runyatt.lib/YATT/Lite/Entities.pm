@@ -158,6 +158,15 @@ sub entity_concat {
   join '', @_;
 }
 
+# coalesce
+sub entity_default {
+  my $this = shift;
+  foreach my $str (@_) {
+    return $str if defined $str and $str ne '';
+  }
+  '';
+}
+
 sub entity_join {
   my ($this, $sep) = splice @_, 0, 2;
   join $sep, grep {defined $_ && $_ ne ''} @_;
