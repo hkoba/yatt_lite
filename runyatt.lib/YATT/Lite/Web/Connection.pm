@@ -198,13 +198,14 @@ sub param_type {
     $pat_sub->();
   };
 
-  my $value = $prop->{cf_cgi}->param($name)
-    // die "Parameter '$name' is missing!\n";
+  my $value = $prop->{cf_cgi}->param($name);
 
-  if ($value =~ $pat) {
+  if (defined $value && $value =~ $pat) {
     return $&; # Also for taint check.
   } elsif ($diag) {
     croak ref $diag eq 'CODE' ? $diag->($value) : $diag;
+  } elsif (not defined $value) {
+    die "Parameter '$name' is missing!\n";
   } else {
     # Just for default message. Production code should provide $diag.
     die "Parameter '$name' must match $type!: '$value'\n";

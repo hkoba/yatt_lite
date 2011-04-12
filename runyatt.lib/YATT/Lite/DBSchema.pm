@@ -202,6 +202,7 @@ sub ensure_created_on {
   }
   foreach my Table $view ($schema->list_views(raw => 1)) {
     next if $schema->has_view($view->{cf_name}, $dbh);
+    next if $view->{cf_virtual};
     if ($schema->{cf_verbose}) {
       print STDERR "CREATE VIEW $view->{cf_name}\n";
     }
