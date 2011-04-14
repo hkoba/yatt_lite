@@ -71,7 +71,7 @@ sub location {
 sub mkurl {
   my PROP $prop = (my $glob = shift)->prop;
   my $opts = shift if @_ && ref $_[0] eq 'HASH';
-  my ($file, $param) = @_;
+  my ($file, $param, %opts) = @_;
 
   my $scheme = $prop->{cf_cgi}->protocol;
   my $base = $prop->{cf_cgi}->server_name;
@@ -95,12 +95,12 @@ sub mkurl {
 
   # XXX: /../ truncation
   # XXX: If sep is '&', scalar ref quoting is required.
-  ($scheme . '://' . $base . $path . $glob->mkquery($param))
+  ($scheme . '://' . $base . $path . $glob->mkquery($param, $opts{separator}))
 }
 
 sub mkquery {
   my ($self, $param, $sep) = @_;
-  $sep //= ';';
+  $sep //= '&';
 
   my @enc_param;
   if (ref $param eq 'HASH') {
