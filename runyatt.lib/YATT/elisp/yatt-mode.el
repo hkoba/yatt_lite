@@ -31,6 +31,10 @@
 	 (file-truename load-file-name)))))
   "Where YATT is installed. This is used to locate ``yatt.lint''.")
 
+(defvar yatt-mode-default-mmm-classes
+  '(yatt-declaration html-js embedded-css)
+  "Default mmm-classes for *.yatt files.")
+
 ;;========================================
 ;; 通常の html 部分
 (define-derived-mode yatt-mode html-mode "YATT"
@@ -38,7 +42,7 @@
   ;; To avoid duplicate call from mmm-mode-on (mmm-update-mode-info)
   (unless (yatt-mode-called-from-p 'mmm-mode-on)
     ;;
-    (setq mmm-classes '(yatt-declaration html-js embedded-css))
+    (setq mmm-classes yatt-mode-default-mmm-classes)
     (setq mmm-submode-decoration-level 2)
     (make-variable-buffer-local 'process-environment)
     (yatt-lint-any-mode 1)
