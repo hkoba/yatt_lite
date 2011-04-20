@@ -66,7 +66,7 @@ if ($this->YATT->sendmail($con, $this, email => $email, $url)) {
   die "Can't send email!";
 }
 
-<!yatt:widget email to url>
+<!yatt:widget email to url=html>
 From: webmaster@localhost.localdomain
 To: &yatt:to;
 Subject: Confirm

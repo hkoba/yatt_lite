@@ -199,6 +199,10 @@ use YATT::Lite::Constants;
     (my MY $self, my ($dispatch, $escape, $text_quote)) = splice @_, 0, 4;
     local $self->{needs_escaping} = $escape;
     my (@result);
+    # Empty expr (ie <:yatt:arg></:yatt:arg>) should generate q|| as code.
+    if (not @_ and $text_quote) {
+      push @result, qtext('');
+    }
     while (@_) {
       my $node = shift;
       unless (ref $node) {

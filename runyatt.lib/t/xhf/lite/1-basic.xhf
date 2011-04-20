@@ -515,6 +515,22 @@ OUT:
  </b>
  
 
+TITLE: empty :att arg
+BREAK: 1
+IN:
+ <yatt:foo x="X" y="Y">
+   <:yatt:arg></:yatt:arg>
+ BODY
+ </yatt:foo>
+ 
+ <!yatt:widget foo x arg=html? y body=html?>
+ foo|(&yatt:x;)|&yatt:arg;|(&yatt:y;)|&yatt:body;|bar
+OUT:
+ foo|(X)||(Y)|
+ BODY
+ |bar
+ 
+
 TITLE: attr (simple case: attName == varName)
 IN:
  <!yatt:args class=attr>

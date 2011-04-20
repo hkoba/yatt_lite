@@ -155,7 +155,7 @@ END
 Thank you for registration. To confirm your registration,
 please click following link:
 
-\Ehttp://localhost/(?:[^/]+/)*regist\.yatt\?!confirm=1;token=(?<token>[0-9a-f]+)\Q
+\Ehttp://localhost/(?:[^/]+/)*regist\.yatt\?!confirm=1[;&]token=(?<token>[0-9a-f]+)\Q
 
 心当たりの無い方は、このメールは破棄してください。
 
