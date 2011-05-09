@@ -449,7 +449,7 @@ runyatt.lib first.
 
 =head1 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007..2010 "KOBAYASI, Hiroaki"
+Copyright (C) 2007..2011 "KOBAYASI, Hiroaki"
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

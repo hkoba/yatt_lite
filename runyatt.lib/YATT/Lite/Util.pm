@@ -351,8 +351,8 @@ sub callerinfo {
 
 sub ostream {
   my $fn = ref $_[0] ? $_[0] : \ ($_[0] //= "");
-  open my $fh, '>', $fn or die "Can't create output memory stream: $!";
-  # XXX: IOLayer, encoding...
+  open my $fh, '>' . ($_[1] // ''), $fn
+    or die "Can't create output memory stream: $!";
   $fh;
 }
 

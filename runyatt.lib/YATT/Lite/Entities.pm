@@ -193,8 +193,14 @@ sub entity_render {
   my $sub = $this->can("render_$method")
     or die "No such method: $method";
   require YATT::Lite::Util;
-  $sub->($this, YATT::Lite::Util::ostream(my $buffer), @_);
-  \ $buffer;
+  my $enc = $this->YATT->CON->cget('encoding');
+  my $layer = ":encoding($enc)" if $enc;
+  $sub->($this, YATT::Lite::Util::ostream(my $buffer, $layer), @_);
+  if ($enc) {
+    \ Encode::decode($enc, $buffer);
+  } else {
+    \ $buffer;
+  }
 }
 
 sub entity_can_render {
