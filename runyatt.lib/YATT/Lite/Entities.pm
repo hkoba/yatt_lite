@@ -188,22 +188,6 @@ sub entity_dump {
   YATT::Lite::Util::terse_dump(@_);
 }
 
-sub entity_render {
-  my ($this, $method) = splice @_, 0, 2;
-  my $sub = $this->can("render_$method")
-    or die "No such method: $method";
-  require YATT::Lite::Util;
-  my $con = $this->YATT->CON;
-  my $enc = $con->cget('encoding') if UNIVERSAL::can($con, 'cget');
-  my $layer = ":encoding($enc)" if $enc;
-  $sub->($this, YATT::Lite::Util::ostream(my $buffer, $layer), @_);
-  if ($enc) {
-    \ Encode::decode($enc, $buffer);
-  } else {
-    \ $buffer;
-  }
-}
-
 sub entity_can_render {
   my ($this, $widget) = @_;
   $this->can("render_$widget");

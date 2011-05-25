@@ -848,6 +848,13 @@ sub entmacro_lexpand {
   q|@{|.$self->gen_entpath(undef, entx($node)).q|}|;
 }
 
+sub entmacro_render {
+  (my MY $self, my $node) = @_;
+  my ($wname, @expr) = $self->gen_entlist(undef, entx($node));
+  \ sprintf q{$this->can('render_'.%s)->($this, $CON, %s)}
+    , $wname, join(", ", @expr);
+}
+
 use YATT::Lite::Breakpoint qw(break_load_cgen break_cgen);
 break_load_cgen();
 
