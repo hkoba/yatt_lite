@@ -117,3 +117,58 @@ baz: hoehoe
 ]
 OUT:
  hoehoe
+
+
+TITLE: render(name,arg...) h2
+IN:
+ <!yatt:args wname x y>
+ header
+ &yatt:render(t_$wname,:x,:y);
+ footer
+ 
+ <!yatt:widget t_h2 a b>
+ <h2>&yatt:a;</h2>
+ &yatt:b;
+ 
+ <!yatt:widget t_ol a list=list>
+ <ol class="&yatt:a;">
+  <yatt:foreach my=row list>
+  <li>&yatt:row;</li>
+  </yatt:foreach>
+ </ol>
+PARAM[
+- h2
+- title
+- body
+]
+OUT:
+ header
+ <h2>title</h2>
+ body
+ 
+ footer
+
+TITLE: render(name,arg...) ol
+PARAM[
+- ol
+- ordered
+[
+- apple
+- lemon
+- orange
+]
+]
+OUT:
+ header
+ <ol class="ordered">
+  
+  <li>apple</li>
+  
+  <li>lemon</li>
+  
+  <li>orange</li>
+  
+ </ol>
+ 
+ footer
+
