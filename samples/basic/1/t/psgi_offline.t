@@ -2,6 +2,15 @@
 use strict;
 use warnings FATAL => qw(all);
 use Test::More;
+
+BEGIN {
+  foreach my $req (qw(Plack::Test)) {
+    unless (eval qq{require $req}) {
+      plan(skip_all => "$req is not installed."); exit;
+    }
+  }
+}
+
 use Plack::Test;
 use Plack::Util;
 

@@ -19,7 +19,13 @@ unless (-d "$bindir/../cgi-bin"
   plan skip_all => "Can't find cgi-bin/runyatt.cgi";
 }
 
-do_sqlite("$bindir/../data/.htdata.db", <<END);
+my $dbfn = "$bindir/../data/.htdata.db";
+
+unless (-r $dbfn and -s $dbfn) {
+  plan skip_all => "There is no test database to cleanup.";
+}
+
+do_sqlite($dbfn, <<END);
 delete from user where login = 'hkoba'
 END
 
