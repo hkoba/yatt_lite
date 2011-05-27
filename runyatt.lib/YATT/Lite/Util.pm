@@ -356,4 +356,33 @@ sub ostream {
   $fh;
 }
 
+sub dispatch_all {
+  my ($this, $con, $prefix, $nargs) = splice @_, 0, 4;
+  my @queue;
+  foreach my $item (@_) {
+    if (ref $item) {
+      print {$con} escape(splice @queue) if @queue;
+      my ($wname, @args) = @$item;
+      my $sub = $this->can('render_' . $prefix . $wname)
+	or croak "Can't find widget '$wname' in dispatch";
+      $sub->($this, $con, splice(@args, 0, $nargs // 0), \@args);
+    } else {
+      push @queue, $item;
+    }
+  }
+  print {$con} escape(@queue) if @queue;
+}
+
+sub dispatch_one {
+  my ($this, $con, $prefix, $nargs, $item) = @_;
+  if (ref $item) {
+    my ($wname, @args) = @$item;
+    my $sub = $this->can('render_' . $prefix . $wname)
+      or croak "Can't find widget '$wname' in dispatch";
+    $sub->($this, $con, splice(@args, 0, $nargs // 0), \@args);
+  } else {
+    print {$con} escape($item);
+  }
+}
+
 1;

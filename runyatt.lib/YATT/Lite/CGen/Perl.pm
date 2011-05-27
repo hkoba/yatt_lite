@@ -855,6 +855,20 @@ sub entmacro_render {
     , $wname, join(", ", @expr);
 }
 
+sub entmacro_dispatch_all {
+  (my MY $self, my $node) = @_;
+  my ($prefix, $nargs, $list) = $self->gen_entlist(undef, entx($node));
+  \ sprintf q{YATT::Lite::Util::dispatch_all($this, $CON, %s, %s, %s)}
+    , $prefix, $nargs, $list;
+}
+
+sub entmacro_dispatch_one {
+  (my MY $self, my $node) = @_;
+  my ($prefix, $nargs, $list) = $self->gen_entlist(undef, entx($node));
+  \ sprintf q{YATT::Lite::Util::dispatch_one($this, $CON, %s, %s, %s)}
+    , $prefix, $nargs, $list;
+}
+
 use YATT::Lite::Breakpoint qw(break_load_cgen break_cgen);
 break_load_cgen();
 
