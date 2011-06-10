@@ -2,9 +2,28 @@
 
 set -e
 setopt err_return
-function die { echo 1>&2 $*; return 1 }
 autoload colors;
 [[ -t 1 ]] && colors
+
+function warn { print 1>&2 -- $bg[red]$*$bg[default] }
+function die { warn $@; return 1 }
+
+progname=$0
+function usage {
+    cat <<EOF 1>&2
+Usage: \$yl_scripts/${progname:t} [-n | -q] [--datadir=DIR] [--myapp=MyApp] DESTDIR
+
+This script will setup cgi-bin/runyatt.cgi and .htaccess in DESTDIR.
+Short options:
+  -n   dry run. Do not actually change any files; just print what would happen.
+  -q   quiet.
+Long options:
+  --datadir[=DIR]   prepare secure data saving directory.
+  --myapp[=MyApp]   create mock MyApp.pm in cgi-bin/runyatt.lib/MyApp.pm.
+EOF
+    exit ${1:-0}
+}
+
 
 #========================================
 # FindBin equivalent. (Depends on GNU readlink)
@@ -27,6 +46,7 @@ driver_name=$driver_path:t
 #========================================
 
 opt_spec=(
+    h=o_help
     x=o_xtrace
     n=o_dryrun
     y=o_yn
@@ -43,12 +63,17 @@ opt_spec=(
 
 zparseopts -D -A opts $opt_spec
 
+if ((ARGC)) && [[ $1 == -* ]]; then
+    warn "Unknown option '$1'"
+    usage
+fi
+
+(($#o_help)) && usage
+
 [[ -n $o_xtrace ]] && set -x
 if [[ -z $o_quiet ]]; then o_verbose=(-v); else o_verbose=(); fi
 
-if ! ((ARGC)); then
-    die Usage: $0:t '[-n | -x]' DESTDIR
-fi
+((ARGC)) || usage
 
 destdir=$1; shift
 
@@ -82,7 +107,7 @@ function mkfile {
     zparseopts -D m:=mode
     if [[ -z $o_quiet ]]; then
 	echo $bg[cyan]mkfile $1 "$bg[default] as:"
-	echo "$bg[blue]=============$bg[default]"
+	echo "$bg[blue]#{{{{{{{{{{{{$bg[default]"
     fi
     if [[ -n $o_dryrun ]]; then
 	cat
@@ -92,7 +117,7 @@ function mkfile {
 	tee $1
     fi
     if [[ -z $o_quiet ]]; then
-	echo "$bg[blue]=============$bg[default]"
+	echo "$bg[blue]#}}}}}}}}}}}}$bg[default]"
     fi
     if [[ -n $mode ]]; then
 	x chmod $o_verbose $mode[-1] $1
