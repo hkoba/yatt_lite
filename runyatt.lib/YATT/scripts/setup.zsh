@@ -193,9 +193,14 @@ fi
 cgi_bin=$destdir/cgi-bin
 cgi_loc=$location/cgi-bin
 
+if ! [[ -d $cgi_bin ]]; then
+    x install -d $o_verbose -m 2$cgi_bin_perm $cgi_bin
+else
+    x chmod -c 2$cgi_bin_perm $cgi_bin
+fi
+
 # Create library directory and link yatt in it.
 x mkdir -p $cgi_bin/$driver_name.lib
-x chmod -c 2$cgi_bin_perm $cgi_bin
 # XXX: httpd_${install_type}_htaccess_t
 mkfile $cgi_bin/$driver_name.lib/.htaccess <<EOF
 deny from all
