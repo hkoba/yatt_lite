@@ -36,6 +36,18 @@
     )
   "Auto lint filename mapping for yatt and related files.")
 
+(defvar yatt-lint-any-mode-check-blacklist-hook nil
+  "hook style checklist of yatt-lint blacklist")
+
+(defun yatt-lint-any-mode-check-blacklist ()
+  (let ((ok t)
+	(lst yatt-lint-any-mode-check-blacklist-hook) hook)
+    (while (and ok lst)
+      (setq hook (car lst))
+      (setq lst (cdr lst))
+      (setq ok (funcall hook)))
+    ok))
+
 (defvar yatt-lint-any-mode-map (make-sparse-keymap))
 (define-key yatt-lint-any-mode-map [f5] 'yatt-lint-any-after)
 
