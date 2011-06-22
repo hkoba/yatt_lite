@@ -11,7 +11,7 @@ use encoding qw(:_get_locale_encoding);
 #use encoding qw(:locale), map {$_ => _get_locale_encoding()} qw(STDOUT STDERR);
 # binmode STDERR, sprintf ":encoding(%s)", _get_locale_encoding();
 
-use Test::Differences;
+use YATT::Lite::TestUtil;
 use Test::More;
 use YATT::Lite::Util qw(lexpand);
 
@@ -25,8 +25,7 @@ sub do_test {
       ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
 
   # XXX: Should directly read 1-basic.xhf first paragraph.
-  foreach my $mod (qw(Test::Differences
-		      DBIx::Class::Schema
+  foreach my $mod (qw(DBIx::Class::Schema
 		      DBD::mysql
 		      CGI::Session
 		      Email::Simple

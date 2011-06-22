@@ -5,7 +5,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/..");
 use Test::More qw(no_plan);
-use Test::Differences;
+use YATT::Lite::TestUtil;
 
 use YATT::Lite::Util qw(catch);
 use YATT::Lite::Constants;

@@ -6,7 +6,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/..");
 use Test::More;
-use Test::Differences;
+use YATT::Lite::TestUtil;
 use File::Basename;
 use List::Util qw(sum);
 use encoding qw(:locale);

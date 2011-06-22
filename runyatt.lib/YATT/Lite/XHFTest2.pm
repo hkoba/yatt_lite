@@ -20,7 +20,7 @@ push @EXPORT, qw(trimlast nocr);
 
 use Carp;
 use Test::More;
-use Test::Differences;
+use YATT::Lite::TestUtil;
 use File::Basename;
 use List::Util qw(sum);
 

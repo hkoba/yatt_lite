@@ -2,7 +2,6 @@
 use strict;
 use warnings FATAL => qw(all);
 use Test::More;
-use Test::Differences;
 
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
@@ -21,6 +20,7 @@ use lib $libdir = do {
 };
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
+use YATT::Lite::TestUtil;
 use YATT::Lite::Util qw(dict_sort rootname);
 my $func = rootname(basename($0));
 my $script = "$libdir/YATT/scripts/yatt.$func";

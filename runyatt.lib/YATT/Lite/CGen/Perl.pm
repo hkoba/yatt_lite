@@ -593,17 +593,17 @@ use YATT::Lite::Constants;
     (my MY $self, my ($esc_later)) = splice @_, 0, 2;
     '['.$self->gen_entlist(undef, @_).']';
   }
-  sub as_expr_aref {
-    (my MY $self, my ($esc_later, $node)) = @_;
-    '['.$self->gen_entpath(undef, lxnest($node)).']';
-  }
   sub as_expr_hash {
     (my MY $self, my ($esc_later)) = splice @_, 0, 2;
     '{'.$self->gen_entlist(undef, @_).'}';
   }
+  sub as_expr_aref {
+    (my MY $self, my ($esc_later, $node)) = @_;
+    '['.$self->gen_entpath(undef, lxnest($node)).']';
+  }
   sub as_expr_href {
-    (my MY $self, my ($esc_later)) = splice @_, 0, 2;
-    '{'.$self->gen_entlist(undef, @_).'}';
+    (my MY $self, my ($esc_later, $node)) = @_;
+    '{'.$self->gen_entpath(undef, lxnest($node)).'}';
   }
   sub as_expr_prop {
     (my MY $self, my ($esc_later, $name)) = @_;
@@ -857,16 +857,16 @@ sub entmacro_render {
 
 sub entmacro_dispatch_all {
   (my MY $self, my $node) = @_;
-  my ($prefix, $nargs, $list) = $self->gen_entlist(undef, entx($node));
+  my ($prefix, $nargs, @list) = $self->gen_entlist(undef, entx($node));
   \ sprintf q{YATT::Lite::Util::dispatch_all($this, $CON, %s, %s, %s)}
-    , $prefix, $nargs, $list;
+    , $prefix, $nargs, join(", ", @list);
 }
 
 sub entmacro_dispatch_one {
   (my MY $self, my $node) = @_;
-  my ($prefix, $nargs, $list) = $self->gen_entlist(undef, entx($node));
+  my ($prefix, $nargs, @list) = $self->gen_entlist(undef, entx($node));
   \ sprintf q{YATT::Lite::Util::dispatch_one($this, $CON, %s, %s, %s)}
-    , $prefix, $nargs, $list;
+    , $prefix, $nargs, join(", ", @list);
 }
 
 use YATT::Lite::Breakpoint qw(break_load_cgen break_cgen);

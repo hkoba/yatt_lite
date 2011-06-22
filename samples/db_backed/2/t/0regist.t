@@ -3,7 +3,6 @@ use strict;
 use warnings FATAL => qw(all);
 use utf8;
 
-use Test::Differences;
 use Test::More;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
@@ -16,6 +15,8 @@ use lib (untaint_any
 	  ($libdir = ($bindir = dirname(untaint_any($0)))
 	   . "/../../../../runyatt.lib"))
 	 , $FindBin::Bin);
+
+use YATT::Lite::TestUtil;
 
 sub MY () {__PACKAGE__}
 use base qw(t_regist);

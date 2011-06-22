@@ -3,11 +3,11 @@
 use strict;
 use warnings FATAL => qw(all);
 use Test::More;
-use Test::Differences;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use lib untaint_any("$FindBin::Bin/..");
+use YATT::Lite::TestUtil;
 
 BEGIN {
   # Because use YATT::Lite::DBSchema::DBIC loads DBIx::Class::Schema.

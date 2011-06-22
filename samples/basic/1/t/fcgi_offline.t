@@ -35,10 +35,6 @@ my $CLASS = YATT::Lite::TestFCGI::Auto->class
   or YATT::Lite::TestFCGI::Auto->skip_all
   ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
 
-unless (eval {require Test::Differences}) {
-  $CLASS->skip_all('Test::Differences is not installed');
-}
-
 unless (-d "$bindir/../cgi-bin"
 	and grep {-x "$bindir/../cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
   $CLASS->skip_all("Can't find cgi-bin/runyatt.cgi");

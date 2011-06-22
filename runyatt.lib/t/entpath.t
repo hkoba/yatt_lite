@@ -6,7 +6,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/..");
 use Test::More;
-use Test::Differences;
+use YATT::Lite::TestUtil;
 
 use YATT::Lite ();
 use YATT::Lite::Util qw(catch terse_dump);
@@ -270,6 +270,15 @@ my @test; sub add {push @test, [@_]} sub break {push @test, undef}
   add qq{:foo($chrs);}
     , [[call => 'foo'
 	, map {[text => $_]} split /,/, $chrs]];
+
+  add q{:dispatch_one(for_,1,:atts{for},:atts,:lexpand(:list));}
+    , [[call => 'dispatch_one'
+	, [text => 'for_']
+	, [text => '1']
+	, [[var => 'atts'], [href => [text => 'for']]]
+	, [var => 'atts']
+	, [call => 'lexpand'
+	   , [var => 'list']]]];
 }
 
 my $class = 'YATT::Lite::LRXML';
