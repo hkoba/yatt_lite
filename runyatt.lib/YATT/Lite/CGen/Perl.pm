@@ -2,7 +2,7 @@ package YATT::Lite::CGen::Perl;
 use strict;
 use warnings FATAL => qw(all);
 
-require 5.10.0; # For named capture.
+require 5.010; # For named capture.
 
 use YATT::Lite::Core qw(Folder Template Part Widget Action);
 use YATT::Lite::Constants;
