@@ -21,12 +21,14 @@
 (autoload 'yatt-lint-any-mode "yatt-lint-any-mode"
   "auto lint for yatt and others." t)
 
-(autoload 'yatt-lint-any-mode-check-blacklist "yatt-lint-any-mode"
-  "To avoid yatt-lint." t)
+(autoload 'yatt-lint-any-mode-unless-blacklisted "yatt-lint-any-mode"
+  "To turn on yatt-lint unless after-save-hook contains blacklisted." t)
+
+(defvar yatt-lint-any-mode-blacklist nil
+  "Avoid yatt-lint if after-save-hook contains these syms.")
 
 (add-hook 'cperl-mode-hook
-	  '(lambda () (or (yatt-lint-any-mode-check-blacklist)
-			  (yatt-lint-any-mode t))))
+	  'yatt-lint-any-mode-unless-blacklisted)
 
 ;;
 (autoload 'plist-bind "yatt/utils" "plist alternative of multivalue-bind" t)

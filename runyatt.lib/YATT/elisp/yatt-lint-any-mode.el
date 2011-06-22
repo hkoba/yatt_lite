@@ -36,17 +36,24 @@
     )
   "Auto lint filename mapping for yatt and related files.")
 
-(defvar yatt-lint-any-mode-check-blacklist-hook nil
-  "hook style checklist of yatt-lint blacklist")
+(defvar yatt-lint-any-mode-blacklist nil
+  "Avoid yatt-lint if after-save-hook contains these syms.")
 
-(defun yatt-lint-any-mode-check-blacklist ()
-  (let ((ok t)
-	(lst yatt-lint-any-mode-check-blacklist-hook) hook)
+(defun yatt-lint-any-mode-unless-blacklisted ()
+  (let ((ok t) (lst yatt-lint-any-mode-blacklist)
+	i)
     (while (and ok lst)
-      (setq hook (car lst))
-      (setq lst (cdr lst))
-      (setq ok (funcall hook)))
-    ok))
+      (setq i (car lst))
+      (setq ok (and ok (not (cond ((symbolp i)
+				   (memq i after-save-hook))
+				  ((listp i)
+				   (funcall i))
+				  (t nil)))))
+      (setq lst (cdr lst)))
+    (cond (ok
+	   (yatt-lint-any-mode t))
+	  (yatt-lint-any-mode
+	   (yatt-lint-any-mode nil)))))
 
 (defvar yatt-lint-any-mode-map (make-sparse-keymap))
 (define-key yatt-lint-any-mode-map [f5] 'yatt-lint-any-after)
@@ -56,12 +63,19 @@
   :keymap yatt-lint-any-mode-map
   :lighter "<F5 lint>"
   :global nil
-  (let ((hook 'after-save-hook) (fn 'yatt-lint-any-after))
-    (if yatt-lint-any-mode
-	(progn
-	  (add-hook hook fn nil nil)
-	  (make-variable-buffer-local 'yatt-lint-any-driver-path))
-      (remove-hook hook fn nil))))
+  (let ((hook 'after-save-hook) (fn 'yatt-lint-any-after)
+	(buf (current-buffer)))
+    (cond ((and (boundp 'mmm-temp-buffer-name)
+		(equal (buffer-name) mmm-temp-buffer-name))
+	   (message "skipping yatt-lint-any-mode for %s" buf)
+	   nil)
+	  (yatt-lint-any-mode
+	   (message "enabling yatt-lint-any-mode for %s" buf)
+	   (add-hook hook fn nil nil)
+	   (make-variable-buffer-local 'yatt-lint-any-driver-path))
+	  (t
+	   (message "disabling yatt-lint-any-mode for %s" buf)
+	   (remove-hook hook fn nil)))))
 
 (defvar yatt-lint-any-driver-path nil
   "runyatt.lib path for this buffer.")
