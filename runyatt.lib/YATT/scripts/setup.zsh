@@ -30,7 +30,11 @@ EOF
 #========================================
 
 # $checkout_dir/runyatt.lib/YATT/scripts
+if [[ -L $0:h ]]; then
 realbin=$(readlink -f $(cd $0:h && print $PWD))
+else
+realbin=$(cd $0:h && print $PWD)
+fi
 
 # $checkout_dir/runyatt.lib
 libdir=$realbin:h:h
@@ -150,7 +154,23 @@ fi
 #========================================
 # XXX: Should allow explicit option.
 
-if [[ -r /etc/redhat-release ]]; then
+o_chmod_c=(-c)
+CGI_BIN=cgi-bin
+USER_DIR=public_html
+
+if [[ $OSTYPE == darwin* ]]; then
+    CGI_BIN=CGI-Executables
+    USER_DIR=Sites
+    o_chmod_c=()
+
+    apache=/etc/apache2/httpd.conf
+    document_root=$(find_pat '^DocumentRoot\s+"([^"]*)"' $apache) ||
+    document_root=/Library/WebServer/Documents
+
+    APACHE_RUN_GROUP=$(find_pat '^Group\s+(\S+)' $apache) ||
+    APACHE_RUN_GROUP=www
+
+elif [[ -r /etc/redhat-release ]]; then
     apache=/etc/httpd/conf/httpd.conf
     document_root=$(find_pat '^DocumentRoot\s+"([^"]*)"' $apache)
     APACHE_RUN_GROUP=$(find_pat '^Group\s+(\S+)' $apache)
@@ -204,10 +224,12 @@ if [[ $destdir = $document_root(|/*) ]]; then
     location=${destdir#$document_root}
     cgi_bin_perm=775
     install_type=sys
-elif [[ $destdir = $HOME/public_html(|/*) ]]; then
-    location=/~$USER${destdir#$HOME/public_html}
+    cgi_bin=$destdir/$CGI_BIN
+elif [[ $destdir = $HOME/$USER_DIR(|/*) ]]; then
+    location=/~$USER${destdir#$HOME/$USER_DIR}
     cgi_bin_perm=755; # for suexec
     install_type=user
+    cgi_bin=$destdir/cgi-bin
 else
     die Can\'t extract URL from destdir=$destdir.
 fi
@@ -215,13 +237,12 @@ fi
 #========================================
 # Main.
 #========================================
-cgi_bin=$destdir/cgi-bin
 cgi_loc=$location/cgi-bin
 
 if ! [[ -d $cgi_bin ]]; then
     x install -d $o_verbose -m 2$cgi_bin_perm $cgi_bin
 else
-    x chmod -c 2$cgi_bin_perm $cgi_bin
+    x chmod $o_chmod_c 2$cgi_bin_perm $cgi_bin
 fi
 
 # Create library directory and link yatt in it.
@@ -262,7 +283,7 @@ EOF
 fi
 
 # Copy driver cgi and link fcgi.
-x install -t $cgi_bin/ -m $cgi_bin_perm $driver_path.cgi
+x install -m $cgi_bin_perm $driver_path.cgi $cgi_bin/$driver_name.cgi
 if (($is_selinux)); then
     x chcon $o_verbose -t httpd_${install_type}_script_exec_t $cgi_bin/$driver_name.cgi || true
 fi
