@@ -306,6 +306,23 @@ Entity template => sub {
   $YATT->get_trans->find_template_from_package($pkg // $this);
 };
 
+Entity stash => sub {
+  my $this = shift;
+  my $prop = $CON->prop;
+  my $stash = $prop->{stash} //= {};
+  unless (@_) {
+    $stash
+  } elsif (@_ > 1) {
+    %$stash = @_;
+  } elsif (not defined $_[0]) {
+    carp "Undefined argument for :stash()";
+  } elsif (ref $_[0]) {
+    $prop->{stash} = $_[0]
+  } else {
+    $stash->{$_[0]};
+  }
+};
+
 #----------------------------------------
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_facade();
