@@ -41,7 +41,9 @@ use YATT::Lite::Breakpoint ();
      , [Template => -base => MY->File
 	, -alias => 'vfs_file'
 	, -fields => [qw(product parse_ok cf_mtime cf_utf8 cf_age
-			 cf_usage cf_constants)]]
+			 cf_usage cf_constants
+			 cf_ignore_trailing_newlines
+		       )]]
     );
 
   # folder の weaken は parser がしてる。

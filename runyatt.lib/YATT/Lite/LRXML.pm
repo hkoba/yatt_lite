@@ -225,7 +225,8 @@ sub parse_decl {
     if ($part->{toks} and @{$part->{toks}}) {
       # widget 末尾の連続改行を、単一の改行トークンへ変換。(行番号は解析済みだから大丈夫)
       if ($part->{toks}[-1] =~ s/(?:\r?\n)+\Z//) {
-	push @{$part->{toks}}, "\n";
+	push @{$part->{toks}}, "\n"
+	  unless $tmpl->{cf_ignore_trailing_newlines};
       }
     }
     if (my $sub = $part->can('fixup')) {
@@ -420,8 +421,7 @@ sub declare_args {
 sub declare_config {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
   # XXX: 一方が undef だったら？
-  # XXX: name only なら bool(1) 扱い、にすべきよね。
-  $tmpl->configure(map {$_->[NODE_PATH], $_->[NODE_BODY]} @args);
+  $tmpl->configure(map {($_->[NODE_PATH], $_->[NODE_BODY] // 1)} @args);
   undef;
 }
 
