@@ -86,8 +86,16 @@
    (and (not reload) yatt-lint-any-driver-path)
    (setq yatt-lint-any-driver-path
 	 (let ((htaccess ".htaccess")
+	       (htyattcf ".htyattconfig.xhf") config
 	       action driver libdir)
-	   (cond ((and (file-exists-p htaccess)
+	   (cond ((and
+		   ;; For vhost and non-standard DocumentRoot case,
+		   ;; Please specify info{libdir: ...} in your .htyattconfig.xhf
+		   (file-exists-p htyattcf)
+		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir")))
+		  (concat libdir "/YATT"))
+
+		 ((and (file-exists-p htaccess)
 		       (setq action (yatt-lint-any-htaccess-find htaccess
 				     "Action" "x-yatt-handler"))
 		       (file-exists-p
@@ -97,6 +105,21 @@
 		 ((file-exists-p "cgi-bin/runyatt.cgi")
 		  "cgi-bin/runyatt.lib/YATT")
 		 )))))
+
+(defun yatt-xhf-fetch (fn k1 k2)
+  ;; No, this is adhoc. Real logic will be implemented later.
+  (save-current-buffer
+    (find-file-read-only fn)
+    (goto-char 0)
+    (let (res
+	  (found (re-search-forward (concat "^" k1 "{\n" k2 ": ") nil t)))
+      (when found
+	(end-of-line)
+	(setq res (buffer-substring found (point))))
+      (kill-buffer (current-buffer))
+      res
+    )
+  ))
 
 (defun yatt-lint-any-htaccess-find (file config &rest keys)
   (save-excursion

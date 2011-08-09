@@ -21,6 +21,7 @@ use fields qw(YATT
 	      cf_at_done
 	      cf_dont_map_args
 	      cf_dont_debug_param
+	      cf_info
 	    );
 
 # Entities を多重継承する理由は import も継承したいから。
