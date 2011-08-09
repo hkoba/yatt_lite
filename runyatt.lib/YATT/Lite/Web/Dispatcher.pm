@@ -90,20 +90,15 @@ sub call {
 		, subpath => $trailer
 		, root => $root, location => $loc);
 
-  my ($dh, $con, $err);
-  if ($err = catch {$dh = $self->get_dirhandler(untaint_any($dir))}) {
-    return [404, [], ["Not found", $err]];
-  } elsif ($err = catch {$con = $dh->make_connection(undef, @params)}) {
-    # XXX: どんな時に？
-    return [400, [], ["Bad request", $err]];
-  } elsif ($err = catch {$dh->handle($dh->trim_ext($file), $con, $file)}) {
-    # XXX: $con から status を取り出せないか?
-    [500, [], ["Internal Server error\n", $err]];
-  } else {
-    # XXX: headers.
-    $con->flush;
-    [200, ['Content-Type', 'text/html'], [$con->buffer]];
+  unless (-d $dir) {
+    return [404, [], ["Not found: ", $dir]];
   }
+  my $dh = $self->get_dirhandler(untaint_any($dir));
+  my $con = $dh->make_connection(undef, @params);
+  $dh->handle($dh->trim_ext($file), $con, $file);
+  # XXX: headers.
+  $con->flush;
+  return [200, ['Content-Type', 'text/html'], [$con->buffer]];
 }
 
 sub to_app {
