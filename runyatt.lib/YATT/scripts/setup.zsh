@@ -60,7 +60,7 @@ opt_spec=(
     -myapp::
     -datadir::
     # -location
-    # -document_root
+    '-document_root:=o_document_root'
     # -link_driver
     # -as:
 )
@@ -199,6 +199,10 @@ elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
 else
     document_root=/var/www
     APACHE_RUN_GROUP=apache
+fi
+
+if (($#o_document_root)); then
+    document_root=${o_document_root[2][2,-1]}
 fi
 
 #========================================
