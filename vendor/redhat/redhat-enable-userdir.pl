@@ -18,7 +18,7 @@ while (<>) {
     $context = $1 if $line == 1;
     s/^\#//;
     set_config("AllowOverride", "All");
-    ensure_config("Options", "ExecCGI");
+    # ensure_config("Options", "ExecCGI");
   }
 } continue {
   print "$_\n";
