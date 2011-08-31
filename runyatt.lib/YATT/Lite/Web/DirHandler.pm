@@ -127,7 +127,7 @@ sub error_handler {
   if (my ($sub, $pkg) = $self->find_renderer(error => ignore_error => 1)) {
     $sub->($pkg, $errcon, $err);
     $errcon->commit; # これが無いと、 500 error.
-    $self->DONE(1);
+    $self->DONE;
   } else {
     die $err;
   }

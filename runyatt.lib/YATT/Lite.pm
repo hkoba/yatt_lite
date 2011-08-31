@@ -289,7 +289,7 @@ sub DONE {
   if (my $sub = $self->{cf_at_done}) {
     $sub->(@_);
   } else {
-    exit @_;
+    die \ 'DONE';
   }
 }
 
