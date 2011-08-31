@@ -96,7 +96,7 @@ END
 	      , ['redir.ydo', 'redirect', <<'END', ''
 sub {
   my ($sys, $con) = @_;
-  $con->redirect('http://localhost/bar/');
+  $con->redirect(\ 'http://localhost/bar/');
 }
 END
 		 , qr{^Status: \s 302 \s (?:Moved|Found)\r?\n
@@ -151,16 +151,19 @@ $i++;
 
   my $docs = "t$i.docs";
   $dig->mkdir($docs, my $realdir);
+  $dig->mkdir("$docs/img");
   $dig->mkdir("$docs/d1");
 
   $dig->add("$docs/index.yatt", 'top');
+  $dig->add("$docs/auth.yatt", 'auth');
+  $dig->add("$docs/img/bg.png", 'background');
   $dig->add("$docs/d1/f1.yatt", 'in_d1');
 
   my $mux = new YATT::Lite::Web::Dispatcher->new
     (basens => myapp($i), , mount => "$BASE/$docs");
 
-  my $P_T = "$realdir/index.yatt/foo/bar";
-  my $R_URI = '/~hkoba/index.yatt/foo/bar';
+  my $P_T = "$realdir/index.yatt/foo/bar";  # path_translated
+  my $R_URI = '/~hkoba/index.yatt/foo/bar'; # request_uri
 
   is_deeply scalar $mux->split_path_url($P_T, $R_URI)
     , {location => '/~hkoba/'
@@ -179,6 +182,26 @@ $i++;
        , file => 'index.yatt'
        , subpath => '/foo/bar'}
       , 'split_path_url: systemwide www';
+
+  my $splitter = sub {
+    [YATT::Lite::Util::split_path(shift, $realdir)]
+  };
+
+  is_deeply $splitter->("$realdir/auth")
+    , [$realdir, "/", "auth.yatt", ""]
+      , ".yatt extension compensation";
+
+  is_deeply $splitter->("$realdir/auth/foo")
+    , [$realdir, "/", "auth.yatt", "/foo"]
+      , ".yatt extension compensation, with subpath";
+
+  is_deeply $splitter->("$realdir/img/bg.png")
+    , [$realdir, "/img/", "bg.png", ""]
+      , "other extension";
+
+  is_deeply $splitter->("$realdir/img/missing.png")
+    , [$realdir, "/img/", "missing.png", ""]
+      , "other missing.";
 }
 
 

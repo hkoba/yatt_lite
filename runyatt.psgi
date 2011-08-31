@@ -34,9 +34,15 @@ BEGIN {
 }
 
 use YATT::Lite::Web::Dispatcher;
+my $appdir = File::Basename::dirname(File::Spec->rel2abs(__FILE__));
+my $docroot = $ENV{YATT_DOCUMENT_ROOT} || "$appdir/html";
+
+unless (-d $docroot) {
+  die "Can't find document root for " . __FILE__ . ": $docroot";
+}
 
 my $dispatcher = YATT::Lite::Web::Dispatcher->new
-  (document_root => File::Basename::dirname(File::Spec->rel2abs(__FILE__))
+  (document_root => $docroot
    , basens => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'

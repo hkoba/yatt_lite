@@ -46,6 +46,8 @@ $tests->enter;
 
 plan $tests->test_plan(1);
 
+use Cwd;
+$ENV{YATT_DOCUMENT_ROOT} = cwd;
 ok(my $app = Plack::Util::load_psgi("runyatt.psgi"), "load_psgi");
 
 test_psgi $app, sub {

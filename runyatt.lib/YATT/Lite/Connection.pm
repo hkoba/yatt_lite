@@ -65,7 +65,8 @@ sub buffer {
 }
 sub set_header {
   my PROP $prop = prop(my $glob = shift);
-  $prop->{header}{shift()} = shift();
+  my ($key, $value) = @_;
+  $prop->{header}{$key} = $value;
   $glob;
 }
 sub list_header {

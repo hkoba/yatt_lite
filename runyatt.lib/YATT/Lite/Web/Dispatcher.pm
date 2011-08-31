@@ -16,6 +16,7 @@ use fields qw(DirHandler Action
 	      cf_mount
 	      cf_is_gateway cf_document_root
 	      cf_debug_cgi
+	      cf_psgi_static
 	    );
 use YATT::Lite::Util qw(cached_in split_path catch
 			lexpand rootname extname untaint_any terse_dump);
@@ -75,35 +76,75 @@ sub call {
   (my MY $self, my Env $env) = @_;
   my $path_translated = $self->{cf_document_root} . $env->{PATH_INFO};
 
+  my ($root, $loc, $file, $trailer)
+    = split_path($path_translated, $self->{cf_document_root});
+  if ($ENV{DEBUG_YATT} and $env->{'psgi.errors'}) {
+    print {$env->{'psgi.errors'}} join("\t", "root=$root", "loc=$loc"
+				       , "file=$file", "trailer=$trailer"
+				       , "docroot=$self->{cf_document_root}"
+				       , "path_info=$env->{PATH_INFO}"
+				      ), "\n";
+  }
+
+  my $dir = "$root$loc";
+  unless (-d $dir) {
+    return [404, [], ["Not found: ", $dir]];
+  } elsif ($loc =~ m{\.lib(?:/|$)}) {
+    return $self->psgi_error(403, "Forbidden library location: $loc");
+  }
+
+  # Default index file.
+  $file = 'index.yatt' if $file eq '' && -r "$dir/index.yatt";
+
+  if ($file =~ /^\.ht|\.ytmpl$/) {
+    # forbidden
+    return $self->psgi_error(403, "Forbidden filetype: $file");
+  } elsif ($file !~ /\.(yatt|ydo)$/) {
+    return $self->psgi_handle_static($env);
+  }
+
+  my $dh = $self->get_dirhandler(untaint_any($dir));
+
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
-  my ($root, $loc, $file, $trailer)
-    = split_path($path_translated, $self->{cf_document_root});
-
-  # Default index file.
-  $file = 'index.yatt' if $file eq '';
-
   my @params = (cgi => $req, psgi => $env
-		, dir => my $dir = "$root$loc"
+		, dir => $dir
 		, file => $file
 		, subpath => $trailer
 		, root => $root, location => $loc);
 
-  unless (-d $dir) {
-    return [404, [], ["Not found: ", $dir]];
-  }
-  my $dh = $self->get_dirhandler(untaint_any($dir));
   my $con = $dh->make_connection(undef, @params);
-  $dh->handle($dh->trim_ext($file), $con, $file);
-  # XXX: headers.
-  $con->flush;
-  return [200, ['Content-Type', 'text/html'], [$con->buffer]];
+
+  my $error = catch {
+    $dh->handle($dh->trim_ext($file), $con, $file);
+    $con->flush;
+  };
+  if (not $error or is_done($error)) {
+    # XXX: charset
+    my $res = Plack::Response->new(200);
+    $res->content_type("text/html"
+		       . ($self->{cf_header_charset}
+			  ? qq{; charset="$self->{cf_header_charset}"}
+			  : ""));
+    if (my @h = $con->list_header) {
+      $res->headers->header(@h);
+    }
+    $res->body($con->buffer);
+    return $res->finalize;
+  } elsif (ref $error eq 'ARRAY') {
+    # redirect
+    return $error;
+  } else {
+    # system_error. Should be treated by PSGI Server.
+    die $error
+  }
 }
 
 sub to_app {
   (my MY $self) = @_;
   require Plack::Request;
+  require Plack::Response;
   $self->init_by_env;
   unless (defined $self->{cf_document_root}) {
     croak "document_root is empty!";
@@ -113,6 +154,20 @@ sub to_app {
 }
 
 sub prepare_app { return }
+
+sub psgi_handle_static {
+  (my MY $self, my Env $env) = @_;
+  my $app = $self->{cf_psgi_static} || do {
+    require Plack::App::File;
+    Plack::App::File->new(root => $self->{cf_document_root})->to_app;
+  };
+  $app->($env);
+}
+
+sub psgi_error {
+  (my MY $self, my ($status, $msg, @rest)) = @_;
+  return [$status, ["Content-type", "text/plain", @rest], [$msg]];
+}
 
 #========================================
 

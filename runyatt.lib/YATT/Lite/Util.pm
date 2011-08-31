@@ -148,9 +148,21 @@ require Scalar::Util;
       $pos = pos($path);
     }
 
-    $file //= '';
     $dir .= "/" if $dir !~ m{/$};
-    ($startDir, substr($dir, length($startDir)), $file, substr($path, $pos));
+    my $subpath = substr($path, $pos);
+    if (not defined $file) {
+      if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.yatt") {
+	$subpath = substr($subpath, 1+length $1);
+	$file = "$1.yatt";
+      } elsif ($subpath =~ s{^/([^/]+)$}{}) {
+	$file = $1;
+      }
+    }
+
+    ($startDir
+     , substr($dir, length($startDir))
+     , $file // ''
+     , $subpath);
   }
 
   sub dict_order {

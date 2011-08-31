@@ -172,16 +172,35 @@ sub list_baked_cookie {
 
 sub redirect {
   my PROP $prop = (my $glob = shift)->prop;
+  croak "undefined url" unless @_ and defined $_[0];
+  my $url = do {
+    if (ref $_[0]) {
+      ${shift @_}
+    } elsif ($_[0] =~ m{^(?:\w+:)?//}) {
+      die "External redirect is not allowed: $_[0]\n";
+    } else {
+      # taint check
+      shift;
+    }
+  };
   if ($prop->{header_is_printed}++) {
     die "Can't redirect multiple times!";
   }
   $prop->{buffer} = '';
   # In test, parent_fh may undef.
   my $fh = $$prop{cf_parent_fh} // $glob;
-  print {$fh} $prop->{cf_cgi}->redirect
-    (-uri => shift, $glob->list_baked_cookie, @_);
-  # 念のため, parent_fh は undef しておく
-  undef $$prop{cf_parent_fh};
+  if ($prop->{cf_psgi}) {
+    # PSGI mode.
+    my $cookie = $glob->list_baked_cookie;
+    die [302, [Location => $url, $glob->list_header
+	      , $cookie ? map(("Set-Cookie", $_), @$cookie) : ()
+	      ], []];
+  } else {
+    print {$fh} $prop->{cf_cgi}->redirect(-uri => $url
+					  , $glob->list_baked_cookie, @_);
+    # 念のため, parent_fh は undef しておく
+    undef $$prop{cf_parent_fh};
+  }
   $glob;
 }
 
@@ -192,6 +211,7 @@ sub param_type {
   my $name = shift // croak "Undefined name!";
   my $type = shift // croak "Undefined type!";
   my $diag = shift;
+  my $opts = shift;
   my $pat = ref $type eq 'Regexp' ? $type : do {
     my $pat_sub = $glob->can("re_$type")
       or croak "Unknown type: $type";
@@ -205,6 +225,7 @@ sub param_type {
   } elsif ($diag) {
     croak ref $diag eq 'CODE' ? $diag->($value) : $diag;
   } elsif (not defined $value) {
+    return undef if $opts->{allow_undef};
     die "Parameter '$name' is missing!\n";
   } else {
     # Just for default message. Production code should provide $diag.
