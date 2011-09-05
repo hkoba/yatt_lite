@@ -177,7 +177,7 @@ sub redirect {
     if (ref $_[0]) {
       ${shift @_}
     } elsif ($_[0] =~ m{^(?:\w+:)?//}) {
-      die "External redirect is not allowed: $_[0]\n";
+      $glob->error("External redirect is not allowed: %s", $_[0]);
     } else {
       # taint check
       shift;
@@ -223,13 +223,15 @@ sub param_type {
   if (defined $value && $value =~ $pat) {
     return $&; # Also for taint check.
   } elsif ($diag) {
-    croak ref $diag eq 'CODE' ? $diag->($value) : $diag;
+    $glob->error((ref $diag eq 'CODE' ? $diag->($value) : $diag)
+		 , $name, $value);
   } elsif (not defined $value) {
     return undef if $opts->{allow_undef};
-    die "Parameter '$name' is missing!\n";
+    $glob->error("Parameter '%s' is missing!", $name);
   } else {
     # Just for default message. Production code should provide $diag.
-    die "Parameter '$name' must match $type!: '$value'\n";
+    $glob->error("Parameter '%s' must match %s!: '%s'"
+		, $name, $type, $value);
   }
 }
 

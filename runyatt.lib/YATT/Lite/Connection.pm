@@ -5,10 +5,12 @@ use fields qw(buffer header header_is_printed cookie session
 	      cf_header cf_parent_fh cf_handler cf_system cf_db
 	      cf_is_error
 	      cf_encoding
+	      yatt
 	      stash
 	      debug_stash
 	    );
 use YATT::Lite::Util qw(globref);
+use Scalar::Util qw(weaken);
 use Carp;
 
 sub prop { my $glob = shift; \%{*$glob}; }
@@ -39,6 +41,22 @@ sub build_fh_for {
   $_[0];
 }
 
+#========================================
+# Constructors (create_for_yatt, new)
+#========================================
+# To route errors to $yatt(==DirHandler), connection needs yatt ref.
+sub create_for_yatt {
+  my ($class, $yatt, $self) = splice @_, 0, 3;
+  require IO::Handle;
+  (my PROP $prop, my @task) = $class->build_prop(@_);
+  weaken($prop->{yatt} = $yatt); # XXX: Is this ok?
+  $class->build_fh_for($prop, $self);
+  $_->[0]->($self, $_->[1]) for @task;
+  $self->after_new;
+  $self;
+}
+
+# XXX: Should be deprecated?
 sub new {
   my ($class, $self) = splice @_, 0, 2;
   require IO::Handle;
@@ -51,13 +69,17 @@ sub new {
 
 sub after_new {}
 
-sub cf_clone {
-  my PROP $prop = prop(my $glob = shift);
-  map {
-    unless (/^cf_(\w+)/ and defined $prop->{$_}) { () }
-    else { ($1 => $prop->{$_}) }
-  } keys %$prop;
+#----------------------------------------
+sub error {
+  shift->raise(error => @_);
 }
+sub raise {
+  my PROP $prop = prop(my $glob = shift);
+  my ($type, @err) = @_; # To make sure backtrace is meaningful.
+  $prop->{yatt}->raise($type, @err);
+}
+
+#========================================
 
 sub buffer {
   my PROP $prop = prop(my $glob = shift);

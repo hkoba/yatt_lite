@@ -37,8 +37,7 @@ sub handle {
   my MY $self = shift;
   chdir($self->{cf_dir})
     or die "Can't chdir '$self->{cf_dir}': $!";
-  # XXX: ここに $SIG{__WARN__} の処理を。 FATAL か、又は...
-  $SIG{__WARN__} = sub {
+  local $SIG{__WARN__} = sub {
     die $self->make_error(2, {reason => $_[0]});
   };
   $self->SUPER::handle(@_);
@@ -112,7 +111,7 @@ sub make_connection {
 
 #========================================
 sub error_handler {
-  (my MY $self, my $err) = @_;
+  (my MY $self, my ($type, $err)) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
   my $errcon = do {
     if (my $con = $self->CON) {
@@ -124,7 +123,7 @@ sub error_handler {
     }
   };
   # error.ytmpl を探し、あれば呼び出す。
-  if (my ($sub, $pkg) = $self->find_renderer(error => ignore_error => 1)) {
+  if (my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1)) {
     $sub->($pkg, $errcon, $err);
     $errcon->commit; # これが無いと、 500 error.
     $self->DONE;

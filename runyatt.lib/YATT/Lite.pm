@@ -46,7 +46,7 @@ require YATT::Lite::Connection;
 sub Connection () {'YATT::Lite::Connection'}
 sub make_connection {
   (my MY $self, my ($fh, @rest)) = @_;
-  $self->Connection->new($fh, @rest)
+  $self->Connection->create_for_yatt($self, $fh, @rest)
 }
 
 #========================================
@@ -249,10 +249,7 @@ foreach
 
 sub error {
   (my MY $self) = map {ref $_ ? $_ : MY} shift;
-  my $opts = shift if @_ and ref $_[0] eq 'HASH';
-  # shift/splice しないのは、引数を stack trace に残したいから
-  my $err = $self->make_error(1 + (delete($opts->{depth}) // 1), $opts, @_);
-  $self->raise_error($err);
+  $self->raise(error => @_);
 }
 
 sub make_error {
@@ -266,19 +263,25 @@ sub make_error {
      , $opts ? %$opts : ());
 }
 
-sub raise_error {
-  (my MY $self, my $err) = @_;
+# $yatt->raise($errType => ?{opts}?, $errFmt, @fmtArgs)
+
+sub raise {
+  (my MY $self, my $type) = splice @_, 0, 2;
+  my $opts = shift if @_ and ref $_[0] eq 'HASH';
+  # shift/splice しないのは、引数を stack trace に残したいから
+  my $err = $self->make_error(1 + (delete($opts->{depth}) // 1), $opts, @_);
+
   if (ref $self and my $sub = $self->{cf_error_handler}) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
-    $sub->($err);
+    $sub->($type, $err);
   } elsif ($sub = $self->can('error_handler')) {
-    $sub->($self, $err);
+    $sub->($self, $type, $err);
   } elsif (not ref $self or $self->{cf_die_in_error}) {
     die $err->message;
   } else {
     # 即座に die しないモードは、デバッガから error 呼び出し箇所に step して戻れるようにするため。
-    # ... でも、受け側を mydie にでもしなきゃダメかも?
+    # ... でも、受け側を do {my $err = $con->error; die $err} にでもしなきゃダメかも?
     return $err;
   }
 }

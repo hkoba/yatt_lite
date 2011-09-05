@@ -258,8 +258,10 @@ END
     }
 
     my $eh = sub {
-      die captured($yatt->find_product(perl => $yatt->find_file('error'))
-		   , 'render_', @_);
+      my ($type, $err) = @_;
+      # $type eq 'error'
+      die captured($yatt->find_product(perl => $yatt->find_file($type))
+		   , render_ => $err);
     };
     eq_or_diff lines(3, catch {
       cf_let {$yatt} [error_handler => $eh], sub {
