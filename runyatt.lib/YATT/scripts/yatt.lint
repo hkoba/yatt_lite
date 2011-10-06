@@ -39,10 +39,10 @@ foreach my $fn (@ARGV) {
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   $dirhandler->configure
     (error_handler => sub {
-       my YATT::Lite::Error $err = shift;
+       (my $type, my YATT::Lite::Error $err) = splice @_, 0, 2;
        my @lineinfo = ("[file] ".default($err->{cf_tmpl_file}, '-')
 		       , "[line] ".default($err->{cf_tmpl_line}, '-'));
-       my $msg = "[@lineinfo]\n "
+       my $msg = $type . " [@lineinfo]\n "
 	 .sprintf($err->{cf_format}, @{$err->{cf_args}});
        $msg .= "\n" unless $msg =~ m{\n\Z};
        print STDERR $msg;

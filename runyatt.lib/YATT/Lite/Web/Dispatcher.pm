@@ -45,6 +45,8 @@ sub configparams {
 REQUEST_METHOD
 SCRIPT_NAME
 PATH_INFO
+PATH_TRANSLATED
+REDIRECT_STATUS
 REQUEST_URI
 QUERY_STRING
 SERVER_NAME
@@ -74,7 +76,13 @@ psgix.logger
 
 sub call {
   (my MY $self, my Env $env) = @_;
-  my $path_translated = $self->{cf_document_root} . $env->{PATH_INFO};
+  my $path_translated = do {
+    if ($env->{PATH_TRANSLATED} && ($env->{REDIRECT_STATUS} // 0) == 200) {
+      $env->{PATH_TRANSLATED};
+    } else {
+      $self->{cf_document_root} . $env->{PATH_INFO};
+    }
+  };
 
   my ($root, $loc, $file, $trailer)
     = split_path($path_translated, $self->{cf_document_root});
