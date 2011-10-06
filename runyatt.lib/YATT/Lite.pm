@@ -2,7 +2,7 @@ package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use 5.010;
-use Carp;
+use Carp qw(carp croak confess longmess);
 use version; our $VERSION = qv('v0.0.2_4');
 
 #
@@ -81,6 +81,11 @@ sub handle {
   $sub->($self, $con, $file);
 
   $con;
+}
+
+sub commit {
+  local ($YATT, $CON) = @_;
+  $CON->commit;
 }
 
 sub find_handler {
@@ -260,6 +265,7 @@ sub make_error {
   new YATT::Lite::Error
     (file => $opts->{file} // $file, line => $opts->{line} // $line
      , format => $fmt, args => [@_[1..$#_]]
+     , backtrace => longmess()
      , $opts ? %$opts : ());
 }
 

@@ -49,9 +49,8 @@ sub convert_array_param {
 
 sub commit {
   my PROP $prop = (my $glob = shift)->prop;
-  if ($prop->{session}) {
-    $prop->{session}->flush;
-  }
+  # print STDERR "committing\n", Carp::longmess(), "\n\n";
+  $glob->flush_session unless $prop->{header_is_printed};
   $glob->SUPER::commit;
 }
 
@@ -136,10 +135,46 @@ sub request_uri {
 
 #========================================
 
+# XXX: Should not depend raw HTTP header.
 sub mkheader {
   my PROP $prop = (my $glob = shift)->prop;
   # my $o = $prop->{session} || $cgi;
-  $prop->{cf_cgi}->header($glob->list_header, @_);
+  my @header_param = ($glob->list_header, @_);
+  if (my $cgi = $prop->{cf_cgi}) {
+    my @h;
+    while (my ($k, $v) = splice @header_param, 0, 2) {
+      push @h, $k =~ /^-/ ? $k : "-$k", $v;
+    }
+    $cgi->header(@h);
+  } else {
+    my @out = ("Content-type: text/html");
+    while (my ($key, $val) = splice @header_param, 0, 2) {
+      # XXX: escape
+      push @out, "X$key: $val";
+    }
+    join("\015\012", @out, '', '');
+  }
+}
+
+#----------------------------------------
+
+sub flush_session {
+  my PROP $prop = (my $glob = shift)->prop;
+  return unless $prop->{session};
+  return if $prop->{session}->errstr; # XXX: to avoid double error;
+  $prop->{session}->flush;
+  if (my $err = $prop->{session}->errstr) {
+    # To avoid infinite recursion of (error > commit > flush > error).
+    $glob->session_raise(error => "Can't flush session: %s", $err);
+  }
+}
+
+# flush_session will be called from $con->commit.
+sub session_raise {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($kind, $msg, @args) = @_;
+  local $prop->{session};
+  $glob->raise($kind, $msg, @args);
 }
 
 #----------------------------------------
@@ -186,6 +221,10 @@ sub redirect {
   if ($prop->{header_is_printed}++) {
     die "Can't redirect multiple times!";
   }
+
+  # Make sure session is flushed before redirection.
+  $glob->flush_session;
+
   $prop->{buffer} = '';
   # In test, parent_fh may undef.
   my $fh = $$prop{cf_parent_fh} // $glob;

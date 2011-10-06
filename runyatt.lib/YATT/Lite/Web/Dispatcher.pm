@@ -174,8 +174,9 @@ sub psgi_error {
 sub dispatch {
   (my MY $self, my $fh) = splice @_, 0, 2;
   my @params = $self->make_cgi(@_);
-  my $con = $self->run_dirhandler($fh, @params);
-  $con->commit;
+  my ($dh, $con) = $self->run_dirhandler($fh, @params);
+  # $con->commit を呼ぶときに $YATT, $CON が埋まっているようにするため
+  $dh->commit($con);
   $con;
 }
 
@@ -191,6 +192,8 @@ sub run_dirhandler {
   my $con = $dh->make_connection($fh, %params);
 
   $dh->handle($dh->trim_ext($params{file}), $con, $params{file});
+
+  wantarray ? ($dh, $con) : $con;
 }
 
 sub runas {
@@ -210,11 +213,10 @@ sub runas_cgi {
 
   $self->init_by_env;
 
-  if (my $gateway = $self->{cf_debug_cgi} || $ENV{DEBUG_CGI}) {
-    # デバッガから使うときなど、 gateway モードで動かしつつ
-    # catch したくないケースは、 DEBUG_CGI=1 で起動。
+  unless ($ENV{GATEWAY_INTERFACE}) {
+    # コマンド行起動時
     require Cwd;
-    local $ENV{GATEWAY_INTERFACE} = $gateway;
+    local $ENV{GATEWAY_INTERFACE} = $self->{cf_is_gateway} = 'CGI/YATT';
     local $ENV{REQUEST_METHOD} //= 'GET';
     local @ENV{qw(PATH_TRANSLATED REDIRECT_STATUS)}
       = (Cwd::abs_path(shift), 200)

@@ -3,8 +3,8 @@ use strict;
 use warnings FATAL => qw(all);
 use fields qw(buffer header header_is_printed cookie session
 	      cf_header cf_parent_fh cf_handler cf_system cf_db
-	      cf_is_error
 	      cf_encoding
+	      error_backup
 	      yatt
 	      stash
 	      debug_stash
@@ -129,6 +129,11 @@ sub configure {
   }
 }
 
+sub header_is_printed {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{header_is_printed};
+}
+
 sub commit {
   my PROP $prop = (my $glob = shift)->prop;
   if (my $sub = $prop->{cf_header}) {
@@ -148,6 +153,19 @@ sub flush {
     # XXX: flush 後は、 parent_fh の dup にするべき。
     # XXX: でも、 multipart (server push) とか continue とかは？
   }
+}
+
+sub is_error {
+  my PROP $prop = (my $glob = shift)->prop;
+  defined $prop->{error_backup};
+}
+
+sub as_error {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{error_backup} = $prop->{buffer};
+  $prop->{buffer} = '';
+  seek $glob, 0, 0;
+  $glob;
 }
 
 1;

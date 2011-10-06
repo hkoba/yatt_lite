@@ -24,7 +24,7 @@ use fields qw(
 
 
 use YATT::Lite::Entities qw(build_entns);
-use YATT::Lite::Util qw(lexpand globref);
+use YATT::Lite::Util qw(lexpand globref untaint_any);
 use YATT::Lite::XHF;
 
 sub after_new {
@@ -61,13 +61,15 @@ sub buildns {
 # with fresh namespace.
 sub load {
   (my MY $self, my MY $sys, my $name) = @_;
-  if (-e (my $cf = "$name/.htyattconfig.xhf")) {
+  if (-e (my $cf = untaint_any($name) . "/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
       my @spec = $self->read_file_xhf($cf, binary => $self->{cf_binary_config});
+      # print STDERR "Factory::load $name (@spec)\n" if $ENV{YATT_DEBUG_LOAD};
       my ($appns, @args) = $self->buildspec($name, \@spec);
       $appns->new($name, @args, @spec);
     };
   } else {
+    # print STDERR "Factory::load $name\n" if $ENV{YATT_DEBUG_LOAD};
     my ($appns, @args) = $self->buildspec($name);
     $appns->new($name, @args);
   }

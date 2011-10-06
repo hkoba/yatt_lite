@@ -115,21 +115,18 @@ sub error_handler {
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
   my $errcon = do {
     if (my $con = $self->CON) {
-      $con->configure(is_error => 1); # 使って無いけど。
-      # XXX: rewind した方が良いのでは?
-      $con;
+      $con->as_error;
     } else {
-      \*STDOUT;
+      $self->make_connection(\*STDOUT, is_gateway => 1);
     }
   };
   # error.ytmpl を探し、あれば呼び出す。
   if (my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1)) {
     $sub->($pkg, $errcon, $err);
-    $errcon->commit; # これが無いと、 500 error.
-    $self->DONE;
-  } else {
-    die $err;
   }
+  #print STDERR "\n\n", $err, Carp::longmess(), "\n\n";
+  $errcon->commit; # これが無いと、 500 error, 有っても無限再帰。
+  $self->DONE;
 }
 
 use YATT::Lite::Breakpoint;
