@@ -117,16 +117,18 @@ sub error_handler {
     if (my $con = $self->CON) {
       $con->as_error;
     } else {
-      $self->make_connection(\*STDOUT, is_gateway => 1);
+      # XXX: is_gateway が形骸化してる。
+      $self->make_connection(\*STDOUT, is_gateway => $self->{cf_is_gateway});
     }
   };
   # error.ytmpl を探し、あれば呼び出す。
   if (my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1)) {
     $sub->($pkg, $errcon, $err);
+  } else {
+    print {*$errcon} $err, Carp::longmess(), "\n\n";
   }
-  #print STDERR "\n\n", $err, Carp::longmess(), "\n\n";
-  $errcon->commit; # これが無いと、 500 error, 有っても無限再帰。
-  $self->DONE;
+  $errcon->commit; # XXX: これが無いと、 500 error, 有っても無限再帰。
+  $self->DONE; # XXX: bailout と分けるべき
 }
 
 use YATT::Lite::Breakpoint;

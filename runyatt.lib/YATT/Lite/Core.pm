@@ -104,7 +104,7 @@ use YATT::Lite::Breakpoint ();
     (my Widget $widget, my ($cgi, $list)) = @_;
     $list ||= [];
     foreach my $name ($cgi->param) {
-      next unless $name =~ /^\w+$/;
+      next unless $name =~ /^[a-z]\w*$/i;
       my $argdecl = $widget->{arg_dict}{$name}
 	or die "Unknown args for widget '$widget->{cf_name}': $name";
       my @value = $cgi->param($name);

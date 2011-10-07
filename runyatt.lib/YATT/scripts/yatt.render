@@ -51,6 +51,12 @@ my @command;
     my $dir = dirname($file);
     $dir =~ s,/*$,/,;
     my $dirhandler = $dispatcher->get_dirhandler($dir);
+    # XXX: そもそも、ここでの DONE に疑問が.
+    local $dirhandler->{cf_at_done} = sub {
+      # ここで at_done が呼ばれるのは error_handler からだけ。
+      exit;
+    };
+
     my $trans = $dirhandler->open_trans;
 
     my ($part, $sub, $pkg) = $trans->find_part_handler(basename($file));
@@ -65,10 +71,12 @@ my @command;
 foreach my $cmd (@command) {
   my ($dirhandler, $file, $sub, $this, @args) = @$cmd;
   local $YATT = $dirhandler;
+  local $dirhandler->{cf_at_done} = sub {};
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $CON = $dirhandler->make_connection
     (\*STDOUT, cgi => CGI->new({}), file => $file);
   $sub->($this, $CON, @args);
 }
 
+exit;
 # exit 1 if $nerror;
