@@ -1,0 +1,6 @@
+<yatt:std:envelope>
+  <h2><yatt:hello/> world!</h2>
+</yatt:std:envelope>
+
+<!yatt:widget hello>
+Hello
