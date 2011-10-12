@@ -1,16 +1,19 @@
-<!yatt:args title="html?">
+<!yatt:args title="html?" head="html?">
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
   <title>&yatt:title;</title>
+&yatt:head;
 </head>
 <body>
-<div id="wrapper" style="width: 800px; margin-left: 50px;">
+<div id="wrapper" style="width: 800px; margin: 0 auto;">
+<yatt:if "&yatt:title;">
 <div id="topnav">
   <h2 style="display: inline;"><a href="./">&yatt:title;</a></h2>
 </div>
-<center>
+</yatt:if>
+<center style="text-align: center;">
 <div id="body" style="text-align: left;">
   <yatt:body/>
 </div>
