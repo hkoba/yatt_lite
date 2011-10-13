@@ -95,6 +95,9 @@
 		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir")))
 		  (concat libdir "/YATT"))
 
+		 ((setq libdir (yatt-lint-any-find-upward "runyatt.lib"))
+		  (concat libdir "/YATT"))
+
 		 ((and (file-exists-p htaccess)
 		       (setq action (yatt-lint-any-htaccess-find htaccess
 				     "Action" "x-yatt-handler"))
@@ -102,9 +105,22 @@
 			(setq libdir (yatt-lint-any-action-libdir action))))
 		  (concat libdir "/YATT")
 		  )
-		 ((file-exists-p "cgi-bin/runyatt.cgi")
+		 ((file-exists-p "cgi-bin/runyatt.lib")
 		  "cgi-bin/runyatt.lib/YATT")
 		 )))))
+
+(defun yatt-lint-any-find-upward (file &optional startdir)
+  "Search FILE from STARTDIR and its parent, upto /."
+  (let ((dir (or startdir (file-name-directory
+			   (buffer-file-name (current-buffer)))))
+	fn)
+    (while (and
+	    dir
+	    (not (equal dir "/"))
+	    (not (file-exists-p (setq fn (concat dir file)))))
+      (setq dir (file-name-directory (directory-file-name dir))))
+    (if (file-exists-p fn)
+	fn)))
 
 (defun yatt-xhf-fetch (fn k1 k2)
   ;; No, this is adhoc. Real logic will be implemented later.
