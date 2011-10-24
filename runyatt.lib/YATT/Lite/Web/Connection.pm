@@ -120,13 +120,14 @@ sub mkquery {
 }
 
 sub request_path {
-  (my $uri = shift->request_uri) =~ s/\?.*//;
+  (my $uri = shift->request_uri // '') =~ s/\?.*//;
   $uri;
 }
 
 sub request_uri {
   my PROP $prop = (my $glob = shift)->prop;
-  if (my $sub = $prop->{cf_cgi}->can('request_uri')) {
+  if ($prop->{cf_cgi}
+      and my $sub = $prop->{cf_cgi}->can('request_uri')) {
     $sub->($prop->{cf_cgi})
   } else {
     $ENV{REQUEST_URI};

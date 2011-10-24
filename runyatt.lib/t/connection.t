@@ -6,7 +6,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/..");
 use Test::More qw(no_plan);
-use YATT::Lite::Util qw(appname);
+use YATT::Lite::Util qw(appname rootname);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 require_ok('YATT::Lite');
@@ -58,3 +58,25 @@ my $i = 1;
 }
 
 # 次は YATT::Lite::Web::Dispatcher から make_connection して...
+
+$i++;
+require_ok('YATT::Lite::Web::DirHandler');
+{
+  
+  my $yatt = new YATT::Lite::Web::DirHandler
+    (rootname($0) . ".d"
+     , package => YATT::Lite->rootns_for(myapp($i))
+     , die_in_error => 1
+     , debug_cgen => $ENV{DEBUG});
+
+  {
+    my $con = $yatt->make_connection;
+    print {$con} "foo", "bar";
+    print {$con} "baz";
+    $con->flush;
+
+    is $con->buffer, "foobarbaz", "Connection output";
+
+    is $con->request_path, "", "empty request path";
+  }
+}
