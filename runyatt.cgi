@@ -12,11 +12,16 @@ $ENV{PATH} = "/sbin:/usr/sbin:/bin:/usr/bin";
 #----------------------------------------
 # To allow do 'runyatt.cgi', we should avoid using FindBin.
 my $untaint_any; BEGIN { $untaint_any = sub { $_[0] =~ m{.*}s; $& } }
-sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
-sub extname { my $fn = shift; $fn =~ s/\.(\w+)$// and $1 }
+# To avoid redefinition of sub rootname.
+my ($get_rootname, $get_extname);
+BEGIN {
+  $get_rootname = sub { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ };
+  $get_extname = sub { my $fn = shift; $fn =~ s/\.(\w+)$// and $1 };
+}
 use Cwd qw(realpath);
 my $rootname;
-use lib ($rootname = rootname($untaint_any->(realpath(__FILE__)))).".lib";
+use lib ($rootname = $get_rootname->($untaint_any->(realpath(__FILE__))))
+  .".lib";
 #
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Web::Dispatcher;
@@ -46,5 +51,5 @@ if (caller) {
   # For do 'runyatt.cgi'.
   return $dispatcher;
 } else {
-  $dispatcher->runas(extname($0), \*STDOUT, @ARGV);
+  $dispatcher->runas($get_extname->($0), \*STDOUT, @ARGV);
 }
