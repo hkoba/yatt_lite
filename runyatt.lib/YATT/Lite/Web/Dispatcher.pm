@@ -15,9 +15,12 @@ use base qw(YATT::Lite::Factory);
 use fields qw(DirHandler Action
 	      cf_mount
 	      cf_is_gateway cf_document_root
+	      cf_appdir
 	      cf_debug_cgi
 	      cf_psgi_static
 	    );
+# XXX: Should rename: is_gateway => is_online
+
 use YATT::Lite::Util qw(cached_in split_path catch
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
@@ -42,14 +45,20 @@ sub configparams {
   sub Env () {"YATT::Lite::Web::Dispatcher::PSGI_ENV"}
   package YATT::Lite::Web::Dispatcher::PSGI_ENV;
   use fields qw(
+GATEWAY_INTERFACE
 REQUEST_METHOD
-SCRIPT_NAME
+DOCUMENT_ROOT
+
+REDIRECT_STATUS
 PATH_INFO
 PATH_TRANSLATED
-REDIRECT_STATUS
 REQUEST_URI
+DOCUMENT_URI
+SCRIPT_NAME
+
 QUERY_STRING
 SERVER_NAME
+SCRIPT_FILENAME
 SERVER_PORT
 SERVER_PROTOCOL
 HTTP_USER_AGENT
@@ -59,6 +68,7 @@ HTTP_FORWARDED
 HTTP_HOST
 HTTP_PROXY_CONNECTION
 HTTP_ACCEPT
+
 psgi.version
 psgi.url_scheme
 psgi.input
@@ -76,17 +86,37 @@ psgix.logger
 
 sub call {
   (my MY $self, my Env $env) = @_;
-  my $path_translated = do {
-    if ($env->{PATH_TRANSLATED} && ($env->{REDIRECT_STATUS} // 0) == 200) {
-      $env->{PATH_TRANSLATED};
-    } else {
-      $self->{cf_document_root} . $env->{PATH_INFO};
-    }
-  };
+  my ($path_translated, $document_root) = do {
+    if (($env->{REDIRECT_STATUS} // 0) != 200) {
+       my $root = $self->{cf_document_root} // $env->{DOCUMENT_ROOT};
+       ($root . $env->{PATH_INFO}
+       , $root);
+     } elsif ($env->{PATH_TRANSLATED}) {
+       ($env->{PATH_TRANSLATED}
+	, $env->{DOCUMENT_ROOT});
+     } elsif (defined $self->{cf_document_root}
+	      and $self->{cf_document_root} eq '') {
+       my $doc = $env->{DOCUMENT_URI} // $env->{SCRIPT_NAME};
+       my $root = $env->{DOCUMENT_ROOT};
+       ($root . $doc
+       , $root);
+     } else {
+       die "Unknown request env";
+     }
+   };
 
   my ($root, $loc, $file, $trailer)
-    = split_path($path_translated, $self->{cf_document_root});
-  if ($ENV{DEBUG_YATT} and $env->{'psgi.errors'}) {
+    = split_path($path_translated, $document_root);
+  if (-e "$self->{cf_appdir}/.htdebug_env") {
+    return [200, ["Content-type", "text/plain"]
+	    , [(map {join("\t", @$_)."\n"}
+		[root => $root], [loc => $loc]
+		, [file => $file], [trailer => $trailer]
+	       )
+	       , (map {"$_\t$env->{$_}\n"} sort keys %$env)
+	      ]];
+  } elsif ($ENV{DEBUG_YATT}
+	   and $env->{'psgi.errors'}) {
     print {$env->{'psgi.errors'}} join("\t", "root=$root", "loc=$loc"
 				       , "file=$file", "trailer=$trailer"
 				       , "docroot=$self->{cf_document_root}"
@@ -116,7 +146,7 @@ sub call {
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
-  my @params = (cgi => $req, psgi => $env
+  my @params = (cgi => $req, psgi => $env, env => $env
 		, dir => $dir
 		, file => $file
 		, subpath => $trailer
@@ -155,7 +185,7 @@ sub to_app {
   require Plack::Response;
   $self->init_by_env;
   unless (defined $self->{cf_document_root}) {
-    croak "document_root is empty!";
+    croak "document_root is undef!";
   }
   $self->prepare_app;
   return sub { $self->call(@_) }
@@ -180,16 +210,17 @@ sub psgi_error {
 #========================================
 
 sub dispatch {
-  (my MY $self, my $fh) = splice @_, 0, 2;
-  my @params = $self->make_cgi(@_);
-  my ($dh, $con) = $self->run_dirhandler($fh, @params);
+  (my MY $self, my $fh, my Env $env) = splice @_, 0, 3;
+  # XXX: 本当は make_cgi 自体を廃止したい。
+  my @params = $self->make_cgi($env, @_);
+  my ($dh, $con) = $self->run_dirhandler($fh, env => $env, @params);
   # $con->commit を呼ぶときに $YATT, $CON が埋まっているようにするため
   $dh->commit($con);
   $con;
 }
 
 sub run_dirhandler {
-  (my MY $self, my ($fh, %params)) = @_;
+  (my MY $self, my $fh, my %params) = @_;
   # dirhandler は必ず load することにする。 *.yatt だけでなくて *.ydo でも。
   # 結局は機能集約モジュールが欲しくなるから。
   # そのために、 dirhandler は死重を減らすよう、部分毎に delayed load する
@@ -197,6 +228,7 @@ sub run_dirhandler {
   my $dh = $self->get_dirhandler(untaint_any($params{dir}));
   # XXX: cache のキーは相対パスか、絶対パスか?
 
+  # XXX: make_connection にも $env を渡すべきではないか
   my $con = $dh->make_connection($fh, %params);
 
   $dh->handle($dh->trim_ext($params{file}), $con, $params{file});
@@ -213,31 +245,31 @@ sub runas {
 }
 
 sub runas_cgi {
-  (my MY $self, my $fh) = splice @_, 0, 2;
+  (my MY $self, my $fh, my Env $env) = splice @_, 0, 3;
   if (-e ".htdebug_env") {
-    $self->printenv($fh);
+    $self->printenv($fh, $env);
     return;
   }
 
-  $self->init_by_env;
+  $self->init_by_env($env);
 
-  unless ($ENV{GATEWAY_INTERFACE}) {
+  unless ($env->{GATEWAY_INTERFACE}) {
     # コマンド行起動時
     require Cwd;
-    local $ENV{GATEWAY_INTERFACE} = $self->{cf_is_gateway} = 'CGI/YATT';
-    local $ENV{REQUEST_METHOD} //= 'GET';
-    local @ENV{qw(PATH_TRANSLATED REDIRECT_STATUS)}
+    local $env->{GATEWAY_INTERFACE} = $self->{cf_is_gateway} = 'CGI/YATT';
+    local $env->{REQUEST_METHOD} //= 'GET';
+    local @{$env}{qw(PATH_TRANSLATED REDIRECT_STATUS)}
       = (Cwd::abs_path(shift), 200)
 	if @_;
-    $self->dispatch($fh, @_);
+    $self->dispatch($fh, $env, @_);
   } elsif ($self->is_gateway) {
     if (defined $fh and fileno($fh) >= 0) {
       open STDERR, '>&', $fh or die "can't redirect STDERR: $!";
     }
-    eval { $self->dispatch($fh, @_) };
+    eval { $self->dispatch($fh, $env, @_) };
     die "Content-type: text/plain\n\n$@" if $@ and not is_done($@);
   } else {
-    $self->dispatch($fh, @_);
+    $self->dispatch($fh, $env, @_);
   }
 }
 
@@ -247,16 +279,17 @@ sub is_done {
 }
 
 sub runas_fcgi {
-  (my MY $self, my $fh) = splice @_, 0, 2;
+  (my MY $self, my $fh, my Env $env) = splice @_, 0, 3;
   require CGI::Fast;
   # In suexec fcgi, $0 will not be absolute path.
   my $progname = $0 if $0 =~ m{^/};
   my ($dir, $age);
   $self->{cf_at_done} = sub {die \"DONE"};
   while (defined (my $cgi = new CGI::Fast)) {
-    $self->init_by_env;
+    # XXX: reset env! use  FCGI::Accept!
+    $self->init_by_env($env);
     unless (defined $progname) {
-      $progname = $ENV{SCRIPT_FILENAME}
+      $progname = $env->{SCRIPT_FILENAME}
 	or die "\n\nSCRIPT_FILENAME is empty!\n";
     }
     unless (defined $dir) {
@@ -265,7 +298,7 @@ sub runas_fcgi {
     }
 
     if (-e "$dir/.htdebug_env") {
-      $self->printenv($fh, $cgi);
+      $self->printenv($fh, $env);
       next;
     }
 
@@ -276,9 +309,9 @@ sub runas_fcgi {
 }
 
 sub init_by_env {
-  (my MY $self) = @_;
-  $self->{cf_is_gateway} //= $ENV{GATEWAY_INTERFACE} if $ENV{GATEWAY_INTERFACE};
-  $self->{cf_document_root} //= $ENV{DOCUMENT_ROOT} if $ENV{DOCUMENT_ROOT};
+  (my MY $self, my Env $env) = @_;
+  $self->{cf_is_gateway} //= $env->{GATEWAY_INTERFACE} if $env->{GATEWAY_INTERFACE};
+  $self->{cf_document_root} //= $env->{DOCUMENT_ROOT} if $env->{DOCUMENT_ROOT};
   $self;
 }
 
@@ -290,29 +323,35 @@ sub get_dirhandler {
 }
 
 #========================================
-# [1] $fh, $cgi を外から渡すケース... そもそも、これを止めるべきなのか? <= CGI::Fast か.
+# XXX: $env 渡し中心に変更する. 現状では...
+# [1] $fh, $cgi を外から渡すケース... そもそも、これを止めるべき. $env でええやん、と。
 # [2] $fh, $file, []/{}
 # [3] $fh, $file, k=v, k=v... のケース
 
 sub make_cgi {
-  (my MY $self) = shift;
+  (my MY $self, my Env $env) = splice @_, 0, 2;
   my ($cgi, $root, $loc, $file, $trailer);
   if ($self->is_gateway) {
     my $is_cgi_obj = ref $_[0] and $_[0]->can('param');
     $cgi = $is_cgi_obj ? shift : $self->new_cgi(@_);
-    my $path;
-    if (nonempty($path = $cgi->path_translated)) {
-      # ok
-    } elsif (nonempty($self->{cf_mount})) {
-      $path = $self->{cf_mount} . ($cgi->path_info // '/');
-    } else {
-      croak "\n\nYATT mount point is not specified.";
-    }
+    my ($path_translated, $document_root) = do {
+      if ($env->{PATH_TRANSLATED} && ($env->{REDIRECT_STATUS} // 0) == 200) {
+	($env->{PATH_TRANSLATED}
+	 , '');
+      } else {
+	my $root = $self->{cf_mount}
+	  // $env->{DOCUMENT_ROOT} // $self->{cf_document_root} // '';
+	($root . ($env->{PATH_INFO} // '/')
+	 , $root);
+      }
+    };
+
     # XXX: /~user_dir の場合は $dir ne $root$loc じゃんか orz...
     return (cgi => $cgi
-     , $self->split_path_url($path, $cgi->path_info // '/'
-			    , $self->document_dir($cgi))
-     , is_gateway => $self->is_gateway);
+	    , $self->split_path_url($path_translated
+				    , $env->{PATH_INFO} // '/'
+				    , $document_root)
+	    , is_gateway => $self->is_gateway);
 
   } else {
     my $path = shift;
@@ -410,15 +449,11 @@ sub is_gateway {
 }
 
 sub printenv {
-  (my MY $self, my ($fh, $cgi)) = @_;
+  (my MY $self, my ($fh, $env)) = @_;
   print $fh "\n\n";
-  foreach my $name (sort keys %ENV) {
-    print $fh $name, "\t", map(defined $_ ? $_ : "(undef)", $ENV{$name}), "\n"
+  foreach my $name (sort keys %$env) {
+    print $fh $name, "\t", map(defined $_ ? $_ : "(undef)", $env->{$name}), "\n"
       ;
-  }
-
-  if (defined $cgi and ref $cgi) {
-    print $fh "CGI:\n", terse_dump($cgi), "\n";
   }
 }
 

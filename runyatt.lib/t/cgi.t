@@ -38,7 +38,7 @@ $i = 1;
   my $text_html_sjis = qr{Content-Type: text/html; charset=shiftjis};
 
   # $YATT::Lite::APP が見えているかのテストのため、 &yatt:template(); を呼んでみる.
-  local $ENV{GATEWAY_INTERFACE} = "CGI(local)";
+  my $gateway_interface = "CGI(local)";
   my @test = (['foo.yatt', '1st', <<END, <<END, $text_html_sjis]
 AAA
 <yatt:bar/>
@@ -123,20 +123,24 @@ END
     my ($fn, $title, $in, $result, $header_re) = @$test;
     $dig->add("$docs/$fn", $in);
     {
-      local $ENV{REDIRECT_STATUS} = 200;
-      local $ENV{PATH_TRANSLATED} = "$BASE/$docs/$fn";
-      local $ENV{REQUEST_URI} = "/$fn";
-      is captured_runas($mux, \ (my $header), cgi => ()), $result
+      my %env = (GATEWAY_INTERFACE => $gateway_interface
+		 , REDIRECT_STATUS => 200
+		 , PATH_TRANSLATED => "$BASE/$docs/$fn"
+		 , REQUEST_URI => "/$fn");
+      is captured_runas($mux, \ (my $header), cgi => \%env, ()), $result
 	, "$theme $fn $title - redirected";
       like $header, $header_re
 	, "$theme - header contains specified charset";
     }
     {
-      local $ENV{DOCUMENT_ROOT} = $BASE;
-      local $ENV{SCRIPT_NAME} = "/t$i.cgi";
-      local $ENV{PATH_INFO} = "/$fn";
-      local $ENV{REQUEST_URI} = "/$fn"; #XXX "$ENV{SCRIPT_NAME}$ENV{PATH_INFO}";
-      is captured_runas($mux, \ (my $header), cgi => ()), $result
+      my %env = (GATEWAY_INTERFACE => $gateway_interface
+		 , DOCUMENT_ROOT => $BASE
+		 , SCRIPT_NAME => "/t$i.cgi"
+		 , PATH_INFO => "/$fn"
+		 , REQUEST_URI => "/$fn"
+		 , #XXX "$ENV{SCRIPT_NAME}$ENV{PATH_INFO}"
+		 );
+      is captured_runas($mux, \ (my $header), cgi => \%env, ()), $result
 	, "$theme $fn $title - mounted";
       like $header, $header_re
 	, "$theme - header contains specified charset";
@@ -206,9 +210,9 @@ $i++;
 
 
 sub captured_runas {
-  my ($obj, $header, $as, @args) = @_;
+  my ($obj, $header, $as, $env, @args) = @_;
   open my $fh, ">", \ (my $buf = "") or die $!;
-  $obj->runas($as, $fh, @args);
+  $obj->runas($as, $fh, $env, @args);
   close $fh;
   $buf =~ s/^((?:[^\n]+\n)+)\r?\n//s
     and $$header = $1;

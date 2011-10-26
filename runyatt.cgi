@@ -51,5 +51,5 @@ if (caller) {
   # For do 'runyatt.cgi'.
   return $dispatcher;
 } else {
-  $dispatcher->runas($get_extname->($0), \*STDOUT, @ARGV);
+  $dispatcher->runas($get_extname->($0), \*STDOUT, \%ENV, @ARGV);
 }

@@ -4,6 +4,7 @@ use warnings FATAL => qw(all);
 use fields qw(buffer header header_is_printed cookie session
 	      cf_header cf_parent_fh cf_handler cf_system cf_db
 	      cf_encoding
+	      cf_env
 	      error_backup
 	      yatt
 	      stash

@@ -126,9 +126,11 @@ sub request_path {
 
 sub request_uri {
   my PROP $prop = (my $glob = shift)->prop;
-  if ($prop->{cf_cgi}
+  if ($prop->{cf_env}) {
+    $prop->{cf_env}{REQUEST_URI};
+  } elsif ($prop->{cf_cgi}
       and my $sub = $prop->{cf_cgi}->can('request_uri')) {
-    $sub->($prop->{cf_cgi})
+    $sub->($prop->{cf_cgi});
   } else {
     $ENV{REQUEST_URI};
   }
