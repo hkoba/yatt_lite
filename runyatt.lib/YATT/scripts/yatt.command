@@ -12,6 +12,7 @@ use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 use YATT::Lite::Util::FindMethods;
 
 use YATT::Lite qw(*YATT);
+use YATT::Lite::Util qw(rootname);
 use YATT::Lite::Breakpoint;
 
 require YATT::Lite::Util::CmdLine;
@@ -27,7 +28,17 @@ my $dispatcher = do {
   if (-r $cgi) {
     do $cgi;
   } else {
-    die "Not implemented yet. Can't find driver: $cgi\n";
+    require YATT::Lite::Web::Dispatcher;
+    YATT::Lite::Web::Dispatcher->new
+	(basens => 'MyApp'
+	 , namespace => ['yatt', 'perl', 'js']
+	 , header_charset => 'utf-8'
+	 , tmpldirs => [grep {-d} rootname($libdir).".ytmpl"]
+	 , debug_cgen => $ENV{DEBUG}
+	 , debug_cgi  => $ENV{DEBUG_CGI}
+	 # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
+	 # , tmpl_encoding => 'utf-8'
+	);
   }
 };
 

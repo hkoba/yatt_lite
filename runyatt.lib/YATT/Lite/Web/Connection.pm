@@ -72,9 +72,9 @@ sub mkurl {
   my $opts = shift if @_ && ref $_[0] eq 'HASH';
   my ($file, $param, %opts) = @_;
 
-  my $scheme = $prop->{cf_cgi}->protocol;
-  my $base = $prop->{cf_cgi}->server_name;
-  if (my $port = $prop->{cf_cgi}->server_port) {
+  my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
+  my $base = $prop->{cf_env}{SERVER_NAME} // $prop->{cf_cgi}->server_name;
+  if (my $port = $prop->{cf_env}{SERVER_PORT} || $prop->{cf_cgi}->server_port) {
     $base .= ":$port"  unless ($scheme eq 'http' and $port == 80
 			       or $scheme eq 'https' and $port == 443);
   }
