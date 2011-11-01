@@ -150,6 +150,7 @@ sub call {
 		, dir => $dir
 		, file => $file
 		, subpath => $trailer
+		, system => $self
 		, root => $root, location => $loc);
 
   my $con = $dh->make_connection(undef, @params);
@@ -228,8 +229,7 @@ sub run_dirhandler {
   my $dh = $self->get_dirhandler(untaint_any($params{dir}));
   # XXX: cache のキーは相対パスか、絶対パスか?
 
-  # XXX: make_connection にも $env を渡すべきではないか
-  my $con = $dh->make_connection($fh, %params);
+  my $con = $dh->make_connection($fh, system => $self, %params);
 
   $dh->handle($dh->trim_ext($params{file}), $con, $params{file});
 
