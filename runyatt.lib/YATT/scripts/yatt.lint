@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 use strict;
 use warnings FATAL => qw(all);
 sub MY () {__PACKAGE__}
