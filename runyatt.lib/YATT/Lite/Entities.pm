@@ -159,6 +159,7 @@ sub entity_concat {
 }
 
 # coalesce
+*entity_coalesce = *entity_default; *entity_coalesce = *entity_default;
 sub entity_default {
   my $this = shift;
   foreach my $str (@_) {

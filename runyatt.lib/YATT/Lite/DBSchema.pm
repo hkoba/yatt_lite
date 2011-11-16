@@ -428,6 +428,12 @@ sub add_table_relation {
   unless (defined $item) {
     croak "Undefined relation spec for table $tab->{cf_name}";
   }
+
+  #
+  # [-has_many => 'table.key']
+  #
+  $fkName = $1 if not ref $item and $item =~ s/\.(\w+)$//;
+
   my Table $subTab = ref $item ? $self->get_table(@$item)
     : $self->info_table($item);
   my $relName = $relSpec->[0] // lc($subTab->{cf_name});
@@ -512,6 +518,7 @@ sub verify_schema {
 		    );
   sub known_rels {
     (my MY $self, my $desc) = @_;
+    # ['-has_many:rel:fk' => 'table']
     my ($relType, $relName, $fkName) = split /:/, $desc, 3;
     return unless $known_rels{$relType};
     ($relType, $relName, $fkName)
