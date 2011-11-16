@@ -107,7 +107,8 @@ sub call {
 
   my ($root, $loc, $file, $trailer)
     = split_path($path_translated, $document_root);
-  if (-e "$self->{cf_appdir}/.htdebug_env") {
+  if (defined $self->{cf_appdir}
+      and -e "$self->{cf_appdir}/.htdebug_env") {
     return [200, ["Content-type", "text/plain"]
 	    , [(map {join("\t", @$_)."\n"}
 		[root => $root], [loc => $loc]
