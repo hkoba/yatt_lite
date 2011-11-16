@@ -10,13 +10,14 @@ BODY:
  <html>
  <head>
    <title>Hello World!</title>
+ 
  </head>
  <body>
- <div id="wrapper" style="width: 800px; margin-left: 50px;">
+ <div id="wrapper" style="width: 800px; margin: 0 auto;">
  <div id="topnav">
    <h2 style="display: inline;"><a href="./">Hello World!</a></h2>
  </div>
- <center>
+ <center style="text-align: center;">
  <div id="body" style="text-align: left;">
    RUOK?</div>
  </center>

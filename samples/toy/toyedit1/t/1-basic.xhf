@@ -14,13 +14,14 @@ BODY:
  <html>
  <head>
    <title>Toy file editor, (without auth!;-)</title>
+ 
  </head>
  <body>
- <div id="wrapper" style="width: 800px; margin-left: 50px;">
+ <div id="wrapper" style="width: 800px; margin: 0 auto;">
  <div id="topnav">
    <h2 style="display: inline;"><a href="./">Toy file editor, (without auth!;-)</a></h2>
  </div>
- <center>
+ <center style="text-align: center;">
  <div id="body" style="text-align: left;">
    
  <h3>Add new file:</h3>
@@ -80,13 +81,14 @@ BODY:
  <html>
  <head>
    <title>Toy file editor, (without auth!;-)</title>
+ 
  </head>
  <body>
- <div id="wrapper" style="width: 800px; margin-left: 50px;">
+ <div id="wrapper" style="width: 800px; margin: 0 auto;">
  <div id="topnav">
    <h2 style="display: inline;"><a href="./">Toy file editor, (without auth!;-)</a></h2>
  </div>
- <center>
+ <center style="text-align: center;">
  <div id="body" style="text-align: left;">
    
  <h3>Add new file:</h3>
@@ -149,13 +151,14 @@ BODY:
  <html>
  <head>
    <title>Toy file editor, (without auth!;-)</title>
+ 
  </head>
  <body>
- <div id="wrapper" style="width: 800px; margin-left: 50px;">
+ <div id="wrapper" style="width: 800px; margin: 0 auto;">
  <div id="topnav">
    <h2 style="display: inline;"><a href="./">Toy file editor, (without auth!;-)</a></h2>
  </div>
- <center>
+ <center style="text-align: center;">
  <div id="body" style="text-align: left;">
    
  <h3>Add new file:</h3>
@@ -217,13 +220,14 @@ BODY:
  <html>
  <head>
    <title>Toy file editor, (without auth!;-)</title>
+ 
  </head>
  <body>
- <div id="wrapper" style="width: 800px; margin-left: 50px;">
+ <div id="wrapper" style="width: 800px; margin: 0 auto;">
  <div id="topnav">
    <h2 style="display: inline;"><a href="./">Toy file editor, (without auth!;-)</a></h2>
  </div>
- <center>
+ <center style="text-align: center;">
  <div id="body" style="text-align: left;">
    
  <h3>Add new file:</h3>
