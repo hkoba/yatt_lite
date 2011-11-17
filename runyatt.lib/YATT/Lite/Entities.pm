@@ -168,6 +168,13 @@ sub entity_default {
   '';
 }
 
+*entity_lsize = *entity_llength; *entity_lsize = *entity_llength;
+sub entity_llength {
+  my ($this, $list) = @_;
+  return undef unless defined $list and ref $list eq 'ARRAY';
+  scalar @$list;
+}
+
 sub entity_join {
   my ($this, $sep) = splice @_, 0, 2;
   join $sep, grep {defined $_ && $_ ne ''} @_;
