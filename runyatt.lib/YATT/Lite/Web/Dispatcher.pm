@@ -47,18 +47,18 @@ sub configparams {
   use fields qw(
 GATEWAY_INTERFACE
 REQUEST_METHOD
+SCRIPT_NAME
+SCRIPT_FILENAME
 DOCUMENT_ROOT
 
-REDIRECT_STATUS
 PATH_INFO
 PATH_TRANSLATED
+REDIRECT_STATUS
 REQUEST_URI
 DOCUMENT_URI
-SCRIPT_NAME
 
 QUERY_STRING
 SERVER_NAME
-SCRIPT_FILENAME
 SERVER_PORT
 SERVER_PROTOCOL
 HTTP_USER_AGENT
@@ -222,7 +222,7 @@ sub dispatch {
 }
 
 sub run_dirhandler {
-  (my MY $self, my $fh, my %params) = @_;
+  (my MY $self, my ($fh, %params)) = @_;
   # dirhandler は必ず load することにする。 *.yatt だけでなくて *.ydo でも。
   # 結局は機能集約モジュールが欲しくなるから。
   # そのために、 dirhandler は死重を減らすよう、部分毎に delayed load する
