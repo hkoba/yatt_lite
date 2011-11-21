@@ -1,0 +1,10 @@
+Revision history for YATT::Lite
+
+0.0.3  2011-11-16
+
+ * PSGI Adaption. It is usable, but I'm not enough satisfied though.
+   In next release, to adapt more for psgi, massive internal change will occur.
+
+0.0.1  2010-10-18 08:28:37
+
+ * Initial release.
