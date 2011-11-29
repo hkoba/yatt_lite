@@ -124,3 +124,23 @@ OUT:
  <h2>Hello</h2>
  world!
  
+
+TITLE: if 0 correctly hides body
+IN:
+ You should see empty line:
+ <yatt:if "0">
+  But it is not!
+ </yatt:if>
+OUT:
+ You should see empty line:
+ 
+
+TITLE: yatt:if if="0" correctly hides body too.
+IN:
+ You should see empty line:
+ <yatt:if if="0">
+  But it is not!
+ </yatt:if>
+OUT:
+ You should see empty line:
+ 

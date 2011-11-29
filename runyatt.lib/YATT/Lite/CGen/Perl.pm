@@ -683,7 +683,8 @@ sub feed_arg_spec {
     my @expr = map {
       my ($fmt, $guard, @body) = @$_;
       local $self->{curtoks} = [@body];
-      ($guard ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : $fmt)
+      (defined $guard
+       ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : $fmt)
 	.'{'.$self->cut_next_nl.$self->as_print('}');
     } @arms;
     \ join "", @expr, $self->cut_next_nl;
