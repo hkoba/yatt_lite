@@ -13,6 +13,7 @@ use YATT::Lite::Types
 			     cf_FILE_READABLE
 			   )]]
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
+			     cf_BREAK
 			     cf_PARAM cf_HEADER cf_BODY cf_ERROR)]]);
 
 our @EXPORT;
@@ -226,7 +227,11 @@ sub mech_request {
 
 sub item_url {
   (my Tests $tests, my Item $item) = @_;
-  join '?', $tests->item_url_file($item), $tests->item_query($item);
+  if (($item->{cf_METHOD} // '') eq 'POST') {
+    $tests->item_url_file($item)
+  } else {
+    join '?', $tests->item_url_file($item), $tests->item_query($item);
+  }
 }
 
 sub item_url_file {

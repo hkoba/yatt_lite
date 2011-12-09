@@ -4,7 +4,7 @@ FILE: index.yatt
 BODY:
  <h2>request sigil mapping</h2>
  <form method="POST">
- <input type="text" name="foo" size="10">
+ <input type="text" name="foo" size="10" value="">
  <input type="submit" name="~" value="show this">
  <input type="submit" name="~bar" value="show bar">
  <input type="submit" name="!baz" value="do baz">
@@ -19,7 +19,22 @@ PARAM[
 BODY:
  <h2>request sigil mapping</h2>
  <form method="POST">
- <input type="text" name="foo" size="10">
+ <input type="text" name="foo" size="10" value="">
+ <input type="submit" name="~" value="show this">
+ <input type="submit" name="~bar" value="show bar">
+ <input type="submit" name="!baz" value="do baz">
+ </form>
+
+FILE: index.yatt
+TITLE: ~=any -> default page, with foo=FOO
+PARAM[
+~: show this
+foo: FOO
+]
+BODY:
+ <h2>request sigil mapping</h2>
+ <form method="POST">
+ <input type="text" name="foo" size="10" value="FOO">
  <input type="submit" name="~" value="show this">
  <input type="submit" name="~bar" value="show bar">
  <input type="submit" name="!baz" value="do baz">
@@ -33,6 +48,18 @@ PARAM[
 ]
 BODY:
  <h2>page bar</h2>
+ foo=
+
+FILE: index.yatt
+TITLE: ~page=any, with foo=BAR
+PARAM[
+~bar: show bar
+foo: BAR
+]
+BODY:
+ <h2>page bar</h2>
+ foo=BAR
+
 
 FILE: index.yatt
 TITLE: ~~=page
@@ -41,7 +68,7 @@ PARAM[
 ]
 BODY:
  <h2>page bar</h2>
-
+ foo=
 
 FILE: index.yatt
 METHOD: POST
@@ -49,7 +76,18 @@ TITLE: !baz=any
 PARAM[
 !baz: any
 ]
-BODY: OK
+BODY: OK. foo=
+
+FILE: index.yatt
+METHOD: POST
+TITLE: !baz=any, with foo=BAZ
+PARAM[
+!baz: any
+foo: BAZ
+]
+BODY: OK. foo=BAZ
+
+
 
 FILE: index.yatt
 METHOD: POST
@@ -57,4 +95,4 @@ TITLE: !!=baz
 PARAM[
 !!: baz
 ]
-BODY: OK
+BODY: OK. foo=

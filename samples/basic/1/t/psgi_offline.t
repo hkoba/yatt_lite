@@ -19,28 +19,20 @@ sub MY () {__PACKAGE__}
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use File::Basename;
 use File::Spec;
-my ($bindir, $libdir);
+my ($bindir, $appdir, $libdir);
 BEGIN {
-  # To allow keeping relative dir.
   $bindir = untaint_any(dirname($0));
-  if (-x "$bindir/../cgi-bin/runyatt.cgi"
-      and -d (my $dn = "$bindir/../cgi-bin/runyatt.lib")) {
-    $libdir = $dn;
-  } else {
-    require Test::More;
-    Test::More::plan(skip_all => 'Not yet setup');
-  }
+  $appdir = "$bindir/..";
+  $libdir = untaint_any(File::Spec->rel2abs("$appdir/runyatt.lib"));
 }
-use lib untaint_any(File::Spec->rel2abs($libdir));
+use lib $libdir;
 
 use YATT::Lite::Breakpoint;
 # use YATT::Lite::Util qw(ostream);
 use YATT::Lite::XHFTest2;
 use base qw(YATT::Lite::XHFTest2);
 
-my MY $tests = MY->load_tests([dir => "$bindir/.."
-			       , libdir => untaint_any
-			       (File::Spec->rel2abs($libdir))]
+my MY $tests = MY->load_tests([dir => $appdir , libdir => $libdir]
 			      , @ARGV ? @ARGV : $bindir);
 $tests->enter;
 
@@ -56,6 +48,10 @@ test_psgi $app, sub {
     my $dir = $tests->{cf_dir};
     my $sect_name = $tests->file_title($sect);
     foreach my Item $item (@{$sect->{items}}) {
+
+      if ($item->{cf_BREAK}) {
+	YATT::Lite::Breakpoint::breakpoint();
+      }
 
       if (my $action = $item->{cf_ACTION}) {
 	my ($method, @args) = @$action;
@@ -75,6 +71,8 @@ test_psgi $app, sub {
 	like $str, qr{$item->{cf_ERROR}}
 	  , "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
 	next;
+      } elsif ($res->code >= 400 && $res->code < 500) {
+	# fall through
       } elsif ($res->code != 200) {
 	Test::More::fail $item->{cf_FILE};
 	Test::More::diag $res->content;
