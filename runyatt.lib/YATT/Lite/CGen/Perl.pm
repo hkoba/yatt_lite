@@ -710,8 +710,9 @@ sub feed_arg_spec {
 	  or die $self->generror("Unknown type '%s' for variable '%s'"
 				 , $typename, $name);
 	# typename == source の時が問題だ。
-	'my '.$self->as_lvalue($var).' = '
-	  .$self->as_cast_to($var, argValue($valNode));
+	my $expr = 'my '.$self->as_lvalue($var);
+	my $value = argValue($valNode);
+	$expr .= $value ? (' = '.$self->as_cast_to($var, $value)) : ';';
       }
     };
     my @assign;
