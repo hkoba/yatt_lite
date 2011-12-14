@@ -21,6 +21,7 @@ require Scalar::Util;
 				  url_encode_kv encode_query
 				  ostream
 				  named_attr
+				  mk_http_status
 				));
   }
   use Carp;
@@ -395,6 +396,14 @@ sub dispatch_one {
   } else {
     print {$con} escape($item);
   }
+}
+
+sub mk_http_status {
+  my ($code) = @_;
+  require HTTP::Status;
+
+  my $message = HTTP::Status::status_message($code);
+  "Status: $code $message\015\012";
 }
 
 1;

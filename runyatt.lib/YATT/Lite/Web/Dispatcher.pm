@@ -15,6 +15,7 @@ use base qw(YATT::Lite::Factory);
 use fields qw(DirHandler Action
 	      cf_mount
 	      cf_is_gateway cf_document_root
+	      cf_is_psgi
 	      cf_appdir
 	      cf_debug_cgi
 	      cf_psgi_static
@@ -22,6 +23,7 @@ use fields qw(DirHandler Action
 # XXX: Should rename: is_gateway => is_online
 
 use YATT::Lite::Util qw(cached_in split_path catch
+			mk_http_status
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
@@ -45,6 +47,7 @@ sub configparams {
   sub Env () {"YATT::Lite::Web::Dispatcher::PSGI_ENV"}
   package YATT::Lite::Web::Dispatcher::PSGI_ENV;
   use fields qw(
+HTTPS
 GATEWAY_INTERFACE
 REQUEST_METHOD
 SCRIPT_NAME
@@ -147,7 +150,7 @@ sub call {
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
-  my @params = (cgi => $req, psgi => $env, env => $env
+  my @params = (cgi => $req, is_psgi => 1, env => $env
 		, dir => $dir
 		, file => $file
 		, subpath => $trailer
@@ -183,9 +186,10 @@ sub call {
 
 sub to_app {
   (my MY $self) = @_;
+  $self->{cf_is_psgi} = 1;
   require Plack::Request;
   require Plack::Response;
-  $self->init_by_env;
+  $self->init_by_env; # XXX: meaningless.
   unless (defined $self->{cf_document_root}) {
     croak "document_root is undef!";
   }
@@ -212,9 +216,18 @@ sub psgi_error {
 #========================================
 
 sub dispatch {
-  (my MY $self, my $fh, my Env $env) = splice @_, 0, 3;
+  (my MY $self, my $fh, my Env $env, my ($args, $opts)) = @_;
   # XXX: 本当は make_cgi 自体を廃止したい。
-  my @params = $self->make_cgi($env, @_);
+  my @params = $self->make_cgi($env, $args, $opts);
+#  {
+#    my %params = @params;
+#    $self->dump_pairs($fh
+#		      , params => [$params{cgi}->param]
+#		      , qstr => $env->{QUERY_STRING}
+#		      , cgi => $params{cgi}
+#		     ); return;
+#  }
+
   my ($dh, $con) = $self->run_dirhandler($fh, env => $env, @params);
   # $con->commit を呼ぶときに $YATT, $CON が埋まっているようにするため
   $dh->commit($con);
@@ -246,7 +259,7 @@ sub runas {
 }
 
 sub runas_cgi {
-  (my MY $self, my $fh, my Env $env) = splice @_, 0, 3;
+  (my MY $self, my $fh, my Env $env, my ($args, %opts)) = @_;
   if (-e ".htdebug_env") {
     $self->printenv($fh, $env);
     return;
@@ -260,17 +273,26 @@ sub runas_cgi {
     local $env->{GATEWAY_INTERFACE} = $self->{cf_is_gateway} = 'CGI/YATT';
     local $env->{REQUEST_METHOD} //= 'GET';
     local @{$env}{qw(PATH_TRANSLATED REDIRECT_STATUS)}
-      = (Cwd::abs_path(shift), 200)
+      = (Cwd::abs_path(shift @$args), 200)
 	if @_;
-    $self->dispatch($fh, $env, @_);
+    $self->dispatch($fh, $env, $args, \%opts);
   } elsif ($self->is_gateway) {
     if (defined $fh and fileno($fh) >= 0) {
       open STDERR, '>&', $fh or die "can't redirect STDERR: $!";
     }
-    eval { $self->dispatch($fh, $env, @_) };
-    die "Content-type: text/plain\n\n$@" if $@ and not is_done($@);
+    eval { $self->dispatch($fh, $env, $args, \%opts) };
+    if (not $@ or is_done($@)) {
+      # NOP
+    } elsif (ref $@ eq 'ARRAY') {
+      # Non local exit with PSGI response triplet.
+      $self->cgi_response($fh, $env, @{$@});
+
+    } else {
+      # Unknown error.
+      $self->show_error($fh, $@, $env);
+    }
   } else {
-    $self->dispatch($fh, $env, @_);
+    $self->dispatch($fh, $env, $args, \%opts);
   }
 }
 
@@ -279,15 +301,41 @@ sub is_done {
     and ${$_[0]} eq 'DONE';
 }
 
+########################################
+#
+# FastCGI support, based on PSGI mode.
+#
+########################################
+
+# runas_fcgi() is basically designed for Apache's dynamic fastcgi.
+# If you want psgi.multiprocess, use psgi mode directly.
+
 sub runas_fcgi {
-  (my MY $self, my $fh, my Env $env) = splice @_, 0, 3;
-  require CGI::Fast;
+  (my MY $self, my $fhset, my Env $init_env, my ($args, %opts)) = @_;
+  # $fhset is either stdout or [\*STDIN, \*STDOUT, \*STDERR].
+  # $init_env is just discarded.
+  # $args = \@ARGV
+  # %opts is fcgi specific options.
+
+  $self->{cf_is_psgi} = 1;
+
   # In suexec fcgi, $0 will not be absolute path.
   my $progname = $0 if $0 =~ m{^/};
+
+  my ($stdin, $stdout, $stderr) = ref $fhset eq 'ARRAY' ? @$fhset
+    : (\*STDIN, $fhset, $opts{isolate_stderr} ? \*STDERR : $fhset);
+
+  require FCGI;
+  my $sock = 0;
+  my %env;
+  my $request = FCGI::Request
+    ($stdin, $stdout, $stderr
+     , \%env, $sock, $opts{nointr} ? 0 :&FCGI::FAIL_ACCEPT_ON_INTR);
+
   my ($dir, $age);
-  $self->{cf_at_done} = sub {die \"DONE"};
-  while (defined (my $cgi = new CGI::Fast)) {
-    # XXX: reset env! use  FCGI::Accept!
+  local $self->{cf_at_done} = sub {die \"DONE"};
+  while ($request->Accept >= 0) {
+    my Env $env = $self->psgi_fcgi_newenv(\%env, $stdin, $stderr);
     $self->init_by_env($env);
     unless (defined $progname) {
       $progname = $env->{SCRIPT_FILENAME}
@@ -299,21 +347,61 @@ sub runas_fcgi {
     }
 
     if (-e "$dir/.htdebug_env") {
-      $self->printenv($fh, $env);
+      $self->printenv($stdout, $env);
       next;
     }
 
-    eval { $self->dispatch($fh, $cgi) };
-    $self->show_error($fh, $@, $cgi) if $@ and not is_done($@); # 暫定
+    # 出力の基本動作は streaming.
+    eval { $self->dispatch($stdout, $env) };
+
+    # 正常時は全て出力が済んだ後に制御が戻ってくる。
+    if (not $@ or is_done($@)) {
+      # NOP
+    } elsif (ref $@ eq 'ARRAY') {
+      # Non local exit with PSGI response triplet.
+      $self->cgi_response($stdout, $env, @{$@});
+
+    } else {
+      # Unknown error.
+      $self->show_error($stdout, $@, $env);
+    }
+
     last if -e $progname and -M $progname < $age;
   }
 }
 
-sub init_by_env {
-  (my MY $self, my Env $env) = @_;
-  $self->{cf_is_gateway} //= $env->{GATEWAY_INTERFACE} if $env->{GATEWAY_INTERFACE};
-  $self->{cf_document_root} //= $env->{DOCUMENT_ROOT} if $env->{DOCUMENT_ROOT};
-  $self;
+# Extracted and modified from Plack::Handler::FCGI.
+
+sub psgi_fcgi_newenv {
+  (my MY $self, my Env $init_env, my ($stdin, $stderr)) = @_;
+  require Plack::Util;
+  require Plack::Request;
+  my Env $env = +{ %$init_env };
+  $env->{'psgi.version'} = [1,1];
+  $env->{'psgi.url_scheme'}
+    = ($init_env->{HTTPS}||'off') =~ /^(?:on|1)$/i ? 'https' : 'http';
+  $env->{'psgi.input'}        = $stdin  || *STDIN;
+  $env->{'psgi.errors'}       = $stderr || *STDERR;
+  $env->{'psgi.multithread'}  = &Plack::Util::FALSE;
+  $env->{'psgi.multiprocess'} = &Plack::Util::FALSE; # XXX:
+  $env->{'psgi.run_once'}     = &Plack::Util::FALSE;
+  $env->{'psgi.streaming'}    = &Plack::Util::FALSE; # XXX: Todo.
+  $env->{'psgi.nonblocking'}  = &Plack::Util::FALSE;
+  # delete $env->{HTTP_CONTENT_TYPE};
+  # delete $env->{HTTP_CONTENT_LENGTH};
+  $env;
+}
+
+sub cgi_response {
+  (my MY $self, my ($fh, $env, $code, $headers, $body)) = @_;
+  my $header = mk_http_status($code);
+  while (my ($k, $v) = splice @$headers, 0, 2) {
+    $header .= "$k: $v\015\012";
+  }
+  $header .= "\015\012";
+
+  print {*$fh} $header;
+  print {*$fh} @$body;
 }
 
 #========================================
@@ -330,15 +418,23 @@ sub get_dirhandler {
 # [3] $fh, $file, k=v, k=v... のケース
 
 sub make_cgi {
-  (my MY $self, my Env $env) = splice @_, 0, 2;
+  (my MY $self, my Env $env, my ($args, $opts)) = @_;
   my ($cgi, $root, $loc, $file, $trailer);
   if ($self->is_gateway) {
-    my $is_cgi_obj = ref $_[0] and $_[0]->can('param');
-    $cgi = $is_cgi_obj ? shift : $self->new_cgi(@_);
+    $cgi = do {
+      if ($self->{cf_is_psgi}) {
+	require Plack::Request;
+	Plack::Request->new($env);
+      } elsif (ref $args and UNIVERSAL::can($args, 'param')) {
+	$args;
+      } else {
+	$self->new_cgi(@$args);
+      }
+    };
     my ($path_translated, $document_root) = do {
       if ($env->{PATH_TRANSLATED} && ($env->{REDIRECT_STATUS} // 0) == 200) {
 	($env->{PATH_TRANSLATED}
-	 , '');
+	 , $env->{DOCUMENT_ROOT} // $self->{cf_document_root});
       } else {
 	my $root = $self->{cf_mount}
 	  // $env->{DOCUMENT_ROOT} // $self->{cf_document_root} // '';
@@ -346,16 +442,16 @@ sub make_cgi {
 	 , $root);
       }
     };
-
     # XXX: /~user_dir の場合は $dir ne $root$loc じゃんか orz...
     return (cgi => $cgi
 	    , $self->split_path_url($path_translated
 				    , $env->{PATH_INFO} // '/'
 				    , $document_root)
+	    , $self->cf_delegate_defined(qw(is_psgi))
 	    , is_gateway => $self->is_gateway);
 
   } else {
-    my $path = shift;
+    my $path = shift @$args;
     unless (defined $path) {
       die "Usage: $0 tmplfile args...\n";
     }
@@ -369,7 +465,7 @@ sub make_cgi {
     }
     # XXX: widget 直接呼び出しは？ cgi じゃなしに、直接パラメータ渡しは？ =>
     ($root, $loc, $file, $trailer) = split_path($path);
-    $cgi = $self->new_cgi(@_);
+    $cgi = $self->new_cgi(@$args);
   }
 
   (cgi => $cgi, dir => "$root$loc", file => $file, subpath => $trailer
@@ -408,6 +504,12 @@ sub split_path_url {
 }
 
 #========================================
+sub init_by_env {
+  (my MY $self, my Env $env) = @_;
+  $self->{cf_is_gateway} //= $env->{GATEWAY_INTERFACE} if $env->{GATEWAY_INTERFACE};
+  $self->{cf_document_root} //= $env->{DOCUMENT_ROOT} if $env->{DOCUMENT_ROOT};
+  $self;
+}
 
 sub new_cgi {
   my MY $self = shift;
@@ -451,10 +553,14 @@ sub is_gateway {
 
 sub printenv {
   (my MY $self, my ($fh, $env)) = @_;
+  $self->dump_pairs($fh, map {$_ => $env->{$_}} sort keys %$env);
+}
+
+sub dump_pairs {
+  (my MY $self, my ($fh)) = splice @_, 0, 2;
   print $fh "\n\n";
-  foreach my $name (sort keys %$env) {
-    print $fh $name, "\t", map(defined $_ ? $_ : "(undef)", $env->{$name}), "\n"
-      ;
+  while (my ($name, $value) = splice @_, 0, 2) {
+    print $fh $name, "\t", terse_dump($value), "\n";
   }
 }
 
@@ -469,3 +575,26 @@ sub NIMPL { croak "\n\nNot yet implemented" }
 YATT::Lite::Breakpoint::break_load_dispatcher();
 
 1;
+
+__END__
+
+
+runas_cgi/runas_fcgi            call($env)
+
+dispatch
+
+make_cgi
+
+run_dirhandler
+
+get_dirhandler                  get_dirhandler
+
+$d->make_connection             $d->make_connection
+
+$d->handle                      $d->handle
+
+
+$c->commit
+$c->flush
+$c->DONE
+

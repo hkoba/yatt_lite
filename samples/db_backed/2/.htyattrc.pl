@@ -84,10 +84,19 @@ sub get_session {
 sub load_session {
   (my MY $self, my ($con, $new, @rest)) = @_;
   my ConnProp $prop = $con->prop;
-  if ($new || $prop->{cf_cgi}->cookie($self->sid_name)) {
+  if ($new || $self->_session_sid($prop->{cf_cgi})) {
     $prop->{session} = $self->_load_session($con, $new, @rest);
   } else {
     $prop->{session} = undef;
+  }
+}
+
+sub _session_sid {
+  (my MY $self, my $cgi_or_req) = @_;
+  if (my $sub = $cgi_or_req->can('cookies')) {
+    $sub->($cgi_or_req)->{$self->sid_name};
+  } else {
+    scalar $cgi_or_req->cookie($self->sid_name);
   }
 }
 
@@ -99,9 +108,9 @@ sub _load_session {
   my %opts = (name => $self->sid_name, lexpand($self->{cf_session_opts}));
   my $expire = delete($opts{expire}) // $self->default_session_expire;
   my $sess = CGI::Session->$method
-    ("driver:file", $con->cget('cgi'), undef, \%opts);
+    ("driver:file", $self->_session_sid($con->cget('cgi')), undef, \%opts);
 
-  if (not $new and $sess->is_empty) {
+  if (not $new and $sess and $sess->is_empty) {
     # die "Session is empty!";
     return
   }
@@ -230,9 +239,10 @@ sub dbic {
   my MY $self = shift;
   $self->{dbic} //= do {
     my ($dbi, $user, $pass) = $self->dbi_dsn;
+    # DBIC warns 'AutoCommit => 0'.
     $self->DBIC->connect
       ($dbi, $user, $pass
-       , {PrintError => 0, RaiseError => 1, AutoCommit => 0});
+       , {PrintError => 0, RaiseError => 1, AutoCommit => 1});
   };
 }
 

@@ -3,6 +3,8 @@ use strict;
 use warnings FATAL => qw(all);
 use fields qw(buffer header header_is_printed cookie session
 	      cf_header cf_parent_fh cf_handler cf_system cf_db
+	      cf_content_type
+	      cf_charset
 	      cf_encoding
 	      cf_env
 	      error_backup
@@ -86,6 +88,7 @@ sub buffer {
   my PROP $prop = prop(my $glob = shift);
   $prop->{buffer}
 }
+
 sub set_header {
   my PROP $prop = prop(my $glob = shift);
   my ($key, $value) = @_;
@@ -95,6 +98,26 @@ sub set_header {
 sub list_header {
   my PROP $prop = prop(my $glob = shift);
   (map($_ ? %$_ : (), $prop->{header}));
+}
+
+sub content_type {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{cf_content_type}
+}
+sub set_content_type {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{cf_content_type} = shift;
+  $glob;
+}
+
+sub charset {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{cf_charset}
+}
+sub set_charset {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{cf_charset} = shift;
+  $glob;
 }
 
 sub cget {
@@ -137,9 +160,11 @@ sub header_is_printed {
 
 sub commit {
   my PROP $prop = (my $glob = shift)->prop;
-  if (my $sub = $prop->{cf_header}) {
-    print {$$prop{cf_parent_fh}} $sub->($glob, @_)
-      unless $prop->{header_is_printed}++;
+  if (not $prop->{header_is_printed}++
+      and my $sub = $prop->{cf_header}) {
+    my @header = $sub->($glob, @_);
+    #print STDERR "# HEADER: ", YATT::Lite::Util::terse_dump(\@header), "\n";
+    print {$$prop{cf_parent_fh}} @header;
   }
   $glob->flush;
 }

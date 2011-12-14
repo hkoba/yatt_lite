@@ -40,7 +40,9 @@ sub do_test {
   my $mech = $CLASS->new
     (map {
       (rootdir => $_
-       , fcgiscript => "$_/cgi-bin/runyatt.fcgi")
+       , fcgiscript => "$_/cgi-bin/runyatt.fcgi"
+       , debug_fcgi => $ENV{DEBUG_FCGI}
+      )
     } File::Spec->rel2abs("$bindir/.."));
 
   if (my $reason = $mech->check_skip_reason) {

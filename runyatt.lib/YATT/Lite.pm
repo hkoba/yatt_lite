@@ -169,7 +169,7 @@ sub handle_yatt {
 sub handle_ytmpl {
   (my MY $self, my ($con, $file)) = @_;
   # XXX: http result code:
-  print $con "Not Allowed: $file\n";
+  print $con "Forbidden filetype: $file";
 }
 
 sub trim_ext {

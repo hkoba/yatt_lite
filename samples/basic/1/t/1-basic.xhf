@@ -33,3 +33,12 @@ ERROR: ^Global symbol "\$unknown_var" requires explicit package name at \.?(?:/[
 
 FILE: noncode.ydo
 ERROR: ^file '(?:/[^/]*)*/noncode\.ydo' should return CODE \(but not\)!
+
+FILE: foobar.yatt
+PARAM{
+x: 3
+y: 8
+}
+BODY:
+ <h2>3</h2>
+ <h3>8</h3>

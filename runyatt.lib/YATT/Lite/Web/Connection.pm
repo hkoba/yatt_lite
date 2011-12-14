@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
 use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
-	      cf_psgi
+	      cf_is_psgi
 	      cf_root cf_location
 	      cf_use_array_param
 	    );
@@ -14,7 +14,7 @@ use Carp;
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
-  foreach my $name (qw(param url_param request_method header referer)) {
+  foreach my $name (qw(param url_param request_method referer)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
       $prop->{cf_cgi}->$name(@_);
@@ -32,10 +32,29 @@ BEGIN {
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_cgi} = my $cgi = shift;
-  $glob->convert_array_param($cgi) if $prop->{cf_use_array_param};
+  if ($prop->{cf_use_array_param}) {
+    if ($prop->{cf_is_psgi}) {
+      $glob->convert_array_param_psgi($cgi);
+    } else {
+      $glob->convert_array_param_cgi($cgi);
+    }
+  }
 }
 
-sub convert_array_param {
+sub convert_array_param_psgi {
+  my ($glob, $req) = @_;
+  my $params = $req->body_parameters || $req->query_parameters;
+  foreach my $name (keys %$params) {
+    (my $newname = $name) =~ s{^\*|\[\]$}{}
+      or next;
+    my %hash; $hash{$_} = 1 for $params->get_all($name);
+    $params->remove($name);
+    $params->add($newname, \%hash);
+  }
+  $req;
+}
+
+sub convert_array_param_cgi {
   my ($glob, $cgi) = @_;
   foreach my $name ($cgi->param) {
     (my $newname = $name) =~ s{^\*|\[\]$}{}
@@ -60,6 +79,15 @@ sub location {
   $loc;
 }
 
+sub _invoke_or {
+  my ($default, $obj, $method, @args) = @_;
+  if (my $sub = $obj->can($method)) {
+    $sub->($obj, @args)
+  } else {
+    $default;
+  }
+}
+
 # XXX: parameter の加減算も？
 # XXX: 絶対 path/相対 path の選択?
 # scheme
@@ -73,8 +101,10 @@ sub mkurl {
   my ($file, $param, %opts) = @_;
 
   my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
-  my $base = $prop->{cf_env}{SERVER_NAME} // $prop->{cf_cgi}->server_name;
-  if (my $port = $prop->{cf_env}{SERVER_PORT} || $prop->{cf_cgi}->server_port) {
+  my $base = $prop->{cf_env}{SERVER_NAME}
+    // _invoke_or('localhost', $prop->{cf_cgi}, 'server_name');
+  if (my $port = $prop->{cf_env}{SERVER_PORT}
+      || _invoke_or(80, $prop->{cf_cgi}, 'server_port')) {
     $base .= ":$port"  unless ($scheme eq 'http' and $port == 80
 			       or $scheme eq 'https' and $port == 443);
   }
@@ -138,25 +168,25 @@ sub request_uri {
 
 #========================================
 
-# XXX: Should not depend raw HTTP header.
+sub _mk_content_type {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $ct = $prop->{cf_content_type} || "text/html";
+  if ($ct =~ m{^text/} && $ct !~ /;\s*charset/) {
+    my $cs = $prop->{cf_charset} || "utf-8";
+    $ct .= qq|; charset=$cs|;
+  }
+}
+
 sub mkheader {
   my PROP $prop = (my $glob = shift)->prop;
-  # my $o = $prop->{session} || $cgi;
-  my @header_param = ($glob->list_header, @_);
-  if (my $cgi = $prop->{cf_cgi}) {
-    my @h;
-    while (my ($k, $v) = splice @header_param, 0, 2) {
-      push @h, $k =~ /^-/ ? $k : "-$k", $v;
-    }
-    $cgi->header(@h);
-  } else {
-    my @out = ("Content-type: text/html");
-    while (my ($key, $val) = splice @header_param, 0, 2) {
-      # XXX: escape
-      push @out, "X$key: $val";
-    }
-    join("\015\012", @out, '', '');
-  }
+  my ($code) = shift;
+  require HTTP::Headers;
+  my $headers = HTTP::Headers->new("Content-type", $glob->_mk_content_type
+				   , $glob->list_header
+				   , $glob->list_baked_cookie
+				   , @_);
+  YATT::Lite::Util::mk_http_status($code)
+      . $headers->as_string . "\015\012";
 }
 
 #----------------------------------------
@@ -205,7 +235,7 @@ sub list_baked_cookie {
   my PROP $prop = (my $glob = shift)->prop;
   my @cookie = values %{$prop->{cookie}} if $prop->{cookie};
   return unless @cookie;
-  wantarray ? (-cookie => \@cookie) : \@cookie;
+  wantarray ? map(("Set-Cookie", $_), @cookie) : \@cookie;
 }
 
 sub redirect {
@@ -213,6 +243,7 @@ sub redirect {
   croak "undefined url" unless @_ and defined $_[0];
   my $url = do {
     if (ref $_[0]) {
+      # To do external redirect, $url should pass as SCALAR ref.
       ${shift @_}
     } elsif ($_[0] =~ m{^(?:\w+:)?//}) {
       $glob->error("External redirect is not allowed: %s", $_[0]);
@@ -231,15 +262,13 @@ sub redirect {
   $prop->{buffer} = '';
   # In test, parent_fh may undef.
   my $fh = $$prop{cf_parent_fh} // $glob;
-  if ($prop->{cf_psgi}) {
+  if ($prop->{cf_is_psgi}) {
     # PSGI mode.
-    my $cookie = $glob->list_baked_cookie;
     die [302, [Location => $url, $glob->list_header
-	      , $cookie ? map(("Set-Cookie", $_), @$cookie) : ()
+	       , $glob->list_baked_cookie
 	      ], []];
   } else {
-    print {$fh} $prop->{cf_cgi}->redirect(-uri => $url
-					  , $glob->list_baked_cookie, @_);
+    print {$fh} $glob->mkheader(302, Location => $url, @_);
     # 念のため, parent_fh は undef しておく
     undef $$prop{cf_parent_fh};
   }

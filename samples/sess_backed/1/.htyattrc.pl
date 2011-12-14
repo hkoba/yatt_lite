@@ -62,15 +62,25 @@ sub session_start_from_param {
   $prop->{session} = $self->_session_start(1, qr/^\w+$/);
 }
 
+sub _session_sid {
+  (my MY $self, my $cgi_or_req) = @_;
+  if (my $sub = $cgi_or_req->can('cookies')) {
+    $sub->($cgi_or_req)->{$self->sid_name};
+  } else {
+    scalar $cgi_or_req->cookie($self->sid_name);
+  }
+}
+
 sub _session_start {
   (my MY $self, my ($new, @rest)) = @_;
   my $method = $new ? 'new' : 'load';
   my %opts = (name => $self->sid_name, lexpand($self->{cf_session_opts}));
   my $expire = delete($opts{expire}) // $self->default_session_expire;
   my $sess = CGI::Session->$method
-    ("driver:file", $CON->cget('cgi'), undef, \%opts);
+    ("driver:file", $self->_session_sid($CON->cget('cgi'))
+     , undef, \%opts);
 
-  if (not $new and $sess->is_empty) {
+  if (not $new and $sess and $sess->is_empty) {
     # die "Session is empty!";
     return
   }

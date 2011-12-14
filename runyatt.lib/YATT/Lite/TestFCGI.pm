@@ -14,6 +14,7 @@ my $Test = Test::Builder->new;
 		sockfile
 		raw_result
 		cf_rootdir cf_fcgiscript
+		cf_debug_fcgi
 		kidpid
 	      );		# base form
 
@@ -226,7 +227,9 @@ my $Test = Test::Builder->new;
        , timeout => ($self->is_coverage_mode ? 120 : 10));
 
     my $env = {REQUEST_METHOD    => uc($method)
+	       , GATEWAY_INTERFACE => "FCGI::Client"
 	       , REQUEST_URI     => $path
+	       , PATH_INFO       => $path
 	       , DOCUMENT_ROOT   => $self->{cf_rootdir}
 	       , PATH_TRANSLATED => "$self->{cf_rootdir}$path"};
     my @content;
@@ -251,10 +254,16 @@ my $Test = Test::Builder->new;
       $env->{HTTP_COOKIE} = $cookies;
     }
 
-    # print STDERR "# REQ: ", terse_dump($env, @content), "\n";
+    print STDERR "# FCGI_REQUEST: ", terse_dump($env, @content), "\n"
+      if $self->{cf_debug_fcgi};
 
     ($self->{raw_result}, $self->{raw_error}) = $client->request
       ($env, @content);
+
+    print STDERR "# FCGI_RAW_RESULT: ", terse_dump($self->{raw_result}), "\n"
+      if $self->{cf_debug_fcgi};
+    print STDERR "# FCGI_RAW_ERROR: ", terse_dump($self->{raw_error}), "\n"
+      if $self->{cf_debug_fcgi};
 
     if (defined $self->{raw_error} and $self->{raw_error} ne '') {
       if ($want_error) {

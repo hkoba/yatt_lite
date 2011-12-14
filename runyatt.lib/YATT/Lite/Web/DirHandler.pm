@@ -91,12 +91,13 @@ sub make_connection {
   my @opts = do {
     if ($opts{is_gateway}) {
       # buffered mode.
-      (undef, parent_fh => $fh, header => sub {
+      (undef
+       , parent_fh => $fh
+       , charset => $$self{cf_header_charset} || $$self{cf_output_encoding}
+       , header => sub {
 	 my ($con) = shift;
-	 $con->mkheader(-charset =>
-			$$self{cf_header_charset} || $$self{cf_output_encoding}
-			, $con->list_baked_cookie
-		       );
+	 # die "\n\nconnection->{cf_header} is called\n";
+	 $con->mkheader(200, $con->list_baked_cookie);
        });
     } else {
       # direct mode.
@@ -122,11 +123,12 @@ sub error_handler {
     }
   };
   # error.ytmpl を探し、あれば呼び出す。
-  if (my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1)) {
-    $sub->($pkg, $errcon, $err);
-  } else {
-    print {*$errcon} $err, Carp::longmess(), "\n\n";
-  }
+  my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
+    # print {*$errcon} $err, Carp::longmess(), "\n\n";
+    # Dispatcher の show_error に任せる
+    die $err;
+  };
+  $sub->($pkg, $errcon, $err);
   $errcon->commit; # XXX: これが無いと、 500 error, 有っても無限再帰。
   $self->DONE; # XXX: bailout と分けるべき
 }

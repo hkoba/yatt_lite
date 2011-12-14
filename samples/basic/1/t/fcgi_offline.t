@@ -2,6 +2,8 @@
 use strict;
 use warnings FATAL => qw(all);
 
+# To peek FCGI raw_result & raw_error, run with env DEBUG_FCGI=1
+
 use 5.010;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
@@ -43,7 +45,9 @@ unless (-d "$bindir/../cgi-bin"
 my $mech = $CLASS->new
   (map {
     (rootdir => $_
-     , fcgiscript => "$_/cgi-bin/runyatt.fcgi")
+     , fcgiscript => "$_/cgi-bin/runyatt.fcgi"
+     , debug_fcgi => $ENV{DEBUG_FCGI}
+    )
   } dirname(File::Spec->rel2abs($bindir)));
 
 if (my $reason = $mech->check_skip_reason) {

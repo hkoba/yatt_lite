@@ -69,7 +69,7 @@ use Carp;
     (my VFS $vfs, my $filename) = @_;
     # XXX: 拡張子をどうしたい？
     my ($name) = $filename =~ m{^(\w+)}
-      or die "Can't extract part name from filename '$filename'";
+      or croak "Can't extract part name from filename '$filename'";
     $vfs->{root}->lookup($vfs, $name);
   }
   #========================================

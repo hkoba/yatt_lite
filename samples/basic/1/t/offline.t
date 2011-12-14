@@ -27,7 +27,7 @@ use YATT::Lite::Util qw(ostream);
 use YATT::Lite::XHFTest2;
 use base qw(YATT::Lite::XHFTest2);
 
-my MY $tests = MY->load_tests([dir => "$bindir/.."
+my MY $tests = MY->load_tests([dir => File::Spec->rel2abs("$bindir/..")
 			       , libdir => untaint_any
 			       (File::Spec->rel2abs($libdir))]
 			      , @ARGV ? @ARGV : $bindir);
@@ -36,7 +36,7 @@ $tests->enter;
 plan $tests->test_plan;
 
 my $dispatcher = $tests->load_dispatcher;
-$dispatcher->configure(at_done => sub { die \"DONE"; });
+# $dispatcher->configure(at_done => sub { die \"DONE"; });
 
 foreach my File $sect (@{$tests->{files}}) {
   my $dir = $tests->{cf_dir};
@@ -51,8 +51,12 @@ foreach my File $sect (@{$tests->{files}}) {
       next;
     }
 
+    my %env = (DOCUMENT_ROOT => $dir
+	       , PATH_INFO => "/$item->{cf_FILE}"
+	       , PATH_TRANSLATED => "$dir/$item->{cf_FILE}"
+	      );
     my (@param) = $dispatcher->make_cgi
-      ("./$item->{cf_FILE}", $item->{cf_PARAM});
+      (\%env, ["./$item->{cf_FILE}", $item->{cf_PARAM}]);
 
     $item->{cf_METHOD} //= 'GET';
     my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
