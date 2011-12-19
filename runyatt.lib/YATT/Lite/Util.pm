@@ -323,8 +323,9 @@ sub url_decode {
 sub url_encode {
   my ( $self, $encode ) = @_;
   return () unless defined $encode;
+  # XXX: Forward slash is allowed, for cleaner url. This may break...
   $encode
-    =~ s/([^A-Za-z0-9\-_.!~*'() ])/ uc sprintf "%%%02x",ord $1 /eg;
+    =~ s{([^A-Za-z0-9\-_.!~*'() /])}{ uc sprintf "%%%02x",ord $1 }eg;
   $encode =~ tr/ /+/;
   return $encode;
 }
