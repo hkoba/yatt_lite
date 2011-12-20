@@ -25,17 +25,18 @@ unless (-r $dbfn and -s $dbfn) {
   plan skip_all => "There is no test database to cleanup.";
 }
 
-do_sqlite($dbfn, <<END);
+plan tests => 1;
+
+ok(do_sqlite($dbfn, <<END), "deleting user 'hkoba'");
 delete from user where login = 'hkoba'
 END
-
-plan skip_all => "This is cleanup only test.";
 
 sub do_sqlite {
   my ($fn, $sql) = @_;
   require DBI;
   my $dbh = DBI->connect("dbi:SQLite:dbname=$fn", undef, undef
 			 , {PrintError => 0, RaiseError => 1, AutoCommit => 0});
-  $dbh->do($sql);
+  my $rc = $dbh->do($sql);
   $dbh->commit;
+  $rc;
 }

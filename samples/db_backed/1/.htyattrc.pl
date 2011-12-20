@@ -3,6 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 
 use fields qw(dbic
+	      cf_dir_config
 	      cf_datadir cf_dbname);
 
 use YATT::Lite qw(*CON);
@@ -30,7 +31,7 @@ use YATT::Lite::DBSchema::DBIC
 		      , owner => [int => [-belongs_to => 'user']]
 		      , title => 'text'
 		      , text  => 'text'], 'owner']]
-      , login => 'text'
+      , login => ['text', -unique]
       , encpass => 'text'
       , tmppass => 'text'
       , tmppass_expire => 'datetime'
@@ -42,6 +43,13 @@ use YATT::Lite::DBSchema::DBIC
 #========================================
 Entity resultset => sub {
   shift->YATT->dbic->resultset(@_);
+};
+
+Entity dir_config => sub {
+  my ($this, $name) = @_;
+  my MY $self = $this->YATT;
+  return $self->{cf_dir_config} unless defined $name;
+  $self->{cf_dir_config}{$name};
 };
 
 #========================================
@@ -115,9 +123,9 @@ sub _load_session {
   }
 
   # expire させたくない時は、 session_opts に expire: 0 を仕込むこと。
-  $sess->expire($expire);
+  $sess->expire($expire) if $sess;
 
-  if ($new) {
+  if ($new and $sess) {
     # 本当に良いのかな?
     $con->set_cookie($sess->cookie(-path => $con->location));
 
@@ -153,6 +161,27 @@ sub is_user {
   $self->dbic->resultset('user')->single({login => $loginname})
 }
 
+sub find_user_by_login {
+  my ($self, $login) = @_;
+  $self->dbic->resultset('user')->single({login => $login});
+}
+
+sub find_user_by_email {
+  my ($self, $email) = @_;
+  $self->dbic->resultset('user')
+    ->search({email => $email})
+      ->single;
+}
+
+sub find_user {
+  my ($self, $login_or_email) = @_;
+  if ($login_or_email =~ /\@/) {
+    $self->find_user_by_email($login_or_email)
+  } else {
+    $self->find_user_by_login($login_or_email)
+  }
+}
+
 sub has_auth_failure {
   my ($self, $loginname, $plain_pass) = @_;
   my $user = $self->dbic->resultset('user')->single({login => $loginname})
@@ -179,6 +208,78 @@ sub add_user {
   $newuser->insert;
 
   ($newuser, $token);
+}
+
+sub reset_password {
+  my ($self, $email, $expire_mins) = @_;
+  my $dbic = $self->dbic;
+  my ($auth, $token, $error);
+  txn_do $dbic sub {
+    unless ($auth = $self->find_user_by_email($email)) {
+      $error = "Unknown email: $email";
+      return;
+    }
+
+    $auth->tmppass($token = $self->make_password(20));
+    $auth->tmppass_expire(time + 60*($expire_mins // 60));
+    $auth->update;
+  };
+
+  die $error if $error;
+
+  $token;
+}
+
+sub can_change_password {
+  my ($self, $email, $token) = @_;
+  my $auth = $self->dbic->resultset('user')
+    ->search({email => $email})
+      ->single
+	or return;
+
+  return unless ($auth->tmppass // '') eq $token;
+  return unless time < ($auth->tmppass_expire // 0);
+  $auth;
+}
+
+sub do_change_password {
+  my ($self, $email, $token, $password) = @_;
+  my $dbic = $self->dbic;
+  my ($user, $error);
+  txn_do $dbic sub {
+    unless ($user = $self->can_change_password($email, $token)) {
+      $error = "Invalid email or expired token!";
+      return
+    }
+    my $auth = $user;
+    $auth->update({encpass => md5_hex($password)
+		   , tmppass => undef
+		   , tmppass_expire => undef});
+  };
+  die $error if $error;
+  $user;
+}
+
+sub fetch_pass_pair {
+  (my MY $self, my $con) = @_;
+  my $pass1 = $con->param_type('password', qr{^\w{8,}$ }x
+			       , q|Password should be alphabets and digits|
+			      . q|, at least 8 chars.|);
+  my $pass2 = $con->param_type('password2', nonempty =>
+			       , q|Please retype same password.|);
+
+  unless ($pass1 eq $pass2) {
+    die "Password mismatch!";
+  }
+
+  $pass1;
+}
+
+sub fetch_email {
+  (my MY $self, my $con) = @_;
+  my $email = $con->param_type
+    ('email', qr{^[\w\.\-]+\@[\w\.\-]+$ }x
+     , q|Email syntax error!|);
 }
 
 # Stolen from Slash/Utility/Data/Data.pm:changePassword
@@ -231,6 +332,12 @@ sub sendmail {
     Email::Sender::Simple->send($msg);
   }
 }
+
+Entity mail_sender => sub {
+  my ($this) = @_;
+  $this->entity_dir_config('mail_sender') || 'webmaster@localhost';
+};
+
 
 #========================================
 

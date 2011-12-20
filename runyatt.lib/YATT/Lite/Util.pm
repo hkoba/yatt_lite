@@ -12,6 +12,7 @@ require Scalar::Util;
     our @EXPORT = qw(numLines coalesce default globref symtab lexpand escape
 		     untaint_any ckeval ckrequire ckdo untaint_unless_tainted
 		     dict_sort terse_dump catch
+		     nonempty
 		   );
     our @EXPORT_OK = (@EXPORT, qw(cached_in split_path rootname dict_order
 				  appname extname
@@ -36,6 +37,10 @@ require Scalar::Util;
     undef;
   }
   *default = \*coalesce;
+
+  sub nonempty {
+    defined $_[0] && $_[0] ne '';
+  }
 
   sub globref {
     my ($thing, $name) = @_;

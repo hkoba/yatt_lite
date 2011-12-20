@@ -7,7 +7,7 @@ use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
 	      cf_root cf_location
 	      cf_use_array_param
 	    );
-use YATT::Lite::Util qw(globref url_encode);
+use YATT::Lite::Util qw(globref url_encode nonempty);
 use Carp;
 
 #----------------------------------------
@@ -101,13 +101,7 @@ sub mkurl {
   my ($file, $param, %opts) = @_;
 
   my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
-  my $base = $prop->{cf_env}{SERVER_NAME}
-    // _invoke_or('localhost', $prop->{cf_cgi}, 'server_name');
-  if (my $port = $prop->{cf_env}{SERVER_PORT}
-      || _invoke_or(80, $prop->{cf_cgi}, 'server_port')) {
-    $base .= ":$port"  unless ($scheme eq 'http' and $port == 80
-			       or $scheme eq 'https' and $port == 443);
-  }
+  my $host = $glob->mkhost($scheme);
   my $req  = $glob->request_path;
   (my $dir  = $req) =~ s{([^/]+)$}{};
   my $orig = $1 // '';
@@ -124,7 +118,26 @@ sub mkurl {
 
   # XXX: /../ truncation
   # XXX: If sep is '&', scalar ref quoting is required.
-  ($scheme . '://' . $base . $path . $glob->mkquery($param, $opts{separator}))
+  ($scheme . '://' . $host . $path . $glob->mkquery($param, $opts{separator}))
+}
+
+sub mkhost {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($scheme) = @_;
+  $scheme ||= 'http';
+  my $env = $prop->{cf_env};
+
+  # XXX? Is this secure?
+  return $env->{HTTP_HOST} if nonempty($env->{HTTP_HOST});
+
+  my $base = $env->{SERVER_NAME}
+    // _invoke_or('localhost', $prop->{cf_cgi}, 'server_name');
+  if (my $port = $env->{SERVER_PORT}
+      || _invoke_or(80, $prop->{cf_cgi}, 'server_port')) {
+    $base .= ":$port"  unless ($scheme eq 'http' and $port == 80
+			       or $scheme eq 'https' and $port == 443);
+  }
+  $base;
 }
 
 sub mkquery {
@@ -168,6 +181,11 @@ sub request_uri {
 
 #========================================
 
+sub list_header {
+  my PROP $prop = (my $glob = shift)->prop;
+  ($glob->SUPER::list_header, $glob->list_baked_cookie);
+}
+
 sub _mk_content_type {
   my PROP $prop = (my $glob = shift)->prop;
   my $ct = $prop->{cf_content_type} || "text/html";
@@ -183,7 +201,6 @@ sub mkheader {
   require HTTP::Headers;
   my $headers = HTTP::Headers->new("Content-type", $glob->_mk_content_type
 				   , $glob->list_header
-				   , $glob->list_baked_cookie
 				   , @_);
   YATT::Lite::Util::mk_http_status($code)
       . $headers->as_string . "\015\012";
@@ -243,9 +260,10 @@ sub redirect {
   croak "undefined url" unless @_ and defined $_[0];
   my $url = do {
     if (ref $_[0]) {
-      # To do external redirect, $url should pass as SCALAR ref.
+      # To do external redirect, $url should pass as SCALAR REF.
       ${shift @_}
-    } elsif ($_[0] =~ m{^(?:\w+:)?//}) {
+    } elsif ($_[0] =~ m{^(?:\w+:)?//([^/]+)}
+	     and $1 ne ($glob->mkhost // '')) {
       $glob->error("External redirect is not allowed: %s", $_[0]);
     } else {
       # taint check
@@ -264,13 +282,14 @@ sub redirect {
   my $fh = $$prop{cf_parent_fh} // $glob;
   if ($prop->{cf_is_psgi}) {
     # PSGI mode.
-    die [302, [Location => $url, $glob->list_header
-	       , $glob->list_baked_cookie
-	      ], []];
+    die [302, [Location => $url, $glob->list_header], []];
   } else {
     print {$fh} $glob->mkheader(302, Location => $url, @_);
     # 念のため, parent_fh は undef しておく
     undef $$prop{cf_parent_fh};
+    # XXX: やっぱこっちも die すべきじゃん... なら、呼び出し手は catch 必須では？
+    # => catch があるなら、 catch 側で header 出せばいいじゃん？
+    # ==>> header_is_printed との関係？
   }
   $glob;
 }

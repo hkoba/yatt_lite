@@ -64,14 +64,14 @@ test_psgi $app, sub {
       $item->{cf_METHOD} //= 'GET';
       my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
 
-      my $res = $cb->(my $req = $tests->http_request($item));
+      my $res = $tests->run_psgicb($cb, $item);
 
       if ($item->{cf_ERROR}) {
 	(my $str = $res->content) =~ s/^Internal Server error\n//;
 	like $str, qr{$item->{cf_ERROR}}
 	  , "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
 	next;
-      } elsif ($res->code >= 400 && $res->code < 500) {
+      } elsif ($res->code >= 300 && $res->code < 500) {
 	# fall through
       } elsif ($res->code != 200) {
 	Test::More::fail $item->{cf_FILE};
@@ -80,8 +80,11 @@ test_psgi $app, sub {
       }
 
       if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
-	like trimlast(nocr($res->content)), $tests->mkpat($item->{cf_HEADER})
-	  , "[$sect_name] $T POST $item->{cf_FILE}";
+	my @header = @{$item->{cf_HEADER}};
+	while (my ($f, $v) = splice @header, 0, 2) {
+	  like $res->header($f), qr/$v/
+	    , "[$sect_name] $T POST $item->{cf_FILE} $f";
+	}
       } elsif (ref $item->{cf_BODY}) {
 	like nocr($res->content), $tests->mkseqpat($item->{cf_BODY})
 	  , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";

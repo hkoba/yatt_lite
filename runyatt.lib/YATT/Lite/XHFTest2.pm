@@ -1,11 +1,11 @@
-package YATT::Lite::XHFTest2;
+package YATT::Lite::XHFTest2; sub Tests () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Exporter qw(import);
 
-sub Tests () {__PACKAGE__}
 use base qw(YATT::Lite::Object);
-use fields qw(files cf_dir cf_libdir);
+use fields qw(files cf_dir cf_libdir
+	      cookie_jar);
 use YATT::Lite::Types
   (export_default => 1
    , [File => -fields => [qw(cf_file items
@@ -201,12 +201,27 @@ sub item_method {
   $item->{cf_METHOD} // 'GET';
 }
 
-sub http_request {
+sub run_psgicb {
+  (my Tests $tests, my ($cb, $item)) = @_;
+  my $jar = $tests->{cookie_jar} ||= do {
+    require HTTP::Cookies;
+    HTTP::Cookies->new;
+  };
+  my $res = $cb->(my $req = $tests->mkrequest($item));
+  $jar->extract_cookies($res);
+  $res;
+}
+
+sub mkrequest {
   (my Tests $tests, my Item $item) = @_;
   require HTTP::Request::Common;
   my $builder = HTTP::Request::Common->can($item->{cf_METHOD});
-  $builder->($tests->item_url($item)
-	     , defined $item->{cf_PARAM} ? $item->{cf_PARAM} : ());
+  my $req = $builder->($tests->item_url($item)
+		       , defined $item->{cf_PARAM} ? $item->{cf_PARAM} : ());
+  if (my $jar = $tests->{cookie_jar}) {
+    $jar->add_cookie_header($req);
+  }
+  $req;
 }
 
 sub mech_request {
