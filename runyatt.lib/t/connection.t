@@ -79,4 +79,27 @@ require_ok('YATT::Lite::Web::DirHandler');
 
     is $con->request_path, "", "empty request path";
   }
+
+  {
+    my %env = qw(REQUEST_METHOD  GET
+		 PATH_INFO       /foo
+		 REQUEST_URI     /foo
+		 HTTP_HOST       0.0.0.0:5000
+		 SERVER_NAME     0
+		 SERVER_PORT     5000
+		 SERVER_PROTOCOL HTTP/1.1
+		 psgi.url_scheme http
+	       );
+    my $con = $yatt->make_connection(undef, env => \%env);
+
+    is $con->mkhost, '0.0.0.0:5000', "mkhost()";
+    is $con->mkurl, 'http://0.0.0.0:5000/foo', "mkurl()";
+    is $con->mkurl('bar'), 'http://0.0.0.0:5000/bar'
+      , "mkurl(bar)";
+    is $con->mkurl(undef, {bar => 'ba& z'})
+      , 'http://0.0.0.0:5000/foo?bar=ba%26+z', "mkurl(undef, {query})";
+    is $con->mkurl(undef, undef, local => 1), '/foo'
+      , "mkurl(,,local => 1)";
+  }
+
 }

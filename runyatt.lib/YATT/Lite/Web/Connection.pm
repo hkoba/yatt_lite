@@ -118,7 +118,12 @@ sub mkurl {
 
   # XXX: /../ truncation
   # XXX: If sep is '&', scalar ref quoting is required.
-  ($scheme . '://' . $host . $path . $glob->mkquery($param, $opts{separator}))
+  my $url = '';
+  if (not $opts{local}) {
+    $url .= $scheme . '://' . $host;
+  }
+  $url .= $path . $glob->mkquery($param, $opts{separator});
+  $url;
 }
 
 sub mkhost {
@@ -147,7 +152,7 @@ sub mkquery {
   my @enc_param;
   if (ref $param eq 'HASH') {
     push @enc_param, $self->url_encode($_).'='.$self->url_encode($param->{$_})
-      for keys %$param;
+      for sort keys %$param;
   } elsif (ref $param eq 'ARRAY') {
     my @list = @$param;
     while (my ($key, $value) = splice @list, 0, 2) {
