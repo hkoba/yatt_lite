@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use 5.010;
 use Carp qw(carp croak confess longmess);
-use version; our $VERSION = qv('v0.0.3');
+use version; our $VERSION = qv('v0.0.3_1');
 
 #
 # YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。
