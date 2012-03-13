@@ -1,4 +1,4 @@
-#!/usr/bin/perl -wT
+#!/usr/bin/perl -T
 #!/usr/bin/perl -w
 package main; # For do 'runyatt.cgi'.
 use strict;
