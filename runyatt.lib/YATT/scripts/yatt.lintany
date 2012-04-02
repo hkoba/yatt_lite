@@ -19,8 +19,10 @@ use YATT::Lite::Error;
 # library の追加は？ <= .htyattrc で？違うよね?
 
 my $dispatcher = do {
-  (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
-  do $cgi;
+  (my $base = $libdir) =~ s/\.\w+$//;
+  my ($fn) = grep {-r} map {$base . $_} (qw(.psgi .cgi .fcgi))
+    or die "Can't find bootscript!\n";
+  do $fn;
 };
 
 sub fgrep (&@);
