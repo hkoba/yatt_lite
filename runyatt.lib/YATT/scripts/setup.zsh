@@ -147,7 +147,11 @@ if ! perl -le 'exit 1 if $] < 5.010'; then
     die Perl 5.010 or higher is required for YATT::Lite!
 fi
 
-[[ -d /selinux && -e /selinux/access ]] && is_selinux=1 || is_selinux=0
+if (($+commands[selinuxenabled])) && selinuxenabled; then
+    is_selinux=1
+else
+    is_selinux=0
+fi
 
 #========================================
 # apache config detection.
