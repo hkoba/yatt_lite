@@ -209,6 +209,13 @@ if (($#o_document_root)); then
     document_root=${o_document_root[2][2,-1]}
 fi
 
+if [[ -n $APACHE_RUN_GROUP ]] && (($+commands[groups])); then
+    mygroups=($(groups))
+    if (($mygroups[(ri)$APACHE_RUN_GROUP] > $#mygroups)); then
+	warn "You are not a member of $APACHE_RUN_GROUP. To change this, do \"sudo usermod -aG $APACHE_RUN_GROUP $USER\" and re-login this server."
+    fi
+fi
+
 #========================================
 # destdir verification/preparation and location detection.
 #========================================
