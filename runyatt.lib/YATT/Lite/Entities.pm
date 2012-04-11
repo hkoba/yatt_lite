@@ -213,6 +213,13 @@ sub entity_strftime {
   POSIX::strftime($fmt, $is_uts ? gmtime($sec) : localtime($sec));
 }
 
+sub entity_mkhash {
+  my ($this, @list) = @_;
+  my %hash;
+  $hash{$_} = 1 for @list;
+  \%hash;
+}
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 

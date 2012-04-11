@@ -28,7 +28,7 @@ use fields qw(YATT
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
 use YATT::Lite::Entities -as_base, qw(Entity *YATT);
-use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump);
+use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump escape);
 
 sub Facade () {__PACKAGE__}
 sub default_trans {'YATT::Lite::Core'}
@@ -333,6 +333,18 @@ Entity stash => sub {
   } else {
     $stash->{$_[0]};
   }
+};
+
+Entity mkhidden => sub {
+  my ($this) = shift;
+  \ join "\n", map {
+    my $name = $_;
+    my $esc = escape($name);
+    map {
+      sprintf(qq|<input type="hidden" name="%s" value="%s"/>|
+	      , $esc, escape($_));
+    } $CON->param($name);
+  } @_;
 };
 
 #----------------------------------------
