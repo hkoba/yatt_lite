@@ -5,6 +5,7 @@ use Exporter qw(import);
 
 use base qw(YATT::Lite::Object);
 use fields qw(files cf_dir cf_libdir
+	      cf_debug
 	      cookie_jar);
 use YATT::Lite::Types
   (export_default => 1
@@ -25,7 +26,7 @@ use YATT::Lite::TestUtil;
 use File::Basename;
 use List::Util qw(sum);
 
-use YATT::Lite::Util qw(lexpand untaint_any);
+use YATT::Lite::Util qw(lexpand untaint_any rootname);
 
 push @EXPORT, qw(plan is is_deeply like eq_or_diff sum);
 
@@ -67,11 +68,16 @@ sub test_plan {
   (tests => $self->ntests(@_));
 }
 
-use YATT::Lite::Util qw(ckdo);
 sub load_dispatcher {
   my Tests $self = shift;
-  (my $cgi = $self->{cf_libdir}) =~ s/\.\w+$/.cgi/;
-  ckdo $cgi;
+  require YATT::Lite::Factory;
+  my $rn = rootname($self->{cf_libdir});
+  my @found = grep {-r} map {"$rn.$_"} qw(cgi psgi);
+  unless (@found) {
+    croak "Can't load dispatcher. runyatt.cgi or psgi is required";
+  }
+
+  YATT::Lite::Factory->load_factory_script($found[0]);
 }
 
 sub ntests {
@@ -217,11 +223,19 @@ sub mkrequest {
   require HTTP::Request::Common;
   my $builder = HTTP::Request::Common->can($item->{cf_METHOD});
   my $req = $builder->($tests->item_url($item)
-		       , defined $item->{cf_PARAM} ? $item->{cf_PARAM} : ());
+		       , $tests->mkformref_if_post($item));
   if (my $jar = $tests->{cookie_jar}) {
     $jar->add_cookie_header($req);
   }
   $req;
+}
+
+sub mkformref_if_post {
+  (my Tests $tests, my Item $item) = @_;
+  return unless $item->{cf_METHOD} eq 'POST';
+  defined (my $ary = $item->{cf_PARAM})
+    or return;
+  $ary;
 }
 
 sub mech_request {
@@ -242,11 +256,15 @@ sub mech_request {
 
 sub item_url {
   (my Tests $tests, my Item $item) = @_;
-  if (($item->{cf_METHOD} // '') eq 'POST') {
-    $tests->item_url_file($item)
-  } else {
-    join '?', $tests->item_url_file($item), $tests->item_query($item);
-  }
+  my $url = do {
+    if (($item->{cf_METHOD} // '') eq 'POST') {
+      $tests->item_url_file($item)
+    } else {
+      join '?', $tests->item_url_file($item), $tests->item_query($item);
+    }
+  };
+  print STDERR "#item_url: $url\n" if $tests->{cf_debug};
+  $url;
 }
 
 sub item_url_file {

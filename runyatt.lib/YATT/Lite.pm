@@ -304,7 +304,9 @@ sub DONE {
 
 sub dump {
   my MY $self = shift;
-  die terse_dump(@_);
+  # XXX: charset...
+  die [200, ["Content-type", "text/plain; charset=utf-8"]
+       , [map {terse_dump($_)."\n"} @_]];
 }
 
 #========================================

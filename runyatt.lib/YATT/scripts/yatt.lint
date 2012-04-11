@@ -30,7 +30,7 @@ use YATT::Lite::Error;
 my $dispatcher = do {
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
   if (-r $cgi) {
-    do $cgi;
+    YATT::Lite::Factory->load_factory_script($cgi);
   } else {
     require YATT::Lite::Web::Dispatcher;
     YATT::Lite::Web::Dispatcher->new

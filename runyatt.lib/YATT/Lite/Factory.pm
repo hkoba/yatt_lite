@@ -24,8 +24,23 @@ use fields qw(
 
 
 use YATT::Lite::Entities qw(build_entns);
-use YATT::Lite::Util qw(lexpand globref untaint_any);
+use YATT::Lite::Util qw(lexpand globref untaint_any ckdo);
 use YATT::Lite::XHF;
+
+#
+#
+#
+
+our $yatt_loading;
+sub loading { $yatt_loading }
+
+sub load_factory_script {
+  my ($pack, $fn) = @_;
+  local $yatt_loading = 1;
+  ckdo $fn;
+}
+
+#========================================
 
 sub after_new {
   (my MY $self) = @_;

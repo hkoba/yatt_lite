@@ -96,3 +96,21 @@ PARAM[
 !!: baz
 ]
 BODY: OK. foo=
+
+
+FILE: index.yatt
+TITLE: arg=list auto mapping
+PARAM[
+~testlistarg: show checked list
+chklst[
+- 1
+- 2
+- 5
+]
+]
+BODY:
+ checked=
+ 1
+ 2
+ 5
+ .

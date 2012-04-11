@@ -32,6 +32,7 @@ use YATT::Lite::Types
 			      reference_dict
 			      initializer
 			      cf_view cf_virtual
+			      cf_trigger_after_delete
 			    )]]
     , [Column => fields => [qw(cf_type
 			       cf_hidden
@@ -558,6 +559,14 @@ sub sql_create_table {
 	, $tab->{cf_name}, $ix->{cf_name};
   }
 
+  # after delete on user for each row begin
+  if (my $trigger = $tab->{cf_trigger_after_delete}) {
+    push @create, map {
+      qq{CREATE TRIGGER $_ AFTER DELETE ON $tab->{cf_name}}
+	. qq{ FOR EACH ROW } . $schema->sql_compound_trigger($trigger->{$_});
+    } keys %$trigger;
+  }
+
   wantarray ? @create : join(";\n", @create);
 }
 
@@ -585,6 +594,29 @@ sub sqlite_sql_create_column {
   } else {
     $schema->sql_create_column($tab, $col, $opts);
   }
+}
+
+sub sql_compound_trigger {
+  (my MY $schema, my $item) = @_;
+  my $sub = $schema->can($$schema{dbtype}.'_sql_compound_trigger')
+    or croak "Compound trigger for $$schema{dbtype} is not yet implemented";
+  $sub->($schema, $item);
+}
+
+sub mysql_sql_compound_trigger {
+  (my MY $schema, my $item) = @_;
+  unless (ref $item) {
+    $item
+  } elsif (@$item == 1) {
+    $item->[0]
+  } else {
+    "BEGIN ".join("; ", @$item). "; END";
+  }
+}
+
+sub sqlite_sql_compound_trigger {
+  (my MY $schema, my $item) = @_;
+  "BEGIN ".join("; ", ref $item ? @$item : $item). "; END";
 }
 
 sub sql_drop {

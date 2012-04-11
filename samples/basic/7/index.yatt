@@ -14,3 +14,8 @@ foo=&yatt:CON:param(foo);
 <!yatt:action baz>
 my ($this, $con) = @_;
 print $con "OK. foo=", map {defined $_ ? $_ : "(undef)"} $con->param('foo');
+
+<!yatt:page testlistarg chklst=list>
+checked=
+<yatt:foreach my=v list=chklst>&yatt:v;
+</yatt:foreach>.

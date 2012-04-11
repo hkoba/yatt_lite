@@ -356,7 +356,9 @@ sub encode_query {
       my @param = @$param;
       my @res;
       while (my ($k, $v) = splice @param, 0, 2) {
-	push @res, url_encode_kv($self, $k, $v);
+	my $ek = url_encode($self, $k);
+	push @res, $ek . '='. url_encode($self, $_)
+	  for ref $v ? @$v : $v;
       }
       @res;
     }

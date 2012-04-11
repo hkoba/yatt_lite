@@ -315,3 +315,62 @@ SQL
 	 , [2, chng => '2010-01-02T18:00', '2nd chng']
 	], "$THEME timeline";
 }
+
+# XXX: Should have mysql tests too.
+{
+  my $THEME = "[trigger_after_delete]";
+  my $schema = $CLASS->new
+    ([user => {trigger_after_delete => {user_del => <<SQL}}
+delete from auth where uid = old.uid
+SQL
+   , uid => [integer => -primary_key]
+   , email => [text => -unique]
+   , fullname => [text => -indexed]
+   , [-might_have
+      , [auth => undef # XXX: {auto_delete => 1}
+	 , uid => [integer => -primary_key, [belongs_to => 'user']]
+	 , login => [text => -unique]
+	 , encpass => 'text'
+	 , tmppass => 'text'
+	 , tmppass_expire => 'timestamp'
+	 , confirm_token => [text => -unique]]]
+  ]);
+
+  $schema->create(sqlite => $DBNAME);
+
+  my $dbh = $schema->dbh;
+
+  my @tests
+    = ([1, 'foo@example.com', 'Well known foo', 'foo', 'foopass']
+       , [2, 'bar@example.com', 'Slightly minor bar', 'bar', 'barpass']);
+
+  foreach my $user (@tests) {
+    my ($uid, $email, $full, $login, $pass) = @$user;
+    $dbh->do(<<END, undef, $uid, $email, $full);
+insert into user(uid, email, fullname) values(?, ?, ?)
+END
+
+    $dbh->do(<<END, undef, $uid, $login, $pass); # Not encrypted:-)
+insert into auth(uid, login, encpass) values(?, ?, ?)
+END
+
+  }
+
+  is_deeply $dbh->selectall_arrayref(<<END)
+select user.uid, email, fullname, login, encpass
+from user left join auth using(uid) order by user.uid
+END
+    , \@tests, "Test data is correctly installed";
+
+  $dbh->do('delete from user where uid = ?', undef, 1);
+
+  is_deeply $dbh->selectall_arrayref(<<END)
+select uid from user
+END
+    , [[2]], "uid=1 is removed.";
+
+  is_deeply $dbh->selectall_arrayref(<<END)
+select uid from auth
+END
+    , [[2]], "After deleting uid=1, auth rec is deleted too.";
+}

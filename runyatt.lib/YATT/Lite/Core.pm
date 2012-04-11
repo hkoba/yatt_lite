@@ -108,7 +108,7 @@ use YATT::Lite::Breakpoint ();
       my $argdecl = $widget->{arg_dict}{$name}
 	or die "Unknown args for widget '$widget->{cf_name}': $name";
       my @value = $cgi->param($name);
-      $list->[$argdecl->argno] = $argdecl->type eq 'list'
+      $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
 	? \@value : $value[0];
     }
     @$list;

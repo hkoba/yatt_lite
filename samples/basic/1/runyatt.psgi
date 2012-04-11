@@ -30,6 +30,10 @@ my $dispatcher = YATT::Lite::Web::Dispatcher->new
    # , tmpl_encoding => 'utf-8'
   );
 
+if (caller && YATT::Lite::Factory->loading) {
+  return $dispatcher;
+}
+
 unless (caller) {
   require Plack::Runner;
   my $runner = Plack::Runner->new;

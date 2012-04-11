@@ -14,6 +14,9 @@ BEGIN {
   if (-x "$bindir/../cgi-bin/runyatt.cgi"
       and -d (my $dn = "$bindir/../cgi-bin/runyatt.lib")) {
     $libdir = $dn;
+  } elsif (-r "$bindir/../runyatt.psgi"
+      and -d ($dn = "$bindir/../runyatt.lib")) {
+    $libdir = $dn;
   } else {
     require Test::More;
     Test::More::plan(skip_all => 'Not yet setup');
