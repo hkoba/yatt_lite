@@ -5,6 +5,8 @@ use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
+use 5.010;
+
 #========================================
 # Dispatcher 層: DirHandler と、その他の外部Action のキャッシュ, InstNS の生成
 #========================================
@@ -19,19 +21,27 @@ use fields qw(DirHandler Action
 	      cf_appdir
 	      cf_debug_cgi
 	      cf_psgi_static
+	      cf_index_name
 	    );
 # XXX: Should rename: is_gateway => is_online
 
 use YATT::Lite::Util qw(cached_in split_path catch
+			lookup_path
 			mk_http_status
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
+sub default_index_name { 'index' }
 
 use File::Basename;
 use YATT::Lite::Web::Connection ();
 sub ConnProp () {'YATT::Lite::Web::Connection'}
 sub Connection () {'YATT::Lite::Web::Connection'}
+
+sub after_new {
+  (my MY $self) = @_;
+  $self->{cf_index_name} //= $self->default_index_name;
+}
 
 #========================================
 sub configparams {
@@ -89,59 +99,49 @@ psgix.logger
 
 sub call {
   (my MY $self, my Env $env) = @_;
-  my ($path_translated, $document_root) = do {
-    if (($env->{REDIRECT_STATUS} // 0) != 200) {
-       my $root = $self->{cf_document_root} // $env->{DOCUMENT_ROOT};
-       ($root . $env->{PATH_INFO}
-       , $root);
-     } elsif ($env->{PATH_TRANSLATED}) {
-       ($env->{PATH_TRANSLATED}
-	, $env->{DOCUMENT_ROOT});
-     } elsif (defined $self->{cf_document_root}
-	      and $self->{cf_document_root} eq '') {
-       my $doc = $env->{DOCUMENT_URI} // $env->{SCRIPT_NAME};
-       my $root = $env->{DOCUMENT_ROOT};
-       ($root . $doc
-       , $root);
-     } else {
-       die "Unknown request env";
-     }
-   };
 
-  my ($root, $loc, $file, $trailer)
-    = split_path($path_translated, $document_root);
-  if (defined $self->{cf_appdir}
-      and -e "$self->{cf_appdir}/.htdebug_env") {
-    return [200, ["Content-type", "text/plain"]
-	    , [(map {join("\t", @$_)."\n"}
-		[root => $root], [loc => $loc]
-		, [file => $file], [trailer => $trailer]
-	       )
-	       , (map {"$_\t$env->{$_}\n"} sort keys %$env)
-	      ]];
-  } elsif ($ENV{DEBUG_YATT}
-	   and $env->{'psgi.errors'}) {
-    print {$env->{'psgi.errors'}} join("\t", "root=$root", "loc=$loc"
-				       , "file=$file", "trailer=$trailer"
-				       , "docroot=$self->{cf_document_root}"
-				       , "path_info=$env->{PATH_INFO}"
-				      ), "\n";
+  YATT::Lite::Breakpoint::break_psgi_call();
+
+  if (defined $self->{cf_appdir} and -e "$self->{cf_appdir}/.htdebug_env") {
+    return [200
+	    , ["Content-type", "text/plain"]
+	    , [map {"$_\t$env->{$_}\n"} sort keys %$env]];
   }
 
-  my $dir = "$root$loc";
+  if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})) {
+    return $self->psgi_error(403, "Forbidden $deny");
+  }
+
+  my ($tmpldir, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
+
+  if ($ENV{DEBUG_YATT_PSGI}) {
+    if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
+      print $errfh join("\t", "root=$tmpldir", "loc=$loc"
+			, "file=$file", "trailer=$trailer"
+			, "docroot=$self->{cf_document_root}"
+			, terse_dump($env)
+		       ), "\n";
+    }
+  }
+
+  unless (@pi) {
+    return [404, [], ["Not found: ", $env->{PATH_INFO}]];
+  }
+
+  my $dir = "$tmpldir$loc";
   unless (-d $dir) {
     return [404, [], ["Not found: ", $dir]];
-  } elsif ($loc =~ m{\.lib(?:/|$)}) {
-    return $self->psgi_error(403, "Forbidden library location: $loc");
   }
 
   # Default index file.
-  $file = 'index.yatt' if $file eq '' && -r "$dir/index.yatt";
+  # Note: Files may placed under (one of) tmpldirs instead of docroot.
+  if ($file eq '') {
+    $file = "$self->{cf_index_name}.yatt";
+  } elsif ($file eq $self->{cf_index_name}) {
+    $file .= ".yatt";
+  }
 
-  if ($file =~ /^\.ht|\.ytmpl$/) {
-    # forbidden
-    return $self->psgi_error(403, "Forbidden filetype: $file");
-  } elsif ($file !~ /\.(yatt|ydo)$/) {
+  if ($file !~ /\.(yatt|ydo)$/) {
     return $self->psgi_handle_static($env);
   }
 
@@ -155,7 +155,7 @@ sub call {
 		, file => $file
 		, subpath => $trailer
 		, system => $self
-		, root => $root, location => $loc);
+		, root => $tmpldir, location => $loc);
 
   my $con = $dh->make_connection(undef, @params);
 
@@ -184,12 +184,63 @@ sub call {
   }
 }
 
+sub split_path_info {
+  (my MY $self, my Env $env) = @_;
+
+  if (nonempty($env->{PATH_TRANSLATED})
+      && $self->is_path_translated_mode($env)) {
+    #
+    # [1] PATH_TRANSLATED mode.
+    #
+    # If REDIRECT_STATUS == 200 and PATH_TRANSLATED is not empty,
+    # use it as a template path. It must be located under appdir.
+    #
+    # In this case, PATH_TRANSLATED should be valid physical path
+    # + optionally trailing sub path_info.
+    #
+    split_path($env->{PATH_TRANSLATED}
+	       , $self->{cf_appdir} // $self->{cf_document_root});
+    # or die.
+
+  } else {
+    #
+    # [2] Template lookup mode.
+    #
+    lookup_path($env->{PATH_INFO}
+		, [$self->{cf_document_root}, lexpand($self->{cf_tmpldirs})]
+		, $self->{cf_index_name}, ".yatt");
+    # or die
+  }
+}
+
+sub has_forbidden_path {
+  (my MY $self, my $path) = @_;
+  given ($path) {
+    when (m{\.lib(?:/|$)}) {
+      return ".lib: $path";
+    }
+    when (m{(?:^|/)\.ht|\.ytmpl$}) {
+      # XXX: basename() is just to ease testing.
+      return "filetype: " . basename($path);
+    }
+  }
+}
+
+sub is_path_translated_mode {
+  (my MY $self, my Env $env) = @_;
+  ($env->{REDIRECT_STATUS} // 0) == 200
+}
+
 sub to_app {
   (my MY $self) = @_;
   $self->{cf_is_psgi} = 1;
   require Plack::Request;
   require Plack::Response;
   $self->init_by_env; # XXX: meaningless.
+#  XXX: Should check it.
+#  unless (defined $self->{cf_appdir}) {
+#    croak "appdir is undef!";
+#  }
   unless (defined $self->{cf_document_root}) {
     croak "document_root is undef!";
   }

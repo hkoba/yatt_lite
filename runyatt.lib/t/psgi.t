@@ -39,7 +39,8 @@ sub is_or_like($$;$) {
 
 {
   my $app = YATT::Lite::Web::Dispatcher
-    ->new(document_root => "$rootname.d"
+    ->new(appdir => $FindBin::Bin
+	  , document_root => "$rootname.d"
 	  , tmpldirs => ["$rootname.ytmpl"]
 	  , basens => 'MyApp'
 	  , namespace => ['yatt', 'perl', 'js']

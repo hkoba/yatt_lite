@@ -186,26 +186,6 @@ $i++;
        , file => 'index.yatt'
        , subpath => '/foo/bar'}
       , 'split_path_url: systemwide www';
-
-  my $splitter = sub {
-    [YATT::Lite::Util::split_path(shift, $realdir)]
-  };
-
-  is_deeply $splitter->("$realdir/auth")
-    , [$realdir, "/", "auth.yatt", ""]
-      , ".yatt extension compensation";
-
-  is_deeply $splitter->("$realdir/auth/foo")
-    , [$realdir, "/", "auth.yatt", "/foo"]
-      , ".yatt extension compensation, with subpath";
-
-  is_deeply $splitter->("$realdir/img/bg.png")
-    , [$realdir, "/img/", "bg.png", ""]
-      , "other extension";
-
-  is_deeply $splitter->("$realdir/img/missing.png")
-    , [$realdir, "/img/", "missing.png", ""]
-      , "other missing.";
 }
 
 

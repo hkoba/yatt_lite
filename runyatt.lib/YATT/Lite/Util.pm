@@ -15,6 +15,7 @@ require Scalar::Util;
 		     nonempty
 		   );
     our @EXPORT_OK = (@EXPORT, qw(cached_in split_path rootname dict_order
+				  lookup_path
 				  appname extname
 				  captured is_debugging callerinfo
 				  dofile_in compile_file_in
@@ -169,6 +170,45 @@ require Scalar::Util;
      , substr($dir, length($startDir))
      , $file // ''
      , $subpath);
+  }
+
+  sub lookup_path {
+    my ($path_info, $dirlist, $index_name, $want_ext) = @_;
+    $index_name //= 'index';
+    $want_ext //= '.yatt';
+    my @dirlist = grep {-d} @$dirlist;
+    my $pi = $path_info;
+    my ($loc, $cur, $ext) = ("", "");
+  DIG:
+    while ($pi =~ s{^/+([^/\.]+)(\.\w+)?}{}) {
+      ($cur, $ext) = ($1, $2);
+      foreach my $dir (@dirlist) {
+	my $base = "$dir$loc/$cur";
+	if (defined $ext) {
+	  # If extension is specified and it is readable, use it.
+	  return ($dir, "$loc/", "$cur$ext", $pi) if -r "$base$ext";
+	} elsif (-d $base) {
+	  next; # candidate
+	} elsif (-r (my $fn = "$base$want_ext")) {
+	  return ($dir, "$loc/", "$cur$want_ext", $pi);
+	} else {
+	  # Neither dir nor $cur$want_ext exists, it should be ignored.
+	  undef $dir;
+	}
+      }
+    } continue {
+      $loc .= "/$cur";
+      @dirlist = grep {defined} @dirlist;
+    }
+
+    return unless $pi =~ m{^/+$};
+
+    foreach my $dir (@dirlist) {
+      next unless -r "$dir$loc/$index_name$want_ext";
+      return ($dir, "$loc/", "$index_name$want_ext", "");
+    }
+
+    return;
   }
 
   sub dict_order {

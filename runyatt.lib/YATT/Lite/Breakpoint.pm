@@ -14,9 +14,13 @@ our @EXPORT_OK = qw(
 
 		     break_load_myapp
 
+		     break_psgi_call
+
 		     breakpoint
 	       );
 our @EXPORT = qw(breakpoint);
+
+sub break_psgi_call {}
 
 sub break_load_parser {}
 sub break_load_parsebody {}

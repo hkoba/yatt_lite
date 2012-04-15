@@ -13,6 +13,7 @@ my $Test = Test::Builder->new;
   use fields qw(res status ct content cookie_jar last_request
 		sockfile
 		raw_result
+		onerror
 		cf_rootdir cf_fcgiscript
 		cf_debug_fcgi
 		kidpid

@@ -15,6 +15,7 @@ use YATT::Lite::Types
 			   )]]
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
 			     cf_BREAK
+			     cf_SAME_RESULT
 			     cf_PARAM cf_HEADER cf_BODY cf_ERROR)]]);
 
 our @EXPORT;
@@ -161,6 +162,8 @@ sub mechanized {
   foreach my File $sect (@{$tests->{files}}) {
     my $dir = $tests->{cf_dir};
     my $sect_name = $tests->file_title($sect);
+
+    my $last_body;
     foreach my Item $item (@{$sect->{items}}) {
 
       if (my $action = $item->{cf_ACTION}) {
@@ -172,8 +175,17 @@ sub mechanized {
       }
 
       my $method = $tests->item_method($item);
+      my $error;
+      local $mech->{onerror} = sub {
+	$error = join " ", @_;
+      };
       my $res = $tests->mech_request($mech, $item);
       my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
+
+      if (defined $error) {
+	fail "[$sect_name] $T Unknown error: $error";
+	next;
+      }
 
       if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
 	while (my ($key, $pat) = splice @header, 0, 2) {
@@ -186,18 +198,20 @@ sub mechanized {
 	}
       }
 
-      if ($item->{cf_BODY}) {
-	if (ref $item->{cf_BODY}) {
-	  like nocr($mech->content), $tests->mkseqpat($item->{cf_BODY})
+      if (my $body = $item->{cf_SAME_RESULT} ? $last_body : $item->{cf_BODY}) {
+	if (ref $body) {
+	  like nocr($mech->content), $tests->mkseqpat($body)
 	    , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
 	} else {
-	  eq_or_diff trimlast(nocr($mech->content)), $item->{cf_BODY}
+	  eq_or_diff trimlast(nocr($mech->content)), $body
 	    , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
 	}
       } elsif ($item->{cf_ERROR}) {
 	like $mech->content, qr{$item->{cf_ERROR}}
 	  , "[$sect_name] $T ERROR of $method $item->{cf_FILE}";
       }
+    } continue {
+      $last_body = $item->{cf_BODY} if $item->{cf_BODY};
     }
   }
 }
@@ -213,7 +227,8 @@ sub run_psgicb {
     require HTTP::Cookies;
     HTTP::Cookies->new;
   };
-  my $res = $cb->(my $req = $tests->mkrequest($item));
+  my $req = $tests->mkrequest($item);
+  my $res = $cb->($req);
   $jar->extract_cookies($res);
   $res;
 }
