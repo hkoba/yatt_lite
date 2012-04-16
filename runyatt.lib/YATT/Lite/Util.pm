@@ -24,6 +24,7 @@ require Scalar::Util;
 				  ostream
 				  named_attr
 				  mk_http_status
+				  get_locale_encoding
 				));
   }
   use Carp;
@@ -452,6 +453,24 @@ sub mk_http_status {
 
   my $message = HTTP::Status::status_message($code);
   "Status: $code $message\015\012";
+}
+
+sub list_isa {
+  my ($pack, $all) = @_;
+  my @result;
+  my $symtab = symtab($pack);
+  my $sym = $symtab->{ISA} or return;
+  my $isa = *{$sym}{ARRAY} or return;
+  return @$isa unless $all;
+  map {
+    [$_, list_isa($_, $all)];
+  } @$isa;
+}
+
+sub get_locale_encoding {
+  require Encode;
+  require encoding;
+  Encode::find_encoding(encoding::_get_locale_encoding())->name;
 }
 
 1;

@@ -116,7 +116,7 @@ sub call {
 
   if ($ENV{DEBUG_YATT_PSGI}) {
     if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
-      print $errfh join("\t", "root=$tmpldir", "loc=$loc"
+      print $errfh join("\t", "tmpldir=$tmpldir", "loc=$loc"
 			, "file=$file", "trailer=$trailer"
 			, "docroot=$self->{cf_document_root}"
 			, terse_dump($env)
@@ -128,9 +128,10 @@ sub call {
     return [404, [], ["Not found: ", $env->{PATH_INFO}]];
   }
 
-  my $dir = "$tmpldir$loc";
-  unless (-d $dir) {
-    return [404, [], ["Not found: ", $dir]];
+  my $virtdir = "$self->{cf_document_root}$loc";
+  my $realdir = "$tmpldir$loc";
+  unless (-d $realdir) {
+    return [404, [], ["Not found: ", $virtdir]];
   }
 
   # Default index file.
@@ -145,17 +146,17 @@ sub call {
     return $self->psgi_handle_static($env);
   }
 
-  my $dh = $self->get_dirhandler(untaint_any($dir));
+  my $dh = $self->get_dirhandler(untaint_any($virtdir));
 
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
   my @params = (cgi => $req, is_psgi => 1, env => $env
-		, dir => $dir
+		, dir => $virtdir
 		, file => $file
 		, subpath => $trailer
 		, system => $self
-		, root => $tmpldir, location => $loc);
+		, root => $self->{cf_document_root}, location => $loc);
 
   my $con = $dh->make_connection(undef, @params);
 
@@ -456,6 +457,11 @@ sub cgi_response {
 }
 
 #========================================
+
+# Dispatcher::get_dirhandler
+# -> Util::cached_in
+# -> Factory::load
+# -> Factory::buildspec
 
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
