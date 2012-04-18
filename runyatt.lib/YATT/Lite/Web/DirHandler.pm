@@ -2,8 +2,7 @@ package YATT::Lite::Web::DirHandler; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite);
-use fields qw(cf_dir
-	      cf_session_opts
+use fields qw(cf_session_opts
 	      cf_header_charset
 	      cf_is_gateway
 
@@ -15,21 +14,6 @@ use Carp;
 use YATT::Lite::Util qw(cached_in ckeval
 			dofile_in compile_file_in
 		      );
-sub new {
-  my ($pack, $dir, @args) = @_;
-  # XXX: .htyattrc.pl は？
-  unless (defined $dir) {
-    confess "dir is undef!";
-  }
-  unless (-d $dir) {
-    confess "No such directory '$dir'";
-  }
-  if (-e (my $rc = "$dir/.htyattrc.pl")) {
-    dofile_in($pack, $rc);
-  }
-  $pack->SUPER::new(dir => $dir, @args);
-  # XXX: refresh は？ <= 現状では DirHandler 側のが呼ばれる。
-}
 
 # sub handle_ydo, _do, _psgi...
 
@@ -73,7 +57,7 @@ sub get_action_handler {
        } elsif ($$item[-1] == $age) {
 	 return;
        } else {
-	 $sub = compile_file_in($self->{cf_package}, $path);
+	 $sub = compile_file_in($self->{cf_appns}, $path);
        }
        @{$item} = ($sub, $age);
      });

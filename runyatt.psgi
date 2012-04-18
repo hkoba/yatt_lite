@@ -42,9 +42,9 @@ unless (-d $docroot) {
 }
 
 my $dispatcher = YATT::Lite::Web::Dispatcher->new
-  (document_root => $docroot
+  (appns => 'MyApp'
    , appdir => $appdir
-   , basens => 'MyApp'
+   , document_root => $docroot
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
    , tmpldirs => \@tmpldir

@@ -22,13 +22,25 @@ use YATT::Lite::Constants;
   #========================================
   sub list_inheritance {
     (my MY $self, my Template $tmpl) = @_;
-    map {(my Folder $f = $_)->{cf_package}} $tmpl->list_base
+    map {
+      my Folder $f = $_; $f->{cf_entns}
+    } $tmpl->list_base
   }
   sub setup_inheritance {
     (my MY $self, my Template $tmpl) = @_;
-    my $glob = globref($$tmpl{cf_package}, 'ISA');
+    unless (defined $tmpl->{cf_entns}) {
+      die "BUG: EntNS is empty for '$tmpl->{cf_name}'!";
+    }
+    my $glob = globref($$tmpl{cf_entns}, 'ISA');
     # XXX: base change should be reflected when reloaded, but...
-    *$glob = [$self->list_inheritance($tmpl)];
+    unless (defined $glob) {
+      die "BUG: ISA glob for '$tmpl->{cf_name}' is empty!";
+    }
+    my @isa = $self->list_inheritance($tmpl);
+    if (grep {not defined} @isa) {
+      die "BUG: ISA for '$tmpl->{cf_name}' contains undef!";
+    }
+    *$glob = \@isa;
   }
   sub generate_inheritance {
     (my MY $self, my Template $tmpl) = @_;
@@ -48,7 +60,7 @@ use YATT::Lite::Constants;
       push @stats, $line .= "\n";
     }
     push @stats, sprintf q{package %s; use strict; use warnings; use 5.010; }
-      , $$tmpl{cf_package};
+      , $$tmpl{cf_entns};
     push @stats, $self->generate_inheritance($tmpl);
     push @stats, "use utf8; " if $$tmpl{cf_utf8};
     push @stats, q|no warnings qw(redefine); | if $$tmpl{cf_age}++;
@@ -272,7 +284,7 @@ use YATT::Lite::Constants;
     my Widget $widget = $self->lookup_widget(@path)
       or die $self->generror(q{No such widget <%s>}, $wname);
     $self->ensure_generated(perl => my Template $tmpl = $widget->{cf_folder});
-    my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_package};
+    my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_entns};
     \ sprintf(q{%s->render_%s($CON, %s)}
 	      , $that, $widget->{cf_name}
 	      , $self->gen_putargs($widget, $node)
@@ -372,7 +384,7 @@ use YATT::Lite::Constants;
     (my MY $self, my ($var, $node)) = @_;
     my Widget $delegate = $var->widget;
     $self->ensure_generated(perl => my Template $tmpl = $delegate->{cf_folder});
-    my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_package};
+    my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_entns};
     \ sprintf(q{%s->render_%s($CON, %s)}
 	      , $that, $delegate->{cf_name}
 	      , $self->gen_putargs($delegate, $node, $var->delegate_vars));
@@ -556,7 +568,7 @@ use YATT::Lite::Constants;
     }
 
     my Template $tmpl = $self->{curtmpl};
-    unless ($tmpl->{cf_package}->can("entity_$name")) {
+    unless ($tmpl->{cf_entns}->can("entity_$name")) {
       die $self->generror("No such entity: %s", $name);
     }
     my $call = sprintf '$this->entity_%s(%s)', $name

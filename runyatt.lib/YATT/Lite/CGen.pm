@@ -21,7 +21,7 @@ sub ensure_generated {
   $self->{cf_vfs}->error(q{sink is empty}) unless $self->{cf_sink};
   return if defined $tmpl->{product}{$type};
   local $self->{depth} = 1 + ($self->{depth} // 0);
-  my $pkg = $tmpl->{product}{$type} = $tmpl->{cf_package};
+  my $pkg = $tmpl->{product}{$type} = $tmpl->{cf_entns};
   $self->{cf_parser}->parse_body($tmpl)
     if not $kind or not $self->{cf_only_parse}
       or $self->{cf_only_parse}{$kind};

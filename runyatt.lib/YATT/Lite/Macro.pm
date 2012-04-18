@@ -10,7 +10,6 @@ use Carp;
 use YATT::Lite::Core qw(Template Part Widget Page Action);
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(globref lexpand);
-use YATT::Lite::Entities qw(build_entns);
 
 our @EXPORT = qw(Macro lexpand);
 our @EXPORT_OK = (@EXPORT, qw(Template Part Widget Page Action));

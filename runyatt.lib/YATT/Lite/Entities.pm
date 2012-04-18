@@ -7,7 +7,7 @@ use Carp;
 
 use YATT::Lite::Util;
 
-sub default_export { qw(Entity *YATT) }
+sub default_export { qw(*YATT) }
 
 #========================================
 # Facade を template に見せるための, グローバル変数.
@@ -57,18 +57,6 @@ package $callpack; use base qw($myPack);
 END
 }
 
-sub add_base_to {
-  my ($pkg, $base) = @_;
-  my $isa = globref($pkg, 'ISA');
-  if (*{$isa}{ARRAY} and @{*{$isa}{ARRAY}}
-      and ${*{$isa}{ARRAY}}[0] ne $base) {
-    die "Inheritance confliction on $pkg: old=${*{$isa}{ARRAY}}[0] new=$base";
-  }
-  *$isa = [] unless *{$isa}{ARRAY};
-  @{*{$isa}{ARRAY}} = $base;
-  $pkg;
-}
-
 #########################################
 
 sub define_MY {
@@ -77,71 +65,6 @@ sub define_MY {
   unless (*{$my}{CODE}) {
     *$my = sub () { $callpack };
   }
-}
-
-# use YATT::Lite::Entities qw(Entity); で呼ばれ、
-# $callpack に Entity 登録関数を加える.
-sub define_Entity {
-  my ($myPack, $opts, $callpack) = @_;
-
-  # Entity を追加する先は、 $callpack が Object 系か、 memberless Pkg 系かによる
-  # Object 系の場合は、 ::EntNS を作ってそちらに加える。
-  # XXX: この判断ロジック自体を public API にするべきではないか？
-  my $is_objclass = UNIVERSAL::isa($callpack, 'YATT::Lite::Object');
-  my $destns = $is_objclass ? build_entns(EntNS => $callpack) : $callpack;
-
-  # 既にあるなら何もしない。... バグの温床にならないことを祈る。
-  my $ent = globref($callpack, 'Entity');
-  unless (*{$ent}{CODE}) {
-    *$ent = sub {
-      my ($name, $sub) = @_;
-      *{globref($destns, "entity_$name")} = $sub;
-    };
-  }
-
-  if ($is_objclass) {
-    *{globref($destns, 'YATT')} = *YATT;
-  }
-}
-
-sub coalesce_const (&@) {
-  my ($filter, $const) = splice @_, 0, 2;
-  local $_;
-  foreach my $item (@_) {
-    next unless defined $item;
-    next unless my $sub = $item->can($const);
-    $_ = $sub->();
-    next unless $filter->();
-    return $_;
-  }
-}
-
-# ${outerns}::EntNS を作り、(YATT::Lite::Entities へ至る)継承関係を設定する。
-# $outerns に EntNS constant を追加する。
-# XXX: 複数回呼んでも大丈夫か?
-sub build_entns {
-  my ($suffix, $outerns, $base) = @_;
-  my $newns = join "::", $outerns, $suffix;
-  my $basens = (coalesce_const {$_ ne $newns} EntNS => $outerns)
-    || $base || __PACKAGE__;
-  add_base_to($newns, $basens) unless UNIVERSAL::isa($newns, $basens);
-  set_inc($newns, 1);
-  # EntNS を足すのは最後にしないと、再帰継承に陥る
-  my $sym = globref($outerns, 'EntNS');
-  unless (*{$sym}{CODE}) {
-    # print STDERR "# adding ${outerns}::EntNS = $newns\n";
-    *$sym = sub () { $newns };
-  }
-  $newns
-}
-
-# 少しでも無駄な stat() を減らすため。もっとも、 ROOT ぐらいしか呼んでないから、大勢に影響せず。
-sub set_inc {
-  my ($pkg, $val) = @_;
-  $pkg =~ s|::|/|g;
-  $INC{$pkg.'.pm'} = $val || 1;
-  # $INC{$pkg.'.pmc'} = $val || 1;
-  $_[1];
 }
 
 #========================================

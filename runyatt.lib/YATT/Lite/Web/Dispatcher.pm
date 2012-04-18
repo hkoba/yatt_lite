@@ -15,8 +15,7 @@ use 5.010;
 # DirHandler の生成, .htyattrc.pl の読み込みとキャッシュに責任を持つ.
 use base qw(YATT::Lite::Factory);
 use fields qw(DirHandler Action
-	      cf_mount
-	      cf_is_gateway cf_document_root
+	      cf_is_gateway
 	      cf_is_psgi
 	      cf_appdir
 	      cf_debug_cgi
@@ -30,7 +29,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			mk_http_status
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
-sub default_dirhandler () {'YATT::Lite::Web::DirHandler'}
+sub default_appbase () {'YATT::Lite::Web::DirHandler'}
 sub default_index_name { 'index' }
 
 use File::Basename;
@@ -40,62 +39,21 @@ sub Connection () {'YATT::Lite::Web::Connection'}
 
 sub after_new {
   (my MY $self) = @_;
+  $self->SUPER::after_new();
   $self->{cf_index_name} //= $self->default_index_name;
 }
 
 #========================================
-sub configparams {
-  my MY $self = shift;
-  ($self->SUPER::configparams
+sub configparams_for {
+  (my MY $self, my $hash) = splice @_, 0, 2;
+  ($self->SUPER::configparams_for($hash, @_)
    , is_gateway => $self->is_gateway)
 }
 
 #========================================
 # PSGI Adaptor
 #========================================
-{
-  sub Env () {"YATT::Lite::Web::Dispatcher::PSGI_ENV"}
-  package YATT::Lite::Web::Dispatcher::PSGI_ENV;
-  use fields qw(
-HTTPS
-GATEWAY_INTERFACE
-REQUEST_METHOD
-SCRIPT_NAME
-SCRIPT_FILENAME
-DOCUMENT_ROOT
-
-PATH_INFO
-PATH_TRANSLATED
-REDIRECT_STATUS
-REQUEST_URI
-DOCUMENT_URI
-
-QUERY_STRING
-SERVER_NAME
-SERVER_PORT
-SERVER_PROTOCOL
-HTTP_USER_AGENT
-HTTP_REFERER
-HTTP_COOKIE
-HTTP_FORWARDED
-HTTP_HOST
-HTTP_PROXY_CONNECTION
-HTTP_ACCEPT
-
-psgi.version
-psgi.url_scheme
-psgi.input
-psgi.errors
-psgi.multithread
-psgi.multiprocess
-psgi.run_once
-psgi.nonblocking
-psgi.streaming
-psgix.session
-psgix.session.options
-psgix.logger
-);
-}
+use YATT::Lite::PSGIEnv;
 
 sub call {
   (my MY $self, my Env $env) = @_;
@@ -146,7 +104,9 @@ sub call {
     return $self->psgi_handle_static($env);
   }
 
-  my $dh = $self->get_dirhandler(untaint_any($virtdir));
+  my $dh = $self->get_dirhandler(untaint_any($virtdir)) or do {
+    return [404, [], ["Not such directory: ", $virtdir]];
+  };
 
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
@@ -292,7 +252,8 @@ sub run_dirhandler {
   # 結局は機能集約モジュールが欲しくなるから。
   # そのために、 dirhandler は死重を減らすよう、部分毎に delayed load する
 
-  my $dh = $self->get_dirhandler(untaint_any($params{dir}));
+  my $dh = $self->get_dirhandler(untaint_any($params{dir}))
+    or die "Unknown directory: $params{dir}";
   # XXX: cache のキーは相対パスか、絶対パスか?
 
   my $con = $dh->make_connection($fh, system => $self, %params);
@@ -465,7 +426,9 @@ sub cgi_response {
 
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
-  $self->cached_in($self->{DirHandler} ||= {}, $dirPath, $self);
+  $self->{path2yatt}{$dirPath} || do {
+    $self->load_yatt(INST => $dirPath, @{$self->{baseclass}});
+  };
 }
 
 #========================================
@@ -493,8 +456,8 @@ sub make_cgi {
 	($env->{PATH_TRANSLATED}
 	 , $env->{DOCUMENT_ROOT} // $self->{cf_document_root});
       } else {
-	my $root = $self->{cf_mount}
-	  // $env->{DOCUMENT_ROOT} // $self->{cf_document_root} // '';
+	my $root = $self->{cf_document_root}
+	  // $env->{DOCUMENT_ROOT} // '';
 	($root . ($env->{PATH_INFO} // '/')
 	 , $root);
       }

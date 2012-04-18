@@ -21,8 +21,8 @@ BEGIN {
 }
 
 use HTTP::Request::Common;
-use Plack::Test;
 use YATT::Lite::Web::Dispatcher;
+use YATT::Lite::PSGIEnv;
 
 my $rootname = untaint_any($FindBin::Bin."/".rootname($FindBin::RealScript));
 
@@ -42,9 +42,10 @@ sub is_or_like($$;$) {
     ->new(appdir => $FindBin::Bin
 	  , document_root => "$rootname.d"
 	  , tmpldirs => ["$rootname.ytmpl"]
-	  , basens => 'MyApp'
+	  , appns => 'MyApp'
 	  , namespace => ['yatt', 'perl', 'js']
-	  , header_charset => 'utf-8')->to_app;
+	  , header_charset => 'utf-8')
+      ->to_app;
 
   my $hello = sub {
     my ($id, $body) = @_;
@@ -62,29 +63,30 @@ END
   # XXX: subdir
   # XXX: .htyattrc.pl and entity
   #
-  test_psgi $app, sub {
-    my ($cb) = @_;
-    foreach my $test
-      (["/", 200, $out_index, ["Content-type", qq{text/html; charset="utf-8"}]]
-       , ["/index", 200, $out_index]
-       , ["/index.yatt", 200, $out_index]
-       , ["/index.yatt/foo/bar", 200, $out_index]
-       , ["/test.lib/Foo.pm", 403, qr{Forbidden}]
-       , ["/.htaccess", 403, qr{Forbidden}]
-       , ["/hidden.ytmpl", 403, qr{Forbidden}]
-       , ["/beta/world_line", 200, $out_beta]
-       , ["/beta/world_line.yatt", 200, $out_beta]
-       , ["/beta/world_line.yatt/baz", 200, $out_beta]
-      ) {
-      my ($path, $code, $body, $header) = @$test;
-      my $res = $cb->(GET $path);
-      is $res->code, $code, "[code] $path";
-      is_or_like $res->content, $body, "[body] $path";
-      if ($header and my @h = @$header) {
-	while (my ($key, $value) = splice @h, 0, 2) {
-	  is_or_like $res->header($key), $value, "[header][$key] $path";
-	}
+  foreach my $test
+    (["/", 200, $out_index, ["Content-type", qq{text/html; charset="utf-8"}]]
+     , ["/index", 200, $out_index]
+     , ["/index.yatt", 200, $out_index]
+     , ["/index.yatt/foo/bar", 200, $out_index]
+     , ["/test.lib/Foo.pm", 403, qr{Forbidden}]
+     , ["/.htaccess", 403, qr{Forbidden}]
+     , ["/hidden.ytmpl", 403, qr{Forbidden}]
+     , ["/beta/world_line", 200, $out_beta]
+     , ["/beta/world_line.yatt", 200, $out_beta]
+     , ["/beta/world_line.yatt/baz", 200, $out_beta]
+    ) {
+    my ($path, $code, $body, $header) = @$test;
+    my $res = do {
+      my Env $env = Env->psgi_simple_env;
+      $env->{PATH_INFO} = $path;
+      $app->($env);
+    };
+    is $res->code, $code, "[code] $path";
+    is_or_like $res->content, $body, "[body] $path";
+    if ($header and my @h = @$header) {
+      while (my ($key, $value) = splice @h, 0, 2) {
+	is_or_like $res->header($key), $value, "[header][$key] $path";
       }
     }
-  };
+  }
 }

@@ -113,12 +113,18 @@ sub cf_delegate {
 sub cf_delegate_defined {
   my MY $self = shift;
   my $fields = YATT::Lite::Util::fields_hash($self);
+  $self->cf_delegate_known(1, $fields, @_);
+}
+
+sub cf_delegate_known {
+  (my MY $self, my ($raise_err, $fields)) = splice @_, 0, 3;
   map {
     my ($from, $to) = ref $_ ? @$_ : ($_, $_);
-    unless (exists $fields->{"cf_$from"}) {
-      confess $NO_SUCH_CONFIG_ITEM->($self, $from);
+    if (not exists $fields->{"cf_$from"}) {
+      $raise_err ? (confess $NO_SUCH_CONFIG_ITEM->($self, $from)) : ();
+    } else {
+      defined $self->{"cf_$from"} ? ($to => $self->{"cf_$from"}) : ();
     }
-    defined $self->{"cf_$from"} ? ($to => $self->{"cf_$from"}) : ()
   } @_;
 }
 

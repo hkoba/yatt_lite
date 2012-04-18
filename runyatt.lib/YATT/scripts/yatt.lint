@@ -19,6 +19,7 @@ use lib $libdir = do {
 };
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
+use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(default rootname);
 use YATT::Lite::Error;
@@ -34,7 +35,7 @@ my $dispatcher = do {
   } else {
     require YATT::Lite::Web::Dispatcher;
     YATT::Lite::Web::Dispatcher->new
-	(basens => 'MyApp'
+	(appns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'
 	 , tmpldirs => [grep {-d} rootname($libdir).".ytmpl"]

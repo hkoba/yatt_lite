@@ -45,12 +45,13 @@ my $i = 1;
 foreach my MY $sect (@section) {
   my $fn = path_tail($sect->{cf_filename}, 2);
   # XXX: as_vfs_spec => data => {}, rc => '...';
-  my $spec = [data => $sect->as_vfs_data, package =>
-	      YATT::Lite->rootns_for(myapp($i))];
+  my $spec = [data => $sect->as_vfs_data];
   if (my $cf = $sect->{cf_VFS_CONFIG}) {
     push @$spec, @$cf;
   }
-  ok(my $yatt = new YATT::Lite(vfs => $spec, debug_cgen => $ENV{DEBUG}
+  ok(my $yatt = new YATT::Lite(appns => myapp($i)
+			       , vfs => $spec
+			       , debug_cgen => $ENV{DEBUG}
 			       , debug_parser => 1
 			       , lexpand($sect->{cf_YATT_CONFIG})
 			       , $sect->{cf_YATT_RC}

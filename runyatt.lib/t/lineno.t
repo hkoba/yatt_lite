@@ -72,8 +72,7 @@ my $test_widget_lineno = sub {
 my $i = 1;
 {
   my $THEME = "basic";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i), vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list)
 <!yatt:args x y>
@@ -104,8 +103,8 @@ $i = 2;
 # コメント
 {
   my $THEME = "comment";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i)
+			    , vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list)
 <!yatt:args  x y>
@@ -133,8 +132,7 @@ END
 $i = 3;
 {
   my $THEME = "newline in arg decls";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i), vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list)
 <!yatt:args
@@ -172,8 +170,7 @@ END
 $i = 4;
 {
   my $THEME = "newline in call args (bodyless)";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i), vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list)
 <!yatt:args  x y>
@@ -201,8 +198,7 @@ END
 $i = 5;
 {
   my $THEME = " body ";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i), vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list), "$THEME - add_to $SUB");
 <!yatt:args  x y>
@@ -232,8 +228,7 @@ $i = 6;
 TODO: {
   local our $TODO = "Not yet addressed";
   my $THEME = "<?yatt?> before args";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i), vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list), "$THEME - add_to $SUB");
 <?yatt
@@ -255,8 +250,7 @@ $i = 7;
 TODO: {
   local our $TODO = "Perl bug?";
   my $THEME = "elematt";
-  my $yatt = new YATT::Lite(vfs => [data => {}, package =>
-			     YATT::Lite->rootns_for(myapp($i))], @OPT);
+  my $yatt = new YATT::Lite(appns => myapp($i), vfs => [data => {}], @OPT);
   my $SUB = 'index';
   ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list), "$THEME - add_to $SUB");
 <yatt:elematt>

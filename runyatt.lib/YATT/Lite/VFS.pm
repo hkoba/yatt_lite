@@ -13,7 +13,7 @@ use Carp;
   use YATT::Lite::Types
     ([Item => -fields => [qw(cf_name cf_public)]
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
-				  cf_package)]
+				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
 	 , [File => -fields => [qw(partlist cf_string cf_overlay)]
 	    , -alias => 'vfs_file']
@@ -32,7 +32,8 @@ use Carp;
   sub VFS () {__PACKAGE__}
   use base qw(YATT::Lite::Object);
   use fields qw(cf_ext_private cf_ext_public cf_cache cf_no_auto_create
-		cf_facade cf_package cf_base cf_nsbuilder
+		cf_facade cf_base
+		cf_entns
 		root extdict n_creates n_updates cf_mark
 		pkg2folder);
   use YATT::Lite::Util qw(lexpand rootname);
@@ -48,7 +49,7 @@ use Carp;
       my ($value, @ext) = @$desc;
       $vfs->{extdict}{$_} = $value for @ext;
     }
-    $vfs->root_create(linsert($spec, 2, $vfs->cf_delegate(qw(package))))
+    $vfs->root_create(linsert($spec, 2, $vfs->cf_delegate(qw(entns))))
       if $spec;
     $$_[0]->($vfs, $$_[1]) for @task;
     $vfs->after_new;
@@ -58,7 +59,6 @@ use Carp;
     my MY $self = shift;
     confess __PACKAGE__ . ": facade is empty!" unless $self->{cf_facade};
     weaken($self->{cf_facade});
-    weaken($self->{cf_nsbuilder}) if $self->{cf_nsbuilder};
   }
   sub error {
     my MY $self = shift;
@@ -219,7 +219,7 @@ use Carp;
   # special hook for root creation.
   sub root_create {
     (my VFS $vfs, my ($kind, $primary, %rest)) = @_;
-    $rest{package} //= $vfs->{cf_package};
+    $rest{entns} //= $vfs->{cf_entns};
     $vfs->{root} = $vfs->create($kind, $primary, %rest);
   }
   sub create {
@@ -229,7 +229,8 @@ use Carp;
       $vfs->fixup_created($sub->($vfs, $primary, %rest));
     } else {
       $vfs->{cf_cache}{$primary} ||= do {
-	$rest{package} //= $vfs->{cf_nsbuilder}->() if $vfs->{cf_nsbuilder};
+	# XXX: Really??
+	$rest{entns} //= $vfs->{cf_entns};
 	$vfs->fixup_created
 	  ($vfs->can("vfs_$kind")->()->new(%rest, path => $primary));
       };
@@ -245,10 +246,10 @@ use Carp;
     if (my Folder $parent = $folder->{cf_parent}) {
       # XXX: そうか、 package 名を作るだけじゃなくて、親子関係を設定しないと。
       # XXX: private なら、 new_tmplpkg では？
-      if (defined $parent->{cf_package}) {
-	$folder->{cf_package} = join '::'
-	  , $parent->{cf_package}, $folder->{cf_name};
-	$vfs->{pkg2folder}{$folder->{cf_package}} = $folder;
+      if (defined $parent->{cf_entns}) {
+	$folder->{cf_entns} = join '::'
+	  , $parent->{cf_entns}, $folder->{cf_name};
+	$vfs->{pkg2folder}{$folder->{cf_entns}} = $folder;
       }
     }
     $folder->after_create($vfs);

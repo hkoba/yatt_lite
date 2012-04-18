@@ -16,52 +16,61 @@ use YATT::Lite::Util qw(lexpand);
   use Carp;
   use YATT::Lite::Util qw(ckeval);
   our %SEEN_NS;
-  use fields qw(cf_basens basens_loaded subns path2tmplpkg);
-  sub default_basens {__PACKAGE__}
+  use fields qw(cf_appns
+		cf_appbase
+		appns_loaded subns);
+  sub default_appns {__PACKAGE__}
   sub after_new {
     (my MY $self) = @_;
-    $self->{cf_basens} ||= $self->default_basens;
-    if ($SEEN_NS{$self->{cf_basens}}++) {
-      confess "basens '$self->{cf_basens}' is already used!";
+    $self->{cf_appns} ||= $self->default_appns;
+    if ($SEEN_NS{$self->{cf_appns}}++) {
+      confess "appns '$self->{cf_appns}' is already used!";
     }
   }
   sub default_subns {'INST'}
-  sub default_dirhandler {'YATT::Lite'}
+  sub default_appbase {'YATT::Lite'}
+  sub appbase {
+    (my MY $self) = @_;
+    $self->{cf_appbase} || $self->default_appbase
+  }
   sub buildns {
-    (my MY $self, my ($subns, $basens, $baseclass)) = @_;
+    (my MY $self, my ($subns, $baseclasslst)) = @_;
     $subns ||= $self->default_subns;
-    $basens ||= $self->{cf_basens};
-    my $newns = sprintf q{%s::%s%d}, $basens, $subns, ++$self->{subns}{$subns};
-    unless ($self->{basens_loaded}{$basens}++) {
-      (my $modfn = $basens) =~ s|::|/|g;
+    my @base = lexpand($baseclasslst);
+    my $appns = $self->{cf_appns};
+    my $newns = sprintf q{%s::%s%d}, $appns, $subns, ++$self->{subns}{$subns};
+    unless ($self->{appns_loaded}{$appns}++) {
+      (my $modfn = $appns) =~ s|::|/|g;
       local $@;
-      eval qq{require $basens};
+      eval qq{require $appns};
       unless ($@) {
-	# $basens.pm is loaded successfully.
+	# $appns.pm is loaded successfully.
       } elsif ($@ =~ m{^Can't locate $modfn}) {
-	# $basens.pm can be missing.
-	$self->add_isa($basens
-		       , lexpand($baseclass || $self->default_dirhandler));
+	# $appns.pm can be missing.
       } else {
 	die $@;
       }
-      # XXX: エラーにするモードも欲しいのでは？
-      # XXX: MyApp が存在しないなら、 add_isa とか、
+      unless (grep {$appns->isa($_)} @base, $self->appbase) {
+	$self->_eval_use_base($appns, @base ? @base : $self->appbase);
+      }
     }
-    $self->add_isa($newns, lexpand($baseclass || $basens));
+    # $self->_eval_use_base($newns, lexpand($baseclasslst || $appns));
+    $self->_eval_use_base($newns, @base ? @base : $appns);
+
+    foreach my $base ((@base ? @base : $appns), $self->appbase) {
+      unless ($newns->isa($base)) {
+	die "BUG: Can't configure isa relation for $newns: $newns should be a subclass of $base; (base=@base)";
+      }
+    }
     $newns;
   }
-  sub add_isa {
+  sub _eval_use_base {
     (my MY $self, my ($newns, @base)) = @_;
     ckeval($self->lineinfo(1, "$newns.pm") # XXX: ダミーの行情報
 	   , "package $newns;\n"
 	   , @base ? sprintf(qq{use base qw(%s);\n}, join " ", @base) : ());
   }
   sub lineinfo { shift; sprintf qq{#line %d "%s"\n}, @_}
-  sub tmplcache {
-    my MY $self = shift;
-    $self->{path2tmplpkg} ||= {}
-  }
 }
 
 1;

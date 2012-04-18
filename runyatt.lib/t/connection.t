@@ -13,8 +13,8 @@ require_ok('YATT::Lite');
 
 my $i = 1;
 {
-  my $yatt = new YATT::Lite(vfs => [data => {foo => 'bar'}]
-			    , package => YATT::Lite->rootns_for(myapp($i))
+  my $yatt = new YATT::Lite(appns => myapp($i)
+			    , vfs => [data => {foo => 'bar'}]
 			    , die_in_error => 1
 			    , debug_cgen => $ENV{DEBUG});
 
@@ -64,8 +64,8 @@ require_ok('YATT::Lite::Web::DirHandler');
 {
   
   my $yatt = new YATT::Lite::Web::DirHandler
-    (rootname($0) . ".d"
-     , package => YATT::Lite->rootns_for(myapp($i))
+    (dir => rootname($0) . ".d"
+     , appns => myapp($i)
      , die_in_error => 1
      , debug_cgen => $ENV{DEBUG});
 

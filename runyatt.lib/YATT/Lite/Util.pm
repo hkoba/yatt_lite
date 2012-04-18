@@ -25,6 +25,8 @@ require Scalar::Util;
 				  named_attr
 				  mk_http_status
 				  get_locale_encoding
+				  fields_hash
+				  list_isa
 				));
   }
   use Carp;
@@ -457,7 +459,6 @@ sub mk_http_status {
 
 sub list_isa {
   my ($pack, $all) = @_;
-  my @result;
   my $symtab = symtab($pack);
   my $sym = $symtab->{ISA} or return;
   my $isa = *{$sym}{ARRAY} or return;

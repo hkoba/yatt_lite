@@ -36,7 +36,7 @@ for (; @ARGV and $ARGV[0] =~ /^--(\w+)(?:=(.*))?/s; shift @ARGV) {
 # You may edit params.
 
 my $dispatcher = YATT::Lite::Web::Dispatcher->new
-  (basens => 'MyApp'
+  (appns => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
    , tmpldirs => [grep {-d} "$rootname.ytmpl"]

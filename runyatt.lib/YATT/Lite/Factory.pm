@@ -6,9 +6,13 @@ use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
 use base qw(YATT::Lite::NSBuilder);
-use fields qw(
-	      cf_tmpl_cache
+use fields qw(cf_document_root
 	      cf_tmpldirs
+	      path2pkg
+	      path2yatt
+	      baseclass
+
+	      cf_allow_missing_dir
 
 	      cf_binary_config
 
@@ -23,10 +27,12 @@ use fields qw(
 );
 
 
-use YATT::Lite::Entities qw(build_entns);
-use YATT::Lite::Util qw(lexpand globref untaint_any ckdo);
+use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire);
 use YATT::Lite::XHF;
 
+require YATT::Lite;
+
+#========================================
 #
 #
 #
@@ -41,20 +47,90 @@ sub load_factory_script {
 }
 
 #========================================
-
 sub after_new {
   (my MY $self) = @_;
-  $self->{cf_tmpl_cache} ||= {}
+  unless ($self->{cf_appns}) {
+    croak "appns is empty!";
+  }
+  if (not $self->{cf_allow_missing_dir}
+      and $self->{cf_document_root}
+      and not -d $self->{cf_document_root}) {
+    croak "document_root '$self->{cf_document_root}' is missing!";
+  }
+  my $appbase = $self->default_appbase;
+  ckrequire($appbase);
+
+  my $entns = $appbase->ensure_entns($self->{cf_appns});
+
+  $self->{baseclass} = \ my @base;
+  foreach my $tmpldir (map {
+    File::Spec->canonpath($_)
+  } lexpand($self->{cf_tmpldirs})) {
+    push @base, ref $self->load_yatt(TMPL => $tmpldir, $appbase);
+  }
+
+  @base = $appbase unless @base;
+
+  if ($self->{cf_document_root}) {
+    $self->load_yatt(INST => $self->{cf_document_root}, @base);
+  }
 }
 
-sub buildns {
-  my MY $self = shift;
-  my $appns = $self->SUPER::buildns(@_);
+#========================================
 
-  # MyApp が DirHandler を継承していなければ、加える
-  unless ($appns->isa(my $default = $self->default_dirhandler)) {
-    $self->add_isa($appns, $default);
+sub get_pathns {
+  (my MY $self, my $path) = @_;
+  $path =~ s,/*$,/,;
+  $self->{path2pkg}{$path};
+}
+
+sub load_yatt {
+  (my MY $self, my ($kind, $path, @base)) = @_;
+  if (not $self->{cf_allow_missing_dir} and not -d $path) {
+    croak "$kind '$path' is missing!";
+  } elsif (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
+    _with_loading_file {$self} $cf, sub {
+      my %spec = $self->read_file_xhf($cf, binary => $self->{cf_binary_config});
+      my $base = delete $spec{baseclass};
+      $self->build_yatt($kind, $path, [@base, lexpand($base)], %spec);
+    };
+  } else {
+    $self->build_yatt($kind, $path, [@base]);
   }
+}
+
+sub build_yatt {
+  (my MY $self, my ($kind, $path, $base, @opts)) = @_;
+  $path =~ s,/*$,/,;
+  my $appns = $self->{path2pkg}{$path} = $self->buildns($kind => $base);
+
+  if (-e (my $rc = "$path/.htyattrc.pl")) {
+    dofile_in($appns, $rc);
+  }
+
+  my @args = (vfs => [dir => $path, encoding => $self->{cf_tmpl_encoding}]
+	      , dir => $path
+	      , appns => $appns
+	      , $self->configparams_for(YATT::Lite::Util::fields_hash($appns)));
+
+  $self->{path2yatt}{$path} = $appns->new(@args, @opts);
+}
+
+#========================================
+
+sub buildns {
+  (my MY $self, my ($kind, $baseclasslst)) = @_;
+  my $appns = $self->SUPER::buildns($kind, $baseclasslst);
+
+  my $appbase = $self->default_appbase;
+  unless ($appns->isa($appbase)) {
+    $self->add_isa($appns, $appbase);
+  }
+
+  # EntNS を足し、Entity も呼べるようにする。
+  # $appbase->ensure_entns($appns);
+  $appbase->define_Entity(undef, $appns
+			  , map {$_->EntNS} lexpand($baseclasslst));
 
   # instns には MY を定義しておく。
   my $my = globref($appns, 'MY');
@@ -62,76 +138,19 @@ sub buildns {
     *$my = sub () { $appns };
   }
 
-  # Entity も、呼べるようにしておく。
-  my $ent = globref($appns, 'Entity');
-  unless (*{$ent}{CODE}) {
-    require YATT::Lite::Entities;
-    YATT::Lite::Entities->define_Entity(undef, $appns);
-  }
-
   $appns;
 }
 
-# This entry is called from cached_in, and creates DirHandler(facade of trans),
-# with fresh namespace.
-sub load {
-  (my MY $self, my MY $sys, my $name) = @_;
-  if (-e (my $cf = untaint_any($name) . "/.htyattconfig.xhf")) {
-    _with_loading_file {$self} $cf, sub {
-      my @spec = $self->read_file_xhf($cf, binary => $self->{cf_binary_config});
-      # print STDERR "Factory::load $name (@spec)\n" if $ENV{YATT_DEBUG_LOAD};
-      my ($appns, @args) = $self->buildspec($name, \@spec);
-      $appns->new($name, @args, @spec);
-    };
-  } else {
-    # print STDERR "Factory::load $name\n" if $ENV{YATT_DEBUG_LOAD};
-    my ($appns, @args) = $self->buildspec($name);
-    $appns->new($name, @args);
-  }
-}
-
-sub buildspec {
-  (my MY $self, my ($name, $args)) = @_;
-  # MyApp を使いたいときは... Runenv->new(basens => 'MyApp') で。
-  my $appns = $self->buildns(undef, undef
-			     , $self->cutval_from($args, 'baseclass'));
-  # MyApp::INST$n を作る. 親は?
-
-  # $appns は DirHandler で Facade だから、 trans ではないことに注意。
-  # trans にメンバーを足す場合は、facade にも足して、かつ cf_delegate しておかないとだめ。
-
-  my @args = (vfs => [dir => $name, encoding => $self->{cf_tmpl_encoding}]
-	      , package => $appns->rootns_for($appns)
-	      , nsbuilder => sub {
-		build_entns(TMPL => $appns, $appns->EntNS);
-	      }
-	      , $self->configparams);
-
-  ($appns, @args);
-}
-
-sub configparams {
-  my MY $self = shift;
+sub configparams_for {
+  (my MY $self, my $hash) = @_;
   my @base = map { [dir => $_] } lexpand($self->{cf_tmpldirs});
 
   ((@base ? (base => \@base) : ())
-   , $self->cf_delegate
-   (qw(output_encoding header_charset debug_cgen tmpl_cache at_done
-       namespace only_parse error_handler))
+   , $self->cf_delegate_known(0, $hash
+			      , qw(output_encoding header_charset debug_cgen
+				   at_done
+				   namespace only_parse error_handler))
    , die_in_error => ! YATT::Lite::Util::is_debugging());
-}
-
-sub cutval_from {
-  my ($pack, $list, $key) = @_;
-  if ($list) {
-    for (my $i = 0; $i < @$list; $i += 2) {
-      if (defined $list->[$i] and $list->[$i] eq $key) {
-	(undef, my $value) = splice @$list, $i, 2;
-	return $value;
-      }
-    }
-  }
-  return undef;
 }
 
 1;

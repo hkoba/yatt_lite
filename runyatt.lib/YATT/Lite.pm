@@ -10,9 +10,11 @@ use version; our $VERSION = qv('v0.0.3_1');
 #
 use base qw(YATT::Lite::Object);
 use fields qw(YATT
+	      cf_dir
 	      cf_vfs cf_base
 	      cf_output_encoding
-	      cf_tmpl_encoding cf_package cf_nsbuilder
+	      cf_tmpl_encoding
+	      cf_appns entns
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
 	      cf_die_in_error cf_error_handler
 	      cf_special_entities cf_no_lineinfo cf_check_lineno
@@ -27,13 +29,13 @@ use fields qw(YATT
 # Entities を多重継承する理由は import も継承したいから。
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
-use YATT::Lite::Entities -as_base, qw(Entity *YATT);
+use YATT::Lite::Entities -as_base, qw(*YATT);
 use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump escape);
 
 sub Facade () {__PACKAGE__}
 sub default_trans {'YATT::Lite::Core'}
 
-sub default_export {(shift->SUPER::default_export, qw(*CON))}
+sub default_export {(shift->SUPER::default_export, qw(Entity *CON))}
 
 our $CON;
 sub symbol_CON { return *CON }
@@ -74,7 +76,7 @@ sub handle {
   local ($YATT, $CON) = ($self, $con);
   unless (defined $file) {
     confess "\n\nFilename for DirHandler->handle() is undef!"
-      ." in $self->{cf_package}.\n";
+      ." in $self->{cf_appns}.\n";
   }
 
   my $sub = $self->find_handler($ext, $file);
@@ -207,14 +209,105 @@ sub build_trans {
     (\@vfsspec
      , facade => $self
      , cache => $vfscache
+     , entns => $self->{entns}
      , @rest
      # XXX: Should be more extensible.
-     , $self->cf_delegate_defined(qw(namespace package base nsbuilder
+     , $self->cf_delegate_defined(qw(namespace base
 				     die_in_error tmpl_encoding
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
 				     rc_script
 				     only_parse)));
+}
+
+sub after_new {
+  (my MY $self) = @_;
+  $self->{entns} = $self->ensure_entns($self->{cf_appns});
+}
+
+sub root_EntNS { 'YATT::Lite::Entities' }
+
+# ${appns}::EntNS を作り、(YATT::Lite::Entities へ至る)継承関係を設定する。
+# $appns に EntNS constant を追加する。
+# XXX: 複数回呼んでも大丈夫か?
+sub ensure_entns {
+  my ($mypack, $appns) = @_;
+  my $entns = "${appns}::EntNS";
+  my $sym = do {no strict 'refs'; \*{$entns}};
+  unless (UNIVERSAL::isa($appns, MY)) {
+    add_base_to($appns, MY);
+  }
+  my $baseclass = do {
+    if (my $sub = $appns->can("EntNS")) {
+      $sub->();
+    } else {
+      $mypack->root_EntNS;
+    }
+  };
+  unless (UNIVERSAL::isa($entns, $baseclass)) {
+    add_base_to($entns, $baseclass);
+  }
+  set_inc($entns, 1);
+
+  # EntNS を足すのは最後にしないと、再帰継承に陥る
+  unless (my $code = *{$sym}{CODE}) {
+    *$sym = sub () { $entns };
+  } elsif ((my $old = $code->()) ne $entns) {
+    croak "Can't add EntNS() to '$appns'. Already has EntNS as $old!";
+  } else {
+    # ok.
+  }
+  $entns
+}
+
+# 少しでも無駄な stat() を減らすため。もっとも、 ROOT ぐらいしか呼んでないから、大勢に影響せず。
+sub set_inc {
+  my ($pkg, $val) = @_;
+  $pkg =~ s|::|/|g;
+  $INC{$pkg.'.pm'} = $val || 1;
+  # $INC{$pkg.'.pmc'} = $val || 1;
+  $_[1];
+}
+
+# use YATT::Lite qw(Entity); で呼ばれ、
+# $callpack に Entity 登録関数を加える.
+sub define_Entity {
+  my ($myPack, $opts, $callpack, @base) = @_;
+
+  # Entity を追加する先は、 $callpack が Object 系か、 memberless Pkg 系かによる
+  # Object 系の場合は、 ::EntNS を作ってそちらに加える。
+  # XXX: この判断ロジック自体を public API にするべきではないか？
+  my $is_objclass = UNIVERSAL::isa($callpack, 'YATT::Lite::Object');
+  my $destns = $is_objclass ? $myPack->ensure_entns($callpack, @base) : $callpack;
+
+  # 既にあるなら何もしない。... バグの温床にならないことを祈る。
+  my $ent = globref($callpack, 'Entity');
+  unless (*{$ent}{CODE}) {
+    *$ent = sub {
+      my ($name, $sub) = @_;
+      *{globref($destns, "entity_$name")} = $sub;
+    };
+  }
+
+  if ($is_objclass) {
+    *{globref($destns, 'YATT')} = *YATT;
+  }
+}
+
+sub add_base_to {
+  my ($pkg, $base) = @_;
+  my $isa = globref($pkg, 'ISA');
+  if (*{$isa}{ARRAY} and @{*{$isa}{ARRAY}}
+      and ${*{$isa}{ARRAY}}[0] ne $base) {
+    die "Inheritance confliction on $pkg: old=${*{$isa}{ARRAY}}[0] new=$base";
+  }
+  *$isa = [] unless *{$isa}{ARRAY};
+  @{*{$isa}{ARRAY}} = $base;
+  $pkg;
+}
+
+BEGIN {
+  MY->define_Entity(undef, MY);
 }
 
 # YATT public? API, visible via Facade:
@@ -233,18 +326,6 @@ foreach
     )) {
   my $meth = $_;
   *{globref(MY, $meth)} = sub { shift->get_trans->$meth(@_) };
-}
-
-foreach
-  (qw(rootns_for)) {
-  my $meth = $_;
-  *{globref(MY, $meth)} = sub {
-    my $pack = shift;
-    my $trans = $pack->default_trans;
-    ckrequire($trans);
-    my $sub = $trans->can($meth);
-    $sub->($pack, @_);
-  };
 }
 
 #========================================
@@ -313,12 +394,12 @@ sub dump {
 # Builtin Entities.
 #========================================
 
-Entity template => sub {
+sub YATT::Lite::EntNS::entity_template {
   my ($this, $pkg) = @_;
   $YATT->get_trans->find_template_from_package($pkg // $this);
 };
 
-Entity stash => sub {
+sub YATT::Lite::EntNS::entity_stash {
   my $this = shift;
   my $prop = $CON->prop;
   my $stash = $prop->{stash} //= {};
@@ -335,7 +416,7 @@ Entity stash => sub {
   }
 };
 
-Entity mkhidden => sub {
+sub YATT::Lite::EntNS::entity_mkhidden {
   my ($this) = shift;
   \ join "\n", map {
     my $name = $_;

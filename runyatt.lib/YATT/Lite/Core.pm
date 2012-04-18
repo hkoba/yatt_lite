@@ -14,7 +14,7 @@ use fields qw(cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
 	    );
 use YATT::Lite::Util;
 use YATT::Lite::Constants;
-use YATT::Lite::Entities qw(build_entns);
+use YATT::Lite::Entities;
 
 # XXX: YATT::Lite に？
 use YATT::Lite::Breakpoint ();
@@ -117,11 +117,12 @@ use YATT::Lite::Breakpoint ();
 #========================================
 sub configure_rc_script {
   (my MY $vfs, my $script) = @_;
-  my $pkg = $vfs->{root}->{cf_package}
+  my Folder $f = $vfs->{root};
+  my $pkg = $f->{cf_entns}
     or die $vfs->error("package name is not specified for configure rc_script");
   # print STDERR "#### $pkg \n";
   # XXX: base は設定済みだったはずだけど...
-  ckeval(qq{package $pkg; use strict; use YATT::Lite::Entities; $script});
+  ckeval(qq{package $pkg; use strict; use YATT::Lite; $script});
 }
 #========================================
 
@@ -334,14 +335,6 @@ sub create_file {
 sub find_template_from_package {
   (my MY $self, my $pkg) = @_;
   $self->{pkg2folder}{$pkg};
-}
-
-# XXX: 廃止予定。YATT::Lite::Factory (isa NSBuilder dedicated to YATT::Lite)
-# XXX: に取って代わられる, はず。
-sub rootns_for {
-  my $pack = shift;
-  my $outerns = ref $_[0] || $_[0];
-  build_entns(ROOT => $outerns, build_entns(EntNS => $outerns, $pack->EntNS));
 }
 
 use YATT::Lite::Breakpoint ();

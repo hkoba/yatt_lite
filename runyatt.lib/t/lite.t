@@ -11,7 +11,7 @@ use YATT::Lite::Breakpoint ();
 use YATT::Lite::Util qw(catch);
 require_ok('YATT::Lite');
 
-use YATT::Lite::Util qw(appname);
+use YATT::Lite::Util qw(appname list_isa);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 my $i = 1;
@@ -29,9 +29,18 @@ sub captured {
 }
 
 {
+  my $theme = "infra";
+  is(YATT::Lite->EntNS, "YATT::Lite::EntNS", "[$theme] YL->EntNS");
+  is_deeply [list_isa("YATT::Lite::EntNS", 1)]
+      , [['YATT::Lite::Entities']]
+	, "[$theme] YL EntNS isa tree";
+}
+
+{
   my $theme = "[basic]";
   my $yatt = new YATT::Lite
-    (vfs => [data => {foo => <<'END'
+    (appns => myapp($i)
+     , vfs => [data => {foo => <<'END'
 <!yatt:args a b>
 &yatt:a;(<yatt:bar x=a y=b/>)&yatt:b;
 
@@ -48,15 +57,20 @@ END
 &yatt:x;[<yatt:foo:bar x y/>]&yatt:y;
 END
 	      }]
-     , package => YATT::Lite->rootns_for(myapp($i))
      , debug_cgen => $ENV{DEBUG});
 
   {
     my $SUB = 'foo';
+    is "MyTest_lite_${i}"->EntNS, "MyTest_lite_${i}::EntNS"
+      , "$theme $SUB->EntNS";
+    is_deeply [list_isa("MyTest_lite_${i}::EntNS", 1)]
+      , [['YATT::Lite::EntNS', ['YATT::Lite::Entities']]]
+	, "$theme $SUB EntNS isa tree";
+
     ok(my $part = $yatt->find_part('foo', 'bar'), "$theme find_part");
     is_deeply $part->{arg_order}, [qw(x y body)], "$theme arg_order";
     ok(my $tmpl = $yatt->find_file('foo'), "$theme find_file $SUB");
-    is my $pkg = $yatt->find_product(perl => $tmpl), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $pkg = $yatt->find_product(perl => $tmpl), "MyTest_lite_${i}::EntNS::$SUB"
       , "$theme find_product $SUB";
     eq_or_diff captured($pkg => render_ => my @param = ("FOO", "BAR"))
       , my $res = <<'END', "$theme $SUB render_";
@@ -72,7 +86,7 @@ END
   {
     my $SUB = 'bar';
     ok(my $bar_t = $yatt->find_file('bar'), "$theme find_file $SUB");
-    is my $bar_p = $yatt->find_product(perl => $bar_t), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $bar_p = $yatt->find_product(perl => $bar_t), "MyTest_lite_${i}::EntNS::$SUB"
       , "$theme find_product $SUB";
     eq_or_diff captured($bar_p => render_ => "FOO", "BAR")
       , <<'END', "$theme $SUB render_";
@@ -90,7 +104,7 @@ END
 <yatt:foo:bar x y=z/>
 <yatt:bar x y="&yatt:x;-&yatt:y;"/>
 END
-    is my $baz_p = $yatt->find_product(perl => $baz_t), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $baz_p = $yatt->find_product(perl => $baz_t), "MyTest_lite_${i}::EntNS::$SUB"
     , "$theme find_product $SUB ";
     eq_or_diff captured($baz_p => render_ => "A", "B", "C")
       , <<'END', "$theme $SUB render_";
@@ -115,7 +129,7 @@ END
 <!yatt:widget posargs a b c>
 A=&yatt:a;/ B=&yatt:b;/ C=&yatt:c;
 END
-    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::EntNS::$SUB"
     , "$theme find_product $SUB ";
     eq_or_diff captured($pos_p => render_ => ())
       , <<'END', "$theme $SUB render_";
@@ -136,7 +150,7 @@ END
 <!yatt:widget dobody x y body=[code z w]>
 {<yatt:body z="a(&yatt:x;)" w="b(&yatt:y;)"/>}
 END
-    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::EntNS::$SUB"
       , "$theme find_product $SUB ";
     eq_or_diff captured($pos_p => render_ => ())
       , <<'END', "$theme $SUB render_";
@@ -170,7 +184,7 @@ FOOTER
 &yatt:footer;
 </body>
 END
-    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::EntNS::$SUB"
     , "$theme find_product $SUB ";
     eq_or_diff captured($pos_p => render_ => ())
       , <<'END', "$theme $SUB render_";
@@ -210,7 +224,7 @@ END
 <yatt:base1/>
 <yatt:bar/>
 END
-    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::ROOT::$SUB"
+    is my $pos_p = $yatt->find_product(perl => $pos_t), "MyTest_lite_${i}::EntNS::$SUB"
       , "$theme find_product $SUB ";
     eq_or_diff captured($pos_p => render_ => qw(FOO Bar))
       , <<'END', "$theme $SUB render_";
@@ -290,7 +304,8 @@ END
   $i++;
   my $theme = "[single string template]";
 
-  my $yatt = new YATT::Lite(vfs => [data => <<END
+  my $yatt = new YATT::Lite(appns => myapp($i)
+			    , vfs => [data => <<END]
 <!yatt:args x y>
 <h2>&yatt:x;</h2>
 <yatt:bar y/>
@@ -298,7 +313,6 @@ END
 <!yatt:widget bar y>
 (&yatt:y;)
 END
-			     , package => YATT::Lite->rootns_for(myapp($i))]
 			    , debug_cgen => $ENV{DEBUG});
 
   eq_or_diff $yatt->render('' => 'A', 'B'), <<END
