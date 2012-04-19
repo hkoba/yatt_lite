@@ -22,6 +22,25 @@ use_ok(NSBuilder);
   is $pkg->bar, "baz", "$pkg->bar";
 }
 
+{
+  my $WDH = 'YATT::Lite::Web::DirHandler';
+  {
+    package MyTest_NSB_Web;
+    use base qw(YATT::Lite::NSBuilder);
+    sub default_appbase {$WDH}
+    use YATT::Lite::Inc;
+  }
+  my $NS = 'MyTest_NSB';
+  my $builder = MyTest_NSB_Web->new(appns => $NS);
+
+  my $sub = $builder->buildns('INST');
+  is_deeply [list_isa($sub, 1)]
+    , [[$NS, [$WDH, list_isa($WDH, 1)]]]
+      , "sub inherits $NS, which inherits $WDH only.";
+
+  ok $WDH->can('handle_yatt'), "$WDH is loaded (can handle_yatt)";
+}
+
 my $i = 0;
 {
   my $CLS = myapp(++$i);
@@ -47,4 +66,28 @@ my $i = 0;
   is_deeply [list_isa($sub1, 1)]
     , [[$base1, [$NS, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]]
       , "sub1 inherits base1";
+}
+
+{
+  my $YL = 'MyTest_instpkg_YL';
+  {
+    package MyTest_instpkg_YL;
+    use base qw(YATT::Lite);
+    use YATT::Lite::Inc;
+  }
+
+  my $NS = myapp(++$i);
+  my $builder = NSBuilder->new(appns => $NS);
+
+  my $sub = $builder->buildns(INST => $YL);
+  is_deeply [list_isa($sub, 1)]
+    , [[$YL, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]
+      , "sub inherits $YL only.";
+
+  my $unknown = 'MyTest_instpkg_unk';
+  eval {
+    $builder->buildns(INST => $unknown);
+  };
+  like $@, qr/^None of baseclass inherits YATT::Lite: $unknown/
+    , "Unknown baseclass should raise error";
 }

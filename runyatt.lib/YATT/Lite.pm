@@ -30,7 +30,9 @@ use fields qw(YATT
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
 use YATT::Lite::Entities -as_base, qw(*YATT);
-use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump escape);
+use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump escape
+			set_inc
+		      );
 
 sub Facade () {__PACKAGE__}
 sub default_trans {'YATT::Lite::Core'}
@@ -258,15 +260,6 @@ sub ensure_entns {
     # ok.
   }
   $entns
-}
-
-# 少しでも無駄な stat() を減らすため。もっとも、 ROOT ぐらいしか呼んでないから、大勢に影響せず。
-sub set_inc {
-  my ($pkg, $val) = @_;
-  $pkg =~ s|::|/|g;
-  $INC{$pkg.'.pm'} = $val || 1;
-  # $INC{$pkg.'.pmc'} = $val || 1;
-  $_[1];
 }
 
 # use YATT::Lite qw(Entity); で呼ばれ、

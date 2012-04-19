@@ -62,19 +62,13 @@ sub configure_appns {
     trim_slash($self->{cf_document_root});
   }
   # XXX: $self->{cf_tmpldirs}
-  my $appbase = $self->default_appbase;
-  ckrequire($appbase);
-
-  my $entns = $appbase->ensure_entns($self->{cf_appns});
 
   $self->{baseclass} = \ my @base;
   foreach my $tmpldir (map {
     File::Spec->canonpath($_)
   } lexpand($self->{cf_tmpldirs})) {
-    push @base, ref $self->load_yatt(TMPL => $tmpldir, $appbase);
+    push @base, ref $self->load_yatt(TMPL => $tmpldir);
   }
-
-  @base = $appbase unless @base;
 
   if ($self->{cf_document_root}) {
     $self->{loc2yatt}{'/'}
@@ -82,6 +76,12 @@ sub configure_appns {
   }
 }
 
+sub init_appns {
+  (my MY $self) = @_;
+  my $appns = $self->SUPER::init_appns;
+  $self->appbase->ensure_entns($self->{cf_appns});
+  $appns;
+}
 
 #========================================
 
@@ -93,23 +93,26 @@ sub get_pathns {
 
 sub load_yatt {
   (my MY $self, my ($kind, $path, @base)) = @_;
+  my @basepkg = map {ref $_ || $_} @base;
   if (not $self->{cf_allow_missing_dir} and not -d $path) {
     croak "$kind '$path' is missing!";
   } elsif (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
       my %spec = $self->read_file_xhf($cf, binary => $self->{cf_binary_config});
       my $base = delete $spec{baseclass};
-      $self->build_yatt($kind, $path, [@base, lexpand($base)], %spec);
+      # XXX: @basepkg が既に $base を継承していたら、自動で削るべき
+      $self->build_yatt($kind, $path, [@basepkg, lexpand($base)], %spec);
     };
   } else {
-    $self->build_yatt($kind, $path, [@base]);
+    $self->build_yatt($kind, $path, [@basepkg]);
   }
 }
 
 sub build_yatt {
   (my MY $self, my ($kind, $path, $base, @opts)) = @_;
   trim_slash($path);
-  my $appns = $self->{path2pkg}{$path} = $self->buildns($kind => $base);
+  my $appns = $self->{path2pkg}{$path}
+    = $self->buildns($kind => lexpand($base));
 
   if (-e (my $rc = "$path/.htyattrc.pl")) {
     dofile_in($appns, $rc);
@@ -126,26 +129,19 @@ sub build_yatt {
 #========================================
 
 sub buildns {
-  (my MY $self, my ($kind, $baseclasslst)) = @_;
-  my $appns = $self->SUPER::buildns($kind, $baseclasslst);
-
-  my $appbase = $self->default_appbase;
-  unless ($appns->isa($appbase)) {
-    $self->add_isa($appns, $appbase);
-  }
+  (my MY $self, my ($kind, @base)) = @_;
+  my $newns = $self->SUPER::buildns($kind, @base);
 
   # EntNS を足し、Entity も呼べるようにする。
-  # $appbase->ensure_entns($appns);
-  $appbase->define_Entity(undef, $appns
-			  , map {$_->EntNS} lexpand($baseclasslst));
+  $self->appbase->define_Entity(undef, $newns, map {$_->EntNS} @base);
 
   # instns には MY を定義しておく。
-  my $my = globref($appns, 'MY');
+  my $my = globref($newns, 'MY');
   unless (*{$my}{CODE}) {
-    *$my = sub () { $appns };
+    *$my = sub () { $newns };
   }
 
-  $appns;
+  $newns;
 }
 
 sub configparams_for {

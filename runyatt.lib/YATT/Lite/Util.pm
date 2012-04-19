@@ -27,6 +27,7 @@ require Scalar::Util;
 				  get_locale_encoding
 				  fields_hash
 				  list_isa
+				  set_inc
 				));
   }
   use Carp;
@@ -472,6 +473,14 @@ sub get_locale_encoding {
   require Encode;
   require encoding;
   Encode::find_encoding(encoding::_get_locale_encoding())->name;
+}
+
+sub set_inc {
+  my ($pkg, $val) = @_;
+  $pkg =~ s|::|/|g;
+  $INC{$pkg.'.pm'} = $val || 1;
+  # $INC{$pkg.'.pmc'} = $val || 1;
+  $_[1];
 }
 
 1;

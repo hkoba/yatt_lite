@@ -11,6 +11,7 @@ use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 
 use YATT::Lite::Util::FindMethods;
 
+use YATT::Lite::Factory;
 use YATT::Lite qw(*YATT);
 use YATT::Lite::Util qw(rootname);
 use YATT::Lite::Breakpoint;
@@ -26,11 +27,11 @@ GetOptions("if_can" => \ my $if_can
 my $dispatcher = do {
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
   if (-r $cgi) {
-    do $cgi;
+    YATT::Lite::Factory->load_factory_script($cgi);
   } else {
     require YATT::Lite::Web::Dispatcher;
     YATT::Lite::Web::Dispatcher->new
-	(basens => 'MyApp'
+	(appns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'
 	 , tmpldirs => [grep {-d} rootname($libdir).".ytmpl"]

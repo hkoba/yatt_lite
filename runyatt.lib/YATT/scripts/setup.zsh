@@ -281,7 +281,7 @@ fi
 # Create custom DirHandler.
 # XXX: only if missing.
 if (($+opts[--myapp])); then
-    # XXX: Must modify runyatt.cgi basens!
+    # XXX: Must modify runyatt.cgi appns!
     myapp=${opts[--myapp][2,-1]:-MyApp}
     mkfile -m a+x $cgi_bin/$driver_name.lib/$myapp.pm <<EOF
 #!/usr/bin/perl -w

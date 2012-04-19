@@ -12,7 +12,7 @@ use fields qw(buffer header header_is_printed cookie session
 	      stash
 	      debug_stash
 	    );
-use YATT::Lite::Util qw(globref);
+use YATT::Lite::Util qw(globref fields_hash);
 use Scalar::Util qw(weaken);
 use Carp;
 
@@ -20,10 +20,13 @@ sub prop { my $glob = shift; \%{*$glob}; }
 sub build_prop {
   my $class = shift;
   my PROP $prop = fields::new($class);
+  my $fields = fields_hash($prop);
   my @task;
   while (my ($name, $value) = splice @_, 0, 2) {
     if (my $sub = $class->can("configure_$name")) {
       push @task, [$sub, $value];
+    } elsif (not exists $fields->{"cf_$name"}) {
+      confess "No such config item $name in class $class";
     } else {
       $prop->{"cf_$name"} = $value;
     }
