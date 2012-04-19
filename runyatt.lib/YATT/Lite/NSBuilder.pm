@@ -22,8 +22,7 @@ use YATT::Lite::Util qw(lexpand);
   sub default_appns {__PACKAGE__}
   sub after_new {
     (my MY $self) = @_;
-    $self->{cf_appns} ||= $self->default_appns;
-    if ($SEEN_NS{$self->{cf_appns}}++) {
+    if ($self->{cf_appns} and $SEEN_NS{$self->{cf_appns}}++) {
       confess "appns '$self->{cf_appns}' is already used!";
     }
   }
@@ -36,7 +35,7 @@ use YATT::Lite::Util qw(lexpand);
   sub buildns {
     (my MY $self, my ($subns, $baseclasslst)) = @_;
     $subns ||= $self->default_subns;
-    my @base = lexpand($baseclasslst);
+    my @base = map {ref $_ || $_} lexpand($baseclasslst);
     my $appns = $self->{cf_appns};
     my $newns = sprintf q{%s::%s%d}, $appns, $subns, ++$self->{subns}{$subns};
     unless ($self->{appns_loaded}{$appns}++) {

@@ -17,8 +17,14 @@ sub new {
   } else {
     $self->after_new;
   }
+
+  # To tolerate ``forgotten ->SUPER::after_new() bug'' in user class.
+  $self->_after_after_new;
+
   $self;
 }
+
+sub _after_after_new {}
 
 sub just_new {
   my $self = fields::new(shift);

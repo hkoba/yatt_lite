@@ -181,7 +181,7 @@ Entity tsvfile => sub {
   my ($this, $name) = @_;
   my MY $yatt = $this->YATT;
   $name =~ s;(^|/)\.+/;$1;g;
-  my $fn = "$yatt->{cf_dir}$name.tsv";
+  my $fn = "$yatt->{cf_dir}/$name.tsv";
   unless (-r $fn) {
     die "No such file: $fn\n";
   }

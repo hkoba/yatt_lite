@@ -10,6 +10,7 @@ use fields qw(cf_document_root
 	      cf_tmpldirs
 	      path2pkg
 	      path2yatt
+	      loc2yatt
 	      baseclass
 
 	      cf_allow_missing_dir
@@ -27,10 +28,11 @@ use fields qw(cf_document_root
 );
 
 
-use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire);
+use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in);
 use YATT::Lite::XHF;
 
 require YATT::Lite;
+require File::Spec;
 
 #========================================
 #
@@ -47,16 +49,19 @@ sub load_factory_script {
 }
 
 #========================================
-sub after_new {
-  (my MY $self) = @_;
-  unless ($self->{cf_appns}) {
-    croak "appns is empty!";
-  }
+
+sub configure_appns {
+  (my MY $self, my $appns) = @_;
+  $self->{cf_appns} = $appns;
   if (not $self->{cf_allow_missing_dir}
       and $self->{cf_document_root}
       and not -d $self->{cf_document_root}) {
     croak "document_root '$self->{cf_document_root}' is missing!";
   }
+  if ($self->{cf_document_root}) {
+    trim_slash($self->{cf_document_root});
+  }
+  # XXX: $self->{cf_tmpldirs}
   my $appbase = $self->default_appbase;
   ckrequire($appbase);
 
@@ -72,15 +77,17 @@ sub after_new {
   @base = $appbase unless @base;
 
   if ($self->{cf_document_root}) {
-    $self->load_yatt(INST => $self->{cf_document_root}, @base);
+    $self->{loc2yatt}{'/'}
+      = $self->load_yatt(INST => $self->{cf_document_root}, @base);
   }
 }
+
 
 #========================================
 
 sub get_pathns {
   (my MY $self, my $path) = @_;
-  $path =~ s,/*$,/,;
+  trim_slash($path);
   $self->{path2pkg}{$path};
 }
 
@@ -101,7 +108,7 @@ sub load_yatt {
 
 sub build_yatt {
   (my MY $self, my ($kind, $path, $base, @opts)) = @_;
-  $path =~ s,/*$,/,;
+  trim_slash($path);
   my $appns = $self->{path2pkg}{$path} = $self->buildns($kind => $base);
 
   if (-e (my $rc = "$path/.htyattrc.pl")) {
@@ -151,6 +158,11 @@ sub configparams_for {
 				   at_done
 				   namespace only_parse error_handler))
    , die_in_error => ! YATT::Lite::Util::is_debugging());
+}
+
+sub trim_slash {
+  $_[0] =~ s,/*$,,;
+  $_[0];
 }
 
 1;

@@ -220,7 +220,7 @@ sub build_trans {
 				     only_parse)));
 }
 
-sub after_new {
+sub _after_after_new {
   (my MY $self) = @_;
   $self->{entns} = $self->ensure_entns($self->{cf_appns});
 }

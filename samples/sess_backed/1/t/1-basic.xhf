@@ -671,7 +671,7 @@ PARAM[
 ]
 BODY[
 - <title>Thank you! \(Example of session based input restoration\)</title>
-- saved as:<br>\n<b>(?:/[^/]+)*/samples/sess_backed/1//data/.ht_1</b>,<br>
+- saved as:<br>\n<b>(?:/[^/]+)*/samples/sess_backed/1/data/.ht_1</b>,<br>
 ]
 
 ACTION[

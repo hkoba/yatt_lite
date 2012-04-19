@@ -83,7 +83,7 @@ sub call {
   }
 
   unless (@pi) {
-    return [404, [], ["Not found: ", $env->{PATH_INFO}]];
+    return [404, [], ["Cannot understand: ", $env->{PATH_INFO}]];
   }
 
   my $virtdir = "$self->{cf_document_root}$loc";
@@ -104,8 +104,8 @@ sub call {
     return $self->psgi_handle_static($env);
   }
 
-  my $dh = $self->get_dirhandler(untaint_any($virtdir)) or do {
-    return [404, [], ["Not such directory: ", $virtdir]];
+  my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
+    return [404, [], ["No such directory: ", $loc]];
   };
 
   # To support $con->param and other cgi compat methods.
@@ -424,9 +424,18 @@ sub cgi_response {
 # -> Factory::load
 # -> Factory::buildspec
 
+sub get_lochandler {
+  (my MY $self, my ($location, $tmpldir)) = @_;
+  $self->{loc2yatt}{$location} ||= do {
+    $tmpldir //= $self->{cf_document_root};
+    $self->load_yatt(INST => "$tmpldir$location", @{$self->{baseclass}});
+  };
+}
+
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
-  $self->{path2yatt}{$dirPath} || do {
+  $dirPath =~ s,/*$,,;
+  $self->{path2yatt}{$dirPath} ||= do {
     $self->load_yatt(INST => $dirPath, @{$self->{baseclass}});
   };
 }

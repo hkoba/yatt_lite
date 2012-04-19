@@ -20,7 +20,7 @@ use YATT::Lite::Web::Dispatcher;
 
 my $dispatcher = YATT::Lite::Web::Dispatcher->new
   (document_root => File::Basename::dirname(File::Spec->rel2abs(__FILE__))
-   , basens => 'MyApp'
+   , appns => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
    , tmpldirs => [grep {-d} "$rootname.ytmpl"]
