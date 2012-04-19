@@ -64,7 +64,7 @@ END
   # XXX: .htyattrc.pl and entity
   #
   foreach my $test
-    (["/", 200, $out_index, ["Content-type", qq{text/html; charset="utf-8"}]]
+    (["/", 200, $out_index, ["Content-Type", qq{text/html; charset="utf-8"}]]
      , ["/index", 200, $out_index]
      , ["/index.yatt", 200, $out_index]
      , ["/index.yatt/foo/bar", 200, $out_index]
@@ -76,16 +76,17 @@ END
      , ["/beta/world_line.yatt/baz", 200, $out_beta]
     ) {
     my ($path, $code, $body, $header) = @$test;
-    my $res = do {
+    my $tuple = do {
       my Env $env = Env->psgi_simple_env;
       $env->{PATH_INFO} = $path;
       $app->($env);
     };
-    is $res->code, $code, "[code] $path";
-    is_or_like $res->content, $body, "[body] $path";
+    is $tuple->[0], $code, "[code] $path";
+    is_or_like join("", @{$tuple->[2]}), $body, "[body] $path";
     if ($header and my @h = @$header) {
+      my %header = @{$tuple->[1]};
       while (my ($key, $value) = splice @h, 0, 2) {
-	is_or_like $res->header($key), $value, "[header][$key] $path";
+	is_or_like $header{$key}, $value, "[header][$key] $path";
       }
     }
   }
