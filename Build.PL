@@ -1,45 +1,33 @@
 use strict;
 use warnings;
-use Module::Build;
 
 use FindBin;
-use lib "$FindBin::Bin/runyatt.lib";
+use lib "$FindBin::Bin/misc/cpan";
 
-sub rscan_and_subst {
-  my ($rscanSpec, $substSpec) = @_;
-  my ($from, $to) = @$substSpec;
-  my %hash = (
-	      map {my ($std) = $_; $std =~ s{$from}{$to}; $_ => $std}
-	      @{Module::Build->rscan_dir(@$rscanSpec)}
-	     );
-  \%hash;
-}
+use MyBuilder;
 
-my $builder = Module::Build->new
+my $builder = MyBuilder->new
 (module_name           => 'YATT::Lite'
  , license             => 'perl'
- , dist_version_from   => 'runyatt.lib/YATT/Lite.pm'
+ , dist_version_from   => 'Lite.pm'
+
  , requires =>
  {'perl'       => '5.10.1' # for named capture and //
   , 'version'    => 0
   , 'List::Util' => 0
-  , 'Test::More' => 0
-  , 'Test::Differences' => 0
  }
 
- , pm_files => rscan_and_subst
- (['runyatt.lib', qr{\.pm}]
-  , [q{^runyatt.lib/}, q{lib/}])
+ , build_requires =>
+ {'Test::More' => 0
+  , 'Test::Differences' => 0
+  , 'File::ShareDir' => 0
+ }
 
- , test_files => Module::Build->rscan_dir('runyatt.lib/t', qr{\.t$})
-
- , script_files => rscan_and_subst
- (['runyatt.lib/YATT/scripts/', qr{\byatt\.\w+$}]
-  , ["runyatt.lib/YATT/scripts/", q{bin/}])
+ # , test_files => Module::Build->rscan_dir('t', qr{\.t$})
 
  , add_to_cleanup      => [ qw(YATT-*
 			       *.tmp
-			       runyatt.lib/t/cover_db
+			       t/cover_db
 			     ) ]
 );
 

@@ -5,20 +5,12 @@ use Test::More;
 
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
-use File::Basename;
+
 use FindBin;
-sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
 my $libdir;
-use lib $libdir = do {
-  if (-l __FILE__) {
-    # If $script is symlink, symlink-resolved path is used as $libdir
-    updir(2, ($FindBin::RealBin, $FindBin::RealBin)[0]);
-  } else {
-    # Otherwise, just use updir 3 of runyatt.lib/YATT/scripts/$script
-    updir(3, MY->rel2abs(__FILE__))
-  }
-};
-# print STDERR join("\n", __FILE__, $libdir), "\n";
+use lib $libdir = "$FindBin::Bin/../lib";
+
+use File::Basename;
 
 use YATT::Lite::TestUtil;
 use YATT::Lite::Util qw(dict_sort rootname);

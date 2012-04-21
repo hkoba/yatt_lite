@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use lib untaint_any("$FindBin::Bin/..");
+use lib untaint_any("$FindBin::Bin/lib");
 use Test::More qw(no_plan);
 use YATT::Lite::TestUtil;
 use File::Basename;
@@ -14,14 +14,14 @@ use YATT::Lite::Breakpoint;
 use YATT::Lite::Web::Dispatcher;
 use YATT::Lite::Util qw(lexpand appname);
 sub MY () {__PACKAGE__}
-require YATT::TestFiles;
+require YATT::Lite::TestFiles;
 
 sub myapp {join _ => MyTest => appname($0), shift}
 
 my ($quiet, $i) = (1);
 my $BASE = "/tmp/yatt-test$$.d";
-my $dig = YATT::TestFiles->new($BASE
-			       , quiet => $quiet, auto_clean => 1);
+my $dig = YATT::Lite::TestFiles->new($BASE
+				     , quiet => $quiet, auto_clean => 1);
 
 $i = 1;
 {

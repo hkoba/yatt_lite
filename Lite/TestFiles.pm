@@ -1,4 +1,6 @@
-package YATT::TestFiles; sub MY () {__PACKAGE__}
+package
+  YATT::Lite::TestFiles;
+sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use fields qw(basedir Dict List cf_auto_clean cf_quiet);

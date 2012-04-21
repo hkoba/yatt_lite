@@ -5,7 +5,7 @@ use warnings FATAL => qw(all);
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 BEGIN {$FindBin::Bin = untaint_any($FindBin::Bin)}
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/lib";
 
 use Test::More;
 
@@ -19,20 +19,22 @@ my %prereq
 
 my %ignore; map ++$ignore{$_}, ();
 
-my (%modules, @modules);
+
+my @modules = ('YATT::Lite');
+my (%modules) = ('YATT::Lite' => "lib/YATT/Lite.pm");
 find {
   no_chdir => 1,
   wanted => sub {
   my $name = $File::Find::name;
   return unless $name =~ m{\.pm$};
-  $name =~ s{^\../}{};
+  $name =~ s{^lib/}{};
   $name =~ s{/}{::}g;
   $name =~ s{\.pm$}{}g;
   return if $ignore{$name};
   print "$File::Find::name => $name\n" if $ENV{VERBOSE};
   $modules{$name} = $File::Find::name;
   push @modules, untaint_any($name);
-}}, untaint_any('../YATT');
+}}, untaint_any('lib/YATT/Lite/');
 
 plan tests => 3 * @modules;
 

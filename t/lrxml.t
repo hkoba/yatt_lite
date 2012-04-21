@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use lib untaint_any("$FindBin::Bin/..");
+use lib untaint_any("$FindBin::Bin/lib");
 use Test::More qw(no_plan);
 use YATT::Lite::TestUtil;
 

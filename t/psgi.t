@@ -7,7 +7,7 @@ use Test::More;
 sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
-use lib untaint_any("$FindBin::Bin/..");
+use lib untaint_any("$FindBin::Bin/lib");
 use YATT::Lite::TestUtil;
 use YATT::Lite::Breakpoint;
 
