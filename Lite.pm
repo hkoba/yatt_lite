@@ -91,6 +91,13 @@ sub render {
   my MY $self = shift;
   my $con = $self->make_connection;
   $self->render_into($con, @_);
+  $con->commit;
+  $con->buffer;
+
+  # open my $fh, '>', \ (my $str = "") or die "Can't open capture buffer!: $!";
+  # $self->render_into($fh, @_);
+  # close $fh;
+  # $str;
 }
 
 sub render_into {

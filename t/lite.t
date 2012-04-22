@@ -39,7 +39,7 @@ sub captured {
 {
   my $theme = "[basic]";
   my $yatt = new YATT::Lite
-    (appns => myapp($i)
+    (appns => myapp(++$i)
      , vfs => [data => {foo => <<'END'
 <!yatt:args a b>
 &yatt:a;(<yatt:bar x=a y=b/>)&yatt:b;
@@ -301,10 +301,9 @@ END
 }
 
 {
-  $i++;
   my $theme = "[single string template]";
 
-  my $yatt = new YATT::Lite(appns => myapp($i)
+  my $yatt = new YATT::Lite(appns => myapp(++$i)
 			    , vfs => [data => <<END, public => 1]
 <!yatt:args x y>
 <h2>&yatt:x;</h2>

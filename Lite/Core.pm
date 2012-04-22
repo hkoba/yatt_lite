@@ -328,7 +328,8 @@ sub create_file {
       # XXX: $tmpl->{cf_package} の指すパッケージをこの段階で map {undef $_}
       # すべきではないか?
       $parser->load_file_into($tmpl, $tmpl->{cf_path});
-    } elsif ($tmpl->{cf_string}) {
+    } elsif ($tmpl->{cf_string} and not $tmpl->{cf_mtime}) {
+      $tmpl->{cf_mtime} = time; # use mtime to express generated time.
       my $parser = $self->get_parser;
       $parser->load_string_into($tmpl, $tmpl->{cf_string}
 				, scheme => "data", path => $tmpl->{cf_name});
