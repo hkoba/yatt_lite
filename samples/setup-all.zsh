@@ -2,7 +2,7 @@
 
 # set -e
 cd $0:h || exit 1
-yl_scripts=../runyatt.lib/YATT/scripts
+yl_scripts=../scripts
 progname=$0
 
 function warn { echo 1>&2 $* }

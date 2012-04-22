@@ -7,21 +7,12 @@ use warnings FATAL => qw(all);
 use 5.010;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
+use FindBin;
 use File::Basename;
 use File::Spec;
-my ($bindir, $libdir);
-BEGIN {
-  # To allow keeping relative dir.
-  $bindir = untaint_any(dirname($0));
-  if (-x "$bindir/../cgi-bin/runyatt.cgi"
-      and -d (my $dn = "$bindir/../cgi-bin/runyatt.lib")) {
-    $libdir = $dn;
-  } else {
-    require Test::More;
-    Test::More::plan(skip_all => 'Not yet setup');
-  }
-}
-use lib untaint_any(File::Spec->rel2abs($libdir));
+my ($libdir);
+use lib $libdir = "$FindBin::Bin/../lib";
+my $appdir = "$FindBin::Bin/..";
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use YATT::Lite::Breakpoint;
@@ -37,8 +28,8 @@ my $CLASS = YATT::Lite::TestFCGI::Auto->class
   or YATT::Lite::TestFCGI::Auto->skip_all
   ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
 
-unless (-d "$bindir/../cgi-bin"
-	and grep {-x "$bindir/../cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
+unless (-d "$appdir/html/cgi-bin"
+	and grep {-x "$appdir/html/cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
   $CLASS->skip_all("Can't find cgi-bin/runyatt.cgi");
 }
 
@@ -48,16 +39,14 @@ my $mech = $CLASS->new
      , fcgiscript => "$_/cgi-bin/runyatt.fcgi"
      , debug_fcgi => $ENV{DEBUG_FCGI}
     )
-  } dirname(File::Spec->rel2abs($bindir)));
+  } "$appdir/html");
 
 if (my $reason = $mech->check_skip_reason) {
   $mech->skip_all($reason);
 }
 
-my MY $tests = MY->load_tests([dir => "$bindir/.."
-			       , libdir => untaint_any
-			       (File::Spec->rel2abs($libdir))]
-			      , @ARGV ? @ARGV : $bindir);
+my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
+			      , @ARGV ? @ARGV : $FindBin::Bin);
 $tests->enter;
 
 my @plan = $tests->test_plan;

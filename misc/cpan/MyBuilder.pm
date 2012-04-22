@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use base qw(Module::Build);
 
 sub rscan_and_subst {
-  my ($rscanSpec, $substSpec) = @_;
+  my ($self, $rscanSpec, $substSpec) = @_;
   my ($from, $to) = @$substSpec;
   my %hash = (
 	      map {my ($std) = $_; $std =~ s{$from}{$to}; $_ => $std}

@@ -1,1 +1,0 @@
-../1/runyatt.psgi

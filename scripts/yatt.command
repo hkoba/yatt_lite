@@ -4,10 +4,9 @@ use warnings FATAL => qw(all);
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
 
+use FindBin;
 use File::Basename;
-sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
-my $libdir;
-use lib $libdir = updir(3, MY->rel2abs(__FILE__));
+use lib "$FindBin::Bin/lib";
 
 use YATT::Lite::Util::FindMethods;
 
@@ -24,23 +23,18 @@ GetOptions("if_can" => \ my $if_can
 	  , "d=s" => \ my $o_dir)
   or exit 1;
 
-my $dispatcher = do {
-  (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
-  if (-r $cgi) {
-    YATT::Lite::Factory->load_factory_script($cgi);
-  } else {
+my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
     require YATT::Lite::Web::Dispatcher;
     YATT::Lite::Web::Dispatcher->new
 	(appns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'
-	 , tmpldirs => [grep {-d} rootname($libdir).".ytmpl"]
+	 , tmpldirs => [grep {-d} "ytmpl"]
 	 , debug_cgen => $ENV{DEBUG}
 	 , debug_cgi  => $ENV{DEBUG_CGI}
 	 # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
 	 # , tmpl_encoding => 'utf-8'
 	);
-  }
 };
 
 local $YATT = my $dirhandler = $dispatcher->get_dirhandler($o_dir // '.');

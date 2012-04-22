@@ -5,35 +5,17 @@ use warnings FATAL => qw(all);
 use 5.010;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use File::Basename;
-use File::Spec;
-my ($bindir, $libdir);
-BEGIN {
-  # To allow keeping relative dir.
-  $bindir = untaint_any(dirname($0));
-  if (-x "$bindir/../cgi-bin/runyatt.cgi"
-      and -d (my $dn = "$bindir/../cgi-bin/runyatt.lib")) {
-    $libdir = $dn;
-  } elsif (-r "$bindir/../runyatt.psgi"
-      and -d ($dn = "$bindir/../runyatt.lib")) {
-    $libdir = $dn;
-  } else {
-    require Test::More;
-    Test::More::plan(skip_all => 'Not yet setup');
-  }
-}
-use lib untaint_any(File::Spec->rel2abs($libdir));
-# print STDERR join("\n", __FILE__, $libdir), "\n";
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(ostream);
 use YATT::Lite::XHFTest2;
 use base qw(YATT::Lite::XHFTest2);
 
-my MY $tests = MY->load_tests([dir => File::Spec->rel2abs("$bindir/..")
-			       , libdir => untaint_any
-			       (File::Spec->rel2abs($libdir))]
-			      , @ARGV ? @ARGV : $bindir);
+my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
+			      , @ARGV ? @ARGV : $FindBin::Bin);
 $tests->enter;
 
 plan $tests->test_plan;

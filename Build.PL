@@ -23,12 +23,14 @@ my $builder = MyBuilder->new
   , 'File::ShareDir' => 0
  }
 
- # , test_files => Module::Build->rscan_dir('t', qr{\.t$})
+ , test_files => Module::Build->rscan_dir('t', qr{\.t$})
 
  , add_to_cleanup      => [ qw(YATT-*
 			       *.tmp
 			       t/cover_db
 			     ) ]
 );
+
+
 
 $builder->create_build_script();

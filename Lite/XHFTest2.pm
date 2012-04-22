@@ -3,6 +3,8 @@ use strict;
 use warnings FATAL => qw(all);
 use Exporter qw(import);
 
+use File::Basename qw(dirname);
+
 use base qw(YATT::Lite::Object);
 use fields qw(files cf_dir cf_libdir
 	      cf_debug
@@ -72,13 +74,22 @@ sub test_plan {
 sub load_dispatcher {
   my Tests $self = shift;
   require YATT::Lite::Factory;
-  my $rn = rootname($self->{cf_libdir});
-  my @found = grep {-r} map {"$rn.$_"} qw(cgi psgi);
-  unless (@found) {
-    croak "Can't load dispatcher. runyatt.cgi or psgi is required";
+  my $script = do {
+    if (defined $self->{cf_libdir}) {
+      my $rn = rootname($self->{cf_libdir});
+      my @found = grep {-r} map {"$rn.$_"} qw(cgi psgi);
+      $found[0];
+    } elsif (-r (my $psgi = dirname($self->{cf_dir}) . "/app.psgi")) {
+      $psgi;
+    } else {
+      undef;
+    }
+  };
+  unless ($script and -r  $script) {
+    croak "Can't load dispatcher. runyatt.cgi, runyatt.psgi or app.psgi is required";
   }
 
-  YATT::Lite::Factory->load_factory_script($found[0]);
+  YATT::Lite::Factory->load_factory_script($script);
 }
 
 sub ntests {

@@ -17,30 +17,25 @@ use Plack::Util;
 sub MY () {__PACKAGE__}
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
+use FindBin;
 use File::Basename;
 use File::Spec;
-my ($bindir, $appdir, $libdir);
-BEGIN {
-  $bindir = untaint_any(dirname($0));
-  $appdir = "$bindir/..";
-  $libdir = untaint_any(File::Spec->rel2abs("$appdir/runyatt.lib"));
-}
-use lib $libdir;
+use lib "$FindBin::Bin/../lib";
 
 use YATT::Lite::Breakpoint;
 # use YATT::Lite::Util qw(ostream);
 use YATT::Lite::XHFTest2;
 use base qw(YATT::Lite::XHFTest2);
 
-my MY $tests = MY->load_tests([dir => $appdir , libdir => $libdir]
-			      , @ARGV ? @ARGV : $bindir);
+my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
+			      , @ARGV ? @ARGV : $FindBin::Bin);
 $tests->enter;
 
 plan $tests->test_plan(1);
 
 use Cwd;
 $ENV{YATT_DOCUMENT_ROOT} = cwd;
-ok(my $app = Plack::Util::load_psgi("runyatt.psgi"), "load_psgi");
+ok(my $app = Plack::Util::load_psgi("$FindBin::Bin/../app.psgi"), "load_psgi");
 
 test_psgi $app, sub {
   my ($cb) = shift;

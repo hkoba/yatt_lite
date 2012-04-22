@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ACTION[
-remove: data/.ht_*
+remove: ../data/.ht_*
 ]
 
 FILE: save.ydo
@@ -75,5 +75,5 @@ BODY:
  </html>
 
 ACTION[
-remove: data/.ht_*
+remove: ../data/.ht_*
 ]

@@ -42,10 +42,29 @@ require File::Spec;
 our $yatt_loading;
 sub loading { $yatt_loading }
 
+sub find_load_factory_script {
+  my ($pack, $dir) = @_;
+  my ($found) = $pack->find_factory_script($dir)
+    or return;
+  $pack->load_factory_script($found);
+}
+
 sub load_factory_script {
   my ($pack, $fn) = @_;
   local $yatt_loading = 1;
   ckdo $fn;
+}
+
+sub find_factory_script {
+  my $pack = shift;
+  my $dir = $_[0] ? File::Spec->rel2abs($_[0]) : File::Spec->curdir;
+  my @path = File::Spec->no_upwards(File::Spec->splitdir($dir));
+  my $rootdir = File::Spec->rootdir;
+  while (@path and ($dir = File::Spec->catdir(@path)) ne $rootdir) {
+    if (my ($found) = grep {-r "$dir/$_.psgi"} qw(runyatt app)) {
+      return $found;
+    }
+  }
 }
 
 #========================================

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ACTION[
-remove: data/.ht_*
+remove: ../data/.ht_*
 ]
 
 FILE: index.yatt
@@ -264,5 +264,5 @@ BODY:
 
 
 ACTION[
-remove: data/.ht_*
+remove: ../data/.ht_*
 ]
