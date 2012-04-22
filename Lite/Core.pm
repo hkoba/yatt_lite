@@ -213,37 +213,43 @@ sub create_file {
     wantarray ? ($part, $tmpl) : $part;
   }
 
-  # part を保持する template を取り出す。
-  sub find_template_for_part {
-    (my MY $self, my $name) = @_;
-    if (UNIVERSAL::isa($self->{root}, Template)) {
-      $self->{root};
-    } else {
-      $self->find_file($name)
-    }
-  }
-
   sub find_part_handler {
     (my MY $self, my $nameSpec, my %opts) = @_;
     my $ignore_error = delete $opts{ignore_error};
     my ($partName, $subPage, $action) = ref $nameSpec ? @$nameSpec : $nameSpec;
     $subPage //= '';
 
-    my ($itemKey, $method) = do {
-      if (defined $action) {
-	("do_$action") x 2;
-      } else {
-	($subPage, "render_$subPage");
-      }
-    };
+    my $method;
+    (my Template $tmpl, my Part $part);
 
-    my Template $tmpl = $self->find_template_for_part($partName)
-      or ($ignore_error and return)
-	or croak "No such template file: $partName";
+    if (UNIVERSAL::isa($self->{root}, Template)) {
+      # Special case.
+      $tmpl = $self->{root};
 
-    my Part $part = $tmpl->{Item}{$itemKey}
-      or ($ignore_error and return)
-	or croak "No such item in file $partName: $itemKey";
+      $part = $tmpl->{Item}{$partName}
+	or ($ignore_error and return)
+	  or croak "No such item in template: $partName";
+
+      $method = "render_$partName";
+
+    } else {
+      (my $itemKey, $method) = do {
+	if (defined $action) {
+	  ("do_$action") x 2;
+	} else {
+	  ($subPage, "render_$subPage");
+	}
+      };
+
+      # General container case.
+      $tmpl = $self->find_file($partName)
+	or ($ignore_error and return)
+	  or croak "No such template file: $partName";
+      $part = $tmpl->{Item}{$itemKey}
+	or ($ignore_error and return)
+	  or croak "No such item in file $partName: $itemKey";
+    }
+
 
     my $pkg = $self->find_product(perl => $tmpl)
       or ($ignore_error and return)
@@ -329,7 +335,10 @@ sub create_file {
       # すべきではないか?
       $parser->load_file_into($tmpl, $tmpl->{cf_path});
     } elsif ($tmpl->{cf_string} and not $tmpl->{cf_mtime}) {
-      $tmpl->{cf_mtime} = time; # use mtime to express generated time.
+      # To avoid recompilation, use mtime to express generated time.
+      # Not so good.
+      $tmpl->{cf_mtime} = time;
+
       my $parser = $self->get_parser;
       $parser->load_string_into($tmpl, $tmpl->{cf_string}
 				, scheme => "data", path => $tmpl->{cf_name});
