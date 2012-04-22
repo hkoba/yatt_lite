@@ -93,6 +93,7 @@ sub load_session {
 
 sub _session_sid {
   (my MY $self, my $cgi_or_req) = @_;
+  return unless defined $cgi_or_req;
   if (my $sub = $cgi_or_req->can('cookies')) {
     $sub->($cgi_or_req)->{$self->sid_name};
   } else {
@@ -116,9 +117,9 @@ sub _load_session {
   }
 
   # expire させたくない時は、 session_opts に expire: 0 を仕込むこと。
-  $sess->expire($expire);
+  $sess->expire($expire) if $sess;
 
-  if ($new) {
+  if ($new and $sess) {
     # 本当に良いのかな?
     $con->set_cookie($sess->cookie(-path => $con->location));
 
@@ -268,7 +269,7 @@ sub cmd_setup {
 sub after_new {
   my MY $self = shift;
 
-  my $passfile = "$self->{cf_dir}/.htdbpass";
+  my $passfile = "$self->{cf_dir}/../.htdbpass";
   unless (-e $passfile) {
     die "Can't find $passfile";
   }
@@ -278,5 +279,5 @@ sub after_new {
 
   $self->cf_by_filetype(xhf => $passfile);
 
-  $self->{cf_datadir} //= "$self->{cf_dir}/data";
+  $self->{cf_datadir} //= "$self->{cf_dir}/../data";
 }

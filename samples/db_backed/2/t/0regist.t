@@ -9,26 +9,19 @@ sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use File::Basename;
 use File::Spec;
-my ($bindir, $libdir);
-use lib (untaint_any
-	 (File::Spec->rel2abs
-	  ($libdir = ($bindir = dirname(untaint_any($0)))
-	   . "/../../../../runyatt.lib"))
-	 , $FindBin::Bin);
-
-use YATT::Lite::TestUtil;
+use lib $FindBin::Bin, "$FindBin::Bin/../lib";
 
 sub MY () {__PACKAGE__}
 use base qw(t_regist);
 
-MY->do_test($bindir, REQUIRE => [qw(DBD::mysql)]);
+MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::mysql)]);
 
 sub cleanup_sql {
-  my ($pack, $mech, $bindir, $sql) = @_;
-  my $passfile = "$bindir/../.htdbpass";
+  my ($pack, $app, $appdir, $sql) = @_;
+  my $passfile = "$appdir/.htdbpass";
 
   unless (-r $passfile) {
-    $mech->skip_all(".htdbpass is not configured");
+    Test::More::skip(all => ".htdbpass is not configured");
   }
 
   do_mysql($passfile, $sql);

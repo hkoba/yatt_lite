@@ -11,11 +11,11 @@ use lib $FindBin::Bin, "$FindBin::Bin/../lib";
 sub MY () {__PACKAGE__}
 use base qw(t_regist);
 
-MY->do_test($FindBin::Bin, REQUIRE => [qw(DBD::SQLite)]);
+MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::SQLite)]);
 
 sub cleanup_sql {
-  my ($pack, $mech, $bindir, $sql) = @_;
-  do_sqlite("$bindir/../data/.htdata.db", $sql);
+  my ($pack, $app, $appdir, $sql) = @_;
+  do_sqlite("$appdir/data/.htdata.db", $sql);
 }
 
 sub do_sqlite {

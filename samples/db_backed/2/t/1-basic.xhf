@@ -8,7 +8,7 @@ REQUIRE[
 ]
 USE_COOKIE: 1
 FILE_READABLE[
-- .htdbpass
+- ../.htdbpass
 ]
 
 # Include can be case insensitive. Its argument can be an array.

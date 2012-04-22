@@ -4,6 +4,7 @@ use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);
 use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
 	      cf_is_psgi
+	      cf_hmv
 	      cf_root cf_location
 	      cf_use_array_param
 	    );
@@ -14,10 +15,9 @@ use Carp;
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
-  foreach my $name (qw(param url_param request_method referer)) {
+  foreach my $name (qw(url_param request_method referer)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
-      $prop->{cf_cgi}->$name(@_);
     };
   }
   foreach my $name (qw(file subpath)) {
@@ -28,6 +28,27 @@ BEGIN {
     };
   }
 }
+
+#========================================
+
+sub param {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (my $hmv = $prop->{cf_hmv}) {
+    return $hmv->keys unless @_;
+    if (@_ == 1) {
+      return wantarray ? $hmv->get_all($_[0]) : $hmv->get($_[0]);
+    } else {
+      $hmv->add(@_);
+      return $glob;
+    }
+  } elsif (my $cgi = $prop->{cf_cgi}) {
+    return $cgi->param(@_);
+  } else {
+    croak "Neither Hash::Multivalue nor CGI is found in connection!";
+  }
+}
+
+#========================================
 
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
@@ -81,7 +102,7 @@ sub location {
 
 sub _invoke_or {
   my ($default, $obj, $method, @args) = @_;
-  if (my $sub = $obj->can($method)) {
+  if (defined $obj and my $sub = $obj->can($method)) {
     $sub->($obj, @args)
   } else {
     $default;
@@ -313,7 +334,7 @@ sub param_type {
     $pat_sub->();
   };
 
-  my $value = $prop->{cf_cgi}->param($name);
+  my $value = $glob->param($name);
 
   if (defined $value && $value =~ $pat) {
     return $&; # Also for taint check.

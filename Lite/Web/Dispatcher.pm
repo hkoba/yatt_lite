@@ -121,7 +121,7 @@ sub call {
   my $con = $dh->make_connection(undef, @params);
 
   my $error = catch {
-    $dh->handle($dh->trim_ext($file), $con, $file);
+    $dh->handle($dh->cut_ext($file), $con, $file);
     $con->flush;
   };
   if (not $error or is_done($error)) {
@@ -172,6 +172,50 @@ sub split_path_info {
 		, $self->{cf_index_name}, ".yatt");
     # or die
   }
+}
+
+sub render {
+  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+
+  # [$path_info, $subpage, $action]
+  my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
+
+  my ($tmpldir, $loc, $file, $trailer)
+    = my @pi = lookup_path($path_info
+			   , [$self->{cf_document_root}
+			      , lexpand($self->{cf_tmpldirs})]
+			   , $self->{cf_index_name}, ".yatt");
+  unless (@pi) {
+    die "No such location: $path_info";
+  }
+
+  my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
+    die "No such directory: $path_info";
+  };
+
+  my $virtdir = "$self->{cf_document_root}$loc";
+  my $realdir = "$tmpldir$loc";
+
+  my @params = (dir => $virtdir
+		, file => $file
+		, subpath => $trailer
+		, system => $self
+		, root => $self->{cf_document_root}, location => $loc);
+
+  if (@rest == 2 and defined $rest[-1] and ref $args eq 'HASH') {
+    require Hash::MultiValue;
+    my $env = Env->psgi_simple_env;
+    $env->{PATH_INFO} = $path_info;
+    $env->{REQUEST_URI} = $path_info;
+    push @params, env => $env, hmv => Hash::MultiValue->from_mixed($args);
+  }
+
+  my $con = $dh->make_connection(undef, @params);
+
+  $dh->render_into($con, @rest ? [$file, @rest] : $file, $args, @opts);
+
+  $con->flush;
+  $con->buffer;
 }
 
 sub has_forbidden_path {
@@ -258,7 +302,7 @@ sub run_dirhandler {
 
   my $con = $dh->make_connection($fh, system => $self, %params);
 
-  $dh->handle($dh->trim_ext($params{file}), $con, $params{file});
+  $dh->handle($dh->cut_ext($params{file}), $con, $params{file});
 
   wantarray ? ($dh, $con) : $con;
 }

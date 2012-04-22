@@ -305,7 +305,7 @@ END
   my $theme = "[single string template]";
 
   my $yatt = new YATT::Lite(appns => myapp($i)
-			    , vfs => [data => <<END]
+			    , vfs => [data => <<END, public => 1]
 <!yatt:args x y>
 <h2>&yatt:x;</h2>
 <yatt:bar y/>
@@ -315,11 +315,10 @@ END
 END
 			    , debug_cgen => $ENV{DEBUG});
 
-  eq_or_diff $yatt->render('' => 'A', 'B'), <<END
+  eq_or_diff $yatt->render('' => ['A', 'B']), <<END
 <h2>A</h2>
 (B)
 
 END
     , "$theme find_renderer foo";
 }
-

@@ -168,9 +168,30 @@ sub create_file {
     $str;
   }
   sub render_into {
-    (my MY $self, my ($fh, $name, @args)) = @_;
-    my ($sub, $pkg) = $self->find_renderer($name);
-    $sub->($pkg, $fh, @args);
+    (my MY $self, my ($fh, $namerec, $args, @opts)) = @_;
+    my ($part, $sub, $pkg) = $self->find_part_handler($namerec);
+    unless ($part->public) {
+      # XXX: refresh する手もあるだろう。
+      croak $self->error(q|Forbidden request '%s'|, terse_dump($namerec));
+    }
+
+    my @args = do {
+      unless (defined $args and $part->isa(MY->Widget)) {
+	();
+      } elsif (ref $args eq 'ARRAY') {
+	@$args
+      } elsif (ref $args eq 'HASH') {
+	$part->reorder_hash_params($args);
+      } else {
+	croak "BUG: Unknown type args for render_into";
+      }
+    };
+
+    if (@opts) {
+      $self->cf_let(\@opts, $sub, $pkg, $fh, @args);
+    } else {
+      $sub->($pkg, $fh, @args);
+    }
   }
 
   # root から見える part (と、その template)を取り出す。

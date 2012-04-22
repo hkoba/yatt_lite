@@ -100,6 +100,7 @@ sub load_session {
 
 sub _session_sid {
   (my MY $self, my $cgi_or_req) = @_;
+  return unless defined $cgi_or_req;
   if (my $sub = $cgi_or_req->can('cookies')) {
     $sub->($cgi_or_req)->{$self->sid_name};
   } else {

@@ -87,6 +87,17 @@ sub handle {
   $con;
 }
 
+sub render {
+  my MY $self = shift;
+  my $con = $self->make_connection;
+  $self->render_into($con, @_);
+}
+
+sub render_into {
+  local ($YATT, $CON) = splice @_, 0, 2;
+  $YATT->open_trans->render_into($CON, @_);
+}
+
 sub commit {
   local ($YATT, $CON) = @_;
   $CON->commit;
@@ -94,7 +105,7 @@ sub commit {
 
 sub find_handler {
   (my MY $self, my ($ext, $file)) = @_;
-  $ext //= $self->trim_ext($file) || 'yatt';
+  $ext //= $self->cut_ext($file) || 'yatt';
   # XXX: There should be optional hash based (extension => handler) mapping.
   # cf_ext_alias
   my $sub = $self->can("handle_$ext")
@@ -176,7 +187,7 @@ sub handle_ytmpl {
   print $con "Forbidden filetype: $file";
 }
 
-sub trim_ext {
+sub cut_ext {
   my ($self, $fn) = @_;
   croak "Undefined filename!" unless defined $fn;
   return undef unless $fn =~ s/\.(\w+$)//;
@@ -305,10 +316,7 @@ BEGIN {
 
 # YATT public? API, visible via Facade:
 foreach
-  (qw(render
-      render_into
-
-      find_part
+  (qw(find_part
       find_file
       find_product
       find_renderer

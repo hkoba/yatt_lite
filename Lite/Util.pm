@@ -180,7 +180,7 @@ require Scalar::Util;
     my ($path_info, $dirlist, $index_name, $want_ext) = @_;
     $index_name //= 'index';
     $want_ext //= '.yatt';
-    my @dirlist = grep {-d} @$dirlist;
+    my @dirlist = grep {defined $_ and -d $_} @$dirlist;
     my $pi = $path_info;
     my ($loc, $cur, $ext) = ("", "");
   DIG:

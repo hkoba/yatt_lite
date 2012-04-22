@@ -6,29 +6,22 @@ use utf8;
 use Test::More;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use File::Basename;
-use File::Spec;
-my ($bindir, $libdir);
-use lib untaint_any
-  (File::Spec->rel2abs
-   ($libdir = ($bindir = dirname(untaint_any($0)))
-    . "/../../../../runyatt.lib"));
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 
-unless (-d "$bindir/../cgi-bin"
-	and grep {-x "$bindir/../cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
-  plan skip_all => "Can't find cgi-bin/runyatt.cgi";
-}
+my $appdir = "$FindBin::Bin/..";
 
-my $passfile = "$bindir/../.htdbpass";
+my $passfile = "$appdir/.htdbpass";
 unless (-r $passfile) {
   plan skip_all => ".htdbpass is not configured";
 }
 
-do_mysql($passfile, <<END);
+plan tests => 1;
+
+ok do_mysql($passfile, <<END), "test user is deleted";
 delete from user where login = 'hkoba'
 END
 
-plan skip_all => "This is cleanup only test.";
 
 sub do_mysql {
   my ($fn, $sql) = @_;
@@ -50,4 +43,5 @@ sub do_mysql {
 			 , {PrintError => 0, RaiseError => 1, AutoCommit => 0});
   $dbh->do($sql);
   $dbh->commit;
+  1;
 }

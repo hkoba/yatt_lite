@@ -11,21 +11,17 @@ use encoding qw(:_get_locale_encoding);
 #use encoding qw(:locale), map {$_ => _get_locale_encoding()} qw(STDOUT STDERR);
 # binmode STDERR, sprintf ":encoding(%s)", _get_locale_encoding();
 
+use YATT::Lite::Web::Dispatcher;
 use YATT::Lite::TestUtil;
 use Test::More;
 use YATT::Lite::Util qw(lexpand);
 
-use YATT::Lite::TestFCGI;
-
 sub do_test {
-  my ($pack, $bindir, %opts) = @_;
-
-  my $CLASS = YATT::Lite::TestFCGI::Auto->class
-    or YATT::Lite::TestFCGI::Auto->skip_all
-      ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
+  my ($pack, $appdir, %opts) = @_;
 
   # XXX: Should directly read 1-basic.xhf first paragraph.
-  foreach my $mod (qw(DBIx::Class::Schema
+  foreach my $mod (qw(Plack
+		      DBIx::Class::Schema
 		      DBD::mysql
 		      CGI::Session
 		      Email::Simple
@@ -33,39 +29,29 @@ sub do_test {
 		    )
 		   , lexpand(delete $opts{REQUIRE})) {
     unless (eval qq|require $mod|) {
-      $CLASS->skip_all("$mod is not installed");
+      skip(all => "$mod is not installed");
     }
   }
 
-  my $mech = $CLASS->new
-    (map {
-      (rootdir => $_
-       , fcgiscript => "$_/cgi-bin/runyatt.fcgi"
-       , debug_fcgi => $ENV{DEBUG_FCGI}
-      )
-    } File::Spec->rel2abs("$bindir/.."));
+  plan tests => 4;
 
-  if (my $reason = $mech->check_skip_reason) {
-    $mech->skip_all($reason);
-  }
+  my $app = YATT::Lite::Web::Dispatcher->new
+    (appns => 'MyApp'
+     , appdir => $appdir
+     , document_root => "$appdir/html"
+    );
 
-  $pack->cleanup_sql($mech, $bindir, <<END);
+  $pack->cleanup_sql($app, $appdir, <<END);
 delete from user where login = 'hkoba'
 END
 
-  my $email_fn = "$bindir/../data/.htdebug.eml";
+  my $email_fn = "$appdir/data/.htdebug.eml";
 
   unlink $email_fn if -e $email_fn;
 
-  # Before fork!
-  $ENV{EMAIL_SENDER_TRANSPORT} = 'YATT_TEST';
-  $mech->fork_server;
+  my $got = nocr($app->render('/regist.yatt', {back => 'index.yatt'}));
 
-  $mech->plan('no_plan');
-
-  $mech->request(GET => '/regist.yatt', {back => 'index.yatt'});
-
-  eq_or_diff($mech->content_nocr, <<'END', 'regist.yatt');
+  eq_or_diff($got, <<'END', 'regist.yatt');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
@@ -113,15 +99,15 @@ END
 </html>
 END
 
-  $mech->request(POST => '/regist.yatt'
-		 , {qw(login     hkoba
-		       password  foo
-		       password2 foo
-		       email     hkoba@foo.bar
-		       back      index.yatt
-		       !regist   1)});
+  local $ENV{EMAIL_SENDER_TRANSPORT} = 'YATT_TEST';
+  $got = nocr($app->render(['/regist.yatt', undef, 'regist']
+			   , {qw(login     hkoba
+				 password  foo
+				 password2 foo
+				 email     hkoba@foo.bar
+				 back      index.yatt)}));
 
-  eq_or_diff($mech->content_nocr, <<'END', 'regist.yatt !regist');
+  eq_or_diff($got, <<'END', 'regist.yatt !regist');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
@@ -167,10 +153,10 @@ please dispose this mail.
 
     ok(1, $theme);
 
-    $mech->request(GET => '/regist.yatt', {'!confirm' => 1
-					   , token => $token});
+    $got = nocr($app->render(['/regist.yatt', undef, 'confirm']
+			     , {token => $token}));
 
-    eq_or_diff($mech->content_nocr, <<'END', "confirm token=$token");
+    eq_or_diff($got, <<'END', "confirm token=$token");
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
@@ -216,6 +202,13 @@ sub read_file {
   my $data = <$fh>;
   $data =~ s/\r//g;
   $data;
+}
+
+sub nocr {
+  my ($res) = @_;
+  $res =~ s/\r//g;
+  $res =~ s/\n+$/\n/;
+  $res;
 }
 
 1;

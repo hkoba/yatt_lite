@@ -6,20 +6,12 @@ use utf8;
 use Test::More;
 
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use File::Basename;
-use File::Spec;
-my ($bindir, $libdir);
-use lib untaint_any
-  (File::Spec->rel2abs
-   ($libdir = ($bindir = dirname(untaint_any($0)))
-    . "/../../../../runyatt.lib"));
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 
-unless (-d "$bindir/../cgi-bin"
-	and grep {-x "$bindir/../cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
-  plan skip_all => "Can't find cgi-bin/runyatt.cgi";
-}
+my $appdir = "$FindBin::Bin/..";
 
-my $dbfn = "$bindir/../data/.htdata.db";
+my $dbfn = "$appdir/data/.htdata.db";
 
 unless (-r $dbfn and -s $dbfn) {
   plan skip_all => "There is no test database to cleanup.";
