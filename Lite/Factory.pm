@@ -5,7 +5,7 @@ use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
-use base qw(YATT::Lite::NSBuilder);
+use base qw(YATT::Lite::NSBuilder File::Spec);
 use fields qw(cf_document_root
 	      cf_tmpldirs
 	      path2pkg
@@ -32,7 +32,6 @@ use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in);
 use YATT::Lite::XHF;
 
 require YATT::Lite;
-require File::Spec;
 
 #========================================
 #
@@ -57,14 +56,15 @@ sub load_factory_script {
 
 sub find_factory_script {
   my $pack = shift;
-  my $dir = $_[0] ? File::Spec->rel2abs($_[0]) : File::Spec->curdir;
-  my @path = File::Spec->no_upwards(File::Spec->splitdir($dir));
-  my $rootdir = File::Spec->rootdir;
-  while (@path and ($dir = File::Spec->catdir(@path)) ne $rootdir) {
-    if (my ($found) = grep {-r "$dir/$_.psgi"} qw(runyatt app)) {
+  my $dir = $pack->rel2abs($_[0] // $pack->curdir);
+  my @path = $pack->no_upwards($pack->splitdir($dir));
+  my $rootdir = $pack->rootdir;
+  while (@path and length($dir = $pack->catdir(@path)) > length($rootdir)) {
+    if (my ($found) = grep {-r} map {"$dir/$_.psgi"} qw(runyatt app)) {
       return $found;
     }
-  }
+  } continue { pop @path }
+  return;
 }
 
 #========================================
@@ -84,7 +84,7 @@ sub configure_appns {
 
   $self->{baseclass} = \ my @base;
   foreach my $tmpldir (map {
-    File::Spec->canonpath($_)
+    $self->canonpath($_)
   } lexpand($self->{cf_tmpldirs})) {
     push @base, ref $self->load_yatt(TMPL => $tmpldir);
   }
