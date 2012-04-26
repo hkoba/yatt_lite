@@ -10,7 +10,7 @@ use lib untaint_any("$FindBin::Bin/lib");
 use YATT::Lite::TestUtil;
 
 BEGIN {
-  # Because use YATT::Lite::DBSchema::DBIC loads DBIx::Class::Schema.
+  # Because use YATT::Lite::WebMVC0::DBSchema::DBIC loads DBIx::Class::Schema.
   foreach my $req (qw(DBD::SQLite DBIx::Class::Schema SQL::Abstract)) {
     unless (eval qq{require $req}) {
       plan skip_all => "$req is not installed."; exit;
@@ -24,7 +24,7 @@ my $DBNAME = shift || ':memory:';
 {
   my $CLASS = 'MyDB1';
   package MyDB1;
-  use YATT::Lite::DBSchema::DBIC
+  use YATT::Lite::WebMVC0::DBSchema::DBIC
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [Author => undef
 	, author_id => [int => -primary_key, -autoincrement
@@ -120,7 +120,7 @@ my $DBNAME = shift || ':memory:';
 {
   my $CLASS = 'MyDB2';
   package MyDB2;
-  use YATT::Lite::DBSchema::DBIC
+  use YATT::Lite::WebMVC0::DBSchema::DBIC
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [User => undef
 	, uid => [integer => -primary_key]
@@ -164,7 +164,7 @@ my $DBNAME = shift || ':memory:';
 {
   my $CLASS = 'MyDB3';
   package MyDB3;
-  use YATT::Lite::DBSchema::DBIC
+  use YATT::Lite::WebMVC0::DBSchema::DBIC
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [user => undef
 	, id => [integer => -primary_key, -autoincrement]
@@ -206,7 +206,7 @@ my $DBNAME = shift || ':memory:';
 {
   my $CLASS = 'MyDB4';
   package MyDB4;
-  use YATT::Lite::DBSchema::DBIC
+  use YATT::Lite::WebMVC0::DBSchema::DBIC
     (__PACKAGE__, verbose => $ENV{DEBUG_DBSCHEMA}
      , [ticket => undef
 	, tn => [int => -primary_key, -autoincrement]

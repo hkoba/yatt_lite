@@ -1,14 +1,14 @@
-package YATT::Lite::DBSchema::DBIC; sub MY () {__PACKAGE__}
+package YATT::Lite::WebMVC0::DBSchema::DBIC; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
 
-use base qw(YATT::Lite::DBSchema);
+use base qw(YATT::Lite::WebMVC0::DBSchema);
 use fields qw(DBIC DBIC_package);
 
 require DBIx::Class::Core;
 
-sub DBIC_SCHEMA {'YATT::Lite::DBSchema::DBIC::DBIC_SCHEMA'}
+sub DBIC_SCHEMA {'YATT::Lite::WebMVC0::DBSchema::DBIC::DBIC_SCHEMA'}
 
 use YATT::Lite::Types
   ([Table => -fields => [qw(cf_package cf_components)]]
@@ -23,7 +23,7 @@ sub import {
   $pack->buildns(@_);
 }
 
-# use YATT::Lite::DBSchema::DBIC $pkg => @desc;
+# use YATT::Lite::WebMVC0::DBSchema::DBIC $pkg => @desc;
 #
 # $pkg                 ISA DBIC_SCHEMA (ISA DBIx::Class::Schema)
 # ${pkg}::Result::$tab ISA DBIx::Class::Core
@@ -32,7 +32,7 @@ sub buildns {
   my ($myPkg, $DBIC) = splice @_, 0, 2;
   my MY $schema = $myPkg->new(@_);
 
-  # DBIC->YATT_DBSchema holds YATT::Lite::DBSchema::DBIC instance.
+  # DBIC->YATT_DBSchema holds YATT::Lite::WebMVC0::DBSchema::DBIC instance.
   *{globref($DBIC, 'YATT_DBSchema')} = sub {
     my $dbic = shift;
     # Class method として呼んだときは, schema に set しない。
@@ -163,12 +163,12 @@ sub add_delegate {
 foreach my $name (keys %DBIx::Class::Schema::) {
   next unless $name =~ /^[a-z]\w*$/;
   next unless *{$DBIx::Class::Schema::{$name}}{CODE};
-  next if $YATT::Lite::DBSchema::DBIC::{$name};
+  next if $YATT::Lite::WebMVC0::DBSchema::DBIC::{$name};
   MY->add_delegate($name);
 }
 
 {
-  package YATT::Lite::DBSchema::DBIC::DBIC_SCHEMA;
+  package YATT::Lite::WebMVC0::DBSchema::DBIC::DBIC_SCHEMA;
   use base qw(DBIx::Class::Schema);
   use Carp;
   # XXX: Should this hold (weakened) ref to DBSchema?

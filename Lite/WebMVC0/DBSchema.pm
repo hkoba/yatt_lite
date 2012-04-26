@@ -1,4 +1,4 @@
-package YATT::Lite::DBSchema; sub MY () {__PACKAGE__}
+package YATT::Lite::WebMVC0::DBSchema; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
@@ -48,9 +48,10 @@ use YATT::Lite::Types
 use YATT::Lite::Util qw(coalesce globref ckeval terse_dump lexpand);
 
 #========================================
-# Class Hierarchy in case of 'package YourSchema; use YATT::Lite::DBSchema':
+# Class Hierarchy in case of
+# 'package YourSchema; use YATT::Lite::WebMVC0::DBSchema':
 #
-#   YATT::Lite::DBSchema (or its subclass)
+#   YATT::Lite::WebMVC0::DBSchema (or its subclass)
 #    ↑
 #   YourSchema
 #

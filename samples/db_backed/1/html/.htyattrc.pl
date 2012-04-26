@@ -12,7 +12,7 @@ require CGI::Session;
 
 sub DBIC () { __PACKAGE__ . '::DBIC' }
 
-use YATT::Lite::DBSchema::DBIC
+use YATT::Lite::WebMVC0::DBSchema::DBIC
   (DBIC, verbose => $ENV{DEBUG_DBSCHEMA}
    , [user => undef
       , uid => [integer => -primary_key

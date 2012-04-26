@@ -18,7 +18,7 @@ foreach my $req (qw(DBD::SQLite SQL::Abstract)) {
 }
 plan qw(no_plan);
 
-my $CLASS = 'YATT::Lite::DBSchema';
+my $CLASS = 'YATT::Lite::WebMVC0::DBSchema';
 use_ok($CLASS);
 
 my $DBNAME = shift || ':memory:';
