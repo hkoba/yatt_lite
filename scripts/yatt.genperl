@@ -32,8 +32,8 @@ my $dispatcher = do {
   if (-r $cgi) {
     YATT::Lite::Factory->load_factory_script($cgi);
   } else {
-    require YATT::Lite::Web::Dispatcher;
-    YATT::Lite::Web::Dispatcher->new
+    require YATT::Lite::WebMVC0::Toplevel;
+    YATT::Lite::WebMVC0::Toplevel->new
 	(appns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'

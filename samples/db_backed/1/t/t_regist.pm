@@ -11,7 +11,7 @@ use encoding qw(:_get_locale_encoding);
 #use encoding qw(:locale), map {$_ => _get_locale_encoding()} qw(STDOUT STDERR);
 # binmode STDERR, sprintf ":encoding(%s)", _get_locale_encoding();
 
-use YATT::Lite::Web::Dispatcher;
+use YATT::Lite::WebMVC0::Toplevel;
 use YATT::Lite::TestUtil;
 use Test::More;
 use YATT::Lite::Util qw(lexpand);
@@ -35,7 +35,7 @@ sub do_test {
 
   plan tests => 4;
 
-  my $app = YATT::Lite::Web::Dispatcher->new
+  my $app = YATT::Lite::WebMVC0::Toplevel->new
     (appns => 'MyApp'
      , appdir => $appdir
      , document_root => "$appdir/html"

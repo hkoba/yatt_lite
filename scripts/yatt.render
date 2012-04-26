@@ -25,8 +25,8 @@ MY->parse_params(\@ARGV, \ my %common);
 my $direct_mode = delete $opts{direct};
 
 my $dispatcher = do {
-    require YATT::Lite::Web::Dispatcher;
-    YATT::Lite::Web::Dispatcher->new
+    require YATT::Lite::WebMVC0::Toplevel;
+    YATT::Lite::WebMVC0::Toplevel->new
 	(appns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'

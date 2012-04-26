@@ -21,7 +21,7 @@ BEGIN {
 }
 
 use HTTP::Request::Common;
-use YATT::Lite::Web::Dispatcher;
+use YATT::Lite::WebMVC0::Toplevel;
 use YATT::Lite::PSGIEnv;
 
 my $rootname = untaint_any($FindBin::Bin."/".rootname($FindBin::RealScript));
@@ -38,7 +38,7 @@ sub is_or_like($$;$) {
 }
 
 {
-  my $app = YATT::Lite::Web::Dispatcher
+  my $app = YATT::Lite::WebMVC0::Toplevel
     ->new(appdir => $FindBin::Bin
 	  , document_root => "$rootname.d"
 	  , tmpldirs => ["$rootname.ytmpl"]

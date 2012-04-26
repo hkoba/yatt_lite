@@ -9,9 +9,9 @@ my $appdir;
 use lib ($appdir = File::Basename::dirname(File::Spec->rel2abs(__FILE__)))
   . "/lib";
 
-use YATT::Lite::Web::Dispatcher;
+use YATT::Lite::WebMVC0::Toplevel;
 
-my $dispatcher = YATT::Lite::Web::Dispatcher->new
+my $dispatcher = YATT::Lite::WebMVC0::Toplevel->new
   (document_root => "$appdir/html"
    , appns => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']

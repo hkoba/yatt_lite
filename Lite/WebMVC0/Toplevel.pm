@@ -1,4 +1,4 @@
-package YATT::Lite::Web::Dispatcher;
+package YATT::Lite::WebMVC0::Toplevel;
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
@@ -29,13 +29,13 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			mk_http_status
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
-sub default_appbase () {'YATT::Lite::Web::DirHandler'}
+sub default_appbase () {'YATT::Lite::WebMVC0::App'}
 sub default_index_name { 'index' }
 
 use File::Basename;
-use YATT::Lite::Web::Connection ();
-sub ConnProp () {'YATT::Lite::Web::Connection'}
-sub Connection () {'YATT::Lite::Web::Connection'}
+use YATT::Lite::WebMVC0::Connection ();
+sub ConnProp () {'YATT::Lite::WebMVC0::Connection'}
+sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 
 sub after_new {
   (my MY $self) = @_;

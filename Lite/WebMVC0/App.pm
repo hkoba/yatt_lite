@@ -1,4 +1,4 @@
-package YATT::Lite::Web::DirHandler; sub MY () {__PACKAGE__}
+package YATT::Lite::WebMVC0::App; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite);
@@ -66,8 +66,8 @@ sub get_action_handler {
 }
 
 #========================================
-use YATT::Lite::Web::Connection;
-sub Connection () {'YATT::Lite::Web::Connection'}
+use YATT::Lite::WebMVC0::Connection;
+sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 sub ConnProp () {Connection}
 
 sub make_connection {

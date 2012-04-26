@@ -1,4 +1,4 @@
-package YATT::Lite::Web::Connection; sub PROP () {__PACKAGE__}
+package YATT::Lite::WebMVC0::Connection; sub PROP () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Connection);

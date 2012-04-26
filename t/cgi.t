@@ -11,7 +11,7 @@ use List::Util qw(sum);
 
 #========================================
 use YATT::Lite::Breakpoint;
-use YATT::Lite::Web::Dispatcher;
+use YATT::Lite::WebMVC0::Toplevel;
 use YATT::Lite::Util qw(lexpand appname);
 sub MY () {__PACKAGE__}
 require YATT::Lite::TestFiles;
@@ -31,7 +31,7 @@ $i = 1;
   my $theme = "[t$i] from dir";
   ok chdir("$BASE/$docs"), "chdir [t$i]";
 
-  my $mux = YATT::Lite::Web::Dispatcher->new
+  my $mux = YATT::Lite::WebMVC0::Toplevel->new
     (appns => myapp($i), output_encoding => 'shiftjis'
      , document_root => "$BASE/$docs");
 
@@ -163,7 +163,7 @@ $i++;
   $dig->add("$docs/img/bg.png", 'background');
   $dig->add("$docs/d1/f1.yatt", 'in_d1');
 
-  my $mux = YATT::Lite::Web::Dispatcher->new
+  my $mux = YATT::Lite::WebMVC0::Toplevel->new
     (appns => myapp($i), document_root => "$BASE/$docs");
 
   my $P_T = "$realdir/index.yatt/foo/bar";  # path_translated

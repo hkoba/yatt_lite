@@ -57,13 +57,13 @@ my $i = 1;
   # もしくは Apache2::RequestRec に。
 }
 
-# 次は YATT::Lite::Web::Dispatcher から make_connection して...
+# 次は YATT::Lite::WebMVC0::Toplevel から make_connection して...
 
 $i++;
-require_ok('YATT::Lite::Web::DirHandler');
+require_ok('YATT::Lite::WebMVC0::App');
 {
   
-  my $yatt = new YATT::Lite::Web::DirHandler
+  my $yatt = new YATT::Lite::WebMVC0::App
     (dir => rootname($0) . ".d"
      , appns => myapp($i)
      , die_in_error => 1
