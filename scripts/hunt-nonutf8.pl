@@ -10,7 +10,9 @@ GetOptions("l|list" => \ my $o_list)
 
 my @cmd = (find => @ARGV
 	   , map((-name => $_ => -prune => '-o')
-		 , qw(cover_db .git *.db))
+		 , qw(cover_db .git *.db *.ico *.png *.gif
+		      .xslate_cache
+		    ))
 	   , qw(-type f -print));
 
 open my $pipe, '-|', @cmd

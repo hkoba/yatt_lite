@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# -*- coding: utf-8 -*-
 use strict;
 use warnings FATAL => qw(all);
 
@@ -26,7 +27,7 @@ my $dummy_root = "/dummy%d/docs";
 my $dummy_tmpl = "/dummy%d/tmpls";
 my $i = 0;
 {
-  # MyApp ¤¬Ì¤ÄêµÁ¤Ç¡¢ .htyattconfig.xhf ¤âÌµ¤¤¥±¡¼¥¹
+  # MyApp ãŒæœªå®šç¾©ã§ã€ .htyattconfig.xhf ã‚‚ç„¡ã„ã‚±ãƒ¼ã‚¹
 
   my $rootdir = sprintf $dummy_root, ++$i;
   my $tmpldir = sprintf $dummy_tmpl, ++$i;
@@ -58,8 +59,8 @@ my $i = 0;
   ok $rooten->isa($tmplen), "$rooten isa $tmplen";
 }
 
-# xhf ¤«¤é baseclass[] ¤ò¥í¡¼¥É¤¹¤ë
-# ¿Æ¥¯¥é¥¹¤òÀ¸À®¤·¡¢ isa ¤ËÂåÆþ¤¹¤ë
+# xhf ã‹ã‚‰ baseclass[] ã‚’ãƒ­ãƒ¼ãƒ‰ã™ã‚‹
+# è¦ªã‚¯ãƒ©ã‚¹ã‚’ç”Ÿæˆã—ã€ isa ã«ä»£å…¥ã™ã‚‹
 
-# ¥Ç¥£¥ì¥¯¥È¥ê¤Ë pkg ¤ò³ä¤êÅö¤Æ¤ë, ¤Î¤â Factory ¤Î»Å»ö
+# ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã« pkg ã‚’å‰²ã‚Šå½“ã¦ã‚‹, ã®ã‚‚ Factory ã®ä»•äº‹
 
