@@ -179,7 +179,7 @@ sub handle_yatt {
   my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);
   unless ($part->public) {
     # XXX: refresh する手もあるだろう。
-    croak $self->error(q|Forbidden request '%s'|, terse_dump($mapped));
+    croak $self->error(q|Forbidden request %s|, terse_dump($mapped));
   }
   # XXX: 未知引数エラーがあったら？
   $sub->($pkg, $con, $self->{cf_dont_map_args} || $part->isa($trans->Action)

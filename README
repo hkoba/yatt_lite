@@ -1,12 +1,12 @@
-YATT::Lite version 0.0.3
+YATT::Lite version 0.0.4
 ==================
 
   YATT is Yet Another Template Toolkit, aimed at Web Designers, rather than
   well-trained programmers. To achieve this goal, YATT provides more
   readable syntax for HTML/XML savvy designers, ``lint'' for static syntax
   checking and many safer default behaviors, ie. automatic output escaping
-  based on argument type declaration and file extension based visibility
-  handling of template.
+  based on argument type declaration and config file naming convention
+  which helps access protection.
 
   YATT::Lite is template-syntax-compatible, lightweight, full rewrite of
   YATT with superior functionalities.
@@ -38,31 +38,45 @@ YATT::Lite version 0.0.3
 
 INSTALLATION
 
-  Its all pure Perl, so its ok to put the .pm files (or YATT directory tree)
-  in their appropriate local Perl subdirectories.
+  It's all pure Perl, so it's ok to put the .pm files (or git repo itself)
+  in their appropriate perl @INC path.
   (But see NON-STANDARD DIRECTORY STRUCTURE)
 
-  The easiest way to install this distribution is:
+  The easiest way to use this distribution in your project is:
 
-    ./runyatt.lib/YATT/scripts/setup.zsh $TARGET_DIR
+    git clone git://github.com/hkoba/yatt_lite.git lib/YATT
 
-  This will copy runyatt.cgi, mkdir runyatt.lib, symlink YATT in it and
-  create .htaccess for extension mapping. (Note: sorry, it needs Zsh)
+    # or If your project is managed in git, clone as submodule like this:
 
-  Alternative, by-hand way is like:
+    git submodule add git://github.com/hkoba/yatt_lite.git lib/YATT
+    git submodule init
+    git submodule update
 
-    cd $TARGET_DIR
-    ln -vnsf $DIST_DIR/runyatt.lib .
-    install -m 755 $DIST_DIR/runyatt.cgi .
+  Then you can use sample app.psgi to start yatt-enabled webapp, like this:
 
-    # Then, map *.yatt to runyatt.cgi, like this:
-    echo AddHandler x-yatt-handler .yatt .ydo > .htaccess
-    echo Action x-yatt-handler $URL/runyatt.cgi >> .htaccess
+    cp lib/YATT/samples/app.psgi .
+    mkdir html
+    plackup
+
+  Now you are ready to write your first index.yatt.
+  Open your favorite editor and create html/index.yatt like this:
+
+    <!yatt:args x y>
+    <h2>Hello &yatt:x; world!</h2>
+    &yatt:y;
+
+
+  Then try to access:
+  
+     http://0:5000/
+     http://0:5000/?x=foo
+     http://0:5000/?x=foo&y=bar
+
 
 NON-STANDARD DIRECTORY STRUCTURE
 
   Unfortunately, YATT::Lite distribution doesn't conform
-  CPAN style standard directory structure. This is experimental,
+  normal CPAN style structure. This is experimental,
   but intentional. Because:
 
   [1] Engine(modules) and support scripts should be directory bundled together.
@@ -77,13 +91,13 @@ SUPPORT AND DOCUMENTATION
 
   You can also look for Source Code Repository at:
 
-        http://github.com/hkoba/yatt_lite
+        https://github.com/hkoba/yatt_lite
         git://github.com/hkoba/yatt_lite.git
 
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007..2010 "KOBAYASI, Hiroaki"
+Copyright (C) 2007..2012 "KOBAYASI, Hiroaki"
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

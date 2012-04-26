@@ -263,7 +263,7 @@ use Carp;
       $item->{Item} = $primary;
       $item;
     } else {
-      $vfs->vfs_file->new(@_, string => $primary);
+      $vfs->vfs_file->new(public => 1, @_, string => $primary);
     }
   }
   sub YATT::Lite::VFS::Dir::after_create {
