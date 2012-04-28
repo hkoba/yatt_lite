@@ -64,12 +64,22 @@ sub _with_loading_file {
   }
 }
 
-# To hide from subclass. (Might harm localization?)
+# XXX: To hide from subclass. (Might harm localization)
 my $NO_SUCH_CONFIG_ITEM = sub {
   my ($self, $name) = @_;
   "No such config item $name in class " . ref($self)
     . $self->_loading_file;
 };
+
+sub cget {
+  my ($self, $key) = @_;
+  my $name = "cf_$key";
+  my $fields = YATT::Lite::Util::fields_hash($self);
+  unless (not exists $fields->{"cf_$name"}) {
+    confess $NO_SUCH_CONFIG_ITEM->($self, $name);
+  }
+  $self->{$name};
+}
 
 sub configure {
   my $self = shift;

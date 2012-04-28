@@ -27,6 +27,10 @@ my @CF = (ext_private => 'tmpl', ext_public => 'yatt'
 	 , facade => DummyFacade->new);
 
 {
+  #
+  # * data => HASH
+  # * base => [[data => HASH] ...]
+  #
   my $theme = "(mem) plain";
   my $vfs = VFS->new
     ([data => {foo => 'mytext'}, base => [[data => {'bar' => 'BARRR'}]]]
@@ -36,6 +40,10 @@ my @CF = (ext_private => 'tmpl', ext_public => 'yatt'
 }
 
 {
+  #
+  # * VFS->create($kind => $spec)
+  # * data => {name => VFS}
+  #
   my $theme = "(mem) from nested Dir";
   my $vfs = VFS->new
     ([data => {foo => VFS->create(data => {'bar' => 'BARRR'})}
@@ -73,6 +81,11 @@ END
 
 }
 {
+  #
+  # * [dir => $dir]
+  # * multipart (file foo contains widget bar)
+  #
+
   my $theme = "[t$i] from dir";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd], @CF);
@@ -81,6 +94,11 @@ END
 }
 
 {
+  #
+  # * [dir => $dir, base => [[file => $file]]
+  #   directory can inherit parts from a file
+  #
+
   my $theme = "[t$i] base file";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd

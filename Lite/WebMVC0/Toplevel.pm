@@ -17,7 +17,6 @@ use base qw(YATT::Lite::Factory);
 use fields qw(DirHandler Action
 	      cf_is_gateway
 	      cf_is_psgi
-	      cf_appdir
 	      cf_debug_cgi
 	      cf_psgi_static
 	      cf_index_name
@@ -29,7 +28,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			mk_http_status
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
-sub default_appbase () {'YATT::Lite::WebMVC0::App'}
+sub default_default_app () {'YATT::Lite::WebMVC0::App'}
 sub default_index_name { 'index' }
 
 use File::Basename;
@@ -60,7 +59,7 @@ sub call {
 
   YATT::Lite::Breakpoint::break_psgi_call();
 
-  if (defined $self->{cf_appdir} and -e "$self->{cf_appdir}/.htdebug_env") {
+  if (defined $self->{cf_app_root} and -e "$self->{cf_app_root}/.htdebug_env") {
     return [200
 	    , ["Content-type", "text/plain"]
 	    , [map {"$_\t$env->{$_}\n"} sort keys %$env]];
@@ -76,7 +75,7 @@ sub call {
     if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
       print $errfh join("\t", "tmpldir=$tmpldir", "loc=$loc"
 			, "file=$file", "trailer=$trailer"
-			, "docroot=$self->{cf_document_root}"
+			, "docroot=$self->{cf_doc_root}"
 			, terse_dump($env)
 		       ), "\n";
     }
@@ -86,7 +85,7 @@ sub call {
     return [404, [], ["Cannot understand: ", $env->{PATH_INFO}]];
   }
 
-  my $virtdir = "$self->{cf_document_root}$loc";
+  my $virtdir = "$self->{cf_doc_root}$loc";
   my $realdir = "$tmpldir$loc";
   unless (-d $realdir) {
     return [404, [], ["Not found: ", $virtdir]];
@@ -116,7 +115,7 @@ sub call {
 		, file => $file
 		, subpath => $trailer
 		, system => $self
-		, root => $self->{cf_document_root}, location => $loc);
+		, root => $self->{cf_doc_root}, location => $loc);
 
   my $con = $dh->make_connection(undef, @params);
 
@@ -154,13 +153,13 @@ sub split_path_info {
     # [1] PATH_TRANSLATED mode.
     #
     # If REDIRECT_STATUS == 200 and PATH_TRANSLATED is not empty,
-    # use it as a template path. It must be located under appdir.
+    # use it as a template path. It must be located under app_root.
     #
     # In this case, PATH_TRANSLATED should be valid physical path
     # + optionally trailing sub path_info.
     #
     split_path($env->{PATH_TRANSLATED}
-	       , $self->{cf_appdir} // $self->{cf_document_root});
+	       , $self->{cf_app_root} // $self->{cf_doc_root});
     # or die.
 
   } else {
@@ -168,7 +167,7 @@ sub split_path_info {
     # [2] Template lookup mode.
     #
     lookup_path($env->{PATH_INFO}
-		, [$self->{cf_document_root}, lexpand($self->{cf_tmpldirs})]
+		, $self->{tmpldirs}
 		, $self->{cf_index_name}, ".yatt");
     # or die
   }
@@ -182,8 +181,7 @@ sub render {
 
   my ($tmpldir, $loc, $file, $trailer)
     = my @pi = lookup_path($path_info
-			   , [$self->{cf_document_root}
-			      , lexpand($self->{cf_tmpldirs})]
+			   , $self->{tmpldirs}
 			   , $self->{cf_index_name}, ".yatt");
   unless (@pi) {
     die "No such location: $path_info";
@@ -193,14 +191,14 @@ sub render {
     die "No such directory: $path_info";
   };
 
-  my $virtdir = "$self->{cf_document_root}$loc";
+  my $virtdir = "$self->{cf_doc_root}$loc";
   my $realdir = "$tmpldir$loc";
 
   my @params = (dir => $virtdir
 		, file => $file
 		, subpath => $trailer
 		, system => $self
-		, root => $self->{cf_document_root}, location => $loc);
+		, root => $self->{cf_doc_root}, location => $loc);
 
   if (@rest == 2 and defined $rest[-1] and ref $args eq 'HASH') {
     require Hash::MultiValue;
@@ -243,10 +241,10 @@ sub to_app {
   require Plack::Response;
   $self->init_by_env; # XXX: meaningless.
 #  XXX: Should check it.
-#  unless (defined $self->{cf_appdir}) {
-#    croak "appdir is undef!";
+#  unless (defined $self->{cf_app_root}) {
+#    croak "app_root is undef!";
 #  }
-  unless (defined $self->{cf_document_root}) {
+  unless (defined $self->{cf_doc_root}) {
     croak "document_root is undef!";
   }
   $self->prepare_app;
@@ -259,7 +257,7 @@ sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;
   my $app = $self->{cf_psgi_static} || do {
     require Plack::App::File;
-    Plack::App::File->new(root => $self->{cf_document_root})->to_app;
+    Plack::App::File->new(root => $self->{cf_doc_root})->to_app;
   };
   $app->($env);
 }
@@ -470,18 +468,15 @@ sub cgi_response {
 
 sub get_lochandler {
   (my MY $self, my ($location, $tmpldir)) = @_;
-  $self->{loc2yatt}{$location} ||= do {
-    $tmpldir //= $self->{cf_document_root};
-    $self->load_yatt(INST => "$tmpldir$location", @{$self->{baseclass}});
+  $self->get_yatt($location) || do {
+    $self->{loc2yatt}{$location} = $self->load_yatt("$tmpldir$location");
   };
 }
 
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
   $dirPath =~ s,/*$,,;
-  $self->{path2yatt}{$dirPath} ||= do {
-    $self->load_yatt(INST => $dirPath, @{$self->{baseclass}});
-  };
+  $self->{path2yatt}{$dirPath} ||= $self->load_yatt($dirPath);
 }
 
 #========================================
@@ -507,9 +502,9 @@ sub make_cgi {
     my ($path_translated, $document_root) = do {
       if ($env->{PATH_TRANSLATED} && ($env->{REDIRECT_STATUS} // 0) == 200) {
 	($env->{PATH_TRANSLATED}
-	 , $env->{DOCUMENT_ROOT} // $self->{cf_document_root});
+	 , $env->{DOCUMENT_ROOT} // $self->{cf_doc_root});
       } else {
-	my $root = $self->{cf_document_root}
+	my $root = $self->{cf_doc_root}
 	  // $env->{DOCUMENT_ROOT} // '';
 	($root . ($env->{PATH_INFO} // '/')
 	 , $root);
@@ -580,7 +575,7 @@ sub split_path_url {
 sub init_by_env {
   (my MY $self, my Env $env) = @_;
   $self->{cf_is_gateway} //= $env->{GATEWAY_INTERFACE} if $env->{GATEWAY_INTERFACE};
-  $self->{cf_document_root} //= $env->{DOCUMENT_ROOT} if $env->{DOCUMENT_ROOT};
+  $self->{cf_doc_root} //= $env->{DOCUMENT_ROOT} if $env->{DOCUMENT_ROOT};
   $self;
 }
 
@@ -611,7 +606,7 @@ sub document_dir {
   if (my ($user) = $path_info =~ m{^/~([^/]+)/}) {
     '';
   } else {
-    $self->{cf_document_root} // '';
+    $self->{cf_doc_root} // '';
   }
 }
 

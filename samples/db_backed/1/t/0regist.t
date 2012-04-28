@@ -14,8 +14,8 @@ use base qw(t_regist);
 MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::SQLite)]);
 
 sub cleanup_sql {
-  my ($pack, $app, $appdir, $sql) = @_;
-  do_sqlite("$appdir/data/.htdata.db", $sql);
+  my ($pack, $app, $app_root, $sql) = @_;
+  do_sqlite("$app_root/data/.htdata.db", $sql);
 }
 
 sub do_sqlite {

@@ -17,8 +17,8 @@ use base qw(t_regist);
 MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::mysql)]);
 
 sub cleanup_sql {
-  my ($pack, $app, $appdir, $sql) = @_;
-  my $passfile = "$appdir/.htdbpass";
+  my ($pack, $app, $app_root, $sql) = @_;
+  my $passfile = "$app_root/.htdbpass";
 
   unless (-r $passfile) {
     Test::More::skip(all => ".htdbpass is not configured");

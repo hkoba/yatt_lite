@@ -16,7 +16,7 @@ use base qw(YATT::Lite::XHFTest2);
 use fields qw(base_url);
 use YATT::Lite::Util qw(lexpand);
 
-my $appdir = "$FindBin::Bin/..";
+my $app_root = "$FindBin::Bin/..";
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
 			      , @ARGV ? @ARGV : $FindBin::Bin);

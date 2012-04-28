@@ -36,10 +36,10 @@ for (; @ARGV and $ARGV[0] =~ /^--(\w+)(?:=(.*))?/s; shift @ARGV) {
 # You may edit params.
 
 my $dispatcher = YATT::Lite::WebMVC0::Toplevel->new
-  (appns => 'MyApp'
+  (app_ns => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
-   , tmpldirs => [grep {-d} "$rootname.ytmpl"]
+   , default_app_base => '@runyatt.ytmpl'
    , debug_cgen => $ENV{DEBUG}
    , debug_cgi  => $ENV{DEBUG_CGI}
    # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.

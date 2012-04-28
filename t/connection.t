@@ -13,7 +13,7 @@ require_ok('YATT::Lite');
 
 my $i = 1;
 {
-  my $yatt = new YATT::Lite(appns => myapp($i)
+  my $yatt = new YATT::Lite(app_ns => myapp($i)
 			    , vfs => [data => {foo => 'bar'}]
 			    , die_in_error => 1
 			    , debug_cgen => $ENV{DEBUG});
@@ -65,7 +65,7 @@ require_ok('YATT::Lite::WebMVC0::App');
   
   my $yatt = new YATT::Lite::WebMVC0::App
     (dir => rootname($0) . ".d"
-     , appns => myapp($i)
+     , app_ns => myapp($i)
      , die_in_error => 1
      , debug_cgen => $ENV{DEBUG});
 

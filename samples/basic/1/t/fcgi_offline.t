@@ -12,7 +12,7 @@ use File::Basename;
 use File::Spec;
 my ($libdir);
 use lib $libdir = "$FindBin::Bin/../lib";
-my $appdir = "$FindBin::Bin/..";
+my $app_root = "$FindBin::Bin/..";
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use YATT::Lite::Breakpoint;
@@ -28,8 +28,8 @@ my $CLASS = YATT::Lite::TestFCGI::Auto->class
   or YATT::Lite::TestFCGI::Auto->skip_all
   ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
 
-unless (-d "$appdir/html/cgi-bin"
-	and grep {-x "$appdir/html/cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
+unless (-d "$app_root/html/cgi-bin"
+	and grep {-x "$app_root/html/cgi-bin/runyatt.$_"} qw(cgi fcgi)) {
   $CLASS->skip_all("Can't find cgi-bin/runyatt.cgi");
 }
 
@@ -39,7 +39,7 @@ my $mech = $CLASS->new
      , fcgiscript => "$_/cgi-bin/runyatt.fcgi"
      , debug_fcgi => $ENV{DEBUG_FCGI}
     )
-  } "$appdir/html");
+  } "$app_root/html");
 
 if (my $reason = $mech->check_skip_reason) {
   $mech->skip_all($reason);

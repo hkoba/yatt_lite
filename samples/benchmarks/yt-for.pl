@@ -64,7 +64,7 @@ my $ht = HTML::Template->new(scalarref => \<<'HT_END', case_sensitive => 1);
 </ul>
 HT_END
 
-my $yt = YATT::Lite->new(appns => 'MyApp'
+my $yt = YATT::Lite->new(app_ns => 'MyApp'
 			 , debug_cgen => $ENV{DEBUG_YATT}
 			 , vfs => [data => <<'YT_END']);
 <!yatt:args vars=value>

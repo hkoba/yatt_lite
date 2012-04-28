@@ -32,8 +32,8 @@ $i = 1;
   ok chdir("$BASE/$docs"), "chdir [t$i]";
 
   my $mux = YATT::Lite::WebMVC0::Toplevel->new
-    (appns => myapp($i), output_encoding => 'shiftjis'
-     , document_root => "$BASE/$docs");
+    (app_ns => myapp($i), output_encoding => 'shiftjis'
+     , doc_root => "$BASE/$docs");
 
   my $text_html_sjis = qr{Content-Type: text/html; charset=shiftjis};
 
@@ -164,7 +164,7 @@ $i++;
   $dig->add("$docs/d1/f1.yatt", 'in_d1');
 
   my $mux = YATT::Lite::WebMVC0::Toplevel->new
-    (appns => myapp($i), document_root => "$BASE/$docs");
+    (app_ns => myapp($i), doc_root => "$BASE/$docs");
 
   my $P_T = "$realdir/index.yatt/foo/bar";  # path_translated
   my $R_URI = '/~hkoba/index.yatt/foo/bar'; # request_uri

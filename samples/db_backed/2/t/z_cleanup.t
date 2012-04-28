@@ -9,9 +9,9 @@ sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
-my $appdir = "$FindBin::Bin/..";
+my $app_root = "$FindBin::Bin/..";
 
-my $passfile = "$appdir/.htdbpass";
+my $passfile = "$app_root/.htdbpass";
 unless (-r $passfile) {
   plan skip_all => ".htdbpass is not configured";
 }

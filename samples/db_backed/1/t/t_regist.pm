@@ -17,7 +17,7 @@ use Test::More;
 use YATT::Lite::Util qw(lexpand);
 
 sub do_test {
-  my ($pack, $appdir, %opts) = @_;
+  my ($pack, $app_root, %opts) = @_;
 
   # XXX: Should directly read 1-basic.xhf first paragraph.
   foreach my $mod (qw(Plack
@@ -36,16 +36,16 @@ sub do_test {
   plan tests => 4;
 
   my $app = YATT::Lite::WebMVC0::Toplevel->new
-    (appns => 'MyApp'
-     , appdir => $appdir
-     , document_root => "$appdir/html"
+    (app_ns => 'MyApp'
+     , app_root => $app_root
+     , doc_root => "$app_root/html"
     );
 
-  $pack->cleanup_sql($app, $appdir, <<END);
+  $pack->cleanup_sql($app, $app_root, <<END);
 delete from user where login = 'hkoba'
 END
 
-  my $email_fn = "$appdir/data/.htdebug.eml";
+  my $email_fn = "$app_root/data/.htdebug.eml";
 
   unlink $email_fn if -e $email_fn;
 

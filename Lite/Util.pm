@@ -15,7 +15,7 @@ require Scalar::Util;
 		     nonempty
 		   );
     our @EXPORT_OK = (@EXPORT, qw(cached_in split_path rootname dict_order
-				  lookup_path
+				  lookup_path lookup_dir
 				  appname extname
 				  captured is_debugging callerinfo
 				  dofile_in compile_file_in
@@ -174,6 +174,16 @@ require Scalar::Util;
      , substr($dir, length($startDir))
      , $file // ''
      , $subpath);
+  }
+
+  sub lookup_dir {
+    my ($loc, $dirlist) = @_;
+    $loc =~ s{^/*}{/};
+    foreach my $dir (@$dirlist) {
+      my $real = "$dir$loc";
+      next unless -d $real;
+      return $real;
+    }
   }
 
   sub lookup_path {

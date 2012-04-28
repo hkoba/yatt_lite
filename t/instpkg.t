@@ -16,7 +16,7 @@ sub NSBuilder () {'YATT::Lite::NSBuilder'}
 use_ok(NSBuilder);
 
 {
-  my $builder = NSBuilder->new(appns => 'Foo');
+  my $builder = NSBuilder->new(app_ns => 'Foo');
   sub Foo::bar {'baz'}
   is my $pkg = $builder->buildns('INST'), 'Foo::INST1', "inst1";
   is $pkg->bar, "baz", "$pkg->bar";
@@ -27,11 +27,11 @@ use_ok(NSBuilder);
   {
     package MyTest_NSB_Web;
     use base qw(YATT::Lite::NSBuilder);
-    sub default_appbase {$WDH}
+    sub default_default_app {$WDH}
     use YATT::Lite::Inc;
   }
   my $NS = 'MyTest_NSB';
-  my $builder = MyTest_NSB_Web->new(appns => $NS);
+  my $builder = MyTest_NSB_Web->new(app_ns => $NS);
 
   my $sub = $builder->buildns('INST');
   is_deeply [list_isa($sub, 1)]
@@ -45,7 +45,7 @@ my $i = 0;
 {
   my $CLS = myapp(++$i);
   is $CLS, 'MyTest_instpkg_1', "sanity check of test logic itself";
-  my $builder = NSBuilder->new(appns => $CLS);
+  my $builder = NSBuilder->new(app_ns => $CLS);
   sub MyTest_instpkg_1::bar {'BARRR'}
   is my $pkg = $builder->buildns, "${CLS}::INST1", "$CLS inst1";
   is $pkg->bar, "BARRR", "$pkg->bar";
@@ -56,7 +56,7 @@ my $i = 0;
 
 {
   my $NS = myapp(++$i);
-  my $builder = NSBuilder->new(appns => $NS);
+  my $builder = NSBuilder->new(app_ns => $NS);
 
   my $base1 = $builder->buildns('TMPL');
   # my $base2 = $builder->buildns('TMPL');
@@ -77,7 +77,7 @@ my $i = 0;
   }
 
   my $NS = myapp(++$i);
-  my $builder = NSBuilder->new(appns => $NS);
+  my $builder = NSBuilder->new(app_ns => $NS);
 
   my $sub = $builder->buildns(INST => $YL);
   is_deeply [list_isa($sub, 1)]

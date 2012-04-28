@@ -49,7 +49,7 @@ foreach my MY $sect (@section) {
   if (my $cf = $sect->{cf_VFS_CONFIG}) {
     push @$spec, @$cf;
   }
-  ok(my $yatt = new YATT::Lite(appns => myapp($i)
+  ok(my $yatt = new YATT::Lite(app_ns => myapp($i)
 			       , vfs => $spec
 			       , debug_cgen => $ENV{DEBUG}
 			       , debug_parser => 1

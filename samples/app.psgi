@@ -5,18 +5,19 @@ use warnings FATAL => qw(all);
 
 use File::Spec;
 use File::Basename ();
-my $appdir;
-use lib ($appdir = File::Basename::dirname(File::Spec->rel2abs(__FILE__)))
+my $app_root;
+use lib ($app_root = File::Basename::dirname(File::Spec->rel2abs(__FILE__)))
   . "/lib";
 
 use YATT::Lite::WebMVC0::Toplevel;
 
 my $dispatcher = YATT::Lite::WebMVC0::Toplevel->new
-  (document_root => "$appdir/html"
-   , appns => 'MyApp'
+  (app_ns => 'MyApp'
+   , app_root => $app_root
+   , doc_root => "$app_root/html"
+   , (-d "$app_root/ytmpl" ? (default_app_base => '@ytmpl') : ())
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
-   , tmpldirs => [grep {-d} "$appdir/ytmpl"]
    , debug_cgen => $ENV{DEBUG}
    , debug_cgi  => $ENV{DEBUG_CGI}
    # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.

@@ -5,15 +5,18 @@ use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
-use base qw(YATT::Lite::NSBuilder File::Spec);
-use fields qw(cf_document_root
-	      cf_tmpldirs
-	      path2pkg
-	      path2yatt
-	      loc2yatt
-	      baseclass
+use 5.010;
 
+use base qw(YATT::Lite::NSBuilder File::Spec);
+use fields qw(cf_app_root
+	      cf_doc_root
 	      cf_allow_missing_dir
+	      cf_default_app_base
+
+	      tmpldirs
+
+	      loc2yatt
+	      path2yatt
 
 	      cf_binary_config
 
@@ -28,7 +31,8 @@ use fields qw(cf_document_root
 );
 
 
-use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in);
+use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in
+			lookup_dir fields_hash);
 use YATT::Lite::XHF;
 
 require YATT::Lite;
@@ -69,80 +73,144 @@ sub find_factory_script {
 
 #========================================
 
-sub configure_appns {
-  (my MY $self, my $appns) = @_;
-  $self->{cf_appns} = $appns;
+sub _after_after_new {
+  (my MY $self) = @_;
+  $self->SUPER::_after_after_new;
+
   if (not $self->{cf_allow_missing_dir}
-      and $self->{cf_document_root}
-      and not -d $self->{cf_document_root}) {
-    croak "document_root '$self->{cf_document_root}' is missing!";
+      and $self->{cf_doc_root}
+      and not -d $self->{cf_doc_root}) {
+    croak "document_root '$self->{cf_doc_root}' is missing!";
   }
-  if ($self->{cf_document_root}) {
-    trim_slash($self->{cf_document_root});
+  if ($self->{cf_doc_root}) {
+    trim_slash($self->{cf_doc_root});
   }
   # XXX: $self->{cf_tmpldirs}
 
-  $self->{baseclass} = \ my @base;
-  foreach my $tmpldir (map {
-    $self->canonpath($_)
-  } lexpand($self->{cf_tmpldirs})) {
-    push @base, ref $self->load_yatt(TMPL => $tmpldir);
-  }
-
-  if ($self->{cf_document_root}) {
-    $self->{loc2yatt}{'/'}
-      = $self->load_yatt(INST => $self->{cf_document_root}, @base);
+  $self->{tmpldirs} = [];
+  if (my $dir = $self->{cf_doc_root}) {
+    push @{$self->{tmpldirs}}, $dir;
+    $self->get_yatt('/');
   }
 }
 
-sub init_appns {
+sub init_app_ns {
   (my MY $self) = @_;
-  my $appns = $self->SUPER::init_appns;
-  $self->appbase->ensure_entns($self->{cf_appns});
-  $appns;
+  $self->SUPER::init_app_ns;
+  $self->{default_app}->ensure_entns($self->{app_ns});
 }
 
 #========================================
 
-sub get_pathns {
-  (my MY $self, my $path) = @_;
-  trim_slash($path);
-  $self->{path2pkg}{$path};
+# location => yatt
+
+sub get_yatt {
+  (my MY $self, my $loc) = @_;
+  if (my $yatt = $self->{loc2yatt}{$loc}) {
+    return $yatt;
+  }
+  my $realdir = lookup_dir(trim_slash($loc), $self->{tmpldirs});
+  unless ($realdir) {
+    $self->error("Can't find template directory for location '%s'", $loc);
+  }
+  $self->{loc2yatt}{$loc} = $self->load_yatt($realdir);
 }
 
+# phys-path => yatt
+
 sub load_yatt {
-  (my MY $self, my ($kind, $path, @base)) = @_;
-  my @basepkg = map {ref $_ || $_} @base;
+  (my MY $self, my ($path, $depth)) = @_;
+  $path = $self->canonpath($path);
+  if (my $yatt = $self->{path2yatt}{$path}) {
+    return $yatt;
+  }
   if (not $self->{cf_allow_missing_dir} and not -d $path) {
-    croak "$kind '$path' is missing!";
-  } elsif (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
+    croak "Can't find '$path'!";
+  }
+  if (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
-      my %spec = $self->read_file_xhf($cf, binary => $self->{cf_binary_config});
-      my $base = delete $spec{baseclass};
-      # XXX: @basepkg が既に $base を継承していたら、自動で削るべき
-      $self->build_yatt($kind, $path, [@basepkg, lexpand($base)], %spec);
+      $self->build_yatt($depth, $path
+			, $self->read_file_xhf($cf, binary => $self->{cf_binary_config}));
     };
   } else {
-    $self->build_yatt($kind, $path, [@basepkg]);
+    $self->build_yatt($depth, $path);
   }
 }
 
 sub build_yatt {
-  (my MY $self, my ($kind, $path, $base, @opts)) = @_;
+  (my MY $self, my ($depth, $path, %opts)) = @_;
   trim_slash($path);
-  my $appns = $self->{path2pkg}{$path}
-    = $self->buildns($kind => lexpand($base));
 
-  if (-e (my $rc = "$path/.htyattrc.pl")) {
-    dofile_in($appns, $rc);
+  #
+  # base package と base vfs object の決定
+  #
+  my (@basepkg, @basevfs);
+  if (my ($base, @mixin) = lexpand(delete $opts{base}
+				   || ($depth ? ()
+				       : $self->{cf_default_app_base}))) {
+    # ::ClassName
+    # relativeDir
+    # @approotDir
+    my ($pkg, $yatt) = $self->find_package_or_yatt($base, $depth);
+    push @basepkg, $pkg;
+    if ($yatt) {
+      # vfs object を直接渡すべきではないか？という考えも
+      # あるいは、[facade => $yatt] とか。
+      push @basevfs, [dir => $yatt->cget('dir')];
+    }
+
+    foreach my $mixin (@mixin) {
+      ($pkg, $yatt) = $self->find_package_or_yatt($mixin, $depth);
+      if ($pkg->isa('YATT::Lite::Object')) {
+	# XXX: warn
+      } else {
+	push @basepkg, $pkg;
+      }
+      if ($yatt) {
+	push @basevfs, [dir => $yatt->cget('dir')];
+      }
+    }
   }
 
-  my @args = (vfs => [dir => $path, encoding => $self->{cf_tmpl_encoding}]
-	      , dir => $path
-	      , appns => $appns
-	      , $self->configparams_for(YATT::Lite::Util::fields_hash($appns)));
+  # XXX: あと、reload は？！
 
-  $self->{path2yatt}{$path} = $appns->new(@args, @opts);
+  my $app_ns = $self->buildns(INST => @basepkg);
+
+  if (-e (my $rc = "$path/.htyattrc.pl")) {
+    dofile_in($app_ns, $rc);
+  }
+
+  my @args = (vfs => [dir => $path, encoding => $self->{cf_tmpl_encoding}
+		      , @basevfs ? (base => \@basevfs) : ()]
+	      , dir => $path
+	      , app_ns => $app_ns
+	      , $self->configparams_for(fields_hash($app_ns)));
+
+  my $yatt = $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
+  push @{$self->{tmpldirs}}, $path;
+  $yatt;
+}
+
+sub find_package_or_yatt {
+  (my MY $self, my ($basespec, $outer_depth)) = @_;
+  if ($basespec =~ /^::/) {
+    ckrequire($basespec);
+    return $basespec;
+  } elsif (-d (my $realpath = $self->app_path($basespec))) {
+    my $yatt = $self->load_yatt($realpath, ($outer_depth // 0) +1);
+    return(ref $yatt, $yatt);
+  } else {
+    $self->error("Can't resolve app_path '%s'", $basespec);
+  }
+}
+
+sub app_path {
+  (my MY $self, my $path) = @_;
+  if ($path =~ s/^\@//) {
+    "$self->{cf_app_root}/$path";
+  } else {
+    "$self->{cf_doc_root}/$path";
+  }
 }
 
 #========================================
@@ -152,7 +220,7 @@ sub buildns {
   my $newns = $self->SUPER::buildns($kind, @base);
 
   # EntNS を足し、Entity も呼べるようにする。
-  $self->appbase->define_Entity(undef, $newns, map {$_->EntNS} @base);
+  $self->{default_app}->define_Entity(undef, $newns, map {$_->EntNS} @base);
 
   # instns には MY を定義しておく。
   my $my = globref($newns, 'MY');
@@ -165,14 +233,20 @@ sub buildns {
 
 sub configparams_for {
   (my MY $self, my $hash) = @_;
-  my @base = map { [dir => $_] } lexpand($self->{cf_tmpldirs});
-
-  ((@base ? (base => \@base) : ())
-   , $self->cf_delegate_known(0, $hash
+  # my @base = map { [dir => $_] } lexpand($self->{cf_tmpldirs});
+  # (@base ? (base => \@base) : ())
+  (
+   $self->cf_delegate_known(0, $hash
 			      , qw(output_encoding header_charset debug_cgen
 				   at_done
 				   namespace only_parse error_handler))
    , die_in_error => ! YATT::Lite::Util::is_debugging());
+}
+
+# XXX: Should have better interface.
+sub error {
+  (my MY $self, my ($fmt, @args)) = @_;
+  croak sprintf $fmt, @args;
 }
 
 sub trim_slash {

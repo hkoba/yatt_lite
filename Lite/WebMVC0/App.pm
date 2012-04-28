@@ -57,7 +57,7 @@ sub get_action_handler {
        } elsif ($$item[-1] == $age) {
 	 return;
        } else {
-	 $sub = compile_file_in($self->{cf_appns}, $path);
+	 $sub = compile_file_in($self->{cf_app_ns}, $path);
        }
        @{$item} = ($sub, $age);
      });

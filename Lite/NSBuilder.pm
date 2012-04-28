@@ -16,51 +16,46 @@ use YATT::Lite::Util qw(lexpand);
   use Carp;
   use YATT::Lite::Util qw(ckeval ckrequire set_inc);
   our %SEEN_NS;
-  use fields qw(cf_appns appns
-		cf_appbase appbase
+  use fields qw(cf_app_ns app_ns
+		cf_default_app default_app
 		subns);
-  sub default_appns {__PACKAGE__}
-  sub after_new {
+  sub _after_after_new {
     (my MY $self) = @_;
-    if ($self->{cf_appns} and $SEEN_NS{$self->{cf_appns}}++) {
-      confess "appns '$self->{cf_appns}' is already used!";
+    $self->SUPER::_after_after_new;
+    if ($self->{cf_app_ns} and $SEEN_NS{$self->{cf_app_ns}}++) {
+      confess "app_ns '$self->{cf_app_ns}' is already used!";
     }
+    $self->init_default_app;
+    $self->init_app_ns;
   }
+
   sub default_subns {'INST'}
-  sub default_appbase {'YATT::Lite'}
-  sub appbase {
+  sub default_app_ns {'MyApp'}
+  sub default_default_app {'YATT::Lite'}
+
+  sub init_default_app {
     (my MY $self) = @_;
-    $self->{appbase} ||= $self->init_appbase
+    $self->{default_app}
+      = $self->{cf_default_app} || $self->default_default_app;
+    ckrequire($self->{default_app});
   }
-  sub init_appbase {
+  sub init_app_ns {
     (my MY $self) = @_;
-    my $appbase = $self->{cf_appbase} || $self->default_appbase;
-    ckrequire($appbase);
-    $appbase;
-  }
-  sub appns {
-    (my MY $self) = @_;
-    $self->{appns} ||= $self->init_appns
-  }
-  sub init_appns {
-    (my MY $self) = @_;
-    my $appns = $self->{cf_appns};
-    try_require($appns);
-    my $appbase = $self->appbase;
-    unless ($appns->isa($appbase)) {
-      $self->_eval_use_base($appns, $appbase);
+    $self->{app_ns} = my $app_ns = $self->{cf_app_ns} // $self->default_app_ns;
+    try_require($app_ns);
+    unless ($app_ns->isa($self->{default_app})) {
+      $self->_eval_use_base($app_ns, $self->{default_app});
     }
-    $appns;
   }
   sub try_require {
-    my ($appns) = @_;
-    (my $modfn = $appns) =~ s|::|/|g;
+    my ($app_ns) = @_;
+    (my $modfn = $app_ns) =~ s|::|/|g;
     local $@;
-    eval qq{require $appns};
+    eval qq{require $app_ns};
     unless ($@) {
-      # $appns.pm is loaded successfully.
+      # $app_ns.pm is loaded successfully.
     } elsif ($@ =~ m{^Can't locate $modfn}) {
-      # $appns.pm can be missing.
+      # $app_ns.pm can be missing.
     } else {
       die $@;
     }
@@ -69,16 +64,15 @@ use YATT::Lite::Util qw(lexpand);
     (my MY $self, my ($subns, @base)) = @_;
     $subns ||= $self->default_subns;
     @base = map {ref $_ || $_} @base;
-    my $appbase = $self->appbase;
     if (@base) {
       try_require($_) for @base;
-      unless (grep {$_->isa($appbase)} @base) {
-	croak "None of baseclass inherits $appbase: @base";
+      unless (grep {$_->isa($self->{default_app})} @base) {
+	croak "None of baseclass inherits $self->{default_app}: @base";
       }
     }
-    my $appns = $self->appns;
-    my $newns = sprintf q{%s::%s%d}, $appns, $subns, ++$self->{subns}{$subns};
-    $self->_eval_use_base($newns, @base ? @base : $appns);
+    my $newns = sprintf q{%s::%s%d}, $self->{app_ns}, $subns
+      , ++$self->{subns}{$subns};
+    $self->_eval_use_base($newns, @base ? @base : $self->{app_ns});
     set_inc($newns, 1);
     $newns;
   }

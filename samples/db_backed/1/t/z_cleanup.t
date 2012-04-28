@@ -9,9 +9,9 @@ sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
-my $appdir = "$FindBin::Bin/..";
+my $app_root = "$FindBin::Bin/..";
 
-my $dbfn = "$appdir/data/.htdata.db";
+my $dbfn = "$app_root/data/.htdata.db";
 
 unless (-r $dbfn and -s $dbfn) {
   plan skip_all => "There is no test database to cleanup.";

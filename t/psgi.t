@@ -39,10 +39,10 @@ sub is_or_like($$;$) {
 
 {
   my $app = YATT::Lite::WebMVC0::Toplevel
-    ->new(appdir => $FindBin::Bin
-	  , document_root => "$rootname.d"
-	  , tmpldirs => ["$rootname.ytmpl"]
-	  , appns => 'MyApp'
+    ->new(app_root => $FindBin::Bin
+	  , doc_root => "$rootname.d"
+	  , app_ns => 'MyApp'
+	  , default_app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
 	  , header_charset => 'utf-8')
       ->to_app;

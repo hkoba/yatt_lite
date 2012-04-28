@@ -116,7 +116,7 @@ if($has_tenjin) {
     });
 }
 
-my $yt = YATT::Lite->new(appns => 'MyApp'
+my $yt = YATT::Lite->new(app_ns => 'MyApp'
 			 , vfs => [dir => $path]);
 
 my $vars = {

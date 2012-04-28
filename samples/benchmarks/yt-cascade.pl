@@ -66,7 +66,7 @@ my $mt = Text::MicroTemplate::Extended->new(
 );
 
 my $yt = YATT::Lite->new(
-    appns => 'MyApp',
+    app_ns => 'MyApp',
     vfs => [dir => $path],
 );
 
