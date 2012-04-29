@@ -817,4 +817,7 @@ sub lhexpand {
       : croak "Invalid option: $_[0]";
 }
 
+use YATT::Lite::Breakpoint ();
+YATT::Lite::Breakpoint::break_load_dbschema();
+
 1;

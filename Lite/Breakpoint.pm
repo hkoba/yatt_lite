@@ -47,6 +47,9 @@ sub break_load_dispatcher {}
 
 sub break_load_myapp {}
 
+sub break_load_dbschema {}
+sub break_load_dbschema_dbic {}
+
 sub breakpoint {}
 
 

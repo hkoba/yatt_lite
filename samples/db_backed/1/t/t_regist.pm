@@ -29,8 +29,12 @@ sub do_test {
 		    )
 		   , lexpand(delete $opts{REQUIRE})) {
     unless (eval qq|require $mod|) {
-      skip(all => "$mod is not installed");
+      plan skip_all => "$mod is not installed";
     }
+  }
+
+  if (my $reason = $pack->skip_check($app_root, %opts)) {
+    plan skip_all => $reason;
   }
 
   plan tests => 4;
@@ -41,7 +45,11 @@ sub do_test {
      , doc_root => "$app_root/html"
     );
 
-  $pack->cleanup_sql($app, $app_root, <<END);
+  my $yatt = $app->get_yatt('/');
+  $yatt->cmd_setup;
+  my $dbh = $yatt->DBIC->YATT_DBSchema->cget('DBH');
+
+  $pack->cleanup_sql($app, $dbh, $app_root, <<END);
 delete from user where login = 'hkoba'
 END
 
@@ -194,6 +202,8 @@ END
 
   unlink $email_fn if -e $email_fn;
 }
+
+sub skip_check {""}
 
 sub read_file {
   my ($fn) = @_;

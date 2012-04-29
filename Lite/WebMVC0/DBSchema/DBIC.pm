@@ -303,4 +303,7 @@ foreach my $name (keys %DBIx::Class::Schema::) {
   }
 }
 
+use YATT::Lite::Breakpoint ();
+YATT::Lite::Breakpoint::break_load_dbschema_dbic();
+
 1;

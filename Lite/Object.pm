@@ -169,4 +169,18 @@ sub cf_bindings {
   (\@keys, \@values);
 }
 
+
+sub cf_unknowns {
+  my $self = shift;
+  my $class = ref $self || $self;
+  my $fields = YATT::Lite::Util::fields_hash($class);
+  my @unknown;
+  while (my ($name, $value) = splice @_, 0, 2) {
+    next if $fields->{"cf_$name"};
+    next if $self->can("configure_$name");
+    push @unknown, $name;
+  }
+  @unknown;
+}
+
 1;

@@ -35,7 +35,7 @@ my $i = 0;
 #----------------------------------------
 # 試したいバリエーション(実験計画法の出番か?)
 #
-# default_app 指定の有無
+# app_base 指定の有無
 #   @ytmpl か CLASS::Name か
 #
 # MyApp.pm の有無
@@ -101,6 +101,7 @@ my $root_sanity = sub {
 ++$i;
 {
   my $THEME = "[composed MyApp]";
+  # * default_app のオーバライド
   # * app_ns を渡したが、それが default_app(YL) を継承していない(=空クラスの)場合、
   #   app_ns に default_app への継承関係を追加する
   #
@@ -124,7 +125,7 @@ my $root_sanity = sub {
 
 ++$i;
 {
-  my $THEME = "[config and rc]";
+  my $THEME = "[config+rc]";
   # * root に config と rc があり、 config から ytmpl への継承が指定されているケース
   # * サブディレクトリ(config 無し)がデフォルト値を継承するケース
 
@@ -132,6 +133,7 @@ my $root_sanity = sub {
   {
     package MyAppBaz;
     use base qw(YATT::Lite); use YATT::Lite::Inc;
+    use fields qw(cf_other_config);
     sub baz {$baz_res}
   }
   
@@ -139,8 +141,19 @@ my $root_sanity = sub {
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/.htyattconfig.xhf"
-	     => q|base: @ytmpl|
+  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+base: @ytmpl
+other_config: in docroot
+END
+	     , "$docroot/.htyattrc.pl" => <<'END'
+use strict;
+use warnings FATAL => qw(all);
+sub root_method {
+  (my MY $self) = @_;
+  $self->{cf_other_config}
+}
+END
+
 	     , "$docroot/foo/bar.yatt"
 	     => q|BAR rrrr|
 	     
@@ -153,28 +166,86 @@ my $root_sanity = sub {
   my $F = Factory->new(app_ns => $CLS
 		       , app_root => $approot
 		       , doc_root => $docroot
-		       , default_app => 'MyAppBaz'
+		       , app_base => '::MyAppBaz'
 		      );
   ok $CLS->isa($YL), "$THEME $CLS isa $YL";
   
   my $yatt = $F->get_yatt('/');
   $root_sanity->($THEME, $CLS, $yatt, 2);
   
-  is $yatt->bar, "my bar result", "root inherits ytmpl bar";
-  ok($yatt->find_part('bar'), "inst part bar is visible");
+  is $yatt->bar, "my bar result", "$THEME root inherits ytmpl bar";
+  ok($yatt->find_part('bar'), "$THEME inst part bar is visible");
 }
 
+++$i;
+{
+  my $THEME = '[app_base=@ytmpl]';
+  # * root に config と rc があり、 config から ytmpl への継承が指定されているケース
+  # * サブディレクトリ(config 無し)がデフォルト値を継承するケース
+
+  my $qux_res = 'My App qux';
+  {
+    package MyAppQux;
+    use base qw(YATT::Lite); use YATT::Lite::Inc;
+    use fields qw(cf_other_config2);
+    sub qux {$qux_res}
+  }
+  
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+  
+  MY->mkfile("$docroot/index.yatt"
+	     => q|my index|
+
+	     , "$docroot/.htyattconfig.xhf" => <<'END'
+other_config2: in docroot
+END
+
+	     , "$approot/ytmpl/.htyattconfig.xhf" => <<'END'
+base: ::MyAppQux
+other_config2: in @ytmpl
+END
+	     , "$approot/ytmpl/.htyattrc.pl" => <<'END'
+use strict;
+use warnings FATAL => qw(all);
+sub root_method {
+  (my MY $self) = @_;
+  $self->{cf_other_config2}
+}
+END
+);
+  
+  #----------------------------------------
+  my $F = Factory->new(app_ns => $CLS
+		       , app_root => $approot
+		       , doc_root => $docroot
+		       , app_base => '@ytmpl'
+		      );
+  ok $CLS->isa($YL), "$THEME $CLS isa $YL";
+
+  my $yatt = $F->get_yatt('/');
+  $root_sanity->($THEME, $CLS, $yatt, 2);
+
+  my $ytmpl = $F->load_yatt("$approot/ytmpl");
+  ok $yatt->isa(ref $ytmpl), "$THEME docroot isa ytmpl";
+  ok $ytmpl->isa('MyAppQux'), "$THEME ytmpl isa MyAppQux";
+
+  foreach my $key (qw(index)) {
+    ok($yatt->find_part($key), "$THEME inst part $key is visible");
+  }
+}
 
 ++$i;
 {
   my $THEME = "[mixin]";
   # * base を複数(=mixin) を指定したケース
 
-  my $qux_res = 'My App qux';
+  my $quux_res = 'My App quux';
   {
-    package MyAppQux;
+    package MyAppQuux;
     use base qw(YATT::Lite);use YATT::Lite::Inc;
-    sub qux {$qux_res}
+    sub quux {$quux_res}
   }
   
   my $CLS = myapp($i);
@@ -204,16 +275,16 @@ END
   my $F = Factory->new(app_ns => $CLS
 		       , app_root => $approot
 		       , doc_root => $docroot
-		       , default_app => 'MyAppQux'
+		       , app_base => '::MyAppQuux'
 		      );
   ok $CLS->isa($YL), "$THEME $CLS isa $YL";
   
   my $yatt = $F->get_yatt('/');
   $root_sanity->($THEME, $CLS, $yatt, 4);
 
-  is $yatt->foo_func, "my foo result", "root inherits t_foo";
+  is $yatt->foo_func, "my foo result", "$THEME root inherits t_foo";
 
   foreach my $key (qw(foo bar baz)) {
-    ok($yatt->find_part($key), "inst part $key is visible");
+    ok($yatt->find_part($key), "$THEME inst part $key is visible");
   }
 }

@@ -14,15 +14,15 @@ use base qw(t_regist);
 MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::SQLite)]);
 
 sub cleanup_sql {
-  my ($pack, $app, $app_root, $sql) = @_;
-  do_sqlite("$app_root/data/.htdata.db", $sql);
+  my ($pack, $app, $dbh, $app_root, $sql) = @_;
+  do_sqlite($dbh, "$app_root/data/.htdata.db", $sql);
 }
 
 sub do_sqlite {
-  my ($fn, $sql) = @_;
+  my ($dbh, $fn, $sql) = @_;
   require DBI;
-  my $dbh = DBI->connect("dbi:SQLite:dbname=$fn", undef, undef
-			 , {PrintError => 0, RaiseError => 1, AutoCommit => 0});
+  $dbh ||= DBI->connect("dbi:SQLite:dbname=$fn", undef, undef
+			, {PrintError => 0, RaiseError => 1, AutoCommit => 0});
   $dbh->do($sql);
   $dbh->commit;
 }

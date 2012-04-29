@@ -11,7 +11,7 @@ use base qw(YATT::Lite::NSBuilder File::Spec);
 use fields qw(cf_app_root
 	      cf_doc_root
 	      cf_allow_missing_dir
-	      cf_default_app_base
+	      cf_app_base
 
 	      tmpldirs
 
@@ -119,64 +119,44 @@ sub get_yatt {
 # phys-path => yatt
 
 sub load_yatt {
-  (my MY $self, my ($path, $depth)) = @_;
+  (my MY $self, my ($path, $cycle)) = @_;
   $path = $self->canonpath($path);
   if (my $yatt = $self->{path2yatt}{$path}) {
     return $yatt;
   }
+  $cycle //= {};
+  $cycle->{$path} = keys %$cycle;
   if (not $self->{cf_allow_missing_dir} and not -d $path) {
     croak "Can't find '$path'!";
   }
   if (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
-      $self->build_yatt($depth, $path
+      $self->build_yatt($path, $cycle
 			, $self->read_file_xhf($cf, binary => $self->{cf_binary_config}));
     };
   } else {
-    $self->build_yatt($depth, $path);
+    $self->build_yatt($path, $cycle);
   }
 }
 
 sub build_yatt {
-  (my MY $self, my ($depth, $path, %opts)) = @_;
+  (my MY $self, my ($path, $cycle, %opts)) = @_;
   trim_slash($path);
 
   #
   # base package と base vfs object の決定
   #
   my (@basepkg, @basevfs);
-  if (my ($base, @mixin) = lexpand(delete $opts{base}
-				   || ($depth ? ()
-				       : $self->{cf_default_app_base}))) {
-    # ::ClassName
-    # relativeDir
-    # @approotDir
-    my ($pkg, $yatt) = $self->find_package_or_yatt($base, $depth);
-    push @basepkg, $pkg;
-    if ($yatt) {
-      # vfs object を直接渡すべきではないか？という考えも
-      # あるいは、[facade => $yatt] とか。
-      push @basevfs, [dir => $yatt->cget('dir')];
-    }
-
-    foreach my $mixin (@mixin) {
-      ($pkg, $yatt) = $self->find_package_or_yatt($mixin, $depth);
-      if ($pkg->isa('YATT::Lite::Object')) {
-	# XXX: warn
-      } else {
-	push @basepkg, $pkg;
-      }
-      if ($yatt) {
-	push @basevfs, [dir => $yatt->cget('dir')];
-      }
-    }
+  if (my $explicit = delete $opts{base}) {
+    $self->_list_base_spec($explicit, 0, $cycle, \@basepkg, \@basevfs);
+  } elsif (my $default = $self->{cf_app_base}) {
+    $self->_list_base_spec($default, 1, $cycle, \@basepkg, \@basevfs);
   }
-
-  # XXX: あと、reload は？！
 
   my $app_ns = $self->buildns(INST => @basepkg);
 
   if (-e (my $rc = "$path/.htyattrc.pl")) {
+    # Note: This can do "use fields (...)"
     dofile_in($app_ns, $rc);
   }
 
@@ -186,31 +166,53 @@ sub build_yatt {
 	      , app_ns => $app_ns
 	      , $self->configparams_for(fields_hash($app_ns)));
 
+  if (my @unk = $app_ns->YATT::Lite::Object::cf_unknowns(%opts)) {
+    $self->error("Unknown option for yatt app '%s': '%s'"
+		 , $path, join(", ", @unk));
+  }
+
   my $yatt = $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
   push @{$self->{tmpldirs}}, $path;
   $yatt;
 }
 
-sub find_package_or_yatt {
-  (my MY $self, my ($basespec, $outer_depth)) = @_;
-  if ($basespec =~ /^::/) {
-    ckrequire($basespec);
-    return $basespec;
-  } elsif (-d (my $realpath = $self->app_path($basespec))) {
-    my $yatt = $self->load_yatt($realpath, ($outer_depth // 0) +1);
-    return(ref $yatt, $yatt);
-  } else {
-    $self->error("Can't resolve app_path '%s'", $basespec);
+sub _list_base_spec {
+  (my MY $self, my ($desc, $is_default, $cycle, $basepkg, $basevfs)) = @_;
+  my ($base, @mixin) = lexpand($desc)
+    or return;
+
+  foreach my $task ([1, $base], [0, @mixin]) {
+    my ($primary, @spec) = @$task;
+    foreach my $basespec (@spec) {
+      my ($pkg, $yatt);
+      if ($basespec =~ /^::(.*)/) {
+	ckrequire($1);
+	$pkg = $1;
+      } elsif (-d (my $realpath = $self->app_path($basespec))) {
+	if ($cycle->{$realpath}) {
+	  next if $is_default;
+	  $self->error("Template config error! base has cycle!: %s"
+		       , join("\n  ", sort {$cycle->{$a} <=> $cycle->{$b}}
+			      keys %$cycle));
+	}
+	$yatt = $self->load_yatt($realpath, $cycle);
+	$pkg = ref $yatt;
+      } else {
+	$self->error("Invalid base spec: %s", $basespec);
+      }
+      if (not $primary and $pkg->isa('YATT::Lite::Object')) {
+	# XXX: This will cause inheritance error. But...
+      }
+      push @$basepkg, $pkg if $primary;
+      push @$basevfs, [dir => $yatt->cget('dir')] if $yatt;
+    }
   }
 }
 
 sub app_path {
   (my MY $self, my $path) = @_;
-  if ($path =~ s/^\@//) {
-    "$self->{cf_app_root}/$path";
-  } else {
-    "$self->{cf_doc_root}/$path";
-  }
+  return '' unless $path =~ s/^\@//;
+  "$self->{cf_app_root}/$path";
 }
 
 #========================================

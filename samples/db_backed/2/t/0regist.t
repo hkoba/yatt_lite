@@ -16,14 +16,20 @@ use base qw(t_regist);
 
 MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::mysql)]);
 
-sub cleanup_sql {
-  my ($pack, $app, $app_root, $sql) = @_;
+sub skip_check {
+  my ($pack, $app_root, %opts) = @_;
   my $passfile = "$app_root/.htdbpass";
 
-  unless (-r $passfile) {
-    Test::More::skip(all => ".htdbpass is not configured");
+  if (-r $passfile) {
+    '';
+  } else {
+    ".htdbpass is not configured";
   }
+}
 
+sub cleanup_sql {
+  my ($pack, $app, $dbh, $app_root, $sql) = @_;
+  my $passfile = "$app_root/.htdbpass";
   do_mysql($passfile, $sql);
 }
 

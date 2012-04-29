@@ -7,7 +7,7 @@ use YATT::Lite::Util qw(lexpand);
 {
   # bootscript が決まれば、root NS も一つに決まる、としよう。 MyApp 、と。
   # instpkg の系列も決まる、と。 MyApp::INST1, 2, ... だと。
-  # INST を越えて共有される *.ytmpl/ は、 TMPL1, 2, ... と名づける。
+  # XXX: INST を越えて共有される *.ytmpl/ は、 TMPL1, 2, ... と名づけたいが、...
   # それ以下のディレクトリ名・ファイル名はそのまま pkgname に使う。
 
   # MyApp::INST1::dir::dir::dir::file

@@ -347,6 +347,14 @@ sub dbic {
   $self->{dbic} //= $self->DBIC->connect($self->dbi_dsn);
 }
 
+sub dbic_disconnect {
+  (my MY $self) = @_;
+  if (my $dbic = $self->{dbic}) {
+    $dbic->storage->disconnect;
+  }
+  $self;
+}
+
 sub dbi_dsn {
   my MY $self = shift;
   "dbi:SQLite:dbname=$self->{cf_dbname}";

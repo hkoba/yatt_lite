@@ -42,7 +42,7 @@ sub is_or_like($$;$) {
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
 	  , app_ns => 'MyApp'
-	  , default_app_base => ['@psgi.ytmpl']
+	  , app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
 	  , header_charset => 'utf-8')
       ->to_app;
