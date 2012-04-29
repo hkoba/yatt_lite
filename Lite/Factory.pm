@@ -189,7 +189,7 @@ sub _list_base_spec {
 	ckrequire($1);
 	$pkg = $1;
       } elsif (-d (my $realpath = $self->app_path($basespec))) {
-	if ($cycle->{$realpath}) {
+	if (defined $cycle->{$realpath}) {
 	  next if $is_default;
 	  $self->error("Template config error! base has cycle!: %s"
 		       , join("\n  ", sort {$cycle->{$a} <=> $cycle->{$b}}
