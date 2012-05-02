@@ -4,22 +4,10 @@ use warnings FATAL => qw(all);
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
 
+use FindBin;
+use lib "$FindBin::Bin/lib";
+
 use File::Basename;
-sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
-my $libdir;
-use lib $libdir = do {
-  if (-l __FILE__) {
-    # If $script is symlink, symlink-resolved path is used as $libdir
-    require FindBin; import FindBin;
-    updir(2, ($FindBin::RealBin, $FindBin::RealBin)[0]);
-  } else {
-    # Otherwise, just use updir 3 of runyatt.lib/YATT/scripts/$script
-    # FindBin::RealBin だと、 YATT/ の symlink まで resolve されてしまう。
-    # Cwd::realpath も symlink を resolve しようとするので、望ましくない。
-    updir(3, MY->rel2abs(__FILE__))
-  }
-};
-# print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;
@@ -27,23 +15,17 @@ use YATT::Lite::Util qw(rootname);
 # XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
 
-my $dispatcher = do {
-  (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
-  if (-r $cgi) {
-    YATT::Lite::Factory->load_factory_script($cgi);
-  } else {
-    require YATT::Lite::WebMVC0::Toplevel;
-    YATT::Lite::WebMVC0::Toplevel->new
-	(appns => 'MyApp'
-	 , namespace => ['yatt', 'perl', 'js']
-	 , header_charset => 'utf-8'
-	 , tmpldirs => [grep {-d} rootname($libdir).".ytmpl"]
-	 , debug_cgen => $ENV{DEBUG}
-	 , debug_cgi  => $ENV{DEBUG_CGI}
-	 # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
-	 # , tmpl_encoding => 'utf-8'
-	);
-  }
+my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+  require YATT::Lite::WebMVC0::Toplevel;
+  YATT::Lite::WebMVC0::Toplevel->new
+      (app_ns => 'MyApp'
+       , namespace => ['yatt', 'perl', 'js']
+       , header_charset => 'utf-8'
+       , debug_cgen => $ENV{DEBUG}
+       , debug_cgi  => $ENV{DEBUG_CGI}
+       # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
+       # , tmpl_encoding => 'utf-8'
+      );
 };
 
 my $nerror = 0;

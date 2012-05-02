@@ -26,7 +26,7 @@ GetOptions("if_can" => \ my $if_can
 my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
     require YATT::Lite::WebMVC0::Toplevel;
     YATT::Lite::WebMVC0::Toplevel->new
-	(appns => 'MyApp'
+	(app_ns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'
 	 , tmpldirs => [grep {-d} "ytmpl"]

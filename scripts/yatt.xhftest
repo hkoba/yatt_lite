@@ -4,15 +4,15 @@ use warnings FATAL => qw(all);
 sub MY () {__PACKAGE__}
 use 5.010;
 
+use FindBin;
+use lib "$FindBin::Bin/lib";
+
 use Test::More;
 use Test::Differences;
 use List::Util qw(sum);
 use Cwd qw(realpath);
 use File::Basename;
 use base qw(File::Spec);
-sub updir {my ($n, $fn) = @_; $fn = dirname($fn) while $n-- > 0; $fn}
-my $libdir;
-use lib $libdir = updir(3, MY->rel2abs(__FILE__));
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::XHF;
@@ -105,7 +105,18 @@ sub mode_internal {
 
   # do で runyatt.cgi を load し、 $dispatcher を取り出す！
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
-  my $dispatcher = ckdo $cgi;
+  my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+    require YATT::Lite::WebMVC0::Toplevel;
+    YATT::Lite::WebMVC0::Toplevel->new
+	(app_ns => 'MyApp'
+	 , namespace => ['yatt', 'perl', 'js']
+	 , header_charset => 'utf-8'
+	 , debug_cgen => $ENV{DEBUG}
+	 , debug_cgi  => $ENV{DEBUG_CGI}
+	 # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
+	 # , tmpl_encoding => 'utf-8'
+	);
+  };
 
   foreach my TestSection $sect (@section) {
     my $dir = dirname(realpath($sect->{cf_file}));
