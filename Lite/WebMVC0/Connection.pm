@@ -353,7 +353,7 @@ sub param_type {
 
 # XXX: These should be easily extendable from .htyattrc.pl
 
-sub re_integer { qr{^[1-9]\d*$}; }
+sub re_integer { qr{^(?:0|[1-9]\d*)$}; }
 
 sub re_word { qr{^\w+$}; }
 
