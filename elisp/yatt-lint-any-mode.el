@@ -93,20 +93,20 @@
 		   ;; Please specify info{libdir: ...} in your .htyattconfig.xhf
 		   (file-exists-p htyattcf)
 		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir")))
-		  (concat libdir "/YATT"))
+		  (concat libdir "/YATT/"))
 
-		 ((setq libdir (yatt-lint-any-find-upward "runyatt.lib"))
-		  (concat libdir "/YATT"))
+		 ((setq libdir (yatt-lint-any-find-upward "lib"))
+		  (concat libdir "/YATT/"))
 
 		 ((and (file-exists-p htaccess)
 		       (setq action (yatt-lint-any-htaccess-find htaccess
 				     "Action" "x-yatt-handler"))
 		       (file-exists-p
 			(setq libdir (yatt-lint-any-action-libdir action))))
-		  (concat libdir "/YATT")
+		  (concat libdir "/YATT/")
 		  )
-		 ((file-exists-p "cgi-bin/runyatt.lib")
-		  "cgi-bin/runyatt.lib/YATT")
+		 ((file-exists-p "lib/YATT")
+		  "lib/YATT/")
 		 )))))
 
 (defun yatt-lint-any-find-upward (file &optional startdir)
@@ -278,10 +278,10 @@ Currently only RHEL is supported."
 ;;========================================
 (defun yatt-lint-cmdfile (cmdfile &optional nocheck)
   (let ((cmd (concat (or (yatt-lint-any-find-driver)
-			 yatt-lint-any-YATT-dir) "/" cmdfile)))
+			 yatt-lint-any-YATT-dir) cmdfile)))
     (if (and (not nocheck)
 	     (not (file-exists-p cmd)))
-	(error "Can't find yatt command: %s" cmdfile))
+	(error "Can't find yatt command: %s" cmd))
     cmd))
 
 (defun yatt-lint-any-shell-command (cmd &rest args)
