@@ -191,9 +191,10 @@ sub _list_base_spec {
       } elsif (-d (my $realpath = $self->app_path($basespec))) {
 	if (defined $cycle->{$realpath}) {
 	  next if $is_default;
-	  $self->error("Template config error! base has cycle!: %s"
-		       , join("\n  ", sort {$cycle->{$a} <=> $cycle->{$b}}
-			      keys %$cycle));
+	  $self->error("Template config error! base has cycle!: %s\n"
+		       , join("\n  -> ", (sort {$cycle->{$a} <=> $cycle->{$b}}
+					  keys %$cycle)
+			     , $realpath));
 	}
 	$yatt = $self->load_yatt($realpath, $cycle);
 	$pkg = ref $yatt;
