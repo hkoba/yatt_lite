@@ -39,6 +39,10 @@
 (defvar yatt-lint-any-mode-blacklist nil
   "Avoid yatt-lint if after-save-hook contains these syms.")
 
+(defvar yatt-lint-any-perl-mode 'yatt-lint-any-handle-perl-script
+  "Check every perl-mode buffer even if it is not related to yatt.
+To disable, set to nil.")
+
 (defun yatt-lint-any-mode-unless-blacklisted ()
   (let ((ok t) (lst yatt-lint-any-mode-blacklist)
 	i)
@@ -181,7 +185,9 @@ Currently only RHEL is supported."
   (let* ((buf (current-buffer))
 	 (spec (yatt-lint-any-lookup
 		(file-name-nondirectory (buffer-file-name buf))))
-	 (handler (and spec (plist-get spec 'after))))
+	 (handler (or (and spec (plist-get spec 'after))
+		      (and (member major-mode '(perl-mode cperl-mode))
+			   yatt-lint-any-perl-mode))))
     (when handler
       (yatt-lint-any-run handler buf))))
 
