@@ -5,6 +5,8 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/lib");
 use Test::More qw(no_plan);
+use File::Temp qw(tempdir);
+use autodie qw(mkdir chdir);
 
 use Getopt::Long;
 GetOptions('q|quiet' => \ (my $quiet))
@@ -53,13 +55,10 @@ my @CF = (ext_private => 'tmpl', ext_public => 'yatt'
   is $vfs->find_part('foo', 'baz'), 'ZZZ', "$theme - foo baz";
 }
 
-sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
-use FindBin;
-
 my $i;
-my $BASE = untaint_any("$FindBin::Bin/".rootname($FindBin::RealScript).".d");
-unless (-d $BASE) {
-  mkdir $BASE or die "$BASE: $!";
+my $BASE = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);
+END {
+  chdir('/');
 }
 
 $i = 1;

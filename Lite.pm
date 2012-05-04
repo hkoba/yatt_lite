@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use 5.010;
 use Carp qw(carp croak confess longmess);
-our $VERSION = '0.0.3_4';
+our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
 
 #
 # YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。
