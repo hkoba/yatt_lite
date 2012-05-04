@@ -1,0 +1,29 @@
+---
+abstract: 'Yet Another Template Toolkit, Lightweight rewrite.'
+author:
+  - "\"KOBAYASI, Hiroaki\" <hkoba@cpan.org>"
+build_requires:
+  Test::Differences: 0
+  Test::More: 0
+configure_requires:
+  Module::Build: 0
+dynamic_config: 1
+generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.120630'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: YATT-Lite
+recommends:
+  CGI::Session: 0
+  DBD::SQLite: 0
+  DBIx::Class: 0
+  Plack: 0
+  Pod::Perldoc: 0
+  Pod::Simple::SimpleTree: 0
+requires:
+  List::Util: 0
+  perl: v5.10.1
+resources:
+  license: http://dev.perl.org/licenses/
+version: v0.0.3_4

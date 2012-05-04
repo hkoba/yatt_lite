@@ -13,24 +13,41 @@ my $builder = MyBuilder->new
 
  , requires =>
  {'perl'       => '5.10.1' # for named capture and //
-  , 'version'    => 0
   , 'List::Util' => 0
  }
+
+ , recommends =>
+ {'Plack' => 0
+  , 'DBD::SQLite' => 0
+  , 'DBIx::Class' => 0
+  , 'CGI::Session' => 0
+  , 'Pod::Perldoc' => 0
+  , 'Pod::Simple::SimpleTree' => 0
+ }
+
+ , configure_requires => {'Module::Build' => 0}
 
  , build_requires =>
  {'Test::More' => 0
   , 'Test::Differences' => 0
-  , 'File::ShareDir' => 0
  }
 
- , test_files => Module::Build->rscan_dir('t', qr{\.t$})
+ , test_files => MyBuilder->rscan_dir('t', qr{\.t$})
 
- , add_to_cleanup      => [ qw(YATT-*
-			       *.tmp
-			       t/cover_db
-			     ) ]
+ , add_to_cleanup => [ qw(t/cover_db) ]
 );
 
+$builder->add_build_element('yatt_dist');
 
+if ($ENV{DEBUG_BUILD}) {
+  print $builder->dist_version, "\n";
+  use Data::Dumper;
+  $builder->process_yatt_dist_files;
+  print Dumper($builder), "\n";
+  print Dumper($builder->install_path), "\n";
+  print Dumper([$builder->install_types]), "\n";
+  print Dumper($builder->install_map), "\n";
+  exit;
+}
 
 $builder->create_build_script();

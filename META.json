@@ -1,0 +1,50 @@
+{
+   "abstract" : "Yet Another Template Toolkit, Lightweight rewrite.",
+   "author" : [
+      "\"KOBAYASI, Hiroaki\" <hkoba@cpan.org>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.120630",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "YATT-Lite",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "Test::Differences" : "0",
+            "Test::More" : "0"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0"
+         }
+      },
+      "runtime" : {
+         "recommends" : {
+            "CGI::Session" : "0",
+            "DBD::SQLite" : "0",
+            "DBIx::Class" : "0",
+            "Plack" : "0",
+            "Pod::Perldoc" : "0",
+            "Pod::Simple::SimpleTree" : "0"
+         },
+         "requires" : {
+            "List::Util" : "0",
+            "perl" : "v5.10.1"
+         }
+      }
+   },
+   "release_status" : "testing",
+   "resources" : {
+      "license" : [
+         "http://dev.perl.org/licenses/"
+      ]
+   },
+   "version" : "v0.0.3_4"
+}

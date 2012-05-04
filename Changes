@@ -1,10 +1,19 @@
 Revision history for YATT::Lite
 
+0.0.3_4 2012-05-04
+
+ * Directory layout is totally changed.
+   Previous runyatt.lib/YATT is current top directory.
+
+ * Also, massive internal changes.
+   class Web::* namespace is renamed to WebMVC0::*.
+   Some options (eg. appns and baseclass) are changed.
+
 0.0.3  2011-11-16
 
  * PSGI Adaption. It is usable, but I'm not enough satisfied though.
    In next release, to adapt more for psgi, massive internal change will occur.
 
-0.0.1  2010-10-18 08:28:37
+0.0.1  2010-10-18
 
  * Initial release.

@@ -1,4 +1,5 @@
 /.svn
-/MANIFEST.SKIP.bak
+*.bak
+*.tar.gz
 /tmon.out
 .xslate_cache

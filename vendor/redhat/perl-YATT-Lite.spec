@@ -9,7 +9,7 @@ Version: 0.0.2
 Release: 1%{?dist}
 License: GPL+ or Artistic
 Group: Development/Languages
-URL: http://github.com/hkoba/%{yatt}
+URL: https://github.com/hkoba/%{yatt}
 Source0: %{modname}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 buildarch: noarch
