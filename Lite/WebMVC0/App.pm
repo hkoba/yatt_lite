@@ -38,6 +38,7 @@ sub handle_ydo {
 
 # XXX: cached_in 周りは面倒過ぎる。
 # XXX: package per dir で、本当に良いのか?
+# XXX: Should handle union mount!
 sub get_action_handler {
   (my MY $self, my $filename) = @_;
   my $path = "$self->{cf_dir}/$filename";

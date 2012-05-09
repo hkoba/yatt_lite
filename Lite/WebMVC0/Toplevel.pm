@@ -18,6 +18,7 @@ use fields qw(DirHandler Action
 	      cf_is_gateway
 	      cf_is_psgi
 	      cf_debug_cgi
+	      cf_debug_psgi
 	      cf_psgi_static
 	      cf_index_name
 	    );
@@ -71,7 +72,7 @@ sub call {
 
   my ($tmpldir, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
 
-  if ($ENV{DEBUG_YATT_PSGI}) {
+  if ($self->{cf_debug_psgi}) {
     if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
       print $errfh join("\t", "tmpldir=$tmpldir", "loc=$loc"
 			, "file=$file", "trailer=$trailer"
@@ -137,6 +138,11 @@ sub call {
     return $res->finalize;
   } elsif (ref $error eq 'ARRAY') {
     # redirect
+    if ($self->{cf_debug_psgi}) {
+      if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
+	print $errfh "PSGI Tuple: ", terse_dump($error), "\n";
+      }
+    }
     return $error;
   } else {
     # system_error. Should be treated by PSGI Server.
@@ -158,8 +164,11 @@ sub split_path_info {
     # In this case, PATH_TRANSLATED should be valid physical path
     # + optionally trailing sub path_info.
     #
-    split_path($env->{PATH_TRANSLATED}
-	       , $self->{cf_app_root} // $self->{cf_doc_root});
+    # XXX: What should be done when app_root is empty?
+    # XXX: Is userdir ok? like /~$USER/dir?
+    # XXX: should have cut_depth option.
+    #
+    split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root});
     # or die.
 
   } else {

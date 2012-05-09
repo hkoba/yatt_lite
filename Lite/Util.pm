@@ -139,8 +139,10 @@ require Scalar::Util;
   }
 
   sub split_path {
-    my ($path, $startDir) = @_;
-    $startDir ||= '';
+    my ($path, $startDir, $cut_depth) = @_;
+    # $startDir is $app_root.
+    # $doc_root should resides under $app_root.
+    $cut_depth //= 1;
     $startDir =~ s,/+$,,;
     unless ($path =~ m{^\Q$startDir\E}gxs) {
       die "Can't split_path: prefix mismatch: $startDir vs $path";
@@ -170,8 +172,15 @@ require Scalar::Util;
       }
     }
 
+    my $loc = substr($dir, length($startDir));
+    while ($cut_depth-- > 0) {
+      $loc =~ s,^/[^/]+,,
+	or croak "Can't cut path location: $loc";
+      $startDir .= $&;
+    }
+
     ($startDir
-     , substr($dir, length($startDir))
+     , $loc
      , $file // ''
      , $subpath);
   }

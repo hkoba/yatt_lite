@@ -5,6 +5,7 @@ sub MY () {__PACKAGE__}
 
 use autodie qw(mkdir chdir);
 use File::Temp qw(tempdir);
+use File::Path qw(make_path);
 use Test::More qw(no_plan);
 
 use FindBin;
@@ -24,42 +25,60 @@ END {
 
 my $i = 1;
 {
-  mkdir(my $realdir = "$BASE/t$i.docs");
-  chdir($realdir);
+  my $appdir = "$BASE/t$i";
+  make_path(my $docroot = "$appdir/html"
+	   , my $ytmpl = "$appdir/ytmpl");
+  chdir($appdir);
 
-  MY->mkfile("index.yatt", 'top');
-  MY->mkfile("auth.yatt", 'auth');
-  MY->mkfile("code.ydo", 'code');
-  MY->mkfile("img/bg.png", 'background');
-  MY->mkfile("d1/f1.yatt", 'in_d1');
+  MY->mkfile("html/index.yatt", 'top');
+  MY->mkfile("html/auth.yatt", 'auth');
+  MY->mkfile("html/code.ydo", 'code');
+  MY->mkfile("html/img/bg.png", 'background');
+  MY->mkfile("html/d1/f1.yatt", 'in_d1');
+
+  MY->mkfile("ytmpl/foo.yatt", "foo in tmpl");
+  MY->mkfile("ytmpl/d1/f2.yatt", "f2 in tmpl");
+  MY->mkfile("ytmpl/d2/bar.yatt", "bar in tmpl");
 
   my $test = sub {
-    my ($loc, $want, $longtitle) = @_;
-    is_deeply [split_path("$realdir$loc", $realdir)], $want
+    my ($part, $loc, $want, $longtitle) = @_;
+    is_deeply [split_path("$appdir/$part$loc", $appdir, 1)], $want
       , "split_path: $loc";
   };
 
   my $res;
-  $test->("/auth.yatt"
-	  , $res = [$realdir, "/", "auth.yatt", ""]);
-  $test->("/auth", $res);
+  $test->(html => "/auth.yatt"
+	  , $res = [$docroot, "/", "auth.yatt", ""]);
+  $test->(html => "/auth", $res);
 
-  $test->("/auth.yatt/foo"
-	  , $res = [$realdir, "/", "auth.yatt", "/foo"]);
-  $test->("/auth/foo", $res);
+  $test->(html => "/auth.yatt/foo"
+	  , $res = [$docroot, "/", "auth.yatt", "/foo"]);
+  $test->(html => "/auth/foo", $res);
 
-  $test->("/auth.yatt/foo/bar"
-	  , $res = [$realdir, "/", "auth.yatt", "/foo/bar"]);
-  $test->("/auth/foo/bar", $res);
+  $test->(html => "/auth.yatt/foo/bar"
+	  , $res = [$docroot, "/", "auth.yatt", "/foo/bar"]);
+  $test->(html => "/auth/foo/bar", $res);
 
-  $test->("/code.ydo"
-	  , $res = [$realdir, '/', 'code.ydo', '']);
+  $test->(ytmpl => "/foo.yatt"
+	  , $res = [$ytmpl, "/", "foo.yatt", ""]);
+  $test->(ytmpl => "/foo", $res);
 
-  $test->("/img/bg.png"
-	  , [$realdir, "/img/", "bg.png", ""]);
+  $test->(html => "/d1/f1.yatt"
+	  , $res = [$docroot, "/d1/", "f1.yatt", ""]);
+  $test->(html => "/d1/f1", $res);
 
-  $test->("/img/missing.png"
-	  , [$realdir, "/img/", "missing.png", ""]);
+  $test->(ytmpl => "/d1/f2.yatt"
+	  , $res = [$ytmpl, "/d1/", "f2.yatt", ""]);
+  $test->(ytmpl => "/d1/f2", $res);
+
+  $test->(html => "/code.ydo"
+	  , $res = [$docroot, '/', 'code.ydo', '']);
+
+  $test->(html => "/img/bg.png"
+	  , [$docroot, "/img/", "bg.png", ""]);
+
+  $test->(html => "/img/missing.png"
+	  , [$docroot, "/img/", "missing.png", ""]);
 }
 
 $i++;
