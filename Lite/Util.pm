@@ -441,7 +441,8 @@ sub ostream {
 }
 
 sub dispatch_all {
-  my ($this, $con, $prefix, $nargs) = splice @_, 0, 4;
+  my ($this, $con, $prefix, $argSpec) = splice @_, 0, 4;
+  my ($nargs, @preargs) = ref $argSpec ? @$argSpec : $argSpec;
   my @queue;
   foreach my $item (@_) {
     if (ref $item) {
@@ -449,7 +450,7 @@ sub dispatch_all {
       my ($wname, @args) = @$item;
       my $sub = $this->can('render_' . $prefix . $wname)
 	or croak "Can't find widget '$wname' in dispatch";
-      $sub->($this, $con, splice(@args, 0, $nargs // 0), \@args);
+      $sub->($this, $con, @preargs, splice(@args, 0, $nargs // 0), \@args);
     } else {
       push @queue, $item;
     }
