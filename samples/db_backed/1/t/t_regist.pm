@@ -12,7 +12,7 @@ use encoding qw(:_get_locale_encoding);
 # binmode STDERR, sprintf ":encoding(%s)", _get_locale_encoding();
 
 use YATT::Lite::WebMVC0;
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 use Test::More;
 use YATT::Lite::Util qw(lexpand);
 

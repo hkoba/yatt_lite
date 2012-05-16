@@ -16,16 +16,16 @@ my $app_root = "$FindBin::Bin/..";
 # print STDERR join("\n", __FILE__, $libdir), "\n";
 
 use YATT::Lite::Breakpoint;
-use YATT::Lite::XHFTest2;
+use YATT::Lite::Test::XHFTest2;
 
 sub MY () {__PACKAGE__}
-use base qw(YATT::Lite::XHFTest2);
+use base qw(YATT::Lite::Test::XHFTest2);
 use YATT::Lite::Util qw(lexpand);
 
-use YATT::Lite::TestFCGI;
+use YATT::Lite::Test::TestFCGI;
 
-my $CLASS = YATT::Lite::TestFCGI::Auto->class
-  or YATT::Lite::TestFCGI::Auto->skip_all
+my $CLASS = YATT::Lite::Test::TestFCGI::Auto->class
+  or YATT::Lite::Test::TestFCGI::Auto->skip_all
   ('None of FCGI::Client and /usr/bin/cgi-fcgi is available');
 
 unless (-d "$app_root/html/cgi-bin"

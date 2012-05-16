@@ -11,8 +11,8 @@ use File::Spec;
 use lib "$FindBin::Bin/../lib";
 
 use YATT::Lite::Breakpoint;
-use YATT::Lite::XHFTest2;
-use base qw(YATT::Lite::XHFTest2);
+use YATT::Lite::Test::XHFTest2;
+use base qw(YATT::Lite::Test::XHFTest2);
 use fields qw(base_url);
 use YATT::Lite::Util qw(lexpand);
 

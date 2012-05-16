@@ -12,7 +12,7 @@ use Getopt::Long;
 GetOptions('q|quiet' => \ (my $quiet))
   or die "Unknown options\n";
 
-sub TestFiles () {'YATT::Lite::TestFiles'}
+sub TestFiles () {'YATT::Lite::Test::TestFiles'}
 require_ok(TestFiles);
 sub VFS () {'YATT::Lite::VFS'}
 require_ok(VFS);

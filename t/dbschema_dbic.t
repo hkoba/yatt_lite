@@ -7,7 +7,7 @@ use Test::More;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use FindBin;
 use lib untaint_any("$FindBin::Bin/lib");
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 
 BEGIN {
   # Because use YATT::Lite::WebMVC0::DBSchema::DBIC loads DBIx::Class::Schema.

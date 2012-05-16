@@ -6,7 +6,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/lib");
 use Test::More;
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 use File::Basename;
 use List::Util qw(sum);
 use encoding qw(:locale);
@@ -19,8 +19,8 @@ sub myapp {join _ => MyTest => appname($0), @_}
 
 use YATT::Lite::Breakpoint;
 
-use YATT::Lite::XHFTest qw(Item);
-use base qw(YATT::Lite::XHFTest File::Spec);
+use YATT::Lite::Test::XHFTest qw(Item);
+use base qw(YATT::Lite::Test::XHFTest File::Spec);
 use fields qw(cf_VFS_CONFIG cf_YATT_CONFIG cf_YATT_RC);
 sub MY () {__PACKAGE__}
 

@@ -5,7 +5,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/lib");
 use Test::More qw(no_plan);
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 use File::Basename;
 use List::Util qw(sum);
 
@@ -14,13 +14,13 @@ use YATT::Lite::Breakpoint;
 use YATT::Lite::WebMVC0;
 use YATT::Lite::Util qw(lexpand appname);
 sub MY () {__PACKAGE__}
-require YATT::Lite::TestFiles;
+require YATT::Lite::Test::TestFiles;
 
 sub myapp {join _ => MyTest => appname($0), shift}
 
 my ($quiet, $i) = (1);
 my $BASE = "/tmp/yatt-test$$.d";
-my $dig = YATT::Lite::TestFiles->new($BASE
+my $dig = YATT::Lite::Test::TestFiles->new($BASE
 				     , quiet => $quiet, auto_clean => 1);
 
 $i = 1;

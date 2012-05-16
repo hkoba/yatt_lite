@@ -8,7 +8,7 @@ use lib untaint_any("$FindBin::Bin/lib");
 
 #========================================
 use Test::More;
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 use Data::Dumper;
 
 my $LOADER = 'YATT::Lite::XHF';

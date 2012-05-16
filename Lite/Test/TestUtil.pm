@@ -1,4 +1,4 @@
-package YATT::Lite::TestUtil;
+package YATT::Lite::Test::TestUtil;
 use strict;
 use warnings FATAL => qw(all);
 

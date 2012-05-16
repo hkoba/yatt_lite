@@ -1,5 +1,5 @@
 package
-  YATT::Lite::TestFiles;
+  YATT::Lite::Test::TestFiles;
 sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);

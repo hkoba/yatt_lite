@@ -1,4 +1,4 @@
-package YATT::Lite::XHFTest;
+package YATT::Lite::Test::XHFTest;
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Object);
@@ -14,8 +14,8 @@ our @EXPORT_OK = qw(Item);
 use Encode;
 
 {
-  sub Item () {'YATT::Lite::XHFTest::Item'}
-  package YATT::Lite::XHFTest::Item;
+  sub Item () {'YATT::Lite::Test::XHFTest::Item'}
+  package YATT::Lite::Test::XHFTest::Item;
   use base qw(YATT::Lite::Object);
   use fields qw(cf_global
 		cf_parser

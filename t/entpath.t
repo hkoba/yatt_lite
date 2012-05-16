@@ -6,7 +6,7 @@ use FindBin;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use lib untaint_any("$FindBin::Bin/lib");
 use Test::More;
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 
 use YATT::Lite ();
 use YATT::Lite::Util qw(catch terse_dump);

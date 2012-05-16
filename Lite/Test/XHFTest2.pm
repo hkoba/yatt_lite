@@ -1,4 +1,4 @@
-package YATT::Lite::XHFTest2; sub Tests () {__PACKAGE__}
+package YATT::Lite::Test::XHFTest2; sub Tests () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Exporter qw(import);
@@ -25,7 +25,7 @@ push @EXPORT, qw(trimlast nocr);
 
 use Carp;
 use Test::More;
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 use File::Basename;
 use List::Util qw(sum);
 

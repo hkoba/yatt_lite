@@ -12,7 +12,7 @@ use lib $libdir = "$FindBin::Bin/../lib";
 
 use File::Basename;
 
-use YATT::Lite::TestUtil;
+use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Util qw(dict_sort rootname);
 my $func = rootname(basename($0));
 my $script = "$libdir/YATT/scripts/yatt.$func";

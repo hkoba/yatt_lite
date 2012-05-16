@@ -24,8 +24,8 @@ use lib "$FindBin::Bin/../lib";
 
 use YATT::Lite::Breakpoint;
 # use YATT::Lite::Util qw(ostream);
-use YATT::Lite::XHFTest2;
-use base qw(YATT::Lite::XHFTest2);
+use YATT::Lite::Test::XHFTest2;
+use base qw(YATT::Lite::Test::XHFTest2);
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
 			      , @ARGV ? @ARGV : $FindBin::Bin);

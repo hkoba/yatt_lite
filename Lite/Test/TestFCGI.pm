@@ -8,7 +8,7 @@ use Test::Builder ();
 my $Test = Test::Builder->new;
 
 {
-  package YATT::Lite::TestFCGI; sub MY () {__PACKAGE__}
+  package YATT::Lite::Test::TestFCGI; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::Object File::Spec);
   use fields qw(res status ct content cookie_jar last_request
 		sockfile
@@ -179,23 +179,23 @@ my $Test = Test::Builder->new;
 #========================================
 {
   package
-    YATT::Lite::TestFCGI::Auto; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::TestFCGI);
+    YATT::Lite::Test::TestFCGI::Auto; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::Test::TestFCGI);
 
   sub class {
     my $pack = shift;
     if (eval {require FCGI::Client}) {
-      'YATT::Lite::TestFCGI::FCGIClient';
+      'YATT::Lite::Test::TestFCGI::FCGIClient';
     } elsif ($pack->which('cgi-fcgi')) {
-      'YATT::Lite::TestFCGI::cgi_fcgi';
+      'YATT::Lite::Test::TestFCGI::cgi_fcgi';
     }
   }
 }
 
 {
   package
-    YATT::Lite::TestFCGI::FCGIClient; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::TestFCGI);
+    YATT::Lite::Test::TestFCGI::FCGIClient; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::Test::TestFCGI);
   use fields qw(connection raw_error);
 
   sub fork_server {
@@ -300,8 +300,8 @@ my $Test = Test::Builder->new;
 #========================================
 {
   package
-    YATT::Lite::TestFCGI::cgi_fcgi; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::TestFCGI);
+    YATT::Lite::Test::TestFCGI::cgi_fcgi; sub MY () {__PACKAGE__}
+  use base qw(YATT::Lite::Test::TestFCGI);
   use fields qw(wrapper);
 
   sub check_skip_reason {
