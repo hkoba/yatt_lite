@@ -1,4 +1,4 @@
-package YATT::Lite::WebMVC0::Toplevel;
+package YATT::Lite::WebMVC0;
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
@@ -70,6 +70,7 @@ sub call {
     return $self->psgi_error(403, "Forbidden $deny");
   }
 
+  # XXX: user_dir?
   my ($tmpldir, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
 
   if ($self->{cf_debug_psgi}) {
@@ -508,22 +509,14 @@ sub make_cgi {
 	$self->new_cgi(@$args);
       }
     };
-    my ($path_translated, $document_root) = do {
-      if ($env->{PATH_TRANSLATED} && ($env->{REDIRECT_STATUS} // 0) == 200) {
-	($env->{PATH_TRANSLATED}
-	 , $env->{DOCUMENT_ROOT} // $self->{cf_doc_root});
-      } else {
-	my $root = $self->{cf_doc_root}
-	  // $env->{DOCUMENT_ROOT} // '';
-	($root . ($env->{PATH_INFO} // '/')
-	 , $root);
-      }
-    };
+
+    ($root, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
+
     # XXX: /~user_dir の場合は $dir ne $root$loc じゃんか orz...
+
     return (cgi => $cgi
-	    , $self->split_path_url($path_translated
-				    , $env->{PATH_INFO} // '/'
-				    , $document_root)
+	    , dir => "$root$loc", file => $file, subpath => $trailer
+	    , root => $root, location => $loc
 	    , $self->cf_delegate_defined(qw(is_psgi))
 	    , is_gateway => $self->is_gateway);
 
@@ -541,7 +534,7 @@ sub make_cgi {
       $path = Cwd::abs_path($path) // die "No such file: $path\n";
     }
     # XXX: widget 直接呼び出しは？ cgi じゃなしに、直接パラメータ渡しは？ =>
-    ($root, $loc, $file, $trailer) = split_path($path);
+    ($root, $loc, $file, $trailer) = split_path($path, $self->{cf_app_root});
     $cgi = $self->new_cgi(@$args);
   }
 
@@ -561,12 +554,13 @@ sub split_path_url {
 	= split_path($path_translated
 		     , substr($path_translated, 0
 			      , length($path_translated) - length($path_info))
+		     , 0
 		    );
       (dir => "$root$loc", file => $file, subpath => $trailer
        , root => $root, location => "$user$loc");
     } else {
       my ($root, $loc, $file, $trailer)
-	= split_path($path_translated, $document_root);
+	= split_path($path_translated, $document_root, 0);
       (dir => "$root$loc", file => $file, subpath => $trailer
        , root => $root, location => $loc);
     }

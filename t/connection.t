@@ -57,7 +57,7 @@ my $i = 1;
   # もしくは Apache2::RequestRec に。
 }
 
-# 次は YATT::Lite::WebMVC0::Toplevel から make_connection して...
+# 次は YATT::Lite::WebMVC0 から make_connection して...
 
 $i++;
 require_ok('YATT::Lite::WebMVC0::App');

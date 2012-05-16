@@ -24,7 +24,7 @@ use lib ($rootname = $get_rootname->($untaint_any->(realpath(__FILE__))))
   .".lib";
 #
 use YATT::Lite::Breakpoint;
-use YATT::Lite::WebMVC0::Toplevel;
+use YATT::Lite::WebMVC0;
 
 #----------------------------------------
 my @opts;
@@ -35,7 +35,7 @@ for (; @ARGV and $ARGV[0] =~ /^--(\w+)(?:=(.*))?/s; shift @ARGV) {
 #----------------------------------------
 # You may edit params.
 
-my $dispatcher = YATT::Lite::WebMVC0::Toplevel->new
+my $dispatcher = YATT::Lite::WebMVC0->new
   (app_ns => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'

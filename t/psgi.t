@@ -21,7 +21,7 @@ BEGIN {
 }
 
 use HTTP::Request::Common;
-use YATT::Lite::WebMVC0::Toplevel;
+use YATT::Lite::WebMVC0;
 use YATT::Lite::PSGIEnv;
 
 my $rootname = untaint_any($FindBin::Bin."/".rootname($FindBin::RealScript));
@@ -38,7 +38,7 @@ sub is_or_like($$;$) {
 }
 
 {
-  my $app = YATT::Lite::WebMVC0::Toplevel
+  my $app = YATT::Lite::WebMVC0
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
 	  , app_ns => 'MyApp'

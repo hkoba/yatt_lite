@@ -85,11 +85,14 @@ sub load_dispatcher {
       undef;
     }
   };
-  unless ($script and -r  $script) {
+  unless ($script and -r $script) {
     croak "Can't load dispatcher. runyatt.cgi, runyatt.psgi or app.psgi is required";
   }
 
-  YATT::Lite::Factory->load_factory_script($script);
+  # $dir/t/../app.psgi => $dir/app.psgi
+  (my $realpath = $script) =~ s{/([^\.][^/]*)/\.\.(?:/|$)}{/}g;
+
+  YATT::Lite::Factory->load_factory_script($realpath);
 }
 
 sub ntests {
