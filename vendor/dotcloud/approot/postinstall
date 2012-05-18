@@ -1,0 +1,13 @@
+#!/bin/sh
+
+approot=$(dirname $0)
+
+cd $approot || exit 1
+
+mod=lib/YATT
+
+# git config -f .gitmodules submodule.$mod.url | read url
+
+url=git://github.com/hkoba/yatt_lite.git
+
+git clone $url $mod

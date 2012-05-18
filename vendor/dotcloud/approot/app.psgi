@@ -3,29 +3,30 @@
 use strict;
 use warnings FATAL => qw(all);
 
-use Cwd;
-use lib getcwd() . "/runyatt.lib";
-my @tmpldir = getcwd() . "/runyatt.ytmpl";
+use File::Spec;
+use File::Basename ();
+my $app_root;
+use lib ($app_root = File::Basename::dirname(File::Spec->rel2abs(__FILE__)))
+  . "/lib";
 
-use YATT::Lite::Web::Dispatcher;
-my $appdir = getcwd();
-my $docroot = $ENV{YATT_DOCUMENT_ROOT} || "$appdir/html";
+use YATT::Lite::WebMVC0;
 
-unless (-d $docroot) {
-  die "Can't find document root for " . __FILE__ . ": $docroot";
-}
-
-my $dispatcher = YATT::Lite::Web::Dispatcher->new
-  (document_root => $docroot
-   , basens => 'MyApp'
+my $dispatcher = YATT::Lite::WebMVC0->new
+  (app_ns => 'MyApp'
+   , app_root => $app_root
+   , doc_root => "$app_root/html"
+   , (-d "$app_root/ytmpl" ? (app_base => '@ytmpl') : ())
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
-   , tmpldirs => \@tmpldir
    , debug_cgen => $ENV{DEBUG}
    , debug_cgi  => $ENV{DEBUG_CGI}
    # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
    # , tmpl_encoding => 'utf-8'
   );
+
+if (caller && YATT::Lite::Factory->loading) {
+  return $dispatcher;
+}
 
 unless (caller) {
   require Plack::Runner;

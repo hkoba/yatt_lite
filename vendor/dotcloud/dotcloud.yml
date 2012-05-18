@@ -1,3 +1,5 @@
 www:
   type: perl
-  approot: yatt_lite
+  approot: approot
+  requirements:
+    - Plack
