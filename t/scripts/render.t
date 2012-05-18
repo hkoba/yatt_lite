@@ -8,7 +8,11 @@ use base qw(File::Spec);
 
 use FindBin;
 my $libdir;
-use lib $libdir = "$FindBin::Bin/../lib";
+BEGIN {
+  ($libdir) = grep {-e "$_/YATT/Lite"} "$FindBin::Bin/../lib", @INC;
+  BAIL_OUT("Can't find YATT/Lite directory!") unless defined $libdir;
+}
+use lib $libdir;
 
 use File::Basename;
 
@@ -43,7 +47,7 @@ foreach my $test (@tests) {
 
 sub test_html {
   my ($src, $res, $title) = @_;
-  if (not defined(my $out = qx($script $src)) or $?) {
+  if (not defined(my $out = qx($^X -I$libdir $script $src)) or $?) {
     fail $src;
   } else {
     eq_or_diff $out, read_file($res), $title // $src;
