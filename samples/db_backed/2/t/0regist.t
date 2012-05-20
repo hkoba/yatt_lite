@@ -14,15 +14,16 @@ my ($app_root, @libdir);
 BEGIN {
   if (-r __FILE__) {
     # detect where app.psgi is placed.
-    $app_root = File::Basename::dirname(File::Spec->rel2abs(__FILE__));
+    $app_root = dirname(dirname(File::Spec->rel2abs(__FILE__)));
   } else {
     # older uwsgi do not set __FILE__ correctly, so use cwd instead.
     $app_root = Cwd::cwd();
   }
-  if (-d (my $dn = "$app_root/lib")) {
+  my $dn;
+  if (-d (($dn = "$app_root/lib") . "/YATT")) {
     push @libdir, $dn
-  } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {
-    push @libdir, $found;
+  } elsif (($dn) = $app_root =~ m{^(.*?/)YATT/}) {
+    push @libdir, $dn;
   }
 }
 use lib $FindBin::Bin, @libdir;
