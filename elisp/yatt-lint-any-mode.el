@@ -99,6 +99,9 @@ To disable, set to nil.")
 		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir")))
 		  (concat libdir "/YATT/"))
 
+		 ((setq libdir (yatt-lint-any-find-upward "YATT"))
+		  (concat libdir "/"))
+
 		 ((setq libdir (yatt-lint-any-find-upward "lib"))
 		  (concat libdir "/YATT/"))
 

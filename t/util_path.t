@@ -1,16 +1,28 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
+# -*- mode: perl; coding: utf-8 -*-
+#----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
 sub MY () {__PACKAGE__}
+use base qw(File::Spec);
+use File::Basename;
+
+use FindBin;
+sub untaint_any {$_[0] =~ m{(.*)} and $1}
+my $libdir;
+BEGIN {
+  unless (grep {$_ eq 'YATT'} MY->splitdir($FindBin::Bin)) {
+    die "Can't find YATT in runtime path: $FindBin::Bin\n";
+  }
+  $libdir = dirname(dirname(untaint_any($FindBin::Bin)));
+}
+use lib $libdir;
+#----------------------------------------
 
 use autodie qw(mkdir chdir);
 use File::Temp qw(tempdir);
 use File::Path qw(make_path);
 use Test::More qw(no_plan);
-
-use FindBin;
-sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use lib untaint_any("$FindBin::Bin/lib");
 
 use YATT::Lite::Util::File qw(mkfile);
 

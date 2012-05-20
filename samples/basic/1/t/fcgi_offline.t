@@ -1,24 +1,39 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
+# -*- mode: perl; coding: utf-8 -*-
+#----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
+sub MY () {__PACKAGE__}
+use base qw(File::Spec);
+use File::Basename;
 
+use FindBin;
+sub untaint_any {$_[0] =~ m{(.*)} and $1}
+use Cwd ();
+my ($app_root, @libdir);
+BEGIN {
+  if (-r __FILE__) {
+    # detect where app.psgi is placed.
+    $app_root = File::Basename::dirname(File::Spec->rel2abs(__FILE__));
+  } else {
+    # older uwsgi do not set __FILE__ correctly, so use cwd instead.
+    $app_root = Cwd::cwd();
+  }
+  if (-d (my $dn = "$app_root/lib")) {
+    push @libdir, $dn
+  } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {
+    push @libdir, $found;
+  }
+}
+use lib @libdir;
+#----------------------------------------
 # To peek FCGI raw_result & raw_error, run with env DEBUG_FCGI=1
 
 use 5.010;
 
-sub untaint_any {$_[0] =~ m{(.*)} and $1}
-use FindBin;
-use File::Basename;
-use File::Spec;
-my ($libdir);
-use lib $libdir = "$FindBin::Bin/../lib";
-my $app_root = "$FindBin::Bin/..";
-# print STDERR join("\n", __FILE__, $libdir), "\n";
-
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Test::XHFTest2;
 
-sub MY () {__PACKAGE__}
 use base qw(YATT::Lite::Test::XHFTest2);
 use YATT::Lite::Util qw(lexpand);
 

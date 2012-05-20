@@ -257,11 +257,8 @@ sub to_app {
   unless (defined $self->{cf_doc_root}) {
     croak "document_root is undef!";
   }
-  $self->prepare_app;
-  return sub { $self->call(@_) }
+  return $self->SUPER::to_app;
 }
-
-sub prepare_app { return }
 
 sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;

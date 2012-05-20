@@ -6,6 +6,7 @@ use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
 use 5.010;
+use Scalar::Util qw(weaken);
 
 use base qw(YATT::Lite::NSBuilder File::Spec);
 use fields qw(cf_app_root
@@ -52,10 +53,33 @@ sub find_load_factory_script {
   $pack->load_factory_script($found);
 }
 
+{
+  my %sub2app;
+  sub to_app {
+    my ($self) = @_;
+    $self->prepare_app;
+    my $sub = sub { $self->call(@_) };
+    $sub2app{$sub} = $self;
+    weaken($sub2app{$sub});
+    $sub;
+  }
+  sub load_psgi_script {
+    my ($pack, $fn) = @_;
+    local $yatt_loading = 1;
+    my $sub = ckdo $fn;
+    $sub2app{$sub};
+  }
+  sub prepare_app { return }
+}
+
 sub load_factory_script {
   my ($pack, $fn) = @_;
   local $yatt_loading = 1;
-  ckdo $fn;
+  if ($fn =~ /\.psgi$/) {
+    $pack->load_psgi_script($fn);
+  } else {
+    ckdo $fn;
+  }
 }
 
 sub find_factory_script {
