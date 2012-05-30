@@ -124,8 +124,10 @@ sub mkurl {
   my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
   my $host = $glob->mkhost($scheme);
   my $req  = $glob->request_path;
-  (my $dir  = $req) =~ s{([^/]+)$}{};
-  my $orig = $1 // '';
+  my ($orig, $dir) = ('');
+  if (($dir = $req) =~ s{([^/]+)$}{}) {
+    $orig = $1;
+  }
 
   my $path = $dir . do {
     if (not defined $file or $file eq '') {

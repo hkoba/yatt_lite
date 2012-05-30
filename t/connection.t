@@ -76,7 +76,7 @@ my $i = 1;
 $i++;
 require_ok('YATT::Lite::WebMVC0::App');
 {
-  
+
   my $yatt = new YATT::Lite::WebMVC0::App
     (dir => rootname($0) . ".d"
      , app_ns => myapp($i)
@@ -94,7 +94,9 @@ require_ok('YATT::Lite::WebMVC0::App');
     is $con->request_path, "", "empty request path";
   }
 
+  my $THEME;
   {
+    $THEME = '/foo';
     my %env = qw(REQUEST_METHOD  GET
 		 PATH_INFO       /foo
 		 REQUEST_URI     /foo
@@ -106,14 +108,44 @@ require_ok('YATT::Lite::WebMVC0::App');
 	       );
     my $con = $yatt->make_connection(undef, env => \%env);
 
-    is $con->mkhost, '0.0.0.0:5000', "mkhost()";
-    is $con->mkurl, 'http://0.0.0.0:5000/foo', "mkurl()";
+    is $con->mkhost, '0.0.0.0:5000'
+      , "[$THEME] mkhost()";
+    is $con->mkurl, 'http://0.0.0.0:5000/foo'
+      , "[$THEME] mkurl()";
     is $con->mkurl('bar'), 'http://0.0.0.0:5000/bar'
-      , "mkurl(bar)";
+      , "[$THEME] mkurl(bar)";
     is $con->mkurl(undef, {bar => 'ba& z'})
-      , 'http://0.0.0.0:5000/foo?bar=ba%26+z', "mkurl(undef, {query})";
-    is $con->mkurl(undef, undef, local => 1), '/foo'
-      , "mkurl(,,local => 1)";
+      , 'http://0.0.0.0:5000/foo?bar=ba%26+z'
+	, "[$THEME] mkurl(undef, {query})";
+    is $con->mkurl(undef, undef, local => 1)
+      , '/foo'
+	, "[$THEME] mkurl(,,local => 1)";
+  }
+
+  {
+    $THEME = '/';
+    my %env = qw(REQUEST_METHOD  GET
+		 PATH_INFO       /
+		 REQUEST_URI     /
+		 HTTP_HOST       0.0.0.0:5050
+		 SERVER_NAME     0
+		 SERVER_PORT     5000
+		 SERVER_PROTOCOL HTTP/1.1
+		 psgi.url_scheme http
+	       );
+    my $con = $yatt->make_connection(undef, env => \%env);
+
+    is $con->mkhost, '0.0.0.0:5050', "[$THEME] mkhost()";
+
+    '/foo' =~ m{/(\w+)}; # Fill $1.
+    is $con->mkurl, 'http://0.0.0.0:5050/', "[$THEME] mkurl()";
+
+    is $con->mkurl('bar'), 'http://0.0.0.0:5050/bar'
+      , "[$THEME] mkurl(bar)";
+    is $con->mkurl(undef, {bar => 'ba& z'})
+      , 'http://0.0.0.0:5050/?bar=ba%26+z', "[$THEME] mkurl(undef, {query})";
+    is $con->mkurl(undef, undef, local => 1), '/'
+      , "[$THEME] mkurl(,,local => 1)";
   }
 
 }
