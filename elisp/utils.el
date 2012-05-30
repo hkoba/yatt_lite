@@ -15,6 +15,8 @@ is expanded into:
        (err  (plist-get result 'err)))
   body)"
 
+  (declare (debug ((&rest symbolp) form &rest form)))
+
   ;; This code is heavily borrowed from cl-macs.el:multiple-value-bind
   (let ((temp (make-symbol "--plist-bind-var--")))
     (list* 'let* (cons (list temp form)
@@ -23,6 +25,9 @@ is expanded into:
 				  (list v (list 'plist-get temp `(quote ,v)))))
 			       vars))
 	   body)))
+
+(unless (get 'plist-bind 'edebug-form-spec)
+  (put 'plist-bind 'edebug-form-spec '((&rest symbolp) form &rest form)))
 
 (put 'plist-bind 'lisp-indent-function 2)
 

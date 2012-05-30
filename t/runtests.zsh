@@ -9,7 +9,8 @@ setopt extendedglob
 
 # chdir to $DIST_ROOT
 bindir=$(cd $0:h; print $PWD)
-cd $0:h:h:h
+distdir=$bindir:h
+cd $distdir
 
 zparseopts -D -A opts C=o_cover T=o_taint -samples -brew:: || true
 
@@ -20,7 +21,7 @@ if (($+opts[--samples])); then
 elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     # If no **/*.t is specified:
     # To make relative path invocation happier.
-    argv=($0:h/**/*.t(N))
+    argv=(t/**/*.t(N))
     if [[ -d samples ]]; then
 	argv+=(samples/**/t/*.t(*N,@N))
     fi

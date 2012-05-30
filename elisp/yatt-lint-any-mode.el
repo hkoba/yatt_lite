@@ -1,6 +1,6 @@
 ;;; yatt-lint-any.el -- *Minor* mode to lint any (yatt related) files.
 
-;;; Copyright (C) 2010 KOBAYASI Hiroaki
+;;; Copyright (C) 2010~2012 KOBAYASI Hiroaki
 
 ;; Author: KOBAYASI Hiroaki <hkoba@cpan.org>
 
@@ -270,16 +270,15 @@ Currently only RHEL is supported."
       (let (match diag)
 	(cond ((setq match
 		     (yatt-lint-any-match
-		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
-		      err 'file 1 'line 2))
-	       (setq diag (substring err 0 (plist-get match 'pos)))
-	       )
-	      ((setq match
-		     (yatt-lint-any-match
 		      "^\\([^\n]+\\)\n  loaded from \\(file '\\([^']+\\)'\\|(unknown file)\\)?"
 		      err 'diag 1 'file 3))
-	       (setq diag (plist-get match 'diag))
-	       ))
+	       (setq diag (plist-get match 'diag)))
+	      ((setq match
+		     (yatt-lint-any-match
+		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
+		      err 'file 1 'line 2))
+	       (setq diag (substring err 0 (plist-get match 'pos))))
+	      )
 	(append `(rc ,rc err ,(or diag err)) match)))))
 
 ;;========================================
@@ -296,16 +295,17 @@ Currently only RHEL is supported."
 (defun yatt-lint-any-shell-command (cmd &rest args)
   (let ((tmpbuf (generate-new-buffer " *yatt-lint-temp*"))
 	rc err)
-    (unwind-protect
-	(setq rc (shell-command (apply #'concat cmd args) tmpbuf))
-      (setq err (with-current-buffer tmpbuf
-		  ;; To remove last \n
-		  (goto-char (point-max))
-		  (skip-chars-backward "\n")
-		  (delete-region (point) (point-max))
-		  (buffer-string)))
-      ;; (message "error=(((%s)))" err)
-      (kill-buffer tmpbuf))
+    (save-window-excursion
+      (unwind-protect
+	  (setq rc (shell-command (apply #'concat cmd args) tmpbuf))
+	(setq err (with-current-buffer tmpbuf
+		    ;; To remove last \n
+		    (goto-char (point-max))
+		    (skip-chars-backward "\n")
+		    (delete-region (point) (point-max))
+		    (buffer-string)))
+	;; (message "error=(((%s)))" err)
+	(kill-buffer tmpbuf)))
     `(rc ,rc err ,err)))
 
 (defun yatt-lint-any-match (pattern str &rest key-offset)
