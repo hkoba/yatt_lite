@@ -91,27 +91,31 @@ To disable, set to nil.")
    (setq yatt-lint-any-driver-path
 	 (let ((htaccess ".htaccess")
 	       (htyattcf ".htyattconfig.xhf") config
-	       action driver libdir)
+	       action driver libdir yattdir)
 	   (cond ((and
 		   ;; For vhost and non-standard DocumentRoot case,
 		   ;; Please specify info{libdir: ...} in your .htyattconfig.xhf
 		   (file-exists-p htyattcf)
-		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir")))
-		  (concat libdir "/YATT/"))
+		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir"))
+		   (file-exists-p (setq yattdir (concat libdir "/YATT/"))))
+		  yattdir)
 
 		 ((setq libdir (yatt-lint-any-find-upward "YATT"))
 		  (concat libdir "/"))
 
-		 ((setq libdir (yatt-lint-any-find-upward "lib"))
-		  (concat libdir "/YATT/"))
+		 ((and
+		   (setq libdir (yatt-lint-any-find-upward "lib"))
+		   (file-exists-p (setq yattdir (concat libdir "/YATT/"))))
+		  yattdir)
 
 		 ((and (file-exists-p htaccess)
 		       (setq action (yatt-lint-any-htaccess-find htaccess
 				     "Action" "x-yatt-handler"))
 		       (file-exists-p
-			(setq libdir (yatt-lint-any-action-libdir action))))
-		  (concat libdir "/YATT/")
-		  )
+			(setq libdir (yatt-lint-any-action-libdir action)))
+		       (file-exists-p (setq yattdir (concat libdir "/YATT/"))))
+		  yattdir)
+
 		 ((file-exists-p "lib/YATT")
 		  "lib/YATT/")
 		 )))))
