@@ -34,6 +34,7 @@ use 5.010;
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Test::XHFTest2;
+use YATT::t::t_preload; # To make Devel::Cover happy.
 
 use base qw(YATT::Lite::Test::XHFTest2);
 use YATT::Lite::Util qw(lexpand);

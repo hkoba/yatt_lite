@@ -29,6 +29,8 @@ use YATT::Lite::WebMVC0;
 use YATT::Lite::Util qw(lexpand appname);
 require YATT::Lite::Test::TestFiles;
 
+use YATT::t::t_preload; # To make Devel::Cover happy.
+
 sub myapp {join _ => MyTest => appname($0), shift}
 
 my ($quiet, $i) = (1);

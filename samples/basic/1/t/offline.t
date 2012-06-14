@@ -34,6 +34,7 @@ use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(ostream);
 use YATT::Lite::Test::XHFTest2; # To import Item class.
 use base qw(YATT::Lite::Test::XHFTest2); # XXX: Redundant, but required.
+use YATT::t::t_preload; # To make Devel::Cover happy.
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
 			      , @ARGV ? @ARGV : $FindBin::Bin);

@@ -22,6 +22,7 @@ use lib $libdir;
 use Test::More;
 use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Breakpoint;
+use YATT::t::t_preload; # To make Devel::Cover happy.
 
 sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
 

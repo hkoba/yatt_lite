@@ -35,6 +35,7 @@ use YATT::Lite::Test::XHFTest2;
 use base qw(YATT::Lite::Test::XHFTest2);
 use fields qw(base_url);
 use YATT::Lite::Util qw(lexpand);
+use YATT::t::t_preload; # To make Devel::Cover happy.
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
 			      , @ARGV ? @ARGV : $FindBin::Bin);

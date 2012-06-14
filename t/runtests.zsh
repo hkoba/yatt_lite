@@ -9,10 +9,20 @@ setopt extendedglob
 
 # chdir to $DIST_ROOT
 bindir=$(cd $0:h; print $PWD)
+if [[ $bindir != */YATT/t ]]; then
+    cat 1>&2 <<EOF; exit 1
+YATT installation path problem!
+To use this t/runtests.zsh, your installation should end with 'YATT'.
+(You can achieve it like this: git clone ...  lib/YATT)
+EOF
+
+fi
+
+libdir=$bindir:h:h
 distdir=$bindir:h
 cd $distdir
 
-zparseopts -D -A opts C=o_cover T=o_taint -samples -brew:: || true
+zparseopts -D -A opts C=o_cover T=o_taint l+:=o_lib -samples -brew:: || true
 
 if (($+opts[--samples])); then
     # Test samples only.
@@ -52,20 +62,36 @@ if [[ -n $o_cover ]]; then
     echo "[[Coverage mode]]"
     cover_db=$bindir/cover_db
     charset=utf-8
+
     ignore=(
 	-ignore_re '^/usr/local/'
-	-ignore_re '\.t$'
+	-ignore_re '\.(?:t|yatt|ytmpl|ydo|htyattrc\.pl|psgi)$'
+	-ignore_re '^My[A-Z]'
+	-ignore_re '/t_'
+	-ignore_re '^f\d+$'
     )
+    for d in ${(s/:/)PERL5LIB}; do
+	ignore+=(-ignore_re "^$d")
+    done
+
     harness+=(-MDevel::Cover=-db,$cover_db,${(j/,/)ignore})
+
+    harness+=(-I$libdir)
+
+    if (($#o_lib)); then
+	for o val in $o_lib; do
+	    harness+=(-I$val)
+	done
+    fi
 fi
 
 if [[ -n $HARNESS_PERL_SWITCHES ]]; then
-    print HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
+    print -R HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
 fi
 if [[ -n $o_taint ]]; then
     ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
 else
-    ${PERL:-perl} =prove $argv || true
+    ${PERL:-perl} =prove $o_lib $argv || true
 fi
 
 : ${docroot:=/var/www/html}

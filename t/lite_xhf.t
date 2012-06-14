@@ -25,6 +25,8 @@ use encoding qw(:locale);
 
 use YATT::Lite::Test::TestUtil;
 #========================================
+use YATT::t::t_preload; # To make Devel::Cover happy.
+
 use YATT::Lite;
 use YATT::Lite::Util qw(lexpand);
 use YATT::Lite::Util qw(appname);
@@ -94,6 +96,16 @@ foreach my MY $sect (@section) {
 	local $SIG{__WARN__} = sub {$error = @_ > 1 ? [@_] : shift};
 	my ($pkg) = eval {
 	  my $tmpl = $yatt->find_file($test->{realfile});
+
+	  #
+	  # Workaround for false failure caused by Devel::Cover.
+	  #
+	  local $SIG{__WARN__} = sub {
+	    my ($msg) = @_;
+	    return if $msg =~ /^Devel::Cover: Can't open \S+ for MD5 digest:/;
+	    die $msg;
+	  };
+
 	  $yatt->find_product(perl => $tmpl);
 	};
 	is $error, undef, "$title - compiled.";
