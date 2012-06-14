@@ -79,7 +79,6 @@ baz:
  
 END
 
-     , undef
      , [<<END, "foo bar" => 'baz']
 - foo bar
 - baz
@@ -113,6 +112,25 @@ bar[
 ]
 END
 
+     , [<<END, [bar => 1, baz => 2], [1..3], [1..3, [4..7]]]
+[
+bar: 1
+baz: 2
+]
+[
+- 1
+- 2
+- 3
+]
+[
+1: 2
+3[
+4: 5
+6: 7
+]
+]
+END
+
      , [<<END, {foo => 'bar', '' => 'baz', bang => undef}]
 {
 : baz
@@ -122,7 +140,21 @@ foo: bar
 END
     );
 
-plan tests => 2 + 3*grep(defined $_, @tests);
+my @dumponly =
+  (
+   [<<END, foo => [bless([foo => 1, bar => 2], "ARRAY"), "baz"]]
+foo[
+[
+foo: 1
+bar: 2
+]
+- baz
+]
+END
+
+  );
+
+plan tests => 2 + 3*grep(defined $_, @tests) + @dumponly;
 
 use_ok($LOADER);
 use_ok($DUMPER);
@@ -140,4 +172,18 @@ foreach my $data (@tests) {
   eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "dump: $title";
   is_deeply [$LOADER->new(string => $got)->read], \@data, "read: $title";
   is_deeply [$LOADER->new(string => $exp)->read], \@data, "read_exp: $title";
+}
+
+foreach my $data (@dumponly) {
+  my ($exp, @data) = @$data;
+  my $title = join(", ", Data::Dumper->new(\@data)->Terse(1)->Indent(0)->Dump);
+  eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "dump: $title";
+}
+
+{
+  package ARRAY;
+  use overload qw("" stringify);
+  sub stringify {
+    "faked_string";
+  }
 }

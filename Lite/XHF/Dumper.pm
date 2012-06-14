@@ -44,7 +44,7 @@ sub _dump_value {
   } elsif (ref $_[0] eq 'HASH') {
     dump_hash(shift);
   } else {
-    croak "Can't dump ref as XHF: $_[0]";
+    croak "Can't dump ref(@{[ref $_[0]]}) as XHF: $_[0]";
   }
 }
 
@@ -63,7 +63,21 @@ sub escape {
 
 sub dump_array {
   my ($item) = @_;
-  "[\n" . join("\n", map {_dump_value($_, '-')} @$item) . "\n]";
+  "[\n" . join("\n", do {
+    if (@$item and @$item % 2 == 0 and looks_like_hash($item)) {
+      _dump_pairs(@$item);
+    } else {
+      map {_dump_value($_, '-')} @$item
+    }
+  }) . "\n]";
+}
+
+sub looks_like_hash {
+  my ($item) = @_;
+  for (my $i = 0; $i < @$item; $i += 2) {
+    return 0 if ref($item->[$i]) or $item->[$i] !~ m{^$cc_name+$};
+  }
+  return 1;
 }
 
 sub dump_hash {
