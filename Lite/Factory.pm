@@ -97,6 +97,12 @@ sub find_factory_script {
 
 #========================================
 
+sub init_app_ns {
+  (my MY $self) = @_;
+  $self->SUPER::init_app_ns;
+  $self->{default_app}->ensure_entns($self->{app_ns});
+}
+
 sub _after_after_new {
   (my MY $self) = @_;
   $self->SUPER::_after_after_new;
@@ -116,12 +122,6 @@ sub _after_after_new {
     push @{$self->{tmpldirs}}, $dir;
     $self->get_yatt('/');
   }
-}
-
-sub init_app_ns {
-  (my MY $self) = @_;
-  $self->SUPER::init_app_ns;
-  $self->{default_app}->ensure_entns($self->{app_ns});
 }
 
 #========================================
