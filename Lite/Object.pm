@@ -12,9 +12,11 @@ sub new {
   my $self = fields::new(shift);
   if (@_) {
     my @task = $self->configure(@_);
+    $self->_before_after_new;
     $self->after_new;
     $$_[0]->($self, $$_[1]) for @task;
   } else {
+    $self->_before_after_new;
     $self->after_new;
   }
 
@@ -24,30 +26,23 @@ sub new {
   $self;
 }
 
-sub _after_after_new {}
-
 sub just_new {
   my $self = fields::new(shift);
   # To delay configure_zzz.
   ($self, $self->configure(@_));
 }
 
-sub cf_by_file {
-  (my MY $self, my $fn) = @_[0..1];
-  my ($ext) = $fn =~ m{\.(\w+)$};
-  $self->cf_by_filetype($ext, $fn, @_[3..$#_]);
-}
+# General initialization hook for each user class.
+sub after_new {};
 
-sub cf_by_filetype {
-  (my MY $self, my ($ext, $fn)) = @_[0..2];
-  $ext //= 'xhf';
-  my $sub = $self->can("read_file_$ext")
-    or croak "Unknown config file type: $fn";
-  $self->_with_loading_file
-    ($fn, sub {
-       $self->configure($sub->($self, $fn));
-     });
-}
+# Two more initialization hooks for framework writer.
+
+# Called just after parameter initialization.
+# Good for private member initialization.
+sub _before_after_new {}
+
+# Called after all configure_ZZZ hook is called.
+sub _after_after_new  {}
 
 our $loading_file;
 sub _loading_file {
@@ -108,8 +103,12 @@ sub configure {
   }
 }
 
-# Hook.
-sub after_new {};
+sub cf_list {
+  my MY $self = shift;
+  my $pat = shift || qr{^cf_(.*)};
+  my $fields = YATT::Lite::Util::fields_hash($self);
+  sort map {($_ =~ $pat) ? $1 : ()} keys %$fields;
+}
 
 #
 # util for delegate
