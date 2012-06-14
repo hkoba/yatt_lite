@@ -81,7 +81,14 @@ sub rootname {
   my $exe = rootname(__FILE__) . ".d/t_cmd1.pl";
   my $run = sub {
     my ($cmdline) = @_;
-    chomp(my $out = qx/$exe $cmdline/);
+    my @opts;
+    if (my $switch = $ENV{HARNESS_PERL_SWITCHES}) {
+      push @opts, split " ", $switch;
+    }
+
+    my $kidpid = open my $pipe, "-|", $^X, @opts, $exe, split " ", $cmdline
+      or die "Can't fork: $!";
+    chomp(my $out = <$pipe>);
     $out;
   };
 
