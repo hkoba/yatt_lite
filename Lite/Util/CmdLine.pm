@@ -15,7 +15,7 @@ sub parse_opts {
     $result = $wantarray ? [] : {};
   }
   while (@$list and my ($n, $v) = $list->[0]
-	 =~ m{^(?:--? ([\w:\-\.]+) (?: =(.*))? | -- )$}xs) {
+	 =~ m{^--$ | ^(?:--? ([\w:\-\.]+) (?: =(.*))?)$}xs) {
     shift @$list;
     last unless defined $n;
     $n = $alias->{$n} if $alias and $alias->{$n};
