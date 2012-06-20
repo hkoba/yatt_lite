@@ -71,6 +71,33 @@ my $i = 1;
   # もしくは Apache2::RequestRec に。
 }
 
+$i++;
+{
+  my $yatt = new YATT::Lite(app_ns => myapp($i)
+			    , vfs => [data => {foo => 'bar'}]
+			    , die_in_error => 1
+			    , debug_cgen => $ENV{DEBUG});
+
+  {
+    package MyBackend1; sub MY () {__PACKAGE__}
+    use base qw/YATT::Lite::Object/;
+    use fields qw/cf_models cf_name/;
+    sub model {
+      (my MY $self, my $name) = @_;
+      $self->{cf_models}{$name};
+    }
+  }
+  my $backend = MyBackend1->new
+    (name => 'Test', models => {foo => 'bar', bar => 3});;
+  {
+    my $con = $yatt->make_connection(undef, backend => $backend);
+    is $con->backend(cget => 'name'), 'Test'
+      , 'con->backend(method,@args)';
+    is $con->model('foo'), 'bar'
+      , 'con->model(foo)';
+  }
+}
+
 # 次は YATT::Lite::WebMVC0 から make_connection して...
 
 $i++;

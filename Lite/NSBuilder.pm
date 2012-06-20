@@ -19,9 +19,9 @@ use YATT::Lite::Util qw(lexpand);
   use fields qw(cf_app_ns app_ns
 		cf_default_app default_app
 		subns);
-  sub _after_after_new {
+  sub _before_after_new {
     (my MY $self) = @_;
-    $self->SUPER::_after_after_new;
+    $self->SUPER::_before_after_new;
     if ($self->{cf_app_ns} and $SEEN_NS{$self->{cf_app_ns}}++) {
       confess "app_ns '$self->{cf_app_ns}' is already used!";
     }

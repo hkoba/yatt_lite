@@ -8,25 +8,26 @@ sub MY () {__PACKAGE__}
 use 5.010;
 
 #========================================
-# Dispatcher 層: DirHandler と、その他の外部Action のキャッシュ, InstNS の生成
+# Dispatcher 層: Request に応じた DirApp をロードし起動する
 #========================================
 
-# caller, runtime env の捨象. Toplevel.
-# DirHandler の生成, .htyattrc.pl の読み込みとキャッシュに責任を持つ.
 use base qw(YATT::Lite::Factory);
-use fields qw(DirHandler Action
-	      cf_is_gateway
+use fields qw(cf_is_gateway
 	      cf_is_psgi
 	      cf_debug_cgi
 	      cf_debug_psgi
 	      cf_psgi_static
 	      cf_index_name
+
+	      cf_backend
 	    );
-# XXX: Should rename: is_gateway => is_online
+
+# XXX: Should rename is_gateway to: is_online, is_http or (inverted) noheader.
 
 use YATT::Lite::Util qw(cached_in split_path catch
 			lookup_path
 			mk_http_status
+			default
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 sub default_default_app () {'YATT::Lite::WebMVC0::App'}
@@ -112,12 +113,8 @@ sub call {
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
-  my @params = (cgi => $req, is_psgi => 1, env => $env
-		, dir => $virtdir
-		, file => $file
-		, subpath => $trailer
-		, system => $self
-		, root => $self->{cf_doc_root}, location => $loc);
+  my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]
+				       , is_psgi => 1, cgi => $req);
 
   my $con = $dh->make_connection(undef, @params);
 
@@ -204,18 +201,15 @@ sub render {
   my $virtdir = "$self->{cf_doc_root}$loc";
   my $realdir = "$tmpldir$loc";
 
-  my @params = (dir => $virtdir
-		, file => $file
-		, subpath => $trailer
-		, system => $self
-		, root => $self->{cf_doc_root}, location => $loc);
+  my Env $env = Env->psgi_simple_env;
+  $env->{PATH_INFO} = $path_info;
+  $env->{REQUEST_URI} = $path_info;
+
+  my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]);
 
   if (@rest == 2 and defined $rest[-1] and ref $args eq 'HASH') {
     require Hash::MultiValue;
-    my $env = Env->psgi_simple_env;
-    $env->{PATH_INFO} = $path_info;
-    $env->{REQUEST_URI} = $path_info;
-    push @params, env => $env, hmv => Hash::MultiValue->from_mixed($args);
+    push @params, hmv => Hash::MultiValue->from_mixed($args);
   }
 
   my $con = $dh->make_connection(undef, @params);
@@ -244,12 +238,20 @@ sub is_path_translated_mode {
   ($env->{REDIRECT_STATUS} // 0) == 200
 }
 
-sub to_app {
+sub prepare_app {
   (my MY $self) = @_;
   $self->{cf_is_psgi} = 1;
   require Plack::Request;
   require Plack::Response;
-  $self->init_by_env; # XXX: meaningless.
+  my $backend;
+  if ($backend = $self->{cf_backend}
+      and my $sub = $backend->can('startup')) {
+    $sub->($backend, $self, $self->preload_apps);
+  }
+}
+
+sub to_app {
+  (my MY $self) = @_;
 #  XXX: Should check it.
 #  unless (defined $self->{cf_app_root}) {
 #    croak "app_root is undef!";
@@ -274,6 +276,28 @@ sub psgi_error {
   return [$status, ["Content-type", "text/plain", @rest], [$msg]];
 }
 
+sub connection_param {
+  (my MY $self, my ($env, $quad, @rest)) = @_;
+  my ($virtdir, $loc, $file, $subpath) = @$quad;
+  (env => $env
+   , dir => $virtdir
+   , location => $loc
+   , file => $file
+   , subpath => $subpath
+   , system => $self
+
+   , defined $self->{cf_backend} ? (backend => $self->{cf_backend}) : ()
+
+   # May be overridden.
+   , root => $self->{cf_doc_root}  # XXX: is this ok?
+   , $self->cf_delegate_defined(qw(is_psgi))
+   , is_gateway => $self->is_gateway
+
+   # override by explict ones
+   , @rest
+  );
+}
+
 #========================================
 
 sub dispatch {
@@ -289,7 +313,7 @@ sub dispatch {
 #		     ); return;
 #  }
 
-  my ($dh, $con) = $self->run_dirhandler($fh, env => $env, @params);
+  my ($dh, $con) = $self->run_dirhandler($fh, @params);
   # $con->commit を呼ぶときに $YATT, $CON が埋まっているようにするため
   $dh->commit($con);
   $con;
@@ -305,7 +329,7 @@ sub run_dirhandler {
     or die "Unknown directory: $params{dir}";
   # XXX: cache のキーは相対パスか、絶対パスか?
 
-  my $con = $dh->make_connection($fh, system => $self, %params);
+  my $con = $dh->make_connection($fh, %params);
 
   $dh->handle($dh->cut_ext($params{file}), $con, $params{file});
 
@@ -379,7 +403,7 @@ sub runas_fcgi {
   # $args = \@ARGV
   # %opts is fcgi specific options.
 
-  $self->{cf_is_psgi} = 1;
+  local $self->{cf_is_psgi} = 1;
 
   # In suexec fcgi, $0 will not be absolute path.
   my $progname = $0 if $0 =~ m{^/};
@@ -511,12 +535,6 @@ sub make_cgi {
 
     # XXX: /~user_dir の場合は $dir ne $root$loc じゃんか orz...
 
-    return (cgi => $cgi
-	    , dir => "$root$loc", file => $file, subpath => $trailer
-	    , root => $root, location => $loc
-	    , $self->cf_delegate_defined(qw(is_psgi))
-	    , is_gateway => $self->is_gateway);
-
   } else {
     my $path = shift @$args;
     unless (defined $path) {
@@ -535,9 +553,8 @@ sub make_cgi {
     $cgi = $self->new_cgi(@$args);
   }
 
-  (cgi => $cgi, dir => "$root$loc", file => $file, subpath => $trailer
-   , root => $root, location => $loc
-   , is_gateway => $self->is_gateway);
+  $self->connection_param($env, ["$root$loc", $loc, $file, $trailer]
+			  , cgi => $cgi, root => $root, is_psgi => 0);
 }
 
 # XXX: kludge! redundant!
@@ -569,6 +586,34 @@ sub split_path_url {
     my %info = @info;
     \%info;
   }
+}
+
+#----------------------------------------
+
+sub preload_apps {
+  (my MY $self, my (@dir)) = @_;
+  push @dir, $self->{cf_doc_root} unless @dir;
+
+  my @apps;
+  foreach my $dir ($self->find_apps(@dir)) {
+    push @apps, my $app = $self->get_dirhandler($dir);
+  }
+  @apps;
+}
+
+sub find_apps {
+  (my MY $self, my @dir) = @_;
+  require File::Find;
+  my @apps;
+  my $handler = sub {
+    push @apps, $_ if -d;
+  };
+  File::Find::find({wanted => $handler
+		    , no_chdir => 1
+		    , follow_skip => 2}
+		   , @dir
+		  );
+  @apps;
 }
 
 #========================================

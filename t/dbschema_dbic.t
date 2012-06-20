@@ -55,9 +55,18 @@ my $DBNAME = shift || ':memory:';
 
   package main;
   my $schema = $CLASS->connect("dbi:SQLite:dbname=$DBNAME");
+
+  isa_ok($schema, "DBIx::Class::Schema");
+  isa_ok($schema->YATT_DBSchema, "YATT::Lite::WebMVC0::DBSchema::DBIC");
+
   $schema->YATT_DBSchema->deploy;
 
   ok my $author = $schema->resultset('Author'), "resultset Author";
+  is $author, $schema->YATT_DBSchema->resultset('Author')
+    , "DBSchema->resultset() is delegated to DBIC";
+  is $author, $schema->YATT_DBSchema->model('Author')
+    , "model() is alias of resultset()";
+
   ok my $book = $schema->resultset('Book'), "resultset Book";
 
   is((my $foo = $author->create({name => 'Foo'}))->id

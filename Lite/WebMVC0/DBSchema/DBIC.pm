@@ -4,7 +4,9 @@ use warnings FATAL => qw(all);
 use Carp;
 
 use base qw(YATT::Lite::WebMVC0::DBSchema);
-use fields qw(DBIC DBIC_package);
+use fields qw(DBIC cf_DBIC);
+
+use YATT::Lite::Util::AsBase qw/_import_as_base/;
 
 require DBIx::Class::Core;
 
@@ -17,10 +19,36 @@ use YATT::Lite::Types
 
 use YATT::Lite::Util qw(globref lexpand terse_dump);
 
+sub dbic {
+  (my MY $schema) = @_; $schema->{DBIC};
+}
+
+sub connect {
+  my MY $schema = ref $_[0] ? shift() : shift->new;
+  $schema->{DBIC} = $schema->{cf_DBIC}->connect(@_);
+  $schema;
+}
+
+sub startup {
+  (my MY $schema, my (@apps)) = @_;
+  unless ($schema->{cf_DBIC}) {
+    croak "DBIC classname parameter is empty!";
+  }
+  unless ($schema->{cf_DBIC} =~ /::/) {
+    croak "DBIC classname MUST has '::'! $schema->{cf_DBIC}";
+  }
+  $schema->SUPER::startup(@apps);
+  $schema->build_dbic($schema->{cf_DBIC});
+  if (my (@args) = $schema->{cf_DBH}
+      || lexpand($schema->{cf_connection_spec})) {
+    $schema->connect(@args);
+  }
+}
+
 sub import {
-  my ($pack) = shift;
-  return unless @_;
-  $pack->buildns(@_);
+  YATT::Lite::Util::AsBase::parse_args(\@_, scalar caller);
+  return unless @_ >= 2;
+  goto &build_dbic;
 }
 
 # use YATT::Lite::WebMVC0::DBSchema::DBIC $pkg => @desc;
@@ -28,18 +56,39 @@ sub import {
 # $pkg                 ISA DBIC_SCHEMA (ISA DBIx::Class::Schema)
 # ${pkg}::Result::$tab ISA DBIx::Class::Core
 
-sub buildns {
-  my ($myPkg, $DBIC) = splice @_, 0, 2;
-  my MY $schema = $myPkg->new(@_);
+# XXX: Make sure build_dbic is callable many times.
+sub build_dbic {
+  my ($class_or_obj, $DBIC) = splice @_, 0, 2;
+  (my $myPkg, my MY $schema) = do {
+    if (ref $class_or_obj) {
+      (ref $class_or_obj, $class_or_obj);
+    } else {
+      ($class_or_obj, $class_or_obj->new(@_));
+    }
+  };
+
+  $DBIC //= caller . '::DBIC';
+  {
+    my $sym = globref($DBIC, undef);
+    unless (*{$sym}{CODE}) {
+      *$sym = sub () { $DBIC }
+    }
+  }
 
   # DBIC->YATT_DBSchema holds YATT::Lite::WebMVC0::DBSchema::DBIC instance.
-  *{globref($DBIC, 'YATT_DBSchema')} = sub {
-    my $dbic = shift;
-    # Class method として呼んだときは, schema に set しない。
-    $schema->{DBIC} ||= $dbic if defined $dbic and ref $dbic; # XXX: weaken??
-    $schema;
-  };
-  $schema->{DBIC_package} = $DBIC;
+  {
+    my $sym = globref($DBIC, 'YATT_DBSchema');
+    unless (*{$sym}{CODE}) {
+      *$sym = sub {
+	my $dbic = shift;
+	# Class method として呼んだときは, schema に set しない。
+	$schema->{DBIC} ||= $dbic
+	  if defined $dbic and ref $dbic; # XXX: weaken??
+	$schema;
+      };
+    }
+  }
+  $schema->{cf_DBIC} = $DBIC;
 
   *{globref($DBIC, 'ISA')} = [$myPkg->DBIC_SCHEMA];
   $myPkg->add_inc($DBIC);
@@ -63,7 +112,7 @@ sub buildns {
       $tabClass->result_source_instance->view_definition($tab->{cf_view});
       $tabClass->result_source_instance->is_virtual($tab->{cf_virtual} ? 1 : 0);
     } else {
-      $pk = $schema->info_table_pk($tab);
+      $pk = $schema->get_table_pk($tab);
       push @comp, qw(PK::Auto) if $pk and $pk->{cf_autoincrement};
       $tabClass->load_components(@comp);
       $tabClass->table($tab->{cf_name});
@@ -81,7 +130,7 @@ sub buildns {
       }
       $tabClass->add_columns(@colSpecs);
     }
-    $tabClass->set_primary_key($schema->info_table_pk($tab)) if $pk;
+    $tabClass->set_primary_key($schema->get_table_pk($tab)) if $pk;
     foreach my $uniq (@constraints) {
       print STDERR <<END if $schema->{cf_verbose};
 -- $tabClass->add_unique_constraint([@{[join ", ", @$uniq]}])
@@ -153,19 +202,28 @@ sub ensure_created {
 
 # XXX: delegate は、やりすぎだったかもしれない。
 sub add_delegate {
-  my ($pack, $name) = @_;
-  *{globref($pack, $name)} = sub {
+  my ($pack) = shift;
+  my ($alias, $dbic_method) = do {
+    if (@_ == 2) {
+      @_;
+    } else {
+      ($_[0], $_[0]);
+    }
+  };
+  *{globref($pack, $alias)} = sub {
     my MY $self = shift;
-    $self->{DBIC}->$name(@_);
+    $self->{DBIC}->$dbic_method(@_);
   };
 }
 
 foreach my $name (keys %DBIx::Class::Schema::) {
   next unless $name =~ /^[a-z]\w*$/;
   next unless *{$DBIx::Class::Schema::{$name}}{CODE};
-  next if $YATT::Lite::WebMVC0::DBSchema::DBIC::{$name};
+  next if MY->can($name);
   MY->add_delegate($name);
 }
+
+MY->add_delegate(model => 'resultset');
 
 {
   package YATT::Lite::WebMVC0::DBSchema::DBIC::DBIC_SCHEMA;

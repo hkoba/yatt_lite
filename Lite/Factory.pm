@@ -32,6 +32,7 @@ use fields qw(cf_app_root
 );
 
 
+use YATT::Lite::Util::AsBase;
 use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in
 			lookup_dir fields_hash);
 use YATT::Lite::XHF;

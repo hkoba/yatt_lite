@@ -106,3 +106,41 @@ END
     }
   }
 }
+
+{
+  {
+    package MyBackend1; sub MY () {__PACKAGE__}
+    use base qw/YATT::Lite::Object/;
+    use fields qw/base_path
+		  paths
+		  cf_name/;
+    sub startup {
+      (my MY $self, my $router, my @apps) = @_;
+      my $docs = $self->{base_path} = $router->cget('doc_root');
+      $docs =~ s,/+$,,;
+      foreach my $app (@apps) {
+	my $dir = $app->cget('dir');
+	$dir =~ s/^\Q$docs\E//;
+	push @{$self->{paths}}, $dir;
+      }
+    }
+
+    sub paths {
+      (my MY $self) = @_;
+      sort @{$self->{paths}}
+    }
+  }
+  my $backend = MyBackend1->new(name => 'backend test');
+  my $app = YATT::Lite::WebMVC0
+    ->new(app_root => $FindBin::Bin
+	  , doc_root => "$rootname.d"
+	  , app_ns => 'MyApp2'
+	  , backend => $backend
+	 )
+      ->to_app;
+
+  is_deeply [$backend->paths]
+    , ['', qw|/beta /test.lib|]
+    , "backend startup is called";
+}
+

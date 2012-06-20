@@ -57,13 +57,20 @@ my @schema1
     , [("${CLASS}::Table") x 2]
       , "$THEME list_tables raw=>1";
 
-  is ref $schema->info_table('Author'), "${CLASS}::Table"
-    , "$THEME info_table Author";
+  is ref $schema->get_table('Author'), "${CLASS}::Table"
+    , "$THEME get_table Author";
 
   is_deeply [map {[$_, $schema->list_table_columns($_)]} $schema->list_tables]
     , [[Author => qw(author_id name)], [Book => qw(book_id author_id name)]]
       , "$THEME list_table_columns";
 
+  $schema->extend_table(Book => undef
+			, price => 'int'
+			, isbn => [text => -unique]);
+
+  is_deeply [$schema->list_table_columns('Book')]
+    , [qw(book_id author_id name price isbn)]
+      , "$THEME extend_table";
 
   is_deeply [$schema->list_relations('Author')]
     , [[has_many => 'books', author_id => 'Book']]
@@ -82,10 +89,6 @@ my @schema1
   ok(my $schema = $CLASS->new(DBH => $dbh, @schema1)
      , "$THEME Can new without connection spec");
 
-  is_deeply $dbh->selectall_arrayref
-    (q|select name from sqlite_master where type = 'table'|)
-      , [], "$THEME no table before create";
-
   eq_or_diff join("", map {chomp;"$_;\n"} $schema->sql_create), <<'END'
 CREATE TABLE Author
 (author_id integer primary key
@@ -97,6 +100,29 @@ CREATE TABLE Book
 CREATE INDEX Book_author_id on Book(author_id);
 END
     , "$THEME SQL returned by sql_create";
+
+  $schema->extend_table(Book => undef
+			, price => 'int'
+			, isbn => [text => -unique]);
+
+  eq_or_diff join("", map {chomp;"$_;\n"} $schema->sql_create), <<'END'
+CREATE TABLE Author
+(author_id integer primary key
+, name text);
+CREATE TABLE Book
+(book_id integer primary key
+, author_id int
+, name text
+, price int
+, isbn text unique);
+CREATE INDEX Book_author_id on Book(author_id);
+END
+    , "$THEME (after extend_table) SQL returned by sql_create";
+
+
+  is_deeply $dbh->selectall_arrayref
+    (q|select name from sqlite_master where type = 'table'|)
+      , [], "$THEME no table before create";
 
   $schema->create(sqlite => $DBNAME);
 
@@ -161,8 +187,8 @@ END
     , [("${CLASS}::Table") x 2]
       , "$THEME list_tables raw=>1";
 
-  is ref $schema->info_table('Author'), "${CLASS}::Table"
-    , "$THEME info_table Author";
+  is ref $schema->get_table('Author'), "${CLASS}::Table"
+    , "$THEME get_table Author";
 
   is_deeply [map {[$_, $schema->list_table_columns($_)]} $schema->list_tables]
     , [[Author => qw(author_id name)], [Book => qw(book_id author_id name)]]
@@ -200,8 +226,8 @@ END
     , [("${CLASS}::Table") x 2]
       , "$THEME list_tables raw=>1";
 
-  is ref $schema->info_table('Author'), "${CLASS}::Table"
-    , "$THEME info_table Author";
+  is ref $schema->get_table('Author'), "${CLASS}::Table"
+    , "$THEME get_table Author";
 
   is_deeply [map {[$_, $schema->list_table_columns($_)]} $schema->list_tables]
     , [[Book => qw(book_id author_id name)], [Author => qw(author_id name)]]

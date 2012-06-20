@@ -51,7 +51,7 @@ require Scalar::Util;
     my ($thing, $name) = @_;
     my $class = ref $thing || $thing;
     no strict 'refs';
-    \*{join("::", $class, $name)};
+    \*{join("::", $class, defined $name ? $name : ())};
   }
   sub symtab {
     *{globref(shift, '')}{HASH}
@@ -94,6 +94,7 @@ require Scalar::Util;
     my $__SCRIPT__ = join "", grep {
       defined $_ and Scalar::Util::tainted($_) ? croak "tainted! '$_'" : 1;
     } @_;
+    local $@;
     my @__RESULT__;
     if (wantarray) {
       @__RESULT__ = eval $__SCRIPT__;
@@ -107,6 +108,7 @@ require Scalar::Util;
     ckeval("require $_[0]");
   }
   sub ckdo {
+    local $@;
     my @__RESULT__;
     if (wantarray) {
       @__RESULT__ = do $_[0];

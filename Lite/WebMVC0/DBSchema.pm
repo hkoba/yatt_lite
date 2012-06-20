@@ -4,22 +4,26 @@ use warnings FATAL => qw(all);
 use Carp;
 use File::Basename;
 
-use base qw(YATT::Lite::Object);
+use base qw(YATT::Lite::Object
+	    YATT::Lite::Util::CmdLine
+	  );
 use fields (qw(table_list table_dict dbtype cf_DBH
 	       cf_user
 	       cf_auth
 	       cf_connection_spec
+	       cf_connect_atstart
 	       cf_verbose
 	       cf_dbtype
 	       cf_NULL
 	       cf_name
 	       cf_no_header
 	       cf_auto_create
-	       cf_as_base
 	       cf_coltype_map
 
 	       cf_after_dbinit
 	       cf_group_writable
+
+	       role_dict
 	     ));
 
 use YATT::Lite::Types
@@ -41,20 +45,9 @@ use YATT::Lite::Types
 			       cf_primary_key
 			       cf_autoincrement
 			     )]]]
-
-   , [QBuilder => fields => [qw(selects joins)]]
 );
 
 use YATT::Lite::Util qw(coalesce globref ckeval terse_dump lexpand);
-
-#========================================
-# Class Hierarchy in case of
-# 'package YourSchema; use YATT::Lite::WebMVC0::DBSchema':
-#
-#   YATT::Lite::WebMVC0::DBSchema (or its subclass)
-#    ↑
-#   YourSchema
-#
 
 #========================================
 sub DESTROY {
@@ -71,15 +64,30 @@ sub new {
   my $pack = shift;
   $pack->parse_import(\@_, \ my %opts);
   my MY $self = $pack->SUPER::new(%opts);
+  $self->init_schema;
+  $self->add_schema(@_) if @_;
+  $self->verify_schema;
+  $self;
+}
+
+sub is_known_role {
+  (my MY $self, my $class) = @_;
+  $class //= caller;
+  $self->{role_dict}{$class}++;
+}
+
+# Extension hook.
+sub init_schema {}
+
+sub add_schema {
+  (my MY $self) = shift;
   foreach my $item (@_) {
     if (ref $item) {
-      $self->get_table(@$item);
+      $self->add_table(@$item);
     } else {
       croak "Invalid schema item: $item";
     }
   }
-  $self->verify_schema;
-  $self;
 }
 
 sub parse_import {
@@ -112,56 +120,117 @@ sub dbinit_sqlite {
 
 #========================================
 
-sub has_connection {
-  my MY $schema = shift;
-  $schema->{cf_DBH}
+sub startup {
+  (my MY $schema, my (@apps)) = @_;
+  foreach my $app (@apps) {
+    # XXX: logging?
+    my $sub = $app->can("backend_startup")
+      or next;
+    $sub->($app, $schema);
+  }
+
+  if ($schema->{cf_connect_atstart}) {
+    $schema->dbh;
+  }
 }
+
+#========================================
+
+sub has_connection { my MY $schema = shift; $schema->{cf_DBH} }
 
 sub dbh {
-  (my MY $schema, my $spec) = @_;
-  unless ($schema->{cf_DBH}) {
-    unless (defined ($spec ||= $schema->{cf_connection_spec})) {
-      croak "connection_spec is empty";
-    }
-    if (ref $spec eq 'ARRAY') {
-      $schema->connect_to(@$spec);
-    } elsif (ref $spec eq 'CODE') {
-      $schema->{cf_DBH} = $spec->($schema);
-    } else {
-      croak "Unknown connection spec obj: $spec";
-    }
-  };
-
-  $schema->{cf_DBH}
+  (my MY $schema) = @_;
+  $schema->{cf_DBH} // $schema->make_connection;
 }
 
+#
+# Quasi-option to configure $when and @spec at once.
+#
+sub configure_connect {
+  (my MY $schema, my $config) = @_;
+  my ($when, @spec) = @$config;
+  $schema->{cf_connection_spec} = \@spec;
+  $schema->{cf_connect_atstart} = $schema->parse_connect_when($when);
+}
+
+sub parse_connect_when {
+  (my MY $schema, my $when) = @_;
+  if ($when =~ /^at_?start$/i) {
+    1;
+  } elsif ($when =~ /^on_?demand$/i) {
+    0;
+  } else {
+    croak "Unknown connection timing: '$when'";
+  }
+}
+
+#
+# This must fill cf_DBH.
+#
+sub make_connection {
+  (my MY $schema) = shift;
+  my ($spec) = @_ ? @_ : $schema->{cf_connection_spec};
+  unless (defined $spec) {
+    croak "connection_spec is empty";
+  }
+  if (ref $spec eq 'ARRAY' or not ref $spec) {
+    $schema->connect_to(lexpand($spec));
+  } elsif (ref $spec eq 'CODE') {
+    $spec->($schema);
+  } else {
+    croak "Unknown connection spec obj: $spec";
+  }
+  $schema->{cf_DBH};
+}
+
+#----------------------------------------
 sub connect_to {
   (my MY $schema, my ($dbtype, @args)) = @_;
-  if ($dbtype =~ /^dbi:(\w+):/i) {
+  if ($dbtype =~ /^dbi:/i) {
     $schema->connect_to_dbi($dbtype, @args);
-  } elsif (my $sub = $schema->can("connect_to_$dbtype")) {
-    $schema->{dbtype} = $dbtype;
+  } elsif (my $sub = $schema->can("connect_to_\L$dbtype")) {
+    $schema->{dbtype} = lc($dbtype);
     $sub->($schema, @args);
   } else {
     croak sprintf("%s: Unknown dbtype: %s", MY, $dbtype);
   }
 }
 
+sub connect_to_dbi {
+  (my MY $schema, my ($dbi, @args)) = @_;
+  my ($driver) = $dbi =~ m{^dbi:([^:]+):}i
+    or croak "Unknown driver spec in DBI DSN! $dbi";
+  if (my $sub = $schema->can("connect_to_\L$driver")) {
+    $schema->{dbtype} = lc($driver);
+    $sub->($schema, $dbi, @args);
+  } else {
+    $schema->dbi_connect($dbi, @args);
+  }
+}
+
+#----------------------------------------
+
 sub connect_to_sqlite {
-  (my MY $schema, my ($sqlite_fn, %opts)) = @_;
+  (my MY $schema, my ($dsn_or_sqlite_fn, %opts)) = @_;
   # XXX: Adapt begin immediate transaction, for SQLITE_BUSY
+  my ($sqlite_fn, $dbi_dsn) = do {
+    if ($dsn_or_sqlite_fn =~ /^dbi:SQLite:(?:dbname=)?(.*)$/i) {
+      ($1, $dsn_or_sqlite_fn);
+    } else {
+      ($dsn_or_sqlite_fn, "dbi:SQLite:dbname=$dsn_or_sqlite_fn");
+    }
+  };
   my $ro = delete($opts{RO}) // 0;
-  my $dbi_dsn = "dbi:SQLite:dbname=$sqlite_fn";
-  my $first_time = not -e $sqlite_fn;
   $schema->{dbtype} //= 'sqlite';
+  my $first_time = not -e $sqlite_fn;
   $schema->configure(%opts) if %opts;
   $schema->{cf_auto_create} //= 1;
-  $schema->connect_to_dbi($dbi_dsn, undef, undef, AutoCommit => $ro);
+  $schema->dbi_connect($dbi_dsn, undef, undef, AutoCommit => $ro);
   $schema->dbinit_sqlite($sqlite_fn) if $first_time;
   $schema;
 }
 
-sub connect_to_dbi {
+sub dbi_connect {
   (my MY $schema, my ($dbi_dsn, $user, $auth, %opts)) = @_;
   my %attr;
   foreach ([RaiseError => 1], [PrintError => 0], [AutoCommit => 0]) {
@@ -174,13 +243,15 @@ sub connect_to_dbi {
   $schema;
 }
 
+#----------------------------------------
+
 #
 # ./lib/MyApp.pm create sqlite data/myapp.db3
 #
 sub create {
   (my MY $schema, my @spec) = @_;
   # $schema->dbh() will call ensure_created_on when auto_create is on.
-  my $dbh = $schema->dbh(@spec ? \@spec : ());
+  my $dbh = $schema->{cf_DBH} || $schema->make_connection(\@spec);
   #
   $schema->ensure_created_on($dbh) unless $schema->{cf_auto_create};
   $schema;
@@ -188,6 +259,7 @@ sub create {
 
 sub ensure_created_on {
   (my MY $schema, my $dbh) = @_;
+  # Carp::cluck("ensure_created is called");
   my (@created, $other_changes);
   foreach my Table $table ($schema->list_tables(raw => 1)) {
     next if $schema->has_table($table->{cf_name}, $dbh);
@@ -270,6 +342,7 @@ sub sqlite_has_type {
   my ($found) = $dbh->selectrow_array(<<'END', undef, $type, $name)
 select name from sqlite_master where type = ? and name = ?
 END
+
     or return undef;
   $found;
 }
@@ -337,8 +410,8 @@ sub list_relations {
     map {
       (my ($relType, $relName, $fkName), my Table $subTab) = @$_;
       $fkName //= do {
-	if (my Column $pk = $self->info_table_pk($subTab)
-	    || $self->info_table_pk($tab)) {
+	if (my Column $pk = $self->get_table_pk($subTab)
+	    || $self->get_table_pk($tab)) {
 	  $pk->{cf_name};
 	}
       };
@@ -354,7 +427,7 @@ sub list_table_columns {
   $self->_list_items(\%opts, @{$tab->{col_list}});
 }
 
-sub info_table {
+sub get_table {
   (my MY $self, my $name) = @_;
   $self->{table_dict}{$name} //= do {
     push @{$self->{table_list}}
@@ -364,7 +437,7 @@ sub info_table {
   };
 }
 
-sub info_table_pk {
+sub get_table_pk {
   (my MY $self, my ($tabName, %opts)) = @_;
   my Table $tab = ref $tabName ? $tabName : $self->{table_dict}{$tabName};
   my $pkinfo = $tab->{pk};
@@ -376,15 +449,22 @@ sub info_table_pk {
   }
 }
 
-sub get_table {
+sub add_table {
   my MY $self = shift;
   my ($name, $opts, @colpairs) = @_;
-  my Table $tab = $self->info_table($name);
+  my Table $tab = $self->get_table($name);
   return $tab if @_ == 1;
   if ($tab and not $tab->{not_configured}) {
     croak "Duplicate definition of table $name";
   }
   delete $tab->{not_configured};
+  $self->extend_table(@_);
+}
+
+sub extend_table {
+  my MY $self = shift;
+  my ($name, $opts, @colpairs) = @_;
+  my Table $tab = $self->get_table($name);
   $tab->configure(lhexpand($opts)) if $opts;
   while (@colpairs) {
     # colName => [colSpec]
@@ -396,7 +476,7 @@ sub get_table {
       my ($method, @args) = @{shift @colpairs};
       $method =~ s/^-//;
       # XXX: [has_many => @tables]
-      if (my ($relType, @relSpec) = $self->known_rels($method)) {
+      if (my ($relType, @relSpec) = $self->known_rels($method, undef, @args)) {
 	$self->add_table_relation($tab, undef, $relType => \@relSpec, @args);
       } else {
 	my $sub = $self->can("add_table_\L$method")
@@ -436,8 +516,8 @@ sub add_table_relation {
   #
   $fkName = $1 if not ref $item and $item =~ s/\.(\w+)$//;
 
-  my Table $subTab = ref $item ? $self->get_table(@$item)
-    : $self->info_table($item);
+  my Table $subTab = ref $item ? $self->add_table(@$item)
+    : $self->get_table($item);
   my $relName = $relSpec->[0] // lc($subTab->{cf_name});
   $fkName //= $relSpec->[1] // $fkCol->{cf_name}
     // $subTab->{reference_dict}{$tab->{cf_name}};
@@ -457,9 +537,9 @@ sub add_table_column {
   # $tab.$colName is encoded by $refTab.pk
   if (ref $type) {
     croak "Deprecated column spec in $tab->{cf_name}.$colName";
+  } elsif (not defined $type) {
+    Carp::cluck "Column type $tab->{cf_name}.$colName is undef";
   }
-  Carp::cluck "Column type $tab->{cf_name}.$colName is undef"
-      unless defined $type;
 
   my (@opt, @rels);
   while (@colSpec) {
@@ -470,15 +550,14 @@ sub add_table_column {
       $method =~ s/^-//;
       # XXX: [has_many => @tables]
       # XXX: [unique => k1, k2..]
-      if (my ($relType, @relSpec) = $self->known_rels($method)) {
+      if (my ($relType, @relSpec)
+	  = $self->known_rels($method, $colName, @args)) {
 	push @rels, [$relType => \@relSpec, @args];
       } else {
 	croak "Unknown method $method";
       }
     } elsif ($key =~ /^-/) {
       push @opt, $key => 1;
-    } elsif (my ($relType, @relSpec) = $self->known_rels($key)) {
-      push @rels, [$relType, \@relSpec, shift @colSpec]
     } else {
       push @opt, $key, shift @colSpec;
     }
@@ -519,11 +598,11 @@ sub verify_schema {
 		      many_to_many 1 might_have 1
 		    );
   sub known_rels {
-    (my MY $self, my $desc) = @_;
+    (my MY $self, my ($desc, $myColName, @args)) = @_;
     # ['-has_many:rel:fk' => 'table']
     my ($relType, $relName, $fkName) = split /:/, $desc, 3;
     return unless $known_rels{$relType};
-    ($relType, $relName, $fkName)
+    ($relType, $relName, $fkName || $myColName)
   }
 }
 
@@ -550,6 +629,7 @@ sub sql_create_table {
   }
 
   # XXX: SQLite specific.
+  # XXX: MySQL ENGINE(TYPE) = ...
   push my @create
     , sprintf qq{CREATE TABLE %s\n(%s)}, $tab->{cf_name}
       , join "\n, ", @cols;
@@ -644,6 +724,9 @@ sub foreach_tables_do {
 }
 
 ########################################
+# Below is poorman's CRUD closure generator(instead of ORM).
+
+
 sub to_encode {
   (my MY $self, my $tabName, my $keyCol, my @otherCols) = @_;
 
@@ -773,6 +856,7 @@ sub rowid_col {
   if (my Column $pk = $tab->{pk}) {
     $pk->{cf_name}
   } else {
+    # XXX: dbtype dispatch
     $schema->default_rowid_col;
   }
 }
@@ -787,17 +871,57 @@ sub add_inc {
 
 ########################################
 
+use YATT::Lite::XHF::Dumper;
+
+sub cmd_deploy {
+  (my MY $schema) = @_;
+  local $schema->{cf_verbose} = 1;
+  $schema->ensure_created_on($schema->dbh)
+    if not $schema->{cf_auto_create};
+}
+
+sub cmd_schema {
+  (my MY $schema) = @_;
+  print $schema->dump_xhf(map {
+    $schema->info_tableobj($_);
+  } @{$schema->{table_list}}), "\n";
+}
+
+sub info_tableobj {
+  (my MY $schema, my Table $tab) = @_;
+  [$tab->{cf_name}, undef, map {
+    $schema->info_columnobj($_);
+   } @{$tab->{col_list}}];
+}
+
+sub info_columnobj {
+  (my MY $schema, my Column $col) = @_;
+  ($col->{cf_name}, $col->{cf_type});
+}
+
 sub cmd_help {
   my ($self) = @_;
   my $pack = ref($self) || $self;
-  my $stash = do {
-    my $pkg = $pack . '::';
-    no strict 'refs';
-    \%{$pkg};
+  my @opts = do {
+    if (my $sub = $pack->can('cf_list')) {
+      $sub->($pack, qr{^cf_([a-z]\w*)});
+    } else {
+      ();
+    }
   };
-  my @methods = sort grep s/^cmd_//, keys %$stash;
-  croak "Usage: @{[basename($0)]} method args..\n  "
-    . join("\n  ", @methods) . "\n";
+  require YATT::Lite::Util::FindMethods;
+  my @methods = YATT::Lite::Util::FindMethods::FindMethods
+    ($pack, , sub {s/^cmd_//});
+  die <<END;
+Usage: @{[basename($0)]} [--opt=value] <command> [--opt=value] [<args>]
+
+Available commands are:
+  @{[join("\n  ", @methods)]}
+
+All options(might not usefull) are:
+  @{[join "\n  ", map {"--$_"} @opts]}
+END
+
 }
 
 #========================================

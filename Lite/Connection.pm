@@ -9,6 +9,7 @@ use fields qw(buffer header header_is_printed cookie session
 	      cf_env
 	      error_backup
 	      yatt
+	      cf_backend
 	      stash
 	      debug_stash
 	    );
@@ -126,7 +127,11 @@ sub set_charset {
 sub cget {
   confess "Not enough argument" unless @_ == 2;
   my PROP $prop = prop(my $glob = shift);
+  my $fields = YATT::Lite::Util::fields_hash($prop);
   my ($name) = @_;
+  if (not exists $fields->{"cf_$name"}) {
+    confess "No such config item $name in class " . ref $glob;
+  }
   $prop->{"cf_$name"};
 }
 
@@ -161,6 +166,7 @@ sub header_is_printed {
   $prop->{header_is_printed};
 }
 
+# XXX: Should be renamed to something like: finalize_header.
 sub commit {
   my PROP $prop = (my $glob = shift)->prop;
   if (not $prop->{header_is_printed}++
@@ -195,6 +201,27 @@ sub as_error {
   $prop->{buffer} = '';
   seek $glob, 0, 0;
   $glob;
+}
+
+#----
+
+sub backend {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $method = shift;
+  unless (defined $method) {
+    $glob->error("backend: null method is called");
+  } elsif (not $prop->{cf_backend}) {
+    $glob->error("backend is empty");
+  } elsif (not my $sub = $prop->{cf_backend}->can($method)) {
+    $glob->error("unknown method called for backend: %s", $method);
+  } else {
+    $sub->($prop->{cf_backend}, @_);
+  }
+}
+
+sub model {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_backend}->model(@_);
 }
 
 1;
