@@ -31,6 +31,10 @@ BEGIN {
 	  HTTP_PROXY_CONNECTION
 	  HTTP_ACCEPT
 
+	  HTTP_ACCEPT_CHARSET
+	  HTTP_ACCEPT_LANGUAGE
+	  HTTP_ACCEPT_ENCODING
+
 	  psgi.version
 	  psgi.url_scheme
 	  psgi.input

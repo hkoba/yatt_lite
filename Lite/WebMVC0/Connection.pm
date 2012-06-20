@@ -1,6 +1,8 @@
 package YATT::Lite::WebMVC0::Connection; sub PROP () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+use Carp;
+
 use base qw(YATT::Lite::Connection);
 use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
 	      cf_is_psgi
@@ -9,7 +11,7 @@ use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
 	      cf_use_array_param
 	    );
 use YATT::Lite::Util qw(globref url_encode nonempty);
-use Carp;
+use YATT::Lite::PSGIEnv;
 
 #----------------------------------------
 
@@ -362,5 +364,27 @@ sub re_word { qr{^\w+$}; }
 sub re_nonempty { qr{\S.*}s }
 
 sub re_any { qr{^.*$}s }
+
+#========================================
+
+sub accept_language {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($detail) = @_;
+  my Env $env = $prop->{cf_env};
+  my $langlist = $env->{HTTP_ACCEPT_LANGUAGE}
+    or return;
+  my @langlist = sort {
+    $$b[-1] <=> $$a[-1]
+  } map {
+    my ($lang, $qual) = split /\s*;\s*q=/;
+    [$lang, $qual // 1]
+  } split /\s*,\s*/, $langlist;
+
+  if ($detail) {
+    @langlist
+  } else {
+    map {$$_[0]} @langlist;
+  }
+}
 
 1;
