@@ -182,4 +182,9 @@ sub cf_unknowns {
   @unknown;
 }
 
+sub define {
+  my ($class, $name, $sub) = @_;
+  *{YATT::Lite::Util::globref($class, $name)} = $sub;
+}
+
 1;

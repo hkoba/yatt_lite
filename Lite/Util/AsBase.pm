@@ -44,7 +44,8 @@ END
 
   ckeval($script);
 
-  *{globref($callpack, 'MY')} = sub () { $callpack };
+  my $sym = globref($callpack, 'MY');
+  *$sym = sub () { $callpack } unless *{$sym}{CODE};
 }
 
 1;
