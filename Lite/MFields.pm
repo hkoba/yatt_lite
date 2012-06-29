@@ -15,7 +15,8 @@ use YATT::Lite::Util qw/globref list_isa/;
 use Carp;
 
 use YATT::Lite::Types
-  ([Field => -fields => [qw/cf_is cf_isa cf_required cf_name
+  ([Decl => -fields => [qw/cf_is cf_isa cf_required cf_name
+			   cf_package
 			    cf_default
 			    cf_doc/]]);
 
@@ -81,7 +82,24 @@ sub import_fields_from {
       $fields = *{$sym}{HASH}
 	or next;
     }
-    $self->has($_, $fields->{$_}) for keys %$fields;
+
+    foreach my $name (keys %$fields) {
+      my Decl $importing = $fields->{$name};
+      unless (UNIVERSAL::isa($importing, $self->Decl)) {
+	croak "Importing raw field $class.$name is prohibited!";
+      }
+
+      unless (my Decl $existing = $self->{fields}->{$name}) {
+	$self->{fields}->{$name} = $importing;
+      } elsif (not UNIVERSAL::isa($existing, $self->Decl)) {
+	croak "Importing $class.$name onto raw field $self->{cf_package}"
+	  . " is prohibited";
+      } elsif ($importing != $existing) {
+	croak "Conflicting import $class.$name"
+	  . " (defined in $importing->{cf_package}) "
+	    . "onto $existing->{cf_package}";
+      }
+    }
   }
 }
 
@@ -98,10 +116,10 @@ sub has {
   }
   $self->{fields}->{$name} = do {
     if (@atts >= 2 || @atts == 0) {
-      $self->Field->new(name => $name, @atts);
+      $self->Decl->new(name => $name, @atts, package => $self->{cf_package});
     } elsif (not defined $atts[0]
-	     or not UNIVERSAL::isa($atts[0], $self->Field)) {
-      $self->Field->new(name => $name);
+	     or not UNIVERSAL::isa($atts[0], $self->Decl)) {
+      $self->Decl->new(name => $name, package => $self->{cf_package});
     } else {
       $atts[0];
     }
