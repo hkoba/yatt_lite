@@ -2,6 +2,8 @@ package YATT::Lite::Object; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
+use mro 'c3';
+
 use fields;
 
 use YATT::Lite::XHF qw(read_file_xhf);

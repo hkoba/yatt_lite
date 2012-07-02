@@ -8,34 +8,33 @@ sub MY () {__PACKAGE__}
 use 5.010;
 use Scalar::Util qw(weaken);
 
-use base qw(YATT::Lite::NSBuilder File::Spec);
-use fields qw(cf_app_root
-	      cf_doc_root
-	      cf_allow_missing_dir
-	      cf_app_base
+use parent qw(YATT::Lite::NSBuilder File::Spec);
+use YATT::Lite::MFields qw/cf_app_root
+			   cf_doc_root
+			   cf_allow_missing_dir
+			   cf_app_base
 
-	      tmpldirs
+			   tmpldirs
 
-	      loc2yatt
-	      path2yatt
+			   loc2yatt
+			   path2yatt
 
-	      cf_binary_config
+			   cf_binary_config
 
-	      cf_tmpl_encoding cf_output_encoding
-	      cf_header_charset
-	      cf_debug_cgen
+			   cf_tmpl_encoding cf_output_encoding
+			   cf_header_charset
+			   cf_debug_cgen
 
-	      cf_only_parse cf_namespace
-	      cf_error_handler
-
-	      cf_at_done
-);
+			   cf_only_parse cf_namespace
+			  /;
 
 
 use YATT::Lite::Util::AsBase;
 use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in
 			lookup_dir fields_hash);
 use YATT::Lite::XHF;
+
+use YATT::Lite::ErrorReporter;
 
 require YATT::Lite;
 
@@ -280,6 +279,15 @@ sub error {
 sub trim_slash {
   $_[0] =~ s,/*$,,;
   $_[0];
+}
+
+#----------------------------------------
+sub Connection () {'YATT::Lite::Connection'};
+
+sub make_connection {
+  (my MY $self, my ($fh, @params)) = @_;
+  require YATT::Lite::Connection;
+  $self->Connection->new($fh, @params);
 }
 
 1;

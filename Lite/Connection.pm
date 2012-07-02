@@ -8,13 +8,12 @@ use fields qw(buffer header header_is_printed cookie session
 	      cf_encoding
 	      cf_env
 	      error_backup
-	      yatt
 	      cf_backend
 	      stash
 	      debug_stash
 	    );
 use YATT::Lite::Util qw(globref fields_hash);
-use Scalar::Util qw(weaken);
+use YATT::Lite::Entities qw(*SYS *YATT);
 use Carp;
 
 sub prop { my $glob = shift; \%{*$glob}; }
@@ -52,16 +51,15 @@ sub build_fh_for {
 # Constructors (create_for_yatt, new)
 #========================================
 # To route errors to $yatt(==DirHandler), connection needs yatt ref.
-sub create_for_yatt {
-  my ($class, $yatt, $self) = splice @_, 0, 3;
-  require IO::Handle;
-  (my PROP $prop, my @task) = $class->build_prop(@_);
-  weaken($prop->{yatt} = $yatt); # XXX: Is this ok?
-  $class->build_fh_for($prop, $self);
-  $_->[0]->($self, $_->[1]) for @task;
-  $self->after_new;
-  $self;
-}
+# sub create_for_yatt {
+#   my ($class, $yatt, $self) = splice @_, 0, 3;
+#   require IO::Handle;
+#   (my PROP $prop, my @task) = $class->build_prop(@_);
+#   $class->build_fh_for($prop, $self);
+#   $_->[0]->($self, $_->[1]) for @task;
+#   $self->after_new;
+#   $self;
+# }
 
 # XXX: Should be deprecated?
 sub new {
@@ -83,7 +81,13 @@ sub error {
 sub raise {
   my PROP $prop = prop(my $glob = shift);
   my ($type, @err) = @_; # To make sure backtrace is meaningful.
-  $prop->{yatt}->raise($type, @err);
+  if (my $handler = $SYS || $YATT) {
+    $handler->raise($type, @err);
+  } else {
+    shift @err if @err and ref $err[0] eq 'HASH'; # drop opts.
+    my $fmt = shift @err;
+    croak sprintf($fmt, @err);
+  }
 }
 
 #========================================

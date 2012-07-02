@@ -2,34 +2,36 @@ package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use 5.010;
-use Carp qw(carp croak confess longmess);
+use Carp qw(carp croak confess);
 our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
 
 #
 # YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。
 #
-use base qw(YATT::Lite::Object);
-use fields qw(YATT
+use parent qw/YATT::Lite::Object/;
+use YATT::Lite::MFields qw/YATT
 	      cf_dir
 	      cf_vfs cf_base
 	      cf_output_encoding
 	      cf_tmpl_encoding
 	      cf_app_ns entns
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
-	      cf_die_in_error cf_error_handler
 	      cf_special_entities cf_no_lineinfo cf_check_lineno
 	      cf_rc_script
 	      cf_tmpl_cache
-	      cf_at_done
 	      cf_dont_map_args
 	      cf_dont_debug_param
 	      cf_info
-	    );
+	    /;
 
 # Entities を多重継承する理由は import も継承したいから。
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
-use YATT::Lite::Entities -as_base, qw(*YATT);
+use YATT::Lite::Entities -as_base, qw(*YATT *CON *SYS);
+
+# For error, raise, DONE. This is inserted to ISA too.
+use YATT::Lite::ErrorReporter;
+
 use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump escape
 			set_inc
 		      );
@@ -39,10 +41,6 @@ sub default_trans {'YATT::Lite::Core'}
 
 sub default_export {(shift->SUPER::default_export, qw(Entity *CON))}
 
-our $CON;
-sub symbol_CON { return *CON }
-sub CON { return $CON }
-
 #========================================
 # Abstract connection
 #========================================
@@ -50,7 +48,11 @@ require YATT::Lite::Connection;
 sub Connection () {'YATT::Lite::Connection'}
 sub make_connection {
   (my MY $self, my ($fh, @rest)) = @_;
-  $self->Connection->create_for_yatt($self, $fh, @rest)
+  if ($SYS) {
+    $SYS->make_connection($fh, @rest);
+  } else {
+    $self->Connection->new($fh, @rest)
+  }
 }
 
 #========================================
@@ -254,7 +256,7 @@ sub ensure_entns {
   my ($mypack, $app_ns) = @_;
   my $entns = "${app_ns}::EntNS";
   my $sym = do {no strict 'refs'; \*{$entns}};
-  unless (UNIVERSAL::isa($app_ns, MY)) {
+  unless (UNIVERSAL::isa($app_ns, 'YATT::Lite::Object')) {
     add_base_to($app_ns, MY);
   }
   my $baseclass = do {
@@ -334,61 +336,6 @@ foreach
     )) {
   my $meth = $_;
   *{globref(MY, $meth)} = sub { shift->get_trans->$meth(@_) };
-}
-
-#========================================
-# error reporting.
-#========================================
-# XXX: MY->error は, 結局使わないのでは?
-
-sub error {
-  (my MY $self) = map {ref $_ ? $_ : MY} shift;
-  $self->raise(error => @_);
-}
-
-sub make_error {
-  my ($self, $depth, $opts) = splice @_, 0, 3;
-  my $fmt = $_[0];
-  my ($pkg, $file, $line) = caller($depth);
-  require YATT::Lite::Error;
-  new YATT::Lite::Error
-    (file => $opts->{file} // $file, line => $opts->{line} // $line
-     , format => $fmt, args => [@_[1..$#_]]
-     , backtrace => longmess()
-     , $opts ? %$opts : ());
-}
-
-# $yatt->raise($errType => ?{opts}?, $errFmt, @fmtArgs)
-
-sub raise {
-  (my MY $self, my $type) = splice @_, 0, 2;
-  my $opts = shift if @_ and ref $_[0] eq 'HASH';
-  # shift/splice しないのは、引数を stack trace に残したいから
-  my $err = $self->make_error(1 + (delete($opts->{depth}) // 1), $opts, @_);
-
-  if (ref $self and my $sub = $self->{cf_error_handler}) {
-    # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
-    # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
-    $sub->($type, $err);
-  } elsif ($sub = $self->can('error_handler')) {
-    $sub->($self, $type, $err);
-  } elsif (not ref $self or $self->{cf_die_in_error}) {
-    die $err->message;
-  } else {
-    # 即座に die しないモードは、デバッガから error 呼び出し箇所に step して戻れるようにするため。
-    # ... でも、受け側を do {my $err = $con->error; die $err} にでもしなきゃダメかも?
-    return $err;
-  }
-}
-
-# XXX: 将来、拡張されるかも。
-sub DONE {
-  my MY $self = shift;
-  if (my $sub = $self->{cf_at_done}) {
-    $sub->(@_);
-  } else {
-    die \ 'DONE';
-  }
 }
 
 sub dump {

@@ -39,7 +39,7 @@ sub _import_as_base {
   # XXX: Should do add_inc?
   # XXX: Direct access to @ISA and %FIELDS would be faster.
   my $script = <<END;
-package $callpack; use base qw/$pack/; 1;
+package $callpack; use parent qw/$pack/; 1;
 END
 
   ckeval($script);

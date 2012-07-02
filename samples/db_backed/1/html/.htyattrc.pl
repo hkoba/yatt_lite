@@ -6,7 +6,7 @@ use fields qw(dbic
 	      cf_dir_config
 	      cf_datadir cf_dbname);
 
-use YATT::Lite qw(*CON);
+use YATT::Lite::Entities qw(*CON);
 
 require CGI::Session;
 

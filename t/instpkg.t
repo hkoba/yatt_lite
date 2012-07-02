@@ -40,6 +40,7 @@ use_ok(NSBuilder);
   {
     package MyTest_NSB_Web;
     use base qw(YATT::Lite::NSBuilder);
+    use YATT::Lite::MFields;
     sub default_default_app {$WDH}
     use YATT::Lite::Inc;
   }

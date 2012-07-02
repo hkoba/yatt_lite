@@ -11,16 +11,15 @@ use 5.010;
 # Dispatcher 層: Request に応じた DirApp をロードし起動する
 #========================================
 
-use base qw(YATT::Lite::Factory);
-use fields qw(cf_is_gateway
-	      cf_is_psgi
-	      cf_debug_cgi
-	      cf_debug_psgi
-	      cf_psgi_static
-	      cf_index_name
-
-	      cf_backend
-	    );
+use parent qw(YATT::Lite::Factory);
+use YATT::Lite::MFields qw/cf_is_gateway
+			   cf_is_psgi
+			   cf_debug_cgi
+			   cf_debug_psgi
+			   cf_psgi_static
+			   cf_index_name
+			   cf_backend
+			 /;
 
 # XXX: Should rename is_gateway to: is_online, is_http or (inverted) noheader.
 
@@ -30,13 +29,12 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			default
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
+use YATT::Lite::WebMVC0::App qw/*SYS/; # Adds Entity, *CON, *YATT, *SYS
+sub DirApp () {'YATT::Lite::WebMVC0::App'}
 sub default_default_app () {'YATT::Lite::WebMVC0::App'}
 sub default_index_name { 'index' }
 
 use File::Basename;
-use YATT::Lite::WebMVC0::Connection ();
-sub ConnProp () {'YATT::Lite::WebMVC0::Connection'}
-sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 
 sub after_new {
   (my MY $self) = @_;
@@ -116,7 +114,7 @@ sub call {
   my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]
 				       , is_psgi => 1, cgi => $req);
 
-  my $con = $dh->make_connection(undef, @params);
+  my $con = $self->make_connection_for($dh, undef, @params);
 
   my $error = catch {
     $dh->handle($dh->cut_ext($file), $con, $file);
@@ -212,7 +210,7 @@ sub render {
     push @params, hmv => Hash::MultiValue->from_mixed($args);
   }
 
-  my $con = $dh->make_connection(undef, @params);
+  my $con = $self->make_connection_for($dh, undef, @params);
 
   $dh->render_into($con, @rest ? [$file, @rest] : $file, $args, @opts);
 
@@ -276,6 +274,39 @@ sub psgi_error {
   return [$status, ["Content-type", "text/plain", @rest], [$msg]];
 }
 
+#========================================
+
+use YATT::Lite::WebMVC0::Connection;
+sub Connection () {'YATT::Lite::WebMVC0::Connection'}
+sub ConnProp () {Connection}
+
+sub make_connection_for {
+  (my MY $self, my DirApp $dh, my ($fh, @args)) = @_;
+  my @opts = do {
+    if ($self->is_gateway) {
+      # buffered mode.
+      (undef
+       , parent_fh => $fh
+       , charset => ($$dh{cf_header_charset}
+		     || $$dh{cf_output_encoding}
+		     || $$self{cf_header_charset}
+		     || $$self{cf_output_encoding})
+       , header => sub {
+	 my ($con) = shift;
+	 # die "\n\nconnection->{cf_header} is called\n";
+	 $con->mkheader(200, $con->list_baked_cookie);
+       });
+    } else {
+      # direct mode.
+      $fh
+    }
+  };
+  if (my $enc = $$dh{cf_output_encoding} || $$self{cf_output_encoding}) {
+    push @opts, encoding => $enc;
+  }
+  $self->make_connection(@opts, @args);
+}
+
 sub connection_param {
   (my MY $self, my ($env, $quad, @rest)) = @_;
   my ($virtdir, $loc, $file, $subpath) = @$quad;
@@ -329,7 +360,7 @@ sub run_dirhandler {
     or die "Unknown directory: $params{dir}";
   # XXX: cache のキーは相対パスか、絶対パスか?
 
-  my $con = $dh->make_connection($fh, %params);
+  my $con = $self->make_connection_for($dh, $fh, %params);
 
   $dh->handle($dh->cut_ext($params{file}), $con, $params{file});
 

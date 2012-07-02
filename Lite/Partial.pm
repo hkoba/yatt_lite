@@ -13,7 +13,7 @@ sub import {
 
 package
   YATT::Lite::Partial::Meta; sub Meta () {__PACKAGE__}
-use base qw/YATT::Lite::MFields/;
+use parent qw/YATT::Lite::MFields/;
 use YATT::Lite::Util qw/globref lexpand/;
 use Carp;
 

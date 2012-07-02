@@ -30,12 +30,12 @@ use Carp;
 
   package YATT::Lite::VFS; BEGIN {$INC{"YATT/Lite/VFS.pm"} = 1}
   sub VFS () {__PACKAGE__}
-  use base qw(YATT::Lite::Object);
-  use fields qw(cf_ext_private cf_ext_public cf_cache cf_no_auto_create
+  use parent qw(YATT::Lite::Object);
+  use YATT::Lite::MFields qw/cf_ext_private cf_ext_public cf_cache cf_no_auto_create
 		cf_facade cf_base
 		cf_entns
 		root extdict n_creates n_updates cf_mark
-		pkg2folder);
+		pkg2folder/;
   use YATT::Lite::Util qw(lexpand rootname);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}

@@ -9,12 +9,12 @@ require Scalar::Util;
   use Exporter qw(import);
   BEGIN {
     $INC{'YATT/Lite/Util.pm'} = 1;
-    our @EXPORT = qw(numLines coalesce default globref symtab lexpand escape
+    our @EXPORT = qw/numLines coalesce default globref symtab lexpand escape
 		     untaint_any ckeval ckrequire ckdo untaint_unless_tainted
 		     dict_sort terse_dump catch
 		     nonempty
-		   );
-    our @EXPORT_OK = (@EXPORT, qw(cached_in split_path rootname dict_order
+		   /;
+    our @EXPORT_OK = (@EXPORT, qw/cached_in split_path rootname dict_order
 				  lookup_path lookup_dir
 				  appname extname
 				  captured is_debugging callerinfo
@@ -28,7 +28,8 @@ require Scalar::Util;
 				  fields_hash
 				  list_isa
 				  set_inc
-				));
+				  look_for_globref
+				/);
   }
   use Carp;
   sub numLines {
@@ -55,6 +56,12 @@ require Scalar::Util;
   }
   sub symtab {
     *{globref(shift, '')}{HASH}
+  }
+  sub look_for_globref {
+    my ($class, $name) = @_;
+    my $symtab = symtab($class);
+    return undef unless defined $symtab->{$name};
+    globref($class, $name);
   }
 
   sub fields_hash {

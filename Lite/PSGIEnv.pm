@@ -5,7 +5,7 @@ use warnings FATAL => qw(all);
 my @PSGI_FIELDS;
 BEGIN {
   @PSGI_FIELDS
-    = qw(
+    = qw/
 	  HTTPS
 	  GATEWAY_INTERFACE
 	  REQUEST_METHOD
@@ -47,29 +47,20 @@ BEGIN {
 	  psgix.session
 	  psgix.session.options
 	  psgix.logger
-       );
+       /;
+  our %FIELDS = map {$_ => ''} @PSGI_FIELDS;
 }
 
-use fields @PSGI_FIELDS;
-
-use YATT::Lite::Util qw(ckeval);
+use YATT::Lite::Util qw(ckeval globref);
 
 sub import {
   my ($myPack, @more_fields) = @_;
 
   my $callpack = caller;
-  my $envname = $callpack . "::Env";
-  my $sym = do {no strict 'refs'; \*{$envname}};
-
-
-  my $script = sprintf(q|package %s; use base qw(%s);|
-		       , $envname, __PACKAGE__);
-  $script .= sprintf(q|use fields qw(%s);|, join " ", @more_fields)
-    if @more_fields;
-
-  ckeval($script);
-
-  *$sym = sub () { $envname };
+  my $envpack = $callpack . "::Env";
+  *{globref($callpack, 'Env')} = sub () { $envpack };
+  *{globref($envpack, 'ISA')} = [$myPack];
+  *{globref($envpack, 'FIELDS')} = {map {$_ => 1} @PSGI_FIELDS, @more_fields};
 }
 
 sub psgi_fields {

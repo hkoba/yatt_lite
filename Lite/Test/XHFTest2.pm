@@ -6,9 +6,9 @@ use Exporter qw(import);
 use File::Basename qw(dirname);
 
 use base qw(YATT::Lite::Object);
-use fields qw(files cf_dir cf_libdir
+use fields qw/files cf_dir cf_libdir
 	      cf_debug
-	      cookie_jar);
+	      cookie_jar/;
 use YATT::Lite::Types
   (export_default => 1
    , [File => -fields => [qw(cf_file items

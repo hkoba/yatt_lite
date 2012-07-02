@@ -1,6 +1,6 @@
 use strict;
 use fields qw(cf_datadir cf_config);
-use YATT::Lite qw(*CON);
+use YATT::Lite::Entities qw(*CON);
 Entity YATT => sub {shift->YATT};
 
 #========================================

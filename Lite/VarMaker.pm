@@ -2,7 +2,7 @@ package YATT::Lite::VarMaker; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Object);
-use fields qw(type_alias);
+use fields qw/type_alias/;
 
 use YATT::Lite::VarTypes qw(:type);
 use YATT::Lite::Util qw(lexpand default);

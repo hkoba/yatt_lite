@@ -87,7 +87,8 @@ my $root_sanity = sub {
   my $foo_res = "My App's foo";
   {
     package MyApp;
-    use base qw(YATT::Lite); use YATT::Lite::Inc;
+    use parent qw(YATT::Lite); use YATT::Lite::Inc;
+    use YATT::Lite::MFields;
     sub foo {$foo_res}
   }
   my $CLS = 'MyApp';
@@ -143,8 +144,8 @@ my $root_sanity = sub {
   my $baz_res = 'My App baz';
   {
     package MyAppBaz;
-    use base qw(YATT::Lite); use YATT::Lite::Inc;
-    use fields qw(cf_other_config);
+    use parent qw(YATT::Lite); use YATT::Lite::Inc;
+    use YATT::Lite::MFields qw(cf_other_config);
     sub baz {$baz_res}
   }
   
@@ -197,8 +198,8 @@ END
   my $qux_res = 'My App qux';
   {
     package MyAppQux;
-    use base qw(YATT::Lite); use YATT::Lite::Inc;
-    use fields qw(cf_other_config2);
+    use parent qw(YATT::Lite); use YATT::Lite::Inc;
+    use YATT::Lite::MFields qw/cf_other_config2/;
     sub qux {$qux_res}
   }
   
@@ -255,7 +256,8 @@ END
   my $quux_res = 'My App quux';
   {
     package MyAppQuux;
-    use base qw(YATT::Lite);use YATT::Lite::Inc;
+    use parent qw(YATT::Lite);use YATT::Lite::Inc;
+    use YATT::Lite::MFields;
     sub quux {$quux_res}
   }
   

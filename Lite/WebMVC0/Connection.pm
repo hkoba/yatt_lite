@@ -4,12 +4,11 @@ use warnings FATAL => qw(all);
 use Carp;
 
 use base qw(YATT::Lite::Connection);
-use fields qw(cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
+use fields qw/cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
 	      cf_is_psgi
 	      cf_hmv
 	      cf_root cf_location
-	      cf_use_array_param
-	    );
+	    /;
 use YATT::Lite::Util qw(globref url_encode nonempty);
 use YATT::Lite::PSGIEnv;
 
@@ -55,13 +54,13 @@ sub param {
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_cgi} = my $cgi = shift;
-  if ($prop->{cf_use_array_param}) {
+  #if ($prop->{cf_use_array_param}) {
     if ($prop->{cf_is_psgi}) {
       $glob->convert_array_param_psgi($cgi);
     } else {
       $glob->convert_array_param_cgi($cgi);
     }
-  }
+  #}
 }
 
 sub convert_array_param_psgi {

@@ -2,8 +2,8 @@ package YATT::Lite::Core; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
-use base qw(YATT::Lite::VFS);
-use fields qw(cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
+use parent qw(YATT::Lite::VFS);
+use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
 	      cf_tmpl_encoding
 	      cf_debug_parser
 	      cf_parse_while_loading cf_only_parse
@@ -11,7 +11,7 @@ use fields qw(cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
 	      cf_special_entities
 
 	      cgen_class
-	    );
+	    /;
 use YATT::Lite::Util;
 use YATT::Lite::Constants;
 use YATT::Lite::Entities;

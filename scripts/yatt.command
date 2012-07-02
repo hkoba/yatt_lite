@@ -18,7 +18,7 @@ use lib $libdir;
 use YATT::Lite::Util::FindMethods;
 
 use YATT::Lite::Factory;
-use YATT::Lite qw(*YATT);
+use YATT::Lite::Entities qw(*YATT);
 use YATT::Lite::Util qw(rootname);
 use YATT::Lite::Breakpoint;
 

@@ -3,22 +3,24 @@ use strict;
 use warnings FATAL => qw/all/;
 use 5.009; # For real hash only. (not works for pseudo-hash)
 
-require base;
-require parent;
+use parent qw/YATT::Lite::Object/;
+BEGIN {
+  our %FIELDS = map {$_ => ''} qw/fields cf_package known_parent/;
+}
 
-use base qw/YATT::Lite::Object/;
-use fields qw/fields cf_package
-	      known_parent
-	     /; # XXX: Should not rely on fields.
-
-use YATT::Lite::Util qw/globref list_isa/;
+use YATT::Lite::Util qw/globref look_for_globref list_isa/;
 use Carp;
 
-use YATT::Lite::Types
-  ([Decl => -fields => [qw/cf_is cf_isa cf_required cf_name
-			   cf_package
-			    cf_default
-			    cf_doc/]]);
+sub Decl () {'YATT::Lite::MFields::Decl'}
+BEGIN {
+  package YATT::Lite::MFields::Decl;
+  use parent qw/YATT::Lite::Object/;
+  our %FIELDS = map {$_ => 1}
+    qw/cf_is cf_isa cf_required cf_name
+       cf_package
+       cf_default
+       cf_doc/;
+}
 
 sub import {
   my $pack = shift;
@@ -78,7 +80,8 @@ sub import_fields_from {
     } else {
       $class = $item;
       next if $self->{known_parent}{$class}++;
-      my $sym = globref($class, 'FIELDS');
+      my $sym = look_for_globref($class, 'FIELDS')
+	or next;
       $fields = *{$sym}{HASH}
 	or next;
     }
@@ -92,8 +95,8 @@ sub import_fields_from {
       unless (my Decl $existing = $self->{fields}->{$name}) {
 	$self->{fields}->{$name} = $importing;
       } elsif (not UNIVERSAL::isa($existing, $self->Decl)) {
-	croak "Importing $class.$name onto raw field $self->{cf_package}"
-	  . " is prohibited";
+	croak "Importing $class.$name onto raw field"
+	  . " (defined in $self->{cf_package}) is prohibited";
       } elsif ($importing != $existing) {
 	croak "Conflicting import $class.$name"
 	  . " (defined in $importing->{cf_package}) "

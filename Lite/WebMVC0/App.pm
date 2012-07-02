@@ -1,14 +1,16 @@
 package YATT::Lite::WebMVC0::App; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
-use base qw(YATT::Lite);
-use fields qw(cf_session_opts
+use parent qw/YATT::Lite/;
+use YATT::Lite::MFields qw/cf_session_opts
 	      cf_header_charset
 	      cf_is_gateway
 
-	      cf_no_array_param
 	      Action
-	    );
+	    /;
+
+use YATT::Lite::WebMVC0::Connection;
+sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 
 use Carp;
 use YATT::Lite::Util qw(cached_in ckeval
@@ -64,35 +66,6 @@ sub get_action_handler {
      });
   return unless defined $item and $item->[0];
   wantarray ? @$item : $item->[0];
-}
-
-#========================================
-use YATT::Lite::WebMVC0::Connection;
-sub Connection () {'YATT::Lite::WebMVC0::Connection'}
-sub ConnProp () {Connection}
-
-sub make_connection {
-  (my MY $self, my ($fh, %opts)) = @_;
-  my @opts = do {
-    if ($opts{is_gateway}) {
-      # buffered mode.
-      (undef
-       , parent_fh => $fh
-       , charset => $$self{cf_header_charset} || $$self{cf_output_encoding}
-       , header => sub {
-	 my ($con) = shift;
-	 # die "\n\nconnection->{cf_header} is called\n";
-	 $con->mkheader(200, $con->list_baked_cookie);
-       });
-    } else {
-      # direct mode.
-      $fh
-    }
-  };
-  push @opts, encoding => $$self{cf_output_encoding}
-    if $$self{cf_output_encoding};
-  push @opts, use_array_param => 1 unless $$self{cf_no_array_param};
-  $self->SUPER::make_connection(@opts, %opts);
 }
 
 #========================================

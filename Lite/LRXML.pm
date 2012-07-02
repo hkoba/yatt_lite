@@ -5,7 +5,7 @@ use strict;
 use warnings FATAL => qw(all);
 use 5.010;
 use base qw(YATT::Lite::VarMaker);
-use fields qw(re_decl
+use fields qw/re_decl
 	      re_body
 	      re_entopn
 	      re_att
@@ -22,7 +22,7 @@ use fields qw(re_decl
 	      cf_base cf_scheme cf_path cf_encoding cf_debug
 	      cf_all
 	      cf_special_entities
-	    );
+	    /;
 
 use YATT::Lite::Core qw(Part Widget Page Action Data Template);
 use YATT::Lite::VarTypes;

@@ -9,15 +9,15 @@ my $Test = Test::Builder->new;
 
 {
   package YATT::Lite::Test::TestFCGI; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::Object File::Spec);
-  use fields qw(res status ct content cookie_jar last_request
+  use parent qw(YATT::Lite::Object File::Spec);
+  use YATT::Lite::MFields qw/res status ct content cookie_jar last_request
 		sockfile
 		raw_result
 		onerror
 		cf_rootdir cf_fcgiscript
 		cf_debug_fcgi
 		kidpid
-	      );		# base form
+	      /;		# base form
 
   sub check_skip_reason {
     my MY $self = shift;
@@ -180,7 +180,7 @@ my $Test = Test::Builder->new;
 {
   package
     YATT::Lite::Test::TestFCGI::Auto; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::Test::TestFCGI);
+  use parent qw(YATT::Lite::Test::TestFCGI);
 
   sub class {
     my $pack = shift;
@@ -195,8 +195,8 @@ my $Test = Test::Builder->new;
 {
   package
     YATT::Lite::Test::TestFCGI::FCGIClient; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::Test::TestFCGI);
-  use fields qw(connection raw_error);
+  use parent qw(YATT::Lite::Test::TestFCGI);
+  use YATT::Lite::MFields qw(connection raw_error);
 
   sub fork_server {
     my $self = shift;
@@ -301,8 +301,8 @@ my $Test = Test::Builder->new;
 {
   package
     YATT::Lite::Test::TestFCGI::cgi_fcgi; sub MY () {__PACKAGE__}
-  use base qw(YATT::Lite::Test::TestFCGI);
-  use fields qw(wrapper);
+  use parent qw(YATT::Lite::Test::TestFCGI);
+  use YATT::Lite::MFields qw(wrapper);
 
   sub check_skip_reason {
     my MY $self = shift;

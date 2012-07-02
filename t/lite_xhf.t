@@ -35,8 +35,8 @@ sub myapp {join _ => MyTest => appname($0), @_}
 use YATT::Lite::Breakpoint;
 
 use YATT::Lite::Test::XHFTest qw(Item);
-use base qw(YATT::Lite::Test::XHFTest File::Spec);
-use fields qw(cf_VFS_CONFIG cf_YATT_CONFIG cf_YATT_RC);
+use parent qw(YATT::Lite::Test::XHFTest File::Spec);
+use YATT::Lite::MFields qw(cf_VFS_CONFIG cf_YATT_CONFIG cf_YATT_RC);
 
 my @files = MY->list_files(@ARGV ? @ARGV
 			   : <$FindBin::Bin/xhf/*/*.xhf>);

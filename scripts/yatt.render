@@ -19,7 +19,7 @@ use encoding qw(:locale);
 
 use CGI;
 use YATT::Lite::Factory;
-use YATT::Lite qw(*YATT *CON);
+use YATT::Lite::Entities qw(*YATT *CON);
 use YATT::Lite::Util::CmdLine qw(parse_opts parse_params);
 use YATT::Lite::Util qw(rootname get_locale_encoding);
 use YATT::Lite::Breakpoint;

@@ -1,10 +1,10 @@
 package YATT::Lite::Test::XHFTest;
 use strict;
 use warnings FATAL => qw(all);
-use base qw(YATT::Lite::Object);
-use fields qw(tests numtests yatt global file_list file_dict
+use parent qw(YATT::Lite::Object);
+use YATT::Lite::MFields qw/tests numtests yatt global file_list file_dict
 	      cf_filename cf_ext cf_parser cf_encoding
-	      prev_item builder);
+	      prev_item builder/;
 use Exporter 'import';
 sub MY () {__PACKAGE__}
 use YATT::Lite::Util qw(default dict_sort);
@@ -16,8 +16,8 @@ use Encode;
 {
   sub Item () {'YATT::Lite::Test::XHFTest::Item'}
   package YATT::Lite::Test::XHFTest::Item;
-  use base qw(YATT::Lite::Object);
-  use fields qw(cf_global
+  use parent qw(YATT::Lite::Object);
+  use YATT::Lite::MFields qw/cf_global
 		cf_parser
 
 		num
@@ -37,7 +37,7 @@ use Encode;
 		cf_ERROR
 
 		cf_TAG
-	      );
+	      /;
 
   sub is_runnable { shift->ntests }
   sub ntests {

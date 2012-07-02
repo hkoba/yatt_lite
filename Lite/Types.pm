@@ -1,23 +1,27 @@
 package YATT::Lite::Types;
 use strict;
 use warnings FATAL => qw(all);
-use base qw(YATT::Lite::Object);
+use parent qw(YATT::Lite::Object);
 use Carp;
 require YATT::Lite::Inc;
 
 sub Desc () {'YATT::Lite::Types::TypeDesc'}
 {
   package YATT::Lite::Types::TypeDesc; sub Desc () {__PACKAGE__}
-  use base qw(YATT::Lite::Object);
-  use fields qw(cf_name cf_ns cf_fields cf_overloads cf_alias cf_base cf_eval
-		cf_constants cf_export_default);
+  use parent qw(YATT::Lite::Object);
+  BEGIN {
+    our %FIELDS = map {$_ => 1}
+      qw/cf_name cf_ns cf_fields cf_overloads cf_alias cf_base cf_eval
+	 fullname
+	 cf_constants cf_export_default/
+  }
   sub pkg {
     my Desc $self = shift;
     join '::', $self->{cf_ns}, $self->{cf_name};
   }
 }
 
-use YATT::Lite::Util qw(globref lexpand ckeval);
+use YATT::Lite::Util qw(globref look_for_globref lexpand ckeval);
 
 sub import {
   my $pack = shift;
@@ -37,6 +41,7 @@ sub create {
 
 sub buildns {
   (my Desc $root, my @desc) = shift->create(@_);
+  my $debug = $ENV{DEBUG_YATT_TYPES};
   my (@script, @task);
   my $export_ok = do {
     my $sym = globref($$root{cf_ns}, 'EXPORT_OK');
@@ -51,8 +56,8 @@ sub buildns {
   }
   foreach my Desc $obj (@desc) {
     push @$export_ok, $obj->{cf_name};
-    my $fullName = join '::', $$root{cf_ns}, $obj->{cf_name};
-    push @script, qq|package $fullName;|;
+    $obj->{fullname} = join '::', $$root{cf_ns}, $obj->{cf_name};
+    push @script, qq|package $obj->{fullname};|;
     push @script, q|use YATT::Lite::Inc;|;
     my $base = $obj->{cf_base} || $root->{cf_base}
       || safe_invoke($$root{cf_ns}, $obj->{cf_name})
@@ -71,11 +76,11 @@ sub buildns {
       push @$export_ok, $alias;
     }
     foreach my $spec (lexpand($obj->{cf_constants})) {
-      push @task, [\&add_const, $fullName, @$spec];
+      push @task, [\&add_const, $obj->{fullname}, @$spec];
     }
   }
-  my $script = join(" ", @script);
-  print $script, "\n" if $ENV{DEBUG_YATT_TYPES};
+  my $script = join(" ", @script, "; 1");
+  print $script, "\n" if $debug;
   ckeval($script);
   foreach my $task (@task) {
     my ($sub, @args) = @$task;
@@ -87,6 +92,16 @@ sub buildns {
       *{$sym}{ARRAY} // (*$sym = []);
     };
     @$export = @$export_ok;
+  }
+  foreach my Desc $obj (@desc) {
+    my $sym = look_for_globref($obj->{fullname}, 'FIELDS');
+    if ($sym and my $fields = *{$sym}{HASH}) {
+      print "Fields in type $obj->{fullname}: "
+	, join(" ", sort keys %$fields), "\n" if $debug;
+    } elsif ($obj->{cf_fields}) {
+      croak "Failed to define type fields for '$obj->{fullname}': "
+	. join(" ", @{$obj->{cf_fields}});
+    }
   }
 }
 

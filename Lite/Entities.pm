@@ -14,6 +14,16 @@ sub default_export { qw(*YATT) }
 our $YATT;
 sub symbol_YATT { return *YATT }
 sub YATT { $YATT }
+
+# Factory/Dispatcher/Logger/... を template に見せる
+our $SYS;
+sub symbol_SYS { return *SYS }
+sub SYS { $SYS }
+
+# Connection
+our $CON;
+sub symbol_CON { return *CON }
+sub CON { return $CON }
 #========================================
 
 sub import {
@@ -50,14 +60,21 @@ sub import {
 # use 時に関数を生成したい場合、 define_ZZZ を定義すること。
 # サブクラスで新たな symbol を export したい場合、 symbol_ZZZ を定義すること
 
+*declare_as_parent = *declare_as_base; *declare_as_parent = *declare_as_base;
+
 sub declare_as_base {
   my ($myPack, $opts, $callpack) = @_;
   ckeval(<<END);
-package $callpack; use base qw($myPack);
+package $callpack; use parent qw($myPack);
 END
 }
 
 #########################################
+
+sub define_import {
+  my ($myPack, $opts, $callpack) = @_;
+  *{globref($callpack, 'import')} = \&import;
+}
 
 sub define_MY {
   my ($myPack, $opts, $callpack) = @_;
