@@ -88,13 +88,6 @@ sub convert_array_param_cgi {
   $cgi;
 }
 
-sub commit {
-  my PROP $prop = (my $glob = shift)->prop;
-  # print STDERR "committing\n", Carp::longmess(), "\n\n";
-  $glob->flush_session unless $prop->{header_is_printed};
-  $glob->SUPER::commit;
-}
-
 sub location {
   my PROP $prop = (my $glob = shift)->prop;
   (my $loc = ($prop->{cf_location} // '')) =~ s,/*$,/,;
@@ -210,80 +203,6 @@ sub request_uri {
 
 #========================================
 
-sub list_header {
-  my PROP $prop = (my $glob = shift)->prop;
-  ($glob->SUPER::list_header, $glob->list_baked_cookie);
-}
-
-sub _mk_content_type {
-  my PROP $prop = (my $glob = shift)->prop;
-  my $ct = $prop->{cf_content_type} || "text/html";
-  if ($ct =~ m{^text/} && $ct !~ /;\s*charset/) {
-    my $cs = $prop->{cf_charset} || "utf-8";
-    $ct .= qq|; charset=$cs|;
-  }
-}
-
-sub mkheader {
-  my PROP $prop = (my $glob = shift)->prop;
-  my ($code) = shift;
-  require HTTP::Headers;
-  my $headers = HTTP::Headers->new("Content-type", $glob->_mk_content_type
-				   , $glob->list_header
-				   , @_);
-  YATT::Lite::Util::mk_http_status($code)
-      . $headers->as_string . "\015\012";
-}
-
-#----------------------------------------
-
-sub flush_session {
-  my PROP $prop = (my $glob = shift)->prop;
-  return unless $prop->{session};
-  return if $prop->{session}->errstr; # XXX: to avoid double error;
-  $prop->{session}->flush;
-  if (my $err = $prop->{session}->errstr) {
-    # To avoid infinite recursion of (error > commit > flush > error).
-    $glob->session_raise(error => "Can't flush session: %s", $err);
-  }
-}
-
-# flush_session will be called from $con->commit.
-sub session_raise {
-  my PROP $prop = (my $glob = shift)->prop;
-  my ($kind, $msg, @args) = @_;
-  local $prop->{session};
-  $glob->raise($kind, $msg, @args);
-}
-
-#----------------------------------------
-
-sub bake_cookie {
-  my $glob = shift;		# not used.
-  my ($name, $value) = splice @_, 0, 2;
-  require CGI::Cookie;
-  CGI::Cookie->new(-name => $name, -value => $value, @_);
-}
-
-sub set_cookie {
-  my PROP $prop = (my $glob = shift)->prop;
-  if (@_ == 1 and ref $_[0]) {
-    my $cookie = shift;
-    my $name = $cookie->name;
-    $prop->{cookie}{$name} = $cookie;
-  } else {
-    my $name = shift;
-    $prop->{cookie}{$name} = $glob->bake_cookie($name, @_);
-  }
-}
-
-sub list_baked_cookie {
-  my PROP $prop = (my $glob = shift)->prop;
-  my @cookie = values %{$prop->{cookie}} if $prop->{cookie};
-  return unless @cookie;
-  wantarray ? map(("Set-Cookie", $_), @cookie) : \@cookie;
-}
-
 sub redirect {
   my PROP $prop = (my $glob = shift)->prop;
   croak "undefined url" unless @_ and defined $_[0];
@@ -299,28 +218,46 @@ sub redirect {
       shift;
     }
   };
-  if ($prop->{header_is_printed}++) {
+  if ($prop->{header_is_sent}++) {
     die "Can't redirect multiple times!";
   }
 
   # Make sure session is flushed before redirection.
-  $glob->flush_session;
+  $glob->finalize_headers;
 
-  $prop->{buffer} = '';
-  # In test, parent_fh may undef.
-  my $fh = $$prop{cf_parent_fh} // $glob;
-  if ($prop->{cf_is_psgi}) {
-    # PSGI mode.
-    die [302, [Location => $url, $glob->list_header], []];
+  ${$prop->{cf_buffer}} = '';
+
+  die [302, [Location => $url, $glob->list_header], []];
+}
+
+#========================================
+# Session support is delegated to 'system'.
+# 'system' must implement session_{load,flush,destroy}
+
+sub get_session {
+  my PROP $prop = (my $glob = shift)->prop;
+  # To avoid repeative false session tests.
+  if (exists $prop->{session}) {
+    $prop->{session};
   } else {
-    print {$fh} $glob->mkheader(302, Location => $url, @_);
-    # 念のため, parent_fh は undef しておく
-    undef $$prop{cf_parent_fh};
-    # XXX: やっぱこっちも die すべきじゃん... なら、呼び出し手は catch 必須では？
-    # => catch があるなら、 catch 側で header 出せばいいじゃん？
-    # ==>> header_is_printed との関係？
+    $prop->{cf_system}->session_load($glob);
   }
-  $glob;
+}
+
+sub load_session {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (exists $prop->{session}) {
+    $glob->error("load_session is called twice!");
+  } else {
+    $prop->{cf_system}->session_load($glob, @_);
+  }
+}
+
+sub destroy_session {
+  my PROP $prop = (my $glob = shift)->prop;
+  # To avoid repeative false session tests.
+  return unless $prop->{session};
+  $prop->{cf_system}->session_destroy($glob);
 }
 
 #========================================

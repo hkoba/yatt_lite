@@ -23,6 +23,7 @@ my $builder = MyBuilder->new
   , 'CGI::Session' => 0
   , 'Pod::Perldoc' => 0
   , 'Pod::Simple::SimpleTree' => 0
+  , 'HTTP::Headers' => 0
  }
 
  , configure_requires => {'Module::Build' => 0}

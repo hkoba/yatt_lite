@@ -52,7 +52,7 @@ use_ok(NSBuilder);
     , [[$NS, [$WDH, list_isa($WDH, 1)]]]
       , "sub inherits $NS, which inherits $WDH only.";
 
-  ok $WDH->can('handle_yatt'), "$WDH is loaded (can handle_yatt)";
+  ok $WDH->can('_handle_yatt'), "$WDH is loaded (can handle_yatt)";
 }
 
 my $i = 0;

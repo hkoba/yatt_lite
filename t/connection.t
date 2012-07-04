@@ -24,6 +24,7 @@ use YATT::Lite::Util qw(appname rootname);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 require_ok('YATT::Lite');
+require_ok('YATT::Lite::Connection');
 
 my $i = 1;
 {
@@ -33,7 +34,7 @@ my $i = 1;
 			    , debug_cgen => $ENV{DEBUG});
 
   {
-    my $con = $yatt->make_connection;
+    my $con = YATT::Lite::Connection->create;
     print {$con} "foo", "bar";
     print {$con} "baz";
     $con->flush;
@@ -65,7 +66,7 @@ my $i = 1;
   }
 
   # ファイルに書けるか
-  # header 周りの commit はどうか。
+  # header 周りの finalize はどうか。
 
   # もっと API を Plack::Request, Plack::Response に頼ったり、似せたりしてはどうか
   # もしくは Apache2::RequestRec に。
@@ -90,7 +91,7 @@ $i++;
   my $backend = MyBackend1->new
     (name => 'Test', models => {foo => 'bar', bar => 3});;
   {
-    my $con = $yatt->make_connection(undef, backend => $backend);
+    my $con = YATT::Lite::Connection->create(undef, backend => $backend);
     is $con->backend(cget => 'name'), 'Test'
       , 'con->backend(method,@args)';
     is $con->model('foo'), 'bar'
@@ -101,17 +102,17 @@ $i++;
 # 次は YATT::Lite::WebMVC0 から make_connection して...
 
 $i++;
-require_ok('YATT::Lite::WebMVC0::App');
+require_ok('YATT::Lite::WebMVC0');
 {
 
-  my $yatt = new YATT::Lite::WebMVC0::App
-    (dir => rootname($0) . ".d"
+  my $mux = YATT::Lite::WebMVC0->new
+    (doc_root => rootname($0) . ".d"
      , app_ns => myapp($i)
      , die_in_error => 1
      , debug_cgen => $ENV{DEBUG});
 
   {
-    my $con = $yatt->make_connection;
+    my $con = $mux->make_connection;
     print {$con} "foo", "bar";
     print {$con} "baz";
     $con->flush;
@@ -133,7 +134,7 @@ require_ok('YATT::Lite::WebMVC0::App');
 		 SERVER_PROTOCOL HTTP/1.1
 		 psgi.url_scheme http
 	       );
-    my $con = $yatt->make_connection(undef, env => \%env);
+    my $con = $mux->make_connection(undef, env => \%env);
 
     is $con->mkhost, '0.0.0.0:5000'
       , "[$THEME] mkhost()";
@@ -160,7 +161,7 @@ require_ok('YATT::Lite::WebMVC0::App');
 		 SERVER_PROTOCOL HTTP/1.1
 		 psgi.url_scheme http
 	       );
-    my $con = $yatt->make_connection(undef, env => \%env);
+    my $con = $mux->make_connection(undef, env => \%env);
 
     is $con->mkhost, '0.0.0.0:5050', "[$THEME] mkhost()";
 

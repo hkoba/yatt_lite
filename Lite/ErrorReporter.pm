@@ -10,7 +10,6 @@ use Carp qw/longmess/;
 #========================================
 # error reporting.
 #========================================
-# XXX: MY->error は, 結局使わないのでは?
 
 sub error {
   (my MY $self) = map {ref $_ ? $_ : MY} shift;

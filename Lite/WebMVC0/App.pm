@@ -1,10 +1,9 @@
 package YATT::Lite::WebMVC0::App; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
-use parent qw/YATT::Lite/;
+use YATT::Lite -as_base, qw/*SYS/;
 use YATT::Lite::MFields qw/cf_session_opts
 	      cf_header_charset
-	      cf_is_gateway
 
 	      Action
 	    /;
@@ -20,16 +19,22 @@ use YATT::Lite::Util qw(cached_in ckeval
 # sub handle_ydo, _do, _psgi...
 
 sub handle {
-  my MY $self = shift;
+  (my MY $self, my ($type, $con, $file)) = @_;
   chdir($self->{cf_dir})
     or die "Can't chdir '$self->{cf_dir}': $!";
   local $SIG{__WARN__} = sub {
     die $self->make_error(2, {reason => $_[0]});
   };
-  $self->SUPER::handle(@_);
+  if (my $charset = $self->header_charset) {
+    $con->set_charset($charset);
+  }
+  if (my $enc = $self->{cf_output_encoding}) {
+    $con->configure(encoding => $enc);
+  }
+  $self->SUPER::handle($type, $con, $file);
 }
 
-sub handle_ydo {
+sub _handle_ydo {
   (my MY $self, my ($con, $file, @rest)) = @_;
   my $action = $self->get_action_handler($file)
     or die "Can't find action handler for file '$file'\n";
@@ -69,6 +74,18 @@ sub get_action_handler {
 }
 
 #========================================
+# Response Header
+#========================================
+
+sub default_header_charset {''}
+sub header_charset {
+  (my MY $self) = @_;
+  $self->{cf_header_charset} || $self->{cf_output_encoding}
+    || $SYS->header_charset
+      || $self->default_header_charset;
+}
+
+#========================================
 sub error_handler {
   (my MY $self, my ($type, $err)) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
@@ -76,8 +93,7 @@ sub error_handler {
     if (my $con = $self->CON) {
       $con->as_error;
     } else {
-      # XXX: is_gateway が形骸化してる。
-      $self->make_connection(\*STDOUT, is_gateway => $self->{cf_is_gateway});
+      $self->make_connection(\*STDOUT);
     }
   };
   # error.ytmpl を探し、あれば呼び出す。
@@ -87,7 +103,7 @@ sub error_handler {
     die $err;
   };
   $sub->($pkg, $errcon, $err);
-  $errcon->commit; # XXX: これが無いと、 500 error, 有っても無限再帰。
+  $errcon->flush_headers; # XXX: これが無いと、 500 error, 有っても無限再帰。
   $self->DONE; # XXX: bailout と分けるべき
 }
 

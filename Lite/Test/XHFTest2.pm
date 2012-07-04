@@ -92,7 +92,9 @@ sub load_dispatcher {
   # $dir/t/../app.psgi => $dir/app.psgi
   (my $realpath = $script) =~ s{/([^\.][^/]*)/\.\.(?:/|$)}{/}g;
 
-  YATT::Lite::Factory->load_factory_script($realpath);
+  my $dispatcher = YATT::Lite::Factory->load_factory_script($realpath);
+  $dispatcher->configure(noheader => 1);
+  $dispatcher;
 }
 
 sub ntests {

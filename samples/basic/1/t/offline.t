@@ -43,7 +43,7 @@ $tests->enter;
 plan $tests->test_plan;
 
 my $dispatcher = $tests->load_dispatcher;
-# $dispatcher->configure(at_done => sub { die \"DONE"; });
+$dispatcher->configure(is_psgi => 0);
 
 foreach my File $sect (@{$tests->{files}}) {
   my $dir = $tests->{cf_dir};
@@ -62,29 +62,39 @@ foreach my File $sect (@{$tests->{files}}) {
 	       , PATH_INFO => "/$item->{cf_FILE}"
 	       , PATH_TRANSLATED => "$dir/$item->{cf_FILE}"
 	      );
-    my (@param) = $dispatcher->make_cgi
-      (\%env, ["./$item->{cf_FILE}", $item->{cf_PARAM}]);
 
     $item->{cf_METHOD} //= 'GET';
     my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
 
     my $con = ostream(my $buffer);
-    eval {$dispatcher->run_dirhandler($con, @param)->commit};
+    eval {$dispatcher->cf_let([noheader => 0]
+			      , runas => cgi => $con, \%env
+			      , [$item->{cf_PARAM}])};
 
+    my $header;
     if ($item->{cf_ERROR}) {
       like $@, qr{$item->{cf_ERROR}}
 	, "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
       next;
     } elsif (ref $@ eq 'SCALAR' and ${$@} eq 'DONE') {
       # Request is completed.
+    } elsif (ref $@ eq 'ARRAY' and @{$@} == 3) {
+      # PSGI triple was raised.
+      $header = join("\n", @{$@->[1]});
     } elsif ($@) {
       Test::More::fail $item->{cf_FILE};
       Test::More::diag $@;
       next;
     }
 
+
+    if ($buffer =~ s/\A((?:[^\n\r]+\r?\n)*\r?\n)//) {
+      $header = $1;
+    }
+
     if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
-      like trimlast(nocr($buffer)), $tests->mkpat($item->{cf_HEADER})
+      $header //= trimlast(nocr($buffer));
+      like $header, $tests->mkpat($item->{cf_HEADER})
 	, "[$sect_name] $T POST $item->{cf_FILE}";
     } elsif (ref $item->{cf_BODY}) {
       like nocr($buffer), $tests->mkseqpat($item->{cf_BODY})

@@ -78,8 +78,8 @@ foreach my $cmd (@command) {
   local $YATT = $dirhandler;
   local $dirhandler->{cf_at_done} = sub {};
   # $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
-  local $CON = $dirhandler->make_connection
-    (\*STDOUT, cgi => CGI->new({}), file => $file);
+  local $CON = $dispatcher->make_connection
+    (\*STDOUT, cgi => CGI->new({}), file => $file, noheader => 1);
   $sub->($this, $CON, @args);
 }
 

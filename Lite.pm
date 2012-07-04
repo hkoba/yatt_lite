@@ -6,7 +6,7 @@ use Carp qw(carp croak confess);
 our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
 
 #
-# YATT 内部への Facade. YATT の初期化パラメータの保持者でもある。
+# YATT Internalへの Facade. YATT の初期化パラメータの保持者でもある。
 #
 use parent qw/YATT::Lite::Object/;
 use YATT::Lite::MFields qw/YATT
@@ -32,84 +32,57 @@ use YATT::Lite::Entities -as_base, qw(*YATT *CON *SYS);
 # For error, raise, DONE. This is inserted to ISA too.
 use YATT::Lite::ErrorReporter;
 
-use YATT::Lite::Util qw(globref lexpand extname ckrequire terse_dump escape
-			set_inc
-		      );
+use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
+			set_inc ostream try_invoke
+		      /;
 
 sub Facade () {__PACKAGE__}
 sub default_trans {'YATT::Lite::Core'}
 
-sub default_export {(shift->SUPER::default_export, qw(Entity *CON))}
+sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
 
-#========================================
-# Abstract connection
-#========================================
-require YATT::Lite::Connection;
-sub Connection () {'YATT::Lite::Connection'}
-sub make_connection {
-  (my MY $self, my ($fh, @rest)) = @_;
-  if ($SYS) {
-    $SYS->make_connection($fh, @rest);
-  } else {
-    $self->Connection->new($fh, @rest)
-  }
-}
-
-#========================================
-# Output encoding
-#========================================
-sub fconfigure_encoding {
-  my MY $self = shift;
-  return unless $self->{cf_output_encoding};
-  my $enc = "encoding($self->{cf_output_encoding})";
-  require PerlIO;
-  foreach my $fh (@_) {
-    next if grep {$_ eq $enc} PerlIO::get_layers($fh);
-    binmode($fh, ":$enc");
-  }
-  $self;
+sub with_system {
+  (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
+  $self->$method(@_);
 }
 
 #========================================
 # file extension based handler dispatching.
 #========================================
 
-# XXX: @rest の使い道、いまいち方針が固まらない。 Web層の事情と Core層の事情を分けるべきか?
 sub handle {
-  (my MY $self, my ($ext, $con, $file, @rest)) = @_;
+  (my MY $self, my ($ext, $con, $file)) = @_;
   local ($YATT, $CON) = ($self, $con);
+  $con->configure(yatt => $self);
+
   unless (defined $file) {
     confess "\n\nFilename for DirHandler->handle() is undef!"
       ." in $self->{cf_app_ns}.\n";
   }
 
-  my $sub = $self->find_handler($ext, $file);
-  $sub->($self, $con, $file);
+  my $sub = $YATT->find_handler($ext, $file);
+  $sub->($YATT, $CON, $file);
 
-  $con;
+  try_invoke($CON, 'flush_headers');
+
+  $CON;
 }
 
 sub render {
   my MY $self = shift;
-  my $con = $self->make_connection;
-  $self->render_into($con, @_);
-  $con->commit;
-  $con->buffer;
-
-  # open my $fh, '>', \ (my $str = "") or die "Can't open capture buffer!: $!";
-  # $self->render_into($fh, @_);
-  # close $fh;
-  # $str;
+  my $buffer; {
+    my $con = $SYS
+      ? $SYS->make_connection(undef, buffer => \$buffer, yatt => $self)
+	: ostream(\$buffer);
+    $self->render_into($con, @_);
+  }
+  $buffer;
 }
 
 sub render_into {
   local ($YATT, $CON) = splice @_, 0, 2;
   $YATT->open_trans->render_into($CON, @_);
-}
-
-sub commit {
-  local ($YATT, $CON) = @_;
-  $CON->commit;
+  try_invoke($CON, 'flush_headers');
 }
 
 sub find_handler {
@@ -117,9 +90,41 @@ sub find_handler {
   $ext //= $self->cut_ext($file) || 'yatt';
   # XXX: There should be optional hash based (extension => handler) mapping.
   # cf_ext_alias
-  my $sub = $self->can("handle_$ext")
+  my $sub = $self->can("_handle_$ext")
     or die "Unsupported file type: $ext";
   $sub;
+}
+
+#----------------------------------------
+
+# 直接呼ぶことは禁止。∵ $YATT, $CON を設定するのは handle の役目だから。
+sub _handle_yatt {
+  (my MY $self, my ($con, $file)) = @_;
+  my $trans = $self->open_trans;
+
+  my $mapped = $self->map_request($con, $file);
+  if (not $self->{cf_dont_debug_param}
+      and -e ".htdebug_param") {
+    $self->dump($mapped, [map {[$_ => $con->param($_)]} $con->param]);
+  }
+
+  # XXX: public に限定するのはどこで？ ここで？それとも find_自体？
+  my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);
+  unless ($part->public) {
+    # XXX: refresh する手もあるだろう。
+    croak $self->error(q|Forbidden request %s|, terse_dump($mapped));
+  }
+  # XXX: 未知引数エラーがあったら？
+  $sub->($pkg, $con, $self->{cf_dont_map_args} || $part->isa($trans->Action)
+	 ? ()
+	 : $part->reorder_cgi_params($con));
+  $con;
+}
+
+sub _handle_ytmpl {
+  (my MY $self, my ($con, $file)) = @_;
+  # XXX: http result code:
+  print $con "Forbidden filetype: $file";
 }
 
 sub map_request {
@@ -166,41 +171,31 @@ sub map_request {
   }
 }
 
-# 直接呼ぶことは禁止すべきではないか。∵ $YATT, $CON を設定するのは handle の役目だから。
-sub handle_yatt {
-  (my MY $self, my ($con, $file)) = @_;
-  my $trans = $self->open_trans;
-
-  my $mapped = $self->map_request($con, $file);
-  if (not $self->{cf_dont_debug_param}
-      and -e ".htdebug_param") {
-    $self->dump($mapped, [map {[$_ => $con->param($_)]} $con->param]);
-  }
-
-  # XXX: public に限定するのはどこで？ ここで？それとも find_自体？
-  my ($part, $sub, $pkg) = $trans->find_part_handler($mapped);
-  unless ($part->public) {
-    # XXX: refresh する手もあるだろう。
-    croak $self->error(q|Forbidden request %s|, terse_dump($mapped));
-  }
-  # XXX: 未知引数エラーがあったら？
-  $sub->($pkg, $con, $self->{cf_dont_map_args} || $part->isa($trans->Action)
-	 ? ()
-	 : $part->reorder_cgi_params($con));
-  $con;
-}
-
-sub handle_ytmpl {
-  (my MY $self, my ($con, $file)) = @_;
-  # XXX: http result code:
-  print $con "Forbidden filetype: $file";
-}
-
 sub cut_ext {
   my ($self, $fn) = @_;
   croak "Undefined filename!" unless defined $fn;
   return undef unless $fn =~ s/\.(\w+$)//;
   $1;
+}
+
+#========================================
+# hook
+#========================================
+sub finalize_connection {}
+
+#========================================
+# Output encoding. Used in scripts/yatt*
+#========================================
+sub fconfigure_encoding {
+  my MY $self = shift;
+  return unless $self->{cf_output_encoding};
+  my $enc = "encoding($self->{cf_output_encoding})";
+  require PerlIO;
+  foreach my $fh (@_) {
+    next if grep {$_ eq $enc} PerlIO::get_layers($fh);
+    binmode($fh, ":$enc");
+  }
+  $self;
 }
 
 #========================================
@@ -234,18 +229,22 @@ sub build_trans {
      , entns => $self->{entns}
      , @rest
      # XXX: Should be more extensible.
-     , $self->cf_delegate_defined(qw(namespace base
+     , $self->cf_delegate_defined(qw/namespace base
 				     die_in_error tmpl_encoding
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
 				     rc_script
-				     only_parse)));
+				     only_parse/));
 }
 
 sub _before_after_new {
   (my MY $self) = @_;
   $self->{entns} = $self->ensure_entns($self->{cf_app_ns});
 }
+
+#========================================
+# Entity
+#========================================
 
 sub root_EntNS { 'YATT::Lite::Entities' }
 
@@ -323,9 +322,11 @@ BEGIN {
   MY->define_Entity(undef, MY);
 }
 
+#========================================
 # YATT public? API, visible via Facade:
+#========================================
 foreach
-  (qw(find_part
+  (qw/find_part
       find_file
       find_product
       find_renderer
@@ -333,7 +334,7 @@ foreach
       ensure_parsed
 
       add_to
-    )) {
+    /) {
   my $meth = $_;
   *{globref(MY, $meth)} = sub { shift->get_trans->$meth(@_) };
 }

@@ -29,6 +29,8 @@ require Scalar::Util;
 				  list_isa
 				  set_inc
 				  look_for_globref
+				  try_invoke
+				  NIMPL
 				/);
   }
   use Carp;
@@ -510,6 +512,22 @@ sub set_inc {
   $INC{$pkg.'.pm'} = $val || 1;
   # $INC{$pkg.'.pmc'} = $val || 1;
   $_[1];
+}
+
+sub try_invoke {
+  my $obj = shift;
+  my ($method, @args) = lexpand(shift);
+  my $default = shift;
+  if (my $sub = UNIVERSAL::can($obj, $method)) {
+    $sub->($obj, @args);
+  } else {
+    $default;
+  }
+}
+
+sub NIMPL {
+  my ($pack, $file, $line, $sub, $hasargs) = caller($_[0] // 1);
+  croak "Not implemented call of '$sub'";
 }
 
 1;

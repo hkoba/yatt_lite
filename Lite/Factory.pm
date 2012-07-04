@@ -287,7 +287,9 @@ sub Connection () {'YATT::Lite::Connection'};
 sub make_connection {
   (my MY $self, my ($fh, @params)) = @_;
   require YATT::Lite::Connection;
-  $self->Connection->new($fh, @params);
+  $self->Connection->create($fh, @params);
 }
+
+sub finalize_connection {}
 
 1;
