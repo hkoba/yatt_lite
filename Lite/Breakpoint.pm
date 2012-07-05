@@ -44,6 +44,8 @@ sub break_load_facade {}
 sub break_load_dirhandler {}
 
 sub break_load_dispatcher {}
+sub break_load_dispatcher_cgi {}
+sub break_load_dispatcher_fcgi {}
 
 sub break_load_myapp {}
 

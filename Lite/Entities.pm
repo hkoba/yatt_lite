@@ -69,10 +69,13 @@ sub declare_as_base {
   # ckrequire($myPack); # Not needed because $myPack is just used!
   {
     my $sym = globref($callpack, 'ISA');
-    unless (*{$sym}{ARRAY}) {
-      *$sym = [];
+    my $isa;
+    unless ($isa = *{$sym}{ARRAY}) {
+      *$sym = $isa = [];
     }
-    push @{*{$sym}{ARRAY}}, $myPack;
+    unless (grep {$_ eq $myPack} @$isa) {
+      push @$isa, $myPack;
+    }
   }
 
   # Fill $callpack's %FIELDS, by current ISA.

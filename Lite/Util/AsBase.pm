@@ -9,6 +9,8 @@ our @EXPORT_OK = @EXPORT;
 
 use YATT::Lite::Util qw/ckeval globref/;
 
+require YATT::Lite::MFields;
+
 sub import {
   parse_args(\@_, scalar caller);
   goto &Exporter::import;
@@ -35,14 +37,21 @@ sub parse_args ($$) {
 # Called like: use Foo -as_base;
 
 sub _import_as_base {
-  my ($pack, $callpack) = @_;
-  # XXX: Should do add_inc?
-  # XXX: Direct access to @ISA and %FIELDS would be faster.
-  my $script = <<END;
-package $callpack; use parent qw/$pack/; 1;
-END
+  my ($myPack, $callpack) = @_;
 
-  ckeval($script);
+  {
+    my $sym = globref($callpack, 'ISA');
+    my $isa;
+    unless ($isa = *{$sym}{ARRAY}) {
+      *$sym = $isa = [];
+    }
+    unless (grep {$_ eq $myPack} @$isa) {
+      push @$isa, $myPack;
+    }
+  }
+
+  # Fill $callpack's %FIELDS, by current ISA.
+  YATT::Lite::MFields->define_fields($callpack);
 
   my $sym = globref($callpack, 'MY');
   *$sym = sub () { $callpack } unless *{$sym}{CODE};

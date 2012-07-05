@@ -1,4 +1,5 @@
 package YATT::Lite::WebMVC0::CGI;
+# -*- coding: utf-8 -*-
 use strict;
 use warnings FATAL => qw/all/;
 
@@ -14,59 +15,52 @@ sub runas_cgi {
   $self->init_by_env($env);
 
   if ($self->{cf_noheader}) {
-    # ¥³¥Þ¥ó¥É¹Ôµ¯Æ°»þ
+    # ã‚³ãƒžãƒ³ãƒ‰è¡Œèµ·å‹•æ™‚
     require Cwd;
     local $env->{GATEWAY_INTERFACE} = 'CGI/YATT';
     local $env->{REQUEST_METHOD} //= 'GET';
     local @{$env}{qw(PATH_TRANSLATED REDIRECT_STATUS)}
       = (Cwd::abs_path(shift @$args), 200)
 	if @_;
-    $self->dispatch($fh, $env, $args, \%opts);
+
+    my @params = $self->make_cgi($env, $args, \%opts);
+    my $con = $self->make_connection($fh, @params);
+    $self->run_dirhandler($con, @params);
 
   } elsif ($env->{GATEWAY_INTERFACE}) {
     # Normal CGI
     if (defined $fh and fileno($fh) >= 0) {
       open STDERR, '>&', $fh or die "can't redirect STDERR: $!";
     }
-    eval { $self->dispatch($fh, $env, $args, \%opts) };
 
-    if (not $@ or is_done($@)) {
-      # NOP
-    } elsif (ref $@ eq 'ARRAY') {
-      # Non local exit with PSGI response triplet.
-      $self->cgi_response($fh, $env, @{$@});
+    my $con;
+    my $error = catch {
+      my @params = $self->make_cgi($env, $args, \%opts);
+      $con = $self->make_connection($fh, @params);
+      $self->run_dirhandler($con, @params);
+    };
 
-    } else {
-      # Unknown error.
-      $self->show_error($fh, $@, $env);
-    }
+    $self->cgi_process_error($error, $con, $fh, $env);
+
   } else {
     # dispatch without catch.
-    $self->dispatch($fh, $env, $args, \%opts);
+    my @params = $self->make_cgi($env, $args, \%opts);
+    my $con = $self->make_connection($fh, @params);
+    $self->run_dirhandler($con, @params);
   }
 }
 
 #========================================
 
-sub dispatch {
-  (my MY $self, my $fh, my Env $env, my ($args, $opts)) = @_;
-  # XXX: ËÜÅö¤Ï make_cgi ¼«ÂÎ¤òÇÑ»ß¤·¤¿¤¤¡£
-  my @params = $self->make_cgi($env, $args, $opts);
-
-  $self->run_dirhandler($fh, @params);
-}
-
 sub run_dirhandler {
-  (my MY $self, my ($fh, %params)) = @_;
-  # dirhandler ¤ÏÉ¬¤º load ¤¹¤ë¤³¤È¤Ë¤¹¤ë¡£ *.yatt ¤À¤±¤Ç¤Ê¤¯¤Æ *.ydo ¤Ç¤â¡£
-  # ·ë¶É¤Ïµ¡Ç½½¸Ìó¥â¥¸¥å¡¼¥ë¤¬Íß¤·¤¯¤Ê¤ë¤«¤é¡£
-  # ¤½¤Î¤¿¤á¤Ë¡¢ dirhandler ¤Ï»à½Å¤ò¸º¤é¤¹¤è¤¦¡¢ÉôÊ¬Ëè¤Ë delayed load ¤¹¤ë
+  (my MY $self, my ($con, %params)) = @_;
+  # dirhandler ã¯å¿…ãš load ã™ã‚‹ã“ã¨ã«ã™ã‚‹ã€‚ *.yatt ã ã‘ã§ãªãã¦ *.ydo ã§ã‚‚ã€‚
+  # çµå±€ã¯æ©Ÿèƒ½é›†ç´„ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ãŒæ¬²ã—ããªã‚‹ã‹ã‚‰ã€‚
+  # ãã®ãŸã‚ã«ã€ dirhandler ã¯æ­»é‡ã‚’æ¸›ã‚‰ã™ã‚ˆã†ã€éƒ¨åˆ†æ¯Žã« delayed load ã™ã‚‹
 
   my $dh = $self->get_dirhandler(untaint_any($params{dir}))
     or die "Unknown directory: $params{dir}";
-  # XXX: cache ¤Î¥­¡¼¤ÏÁêÂÐ¥Ñ¥¹¤«¡¢ÀäÂÐ¥Ñ¥¹¤«?
-
-  my $con = $self->make_connection($fh, %params);
+  # XXX: cache ã®ã‚­ãƒ¼ã¯ç›¸å¯¾ãƒ‘ã‚¹ã‹ã€çµ¶å¯¾ãƒ‘ã‚¹ã‹?
 
   $dh->with_system($self
 		   , handle => $dh->cut_ext($params{file})
@@ -76,10 +70,10 @@ sub run_dirhandler {
 }
 
 #========================================
-# XXX: $env ÅÏ¤·Ãæ¿´¤ËÊÑ¹¹¤¹¤ë. ¸½¾õ¤Ç¤Ï...
-# [1] $fh, $cgi ¤ò³°¤«¤éÅÏ¤¹¥±¡¼¥¹... ¤½¤â¤½¤â¡¢¤³¤ì¤ò»ß¤á¤ë¤Ù¤­. $env ¤Ç¤¨¤¨¤ä¤ó¡¢¤È¡£
+# XXX: $env æ¸¡ã—ä¸­å¿ƒã«å¤‰æ›´ã™ã‚‹. ç¾çŠ¶ã§ã¯...
+# [1] $fh, $cgi ã‚’å¤–ã‹ã‚‰æ¸¡ã™ã‚±ãƒ¼ã‚¹... ãã‚‚ãã‚‚ã€ã“ã‚Œã‚’æ­¢ã‚ã‚‹ã¹ã. $env ã§ãˆãˆã‚„ã‚“ã€ã¨ã€‚
 # [2] $fh, $file, []/{}
-# [3] $fh, $file, k=v, k=v... ¤Î¥±¡¼¥¹
+# [3] $fh, $file, k=v, k=v... ã®ã‚±ãƒ¼ã‚¹
 
 sub make_cgi {
   (my MY $self, my Env $env, my ($args, $opts)) = @_;
@@ -98,7 +92,12 @@ sub make_cgi {
 
     ($root, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
 
-    # XXX: /~user_dir ¤Î¾ì¹ç¤Ï $dir ne $root$loc ¤¸¤ã¤ó¤« orz...
+    unless (@pi) {
+      # XXX: This is too early for fatal to browser. mmm
+      $self->error("Can't parse request. env='%s'", terse_dump($env));
+    }
+
+    # XXX: /~user_dir ã®å ´åˆã¯ $dir ne $root$loc ã˜ã‚ƒã‚“ã‹ orz...
 
   } else {
     my $path = shift @$args;
@@ -109,11 +108,11 @@ sub make_cgi {
       unless (-e $path) {
 	 die "No such file: $path\n";
       }
-      # XXX: $path ¤¬ÁêÂÐ¥Ñ¥¹¤À¤Ã¤¿¤é?¤³¤Î»þÅÀ¤Ç abs ÊÑ´¹¤è¤Í¡©
-      require Cwd;		# ¤Ç¤â¡¢¤³¤ì¤Ç 10ms ÃÙ¤¯¤Ê¤ë¤Î¤è¤Í¡£
+      # XXX: $path ãŒç›¸å¯¾ãƒ‘ã‚¹ã ã£ãŸã‚‰?ã“ã®æ™‚ç‚¹ã§ abs å¤‰æ›ã‚ˆã­ï¼Ÿ
+      require Cwd;		# ã§ã‚‚ã€ã“ã‚Œã§ 10ms é…ããªã‚‹ã®ã‚ˆã­ã€‚
       $path = Cwd::abs_path($path) // die "No such file: $path\n";
     }
-    # XXX: widget Ä¾ÀÜ¸Æ¤Ó½Ð¤·¤Ï¡© cgi ¤¸¤ã¤Ê¤·¤Ë¡¢Ä¾ÀÜ¥Ñ¥é¥á¡¼¥¿ÅÏ¤·¤Ï¡© =>
+    # XXX: widget ç›´æŽ¥å‘¼ã³å‡ºã—ã¯ï¼Ÿ cgi ã˜ã‚ƒãªã—ã«ã€ç›´æŽ¥ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿æ¸¡ã—ã¯ï¼Ÿ =>
     ($root, $loc, $file, $trailer) = split_path($path, $self->{cf_app_root});
     $cgi = $self->new_cgi(@$args);
   }
@@ -149,6 +148,26 @@ sub new_cgi {
   # shift; require CGI::Simple; CGI::Simple->new(@_);
 }
 
+sub cgi_process_error {
+  (my MY $self, my ($error, $con, $fh, $env)) = @_;
+  if (not $error or is_done($error)) {
+    # NOP
+  } elsif (ref $error eq 'ARRAY') {
+    # Non local exit with PSGI response triplet.
+    $self->cgi_response($fh, $env, @{$error});
+
+  } elsif (defined $con and UNIVERSAL::isa($error, $self->Error)) {
+    # Known error. Header (may be) already printed.
+    $con->set_content_type('text/plain');
+    $con->flush_headers;
+    print $fh $error->message;
+
+  } else {
+    # Unknown error.
+    $self->show_error($fh, $error, $env);
+  }
+}
+
 sub cgi_response {
   (my MY $self, my ($fh, $env, $code, $headers, $body)) = @_;
   my $header = mk_http_status($code);
@@ -179,5 +198,7 @@ sub show_error {
   # XXX: Is text/plain secure?
   print $fh "Content-type: text/plain\n\n$@";
 }
+
+&YATT::Lite::Breakpoint::break_load_dispatcher_cgi;
 
 1;

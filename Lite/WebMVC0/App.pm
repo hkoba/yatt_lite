@@ -26,13 +26,10 @@ sub handle {
   local $SIG{__WARN__} = sub {
     die $self->make_error(2, {reason => $_[0]});
   };
-#  local $SIG{__DIE__} = sub {
-#    if (@_ == 1 and ref $_[0] eq 'ARRAY') {
-#      die $_[0];
-#    } else {
-#      die $self->make_error(2, {reason => $_[0]});
-#    }
-#  };
+  local $SIG{__DIE__} = sub {
+    my ($err) = @_;
+    die(ref $err ? $err : $self->make_error(2, {reason => $err}));
+  };
   if (my $charset = $self->header_charset) {
     $con->set_charset($charset);
   }

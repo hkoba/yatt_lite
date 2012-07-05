@@ -323,14 +323,16 @@ sub split_path_info {
     split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root});
     # or die.
 
-  } else {
+  } elsif (nonempty($env->{PATH_INFO})) {
     #
     # [2] Template lookup mode.
     #
     lookup_path($env->{PATH_INFO}
 		, $self->{tmpldirs}
 		, $self->{cf_index_name}, ".yatt");
+  } else {
     # or die
+    return;
   }
 }
 

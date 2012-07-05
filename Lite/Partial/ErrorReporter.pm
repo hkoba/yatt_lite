@@ -1,4 +1,5 @@
 package YATT::Lite::Partial::ErrorReporter; sub MY () {__PACKAGE__}
+# -*- coding: utf-8 -*-
 use strict;
 use warnings FATAL => qw/all/;
 use YATT::Lite::Partial
@@ -7,6 +8,9 @@ use YATT::Lite::Partial
 		 cf_die_in_error
 		/]);
 use Carp qw/longmess/;
+
+use YATT::Lite::Error; sub Error () {'YATT::Lite::Error'}
+
 #========================================
 # error reporting.
 #========================================
@@ -20,8 +24,7 @@ sub make_error {
   my ($self, $depth, $opts) = splice @_, 0, 3;
   my $fmt = $_[0];
   my ($pkg, $file, $line) = caller($depth);
-  require YATT::Lite::Error;
-  new YATT::Lite::Error
+  $self->Error->new
     (file => $opts->{file} // $file, line => $opts->{line} // $line
      , format => $fmt, args => [@_[1..$#_]]
      , backtrace => longmess()
@@ -33,25 +36,25 @@ sub make_error {
 sub raise {
   (my MY $self, my $type) = splice @_, 0, 2;
   my $opts = shift if @_ and ref $_[0] eq 'HASH';
-  # shift/splice ¤·¤Ê¤¤¤Î¤Ï¡¢°ú¿ô¤ò stack trace ¤Ë»Ä¤·¤¿¤¤¤«¤é
+  # shift/splice ã—ãªã„ã®ã¯ã€å¼•æ•°ã‚’ stack trace ã«æ®‹ã—ãŸã„ã‹ã‚‰
   my $err = $self->make_error(1 + (delete($opts->{depth}) // 1), $opts, @_);
 
   if (ref $self and my $sub = $self->{cf_error_handler}) {
-    # $con ¤ò°ú¿ô¤Ç°ú¤­¤º¤ê²ó¤¹¤Î¤ÏÂçÊÑ¤Ê¤Î¤Ç¡¢¤à¤·¤í³°¤«¤é closure ¤òÅÏ¤½¤¦¡¢¤È¡£
-    # $SIG{__DIE__} ¤ò»È¤ï¤Ê¤¤¤Î¤Ï¤Ê¤¼¤«¤Ã¤Æ? ¤½¤ì¤Ï¥æ¡¼¥¶¤Ë³«Êü¤·¤Æ¤ª¤­¤¿¤¤¤Î¤è¤ó¡£
+    # $con ã‚’å¼•æ•°ã§å¼•ããšã‚Šå›žã™ã®ã¯å¤§å¤‰ãªã®ã§ã€ã‚€ã—ã‚å¤–ã‹ã‚‰ closure ã‚’æ¸¡ãã†ã€ã¨ã€‚
+    # $SIG{__DIE__} ã‚’ä½¿ã‚ãªã„ã®ã¯ãªãœã‹ã£ã¦? ãã‚Œã¯ãƒ¦ãƒ¼ã‚¶ã«é–‹æ”¾ã—ã¦ãŠããŸã„ã®ã‚ˆã‚“ã€‚
     $sub->($type, $err);
   } elsif ($sub = $self->can('error_handler')) {
     $sub->($self, $type, $err);
   } elsif (not ref $self or $self->{cf_die_in_error}) {
     die $err->message;
   } else {
-    # Â¨ºÂ¤Ë die ¤·¤Ê¤¤¥â¡¼¥É¤Ï¡¢¥Ç¥Ð¥Ã¥¬¤«¤é error ¸Æ¤Ó½Ð¤·²Õ½ê¤Ë step ¤·¤ÆÌá¤ì¤ë¤è¤¦¤Ë¤¹¤ë¤¿¤á¡£
-    # ... ¤Ç¤â¡¢¼õ¤±Â¦¤ò do {my $err = $con->error; die $err} ¤Ë¤Ç¤â¤·¤Ê¤­¤ã¥À¥á¤«¤â?
+    # å³åº§ã« die ã—ãªã„ãƒ¢ãƒ¼ãƒ‰ã¯ã€ãƒ‡ãƒãƒƒã‚¬ã‹ã‚‰ error å‘¼ã³å‡ºã—ç®‡æ‰€ã« step ã—ã¦æˆ»ã‚Œã‚‹ã‚ˆã†ã«ã™ã‚‹ãŸã‚ã€‚
+    # ... ã§ã‚‚ã€å—ã‘å´ã‚’ do {my $err = $con->error; die $err} ã«ã§ã‚‚ã—ãªãã‚ƒãƒ€ãƒ¡ã‹ã‚‚?
     return $err;
   }
 }
 
-# XXX: ¾­Íè¡¢³ÈÄ¥¤µ¤ì¤ë¤«¤â¡£
+# XXX: å°†æ¥ã€æ‹¡å¼µã•ã‚Œã‚‹ã‹ã‚‚ã€‚
 sub DONE {
   my MY $self = shift;
   if (my $sub = $self->{cf_at_done}) {

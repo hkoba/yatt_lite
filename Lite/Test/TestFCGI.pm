@@ -232,7 +232,9 @@ my $Test = Test::Builder->new;
 	       , REQUEST_URI     => $path
 	       , PATH_INFO       => $path
 	       , DOCUMENT_ROOT   => $self->{cf_rootdir}
-	       , PATH_TRANSLATED => "$self->{cf_rootdir}$path"};
+	       , PATH_TRANSLATED => "$self->{cf_rootdir}$path"
+	       , REDIRECT_STATUS => 200
+	      };
     my @content;
     if (defined $query) {
       if ($env->{REQUEST_METHOD} eq 'GET') {

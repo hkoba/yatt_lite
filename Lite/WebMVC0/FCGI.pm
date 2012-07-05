@@ -1,8 +1,13 @@
 package YATT::Lite::WebMVC0::FCGI;
+# -*- coding: utf-8 -*-
 use strict;
 use warnings FATAL => qw/all/;
 
-package YATT::Lite::WebMVC0; use YATT::Lite::WebMVC0;
+use YATT::Lite::WebMVC0;
+require YATT::Lite::WebMVC0::CGI;
+
+package YATT::Lite::WebMVC0;
+
 
 ########################################
 #
@@ -54,20 +59,15 @@ sub runas_fcgi {
       next;
     }
 
-    # ½ÐÎÏ¤Î´ðËÜÆ°ºî¤Ï streaming.
-    eval { $self->dispatch($stdout, $env) };
+    # å‡ºåŠ›ã®åŸºæœ¬å‹•ä½œã¯ streaming.
+    my $con;
+    my $error = catch {
+      my @params = $self->make_cgi($env, $args, \%opts);
+      $con = $self->make_connection($stdout, @params);
+      $self->run_dirhandler($con, @params);
+    };
 
-    # Àµ¾ï»þ¤ÏÁ´¤Æ½ÐÎÏ¤¬ºÑ¤ó¤À¸å¤ËÀ©¸æ¤¬Ìá¤Ã¤Æ¤¯¤ë¡£
-    if (not $@ or is_done($@)) {
-      # NOP
-    } elsif (ref $@ eq 'ARRAY') {
-      # Non local exit with PSGI response triplet.
-      $self->cgi_response($stdout, $env, @{$@});
-
-    } else {
-      # Unknown error.
-      $self->show_error($stdout, $@, $env);
-    }
+    $self->cgi_process_error($error, $con, $stdout, $env);
 
     last if -e $progname and -M $progname < $age;
   }
@@ -94,5 +94,7 @@ sub psgi_fcgi_newenv {
   # delete $env->{HTTP_CONTENT_LENGTH};
   $env;
 }
+
+&YATT::Lite::Breakpoint::break_load_dispatcher_fcgi;
 
 1;
