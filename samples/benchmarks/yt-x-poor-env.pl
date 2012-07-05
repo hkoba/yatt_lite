@@ -11,7 +11,7 @@ use Benchmark qw(:all);
 use FindBin qw($Bin);
 
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../../..";
 use YATT::Lite;
 
 use Template;
@@ -37,6 +37,7 @@ assuming CGI applications using only pure Perl modules.
 See also benchmark/x-rich-env.pl.
 HELP
 
+
 $tmpl = 'include' if not defined $tmpl;
 $n    = 100       if not defined $n;
 
@@ -52,14 +53,14 @@ $Template::Config::STASH = 'Template::Stash'; # Instead of Stash::XS
 
 require Text::Xslate::PP;
 
-foreach my $mod(qw(
+foreach my $mod(qw/
     Text::Xslate
     Template
     HTML::Template
     Text::MicroTemplate
     Text::MicroTemplate::Extended
     YATT::Lite
-)){
+/){
     print $mod, '/', $mod->VERSION, "\n" if $mod->VERSION;
 }
 
@@ -107,23 +108,29 @@ TEST: {
 
     plan tests => 4;
 
-    $tt->process("$tmpl.tt", $vars, \my $out) or die $tt->error;
-    $out =~ s/\n+/\n/g;
-    is $out, $expected, 'TT: Template-Toolkit';
-
-    $out = $mt->render_file($tmpl, $vars);
-    $out =~ s/\n+/\n/g;
-    is $out, $expected, 'MT: Text::MicroTemplate';
-
-    $ht->param($vars);
-    $out = $ht->output();
-    $out =~ s/\n+/\n/g;
-    is $out, $expected, 'HT: HTML::Template';
+    {
+      $tt->process("$tmpl.tt", $vars, \my $out) or die $tt->error;
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'TT: Template-Toolkit';
+    }
 
     {
-      $out = $yt->render($tmpl, [$vars]);
+      my $out = $mt->render_file($tmpl, $vars);
       $out =~ s/\n+/\n/g;
-      is $out, $expected, 'YATT::Lite';
+      is $out, $expected, 'MT: Text::MicroTemplate';
+    }
+
+    {
+      $ht->param($vars);
+      my $out = $ht->output();
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'HT: HTML::Template';
+    }
+
+    {
+      my $out = $yt->render($tmpl, [$vars]);
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'YT: YATT::Lite';
     }
 }
 

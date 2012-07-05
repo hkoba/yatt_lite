@@ -4,9 +4,10 @@ use warnings FATAL => qw(all);
 use Carp;
 
 use base qw(YATT::Lite::Connection);
-use fields qw/cf_cgi cf_dir cf_file cf_subpath cf_is_gateway
-	      cf_is_psgi
-	      cf_hmv
+use fields qw/cf_cgi
+	      cf_is_psgi cf_hmv
+
+	      cf_dir cf_file cf_subpath
 	      cf_root cf_location
 	    /;
 use YATT::Lite::Util qw(globref url_encode nonempty);
@@ -16,11 +17,21 @@ use YATT::Lite::PSGIEnv;
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
-  foreach my $name (qw(url_param request_method referer)) {
+  foreach my $name (qw(url_param request_method)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
+      $prop->{cf_cgi}->$name;
     };
   }
+
+  foreach my $item ([referer => 'HTTP_REFERER']) {
+    my ($method, $env) = @$item;
+    *{globref(PROP, $method)} = sub {
+      my PROP $prop = (my $glob = shift)->prop;
+      $prop->{cf_env}->{$env};
+    };
+  }
+
   foreach my $name (qw(file subpath)) {
     my $cf = "cf_$name";
     *{globref(PROP, $name)} = sub {
@@ -209,7 +220,9 @@ sub redirect {
   my $url = do {
     if (ref $_[0]) {
       # To do external redirect, $url should pass as SCALAR REF.
-      ${shift @_}
+      my $arg = shift;
+      # die "redirect url is not a scalar ref: $arg";
+      $$arg;
     } elsif ($_[0] =~ m{^(?:\w+:)?//([^/]+)}
 	     and $1 ne ($glob->mkhost // '')) {
       $glob->error("External redirect is not allowed: %s", $_[0]);
@@ -253,11 +266,9 @@ sub load_session {
   }
 }
 
-sub destroy_session {
+sub delete_session {
   my PROP $prop = (my $glob = shift)->prop;
-  # To avoid repeative false session tests.
-  return unless $prop->{session};
-  $prop->{cf_system}->session_destroy($glob);
+  $prop->{cf_system}->session_delete($glob);
 }
 
 #========================================

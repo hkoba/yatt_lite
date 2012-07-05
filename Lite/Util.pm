@@ -70,12 +70,17 @@ require Scalar::Util;
     *{globref(shift, 'FIELDS')}{HASH};
   }
   sub lexpand {
+    croak "lexpand should be used in LIST Context" unless wantarray;
     unless (defined $_[0]) {
-      wantarray ? () : 0
+      ();
     } elsif (not ref $_[0]) {
       $_[0]
-    } else {
+    } elsif (ref $_[0] eq 'ARRAY') {
       @{$_[0]}
+    } elsif (ref $_[0] eq 'HASH') {
+      %{$_[0]}
+    } else {
+      ();
     }
   }
   # $fn:e

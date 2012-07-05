@@ -9,7 +9,7 @@
 <div id="wrapper">
   <yatt:if "&yatt:is_logged_in();">
     <div class="login">
-      <b>&yatt:sess(login);</b> | <a href="logout.ydo?nx=&yatt:CON:file();">logout</a>
+      <b>&yatt:sess(:LOGIN());</b> | <a href="logout.ydo?nx=&yatt:CON:file();">logout</a>
     </div>
   </yatt:if>
 <center>
@@ -33,13 +33,13 @@
 	</tr>
 	<tr>
 	  <td colspan="2">
-	    <input type="hidden" name="back" value="&yatt:CON:file();" />
+	    <input type="hidden" name="nx" value="&yatt:CON:file();" />
 	    <input type="submit" name=":login" value="login" />
 	  </td>
 	</tr>
 	<tr>
 	  <td colspan="2">
-	    <a href="regist.yatt?back=&yatt:CON:file();">Register</a>
+	    <a href="regist.yatt?nx=&yatt:CON:file();">Register</a>
 	    | <a href="resetpass.yatt">Forgot password</a>
 	  </td>
 	</tr>

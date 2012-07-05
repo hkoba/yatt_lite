@@ -22,7 +22,16 @@ libdir=$bindir:h:h
 distdir=$bindir:h
 cd $distdir
 
-zparseopts -D -A opts C=o_cover T=o_taint l+:=o_lib -samples -brew:: || true
+optspec=(
+    C=o_cover
+    T=o_taint
+    'l+:=o_lib'
+    -nosamples
+    -samples
+    -brew::
+)
+
+zparseopts -D -A opts $optspec || true
 
 if (($+opts[--samples])); then
     # Test samples only.
@@ -32,7 +41,7 @@ elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     # If no **/*.t is specified:
     # To make relative path invocation happier.
     argv=(t/**/*.t(N))
-    if [[ -d samples ]]; then
+    if ((! $+opts[--nosamples])) && [[ -d samples ]]; then
 	argv+=(samples/**/t/*.t(*N,@N))
     fi
 fi

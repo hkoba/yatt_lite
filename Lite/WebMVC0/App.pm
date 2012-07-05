@@ -1,20 +1,21 @@
 package YATT::Lite::WebMVC0::App; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
-use YATT::Lite -as_base, qw/*SYS/;
-use YATT::Lite::MFields qw/cf_session_opts
-	      cf_header_charset
+use YATT::Lite -as_base, qw/*SYS
+			    Entity/;
+use YATT::Lite::MFields qw/cf_header_charset
+			   cf_dir_config
 
-	      Action
-	    /;
+			   Action/;
 
 use YATT::Lite::WebMVC0::Connection;
 sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 
 use Carp;
-use YATT::Lite::Util qw(cached_in ckeval
+use YATT::Lite::Util qw/cached_in ckeval
 			dofile_in compile_file_in
-		      );
+			try_invoke
+		      /;
 
 # sub handle_ydo, _do, _psgi...
 
@@ -25,11 +26,15 @@ sub handle {
   local $SIG{__WARN__} = sub {
     die $self->make_error(2, {reason => $_[0]});
   };
+#  local $SIG{__DIE__} = sub {
+#    if (@_ == 1 and ref $_[0] eq 'ARRAY') {
+#      die $_[0];
+#    } else {
+#      die $self->make_error(2, {reason => $_[0]});
+#    }
+#  };
   if (my $charset = $self->header_charset) {
     $con->set_charset($charset);
-  }
-  if (my $enc = $self->{cf_output_encoding}) {
-    $con->configure(encoding => $enc);
   }
   $self->SUPER::handle($type, $con, $file);
 }
@@ -92,8 +97,10 @@ sub error_handler {
   my $errcon = do {
     if (my $con = $self->CON) {
       $con->as_error;
+    } elsif ($SYS) {
+      $SYS->make_connection(\*STDOUT);
     } else {
-      $self->make_connection(\*STDOUT);
+      \*STDERR;
     }
   };
   # error.ytmpl を探し、あれば呼び出す。
@@ -103,9 +110,16 @@ sub error_handler {
     die $err;
   };
   $sub->($pkg, $errcon, $err);
-  $errcon->flush_headers; # XXX: これが無いと、 500 error, 有っても無限再帰。
+  try_invoke($errcon, 'flush_headers');
   $self->DONE; # XXX: bailout と分けるべき
 }
+
+Entity dir_config => sub {
+  my ($this, $name) = @_;
+  my MY $self = $this->YATT;
+  return $self->{cf_dir_config} unless defined $name;
+  $self->{cf_dir_config}{$name};
+};
 
 use YATT::Lite::Breakpoint;
 YATT::Lite::Breakpoint::break_load_dirhandler();

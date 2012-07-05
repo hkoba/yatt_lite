@@ -30,7 +30,9 @@ use YATT::Lite::MFields qw/YATT
 use YATT::Lite::Entities -as_base, qw(*YATT *CON *SYS);
 
 # For error, raise, DONE. This is inserted to ISA too.
-use YATT::Lite::ErrorReporter;
+use YATT::Lite::Partial::ErrorReporter;
+
+use YATT::Lite::Partial::AppPath;
 
 use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			set_inc ostream try_invoke
@@ -54,6 +56,9 @@ sub handle {
   (my MY $self, my ($ext, $con, $file)) = @_;
   local ($YATT, $CON) = ($self, $con);
   $con->configure(yatt => $self);
+  if (my $enc = $self->{cf_output_encoding}) {
+    $con->configure(encoding => $enc);
+  }
 
   unless (defined $file) {
     confess "\n\nFilename for DirHandler->handle() is undef!"

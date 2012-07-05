@@ -14,6 +14,7 @@ sub import {
 package
   YATT::Lite::Partial::Meta; sub Meta () {__PACKAGE__}
 use parent qw/YATT::Lite::MFields/;
+use YATT::Lite::MFields qw/cf_requires/;
 use YATT::Lite::Util qw/globref lexpand/;
 use Carp;
 
@@ -28,10 +29,9 @@ sub define_partial_class {
   if (my @fields = lexpand(delete $opts{fields})) {
     $pack->define_fields($callpack, @fields);
   }
-  if (%opts) {
-    croak "Unknown options for Partial definition: "
-      .join(", ", sort keys %opts);
-  }
+
+  $meta->configure(%opts) if %opts;
+
   # my Meta $meta = $pack->define_fields($callpack, @_);
   *{globref($callpack, 'import')} = sub {
     shift;
@@ -56,6 +56,12 @@ sub export_partial_class_to {
   (my Meta $partial, my $fullclass) = @_;
 
   # print "# partial $partial->{cf_package} is imported to $fullclass\n";
+
+  if (my @requires = lexpand($partial->{cf_requires})) {
+    my @missing = grep {not $fullclass->can($_)} @requires;
+    croak "User class of Partital '$partial->{cf_package}' must implement: "
+      . join(", ", sort @missing) if @missing;
+  }
 
   add_isa_to($fullclass, $partial->{cf_package});
 

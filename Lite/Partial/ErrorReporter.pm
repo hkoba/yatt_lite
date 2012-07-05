@@ -1,4 +1,4 @@
-package YATT::Lite::ErrorReporter; sub MY () {__PACKAGE__}
+package YATT::Lite::Partial::ErrorReporter; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw/all/;
 use YATT::Lite::Partial

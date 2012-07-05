@@ -10,7 +10,7 @@ use FindBin qw($Bin);
 use Test::More;
 use Test::Differences;
 
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../../..";
 use YATT::Lite;
 
 use Config; printf "Perl/%vd %s\n", $^V, $Config{archname};

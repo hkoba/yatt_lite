@@ -98,8 +98,13 @@ test_psgi $app, sub {
       if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
 	my @header = @{$item->{cf_HEADER}};
 	while (my ($f, $v) = splice @header, 0, 2) {
-	  like $res->header($f), qr/$v/
-	    , "[$sect_name] $T POST $item->{cf_FILE} $f";
+	  my $name = "[$sect_name] $T POST $item->{cf_FILE} $f";
+	  my $got = $res->header($f);
+	  if (defined $got) {
+	    like $got, qr/$v/, $name;
+	  } else {
+	    fail $name; diag("Header '$f' was undef");
+	  }
 	}
       } elsif (ref $item->{cf_BODY}) {
 	like nocr($res->content), $tests->mkseqpat($item->{cf_BODY})

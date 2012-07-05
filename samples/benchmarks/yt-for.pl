@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../../..";
 use YATT::Lite;
 
 use Text::Xslate;
@@ -20,8 +20,8 @@ foreach my $mod(qw(YATT::Lite
 
 my $n = shift(@ARGV) || 10;
 
-my %vpath = (
-    for => <<'TX',
+my %vpath;
+$vpath{for} = <<'TX';
 <ul>
 : for $books ->($item) {
     <li><:= $item.title :></li>
@@ -32,7 +32,7 @@ my %vpath = (
 : }
 </ul>
 TX
-);
+;
 
 my $tx = Text::Xslate->new(
     path      => \%vpath,
@@ -52,7 +52,7 @@ my $mt  = build_mt(<<'MT_END');
 </ul>
 MT_END
 
-my $ht = HTML::Template->new(scalarref => \<<'HT_END', case_sensitive => 1);
+my $ht = HTML::Template::Pro->new(scalarref => \<<'HT_END', case_sensitive => 1);
 <ul>
 <tmpl_loop name="books">
     <li><tmpl_var name="title" escape="html"></li>
@@ -77,6 +77,7 @@ my $yt = YATT::Lite->new(app_ns => 'MyApp'
 </ul>
 YT_END
 
+
 my %vars = (
      books => [(
         { title => 'Islands in the stream' },
@@ -100,33 +101,25 @@ $o_tx
 ==yt result==
 $o_yt\n";
 
-my ($yt_sub, $yt_pkg) = $yt->find_renderer('')
-  or die "Can't find yatt renderer";
-
 #$ht->param(\%vars);die $ht->output();
 
 # suppose PSGI response body
 cmpthese -1 => {
-    xslate => sub {
+    Xslate => sub {
         my $body = [$tx->render(for => \%vars)];
         return;
     },
-    mt => sub {
+    MT => sub {
         my $body = [$mt->(\%vars)];
         return;
     },
-    ht => sub{
+    HTP => sub{
         $ht->param(\%vars);
         my $body = [$ht->output()];
         return;
     },
-    yt => sub {
+    YT => sub {
         my $body = $yt->render('' => [\%vars]);
 	return;
     },
-    ytsub => sub {
-      open my $fh, '>', \ (my $body = "\0" x 1024);
-      $yt_sub->($yt_pkg, $fh, \%vars);
-      return;
-    }
 };

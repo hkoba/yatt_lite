@@ -39,13 +39,13 @@ BODY:
  	</tr>
  	<tr>
  	  <td colspan="2">
- 	    <input type="hidden" name="back" value="index.yatt" />
+ 	    <input type="hidden" name="nx" value="index.yatt" />
  	    <input type="submit" name=":login" value="login" />
  	  </td>
  	</tr>
  	<tr>
  	  <td colspan="2">
- 	    <a href="regist.yatt?back=index.yatt">Register</a>
+ 	    <a href="regist.yatt?nx=index.yatt">Register</a>
  	    | <a href="resetpass.yatt">Forgot password</a>
  	  </td>
  	</tr>
@@ -65,7 +65,7 @@ METHOD: POST
 PARAM{
 login: hkoba
 password: foo
-back: index.yatt
+nx: index.yatt
 }
 HEADER[
 Location: ^index.yatt
@@ -102,7 +102,7 @@ BODY:
 FILE: logout.ydo
 METHOD: POST
 PARAM{
-back: index.yatt
+nx: index.yatt
 }
 HEADER[
 Location: ^index.yatt
@@ -141,13 +141,13 @@ BODY:
  	</tr>
  	<tr>
  	  <td colspan="2">
- 	    <input type="hidden" name="back" value="index.yatt" />
+ 	    <input type="hidden" name="nx" value="index.yatt" />
  	    <input type="submit" name=":login" value="login" />
  	  </td>
  	</tr>
  	<tr>
  	  <td colspan="2">
- 	    <a href="regist.yatt?back=index.yatt">Register</a>
+ 	    <a href="regist.yatt?nx=index.yatt">Register</a>
  	    | <a href="resetpass.yatt">Forgot password</a>
  	  </td>
  	</tr>

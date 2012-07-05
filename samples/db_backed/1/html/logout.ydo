@@ -1,14 +1,18 @@
+use strict;
 my $i = 0;
 my $compiled_at = scalar localtime time;
 
 sub {
   my ($this, $con) = @_;
 
-  $this->YATT->remove_session($con);
+  $con->delete_session;
 
-  if (my $url = $con->param('back') || $con->referer) {
+  if (my $url = $con->param('nx') || $con->referer) {
     $con->redirect($url);
   } else {
     print $con "OK(".$i++."; $compiled_at)\n";
   }
 };
+
+# XXX: delegation of: url_param request_method
+# XXX: accessor: file subpath

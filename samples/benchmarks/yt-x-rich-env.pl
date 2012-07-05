@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../../..";
 use YATT::Lite;
 
 use Text::Xslate;
@@ -29,13 +29,14 @@ GetOptions(
     'help'       => \my $help,
 );
 
-die <<'HELP' if $help;
+if ($help) {die <<'HELP'}
 perl -Mblib benchmark/x-rich-env.pl [--size N] [--template NAME]
 
 This is a general benchmark utility for rich environment,
 assuming persisitent PSGI applications using XS modules.
 See also benchmark/x-poor-env.pl.
 HELP
+
 
 require Text::Xslate;
 
@@ -55,7 +56,7 @@ warn "HTML::Template::Pro is not available ($@)\n" if $@;
 my $has_tenjin = ($try_tenjin && eval q{ use Tenjin; 1 });
 warn "Tenjin is not available ($@)\n" if $try_tenjin && $@;
 
-foreach my $mod(qw(
+foreach my $mod(qw/
     Text::Xslate
     Text::MicroTemplate
     Text::MicroTemplate::Extended
@@ -65,7 +66,7 @@ foreach my $mod(qw(
     HTML::Template::Pro
     Tenjin
     YATT::Lite
-)){
+/){
     print $mod, '/', $mod->VERSION, "\n" if $mod->VERSION;
 }
 
@@ -86,7 +87,7 @@ my $tt = Template->new(
 );
 
 my $htp;
-if($has_htp) {
+if ($has_htp) {
     $htp = HTML::Template::Pro->new(
         path           => [$path],
         filename       => "$tmpl.ht",
@@ -95,7 +96,7 @@ if($has_htp) {
 }
 
 my $tcs;
-if($has_tcs) {
+if ($has_tcs) {
     $tcs = Text::ClearSilver->new(
         VarEscapeMode => 'html',
         load_path     => [$path],
@@ -104,7 +105,7 @@ if($has_tcs) {
 
 my $mst_in  = "$Bin/template/list.mst";
 my $mst_bin = "$Bin/template/list.mst.out";
-if($has_mst) {
+if ($has_mst) {
     MobaSiF::Template::Compiler::compile($mst_in, $mst_bin);
 }
 
@@ -140,41 +141,46 @@ my $vars_tenjin = Storable::dclone($vars);
     $tests++ if $has_tenjin;
     plan tests => $tests;
 
-    $tt->process("$tmpl.tt", $vars, \my $out) or die $tt->error;
-    $out =~ s/\n+/\n/g;
-    is $out, $expected, 'TT: Template-Toolkit';
-
-    $out = $mt->render_file($tmpl, $vars);
-    $out =~ s/\n+/\n/g;
-    is $out, $expected, 'MT: Text::MicroTemplate';
-
-    if($has_tcs) {
-        $tcs->process("$tmpl.cs", $vars, \$out);
-        $out =~ s/\n+/\n/g;
-        is $out, $expected, 'TCS: Text::ClearSilver';
-    }
-
-    if($has_mst) {
-        $out = MobaSiF::Template::insert($mst_bin, $vars);
-        $out =~ s/\n+/\n/g;
-        is $out, $expected, 'MST: MobaSiF::Template';
-    }
-
-    if($has_htp) {
-        $htp->param($vars);
-        $out = $htp->output();
-        $out =~ s/\n+/\n/g;
-        is $out, $expected, 'HTP: HTML::Template::Pro';
-    }
-    if($has_tenjin) {
-        $out = $tenjin->render("$tmpl.tj", $vars_tenjin);
-        $out =~ s/\n+/\n/g;
-        is $out, $expected, 'Tenjin';
-    }
     {
-      $out = $yt->render($tmpl, [$vars]);
+      $tt->process("$tmpl.tt", $vars, \my $out) or die $tt->error;
       $out =~ s/\n+/\n/g;
-        is $out, $expected, 'YATT::Lite';
+      is $out, $expected, 'TT: Template-Toolkit';
+    }
+
+    {
+      my $out = $mt->render_file($tmpl, $vars);
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'MT: Text::MicroTemplate';
+    }
+
+    if ($has_tcs) {
+      $tcs->process("$tmpl.cs", $vars, \my $out);
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'TCS: Text::ClearSilver';
+    }
+
+    if ($has_mst) {
+      my $out = MobaSiF::Template::insert($mst_bin, $vars);
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'MST: MobaSiF::Template';
+    }
+
+    if ($has_htp) {
+      $htp->param($vars);
+      my $out = $htp->output();
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'HTP: HTML::Template::Pro';
+    }
+    if ($has_tenjin) {
+      my $out = $tenjin->render("$tmpl.tj", $vars_tenjin);
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'Tenjin';
+    }
+
+    {
+      my $out = $yt->render($tmpl, [$vars]);
+      $out =~ s/\n+/\n/g;
+      is $out, $expected, 'YT: YATT::Lite';
     }
 }
 

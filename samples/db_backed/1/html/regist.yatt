@@ -1,4 +1,4 @@
-<!yatt:args back>
+<!yatt:args nx>
 <yatt:envelope guest_ok>
   <:yatt:title>Registration Form</:yatt:title>
 <form method="POST">
@@ -21,7 +21,7 @@
     </tr>
     <tr>
       <td colspan="2">
-        <input type="hidden" name="back" value="&yatt:back;"/>
+        <input type="hidden" name="nx" value="&yatt:nx;"/>
         <input type="submit" name="!regist"/>
       </td>
     </tr>
@@ -58,7 +58,7 @@ my ($user, $token) = $this->YATT->add_user($login, $pass1, $email);
 # XXX: query 追加の API も用意すべきでは?
 my $url = $con->mkurl(undef, ['!confirm' => 1, token => $token]);
 
-my $back = $con->param('back') || 'index.yatt';
+my $back = $con->param('nx') || 'index.yatt';
 
 if ($this->YATT->sendmail($con, $this, email => $email, $url)) {
   $this->render_sent($con, $back);
@@ -102,7 +102,7 @@ my $user = $this->entity_resultset('user')->find({confirm_token => $token})
 $user->confirm_token(undef);
 $user->update;
 
-$this->entity_set_logged_in(1, login => $user->login);
+$this->entity_set_logged_in($user->login);
 
 $this->render_success($con, $user);
 

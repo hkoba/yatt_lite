@@ -4,12 +4,6 @@ use warnings FATAL => qw/all/;
 use 5.009; # For real hash only. (not works for pseudo-hash)
 
 use parent qw/YATT::Lite::Object/;
-BEGIN {
-  our %FIELDS = map {$_ => ''} qw/fields cf_package known_parent/;
-}
-
-use YATT::Lite::Util qw/globref look_for_globref list_isa/;
-use Carp;
 
 sub Decl () {'YATT::Lite::MFields::Decl'}
 BEGIN {
@@ -21,6 +15,14 @@ BEGIN {
        cf_default
        cf_doc/;
 }
+
+BEGIN {
+  our %FIELDS = map {$_ => Decl->new(name => $_)}
+    qw/fields cf_package known_parent/;
+}
+
+use YATT::Lite::Util qw/globref look_for_globref list_isa/;
+use Carp;
 
 sub import {
   my $pack = shift;

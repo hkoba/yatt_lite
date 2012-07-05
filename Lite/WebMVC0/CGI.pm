@@ -22,12 +22,14 @@ sub runas_cgi {
       = (Cwd::abs_path(shift @$args), 200)
 	if @_;
     $self->dispatch($fh, $env, $args, \%opts);
+
   } elsif ($env->{GATEWAY_INTERFACE}) {
     # Normal CGI
     if (defined $fh and fileno($fh) >= 0) {
       open STDERR, '>&', $fh or die "can't redirect STDERR: $!";
     }
     eval { $self->dispatch($fh, $env, $args, \%opts) };
+
     if (not $@ or is_done($@)) {
       # NOP
     } elsif (ref $@ eq 'ARRAY') {

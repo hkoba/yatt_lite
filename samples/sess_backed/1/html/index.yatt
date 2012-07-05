@@ -59,7 +59,7 @@
 <!yatt:page confirm>
 
 <yatt:envelope title="Confirm">
-&yatt:session_start_from_param();
+&yatt:session_start();
 
 <h2>Is this ok?</h2>
 <yatt:req_form is_confirm/>
@@ -68,14 +68,14 @@
 <!yatt:action regist>
 my ($this, $con) = @_;
 
-if (my $sess = $this->YATT->get_session) {
+if (my $sess = $con->get_session) {
   # dataref だと, おまけが多すぎる。
   my %hash; $hash{$_} = $sess->param($_) for $sess->param;
   require YAML::Tiny;
   my $dump = YAML::Tiny::Dump(\%hash);
   my ($fh, $name, $fnum) = $this->YATT->mh_alloc_newfh;
   print $fh $dump;
-  $this->YATT->session_destroy;
+  $con->delete_session;
   $this->render_thanks($con, $name, $fnum);
 } else {
   die "session is (already) empty!\n";

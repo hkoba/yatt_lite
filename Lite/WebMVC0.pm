@@ -19,13 +19,10 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_psgi_static
 			   cf_index_name
 			   cf_backend
-
-			   cf_session_driver
-			   cf_session_config
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
-			lookup_path nonempty
+			lookup_path nonempty try_invoke
 			mk_http_status
 			default ckrequire
 			lexpand rootname extname untaint_any terse_dump);
@@ -217,8 +214,10 @@ sub call {
   my $error = catch {
     $dh->with_system($self, handle => $dh->cut_ext($file), $con, $file);
   };
+
+  try_invoke($con, 'flush_headers');
+
   if (not $error or is_done($error)) {
-    # XXX: charset
     my $res = Plack::Response->new(200);
     $res->content_type("text/html"
 		       . ($self->{cf_header_charset}
@@ -397,8 +396,6 @@ sub document_dir {
 
 #========================================
 
-#========================================
-
 sub connection_param {
   (my MY $self, my ($env, $quad, @rest)) = @_;
   my ($virtdir, $loc, $file, $subpath) = @$quad;
@@ -450,95 +447,7 @@ sub finalize_connection {
   $self->session_flush($glob) if $prop->{session};
 }
 
-#========================================
-# Session support, based on CGI::Session.
-
-#
-# This will be called back from $CON->get_session.
-#
-sub session_load {
-  my MY $self = shift;
-  my ConnProp $prop = (my $con = shift)->prop;
-  my ($brand_new, @with_init) = @_;
-
-  require CGI::Session;
-  my $method = $brand_new ? 'new' : 'load';
-  my %opts = lexpand($self->{cf_session_config});
-  my $sid_key = $opts{name} ||= $self->default_session_sid_key;
-
-  my $expire = delete($opts{expire}) // $self->default_session_expire;
-  my ($type, $driver_opts) = lexpand($self->{cf_session_driver});
-  my $sess = CGI::Session->$method($type, $con->cookies_in->{$sid_key}
-				   , $driver_opts, \%opts);
-  unless ($sess) {
-    $self->error("Session object is empty!");
-  }
-
-  $sess->expire($expire);
-
-  if ($brand_new and $sess->is_new) {
-    $con->set_cookie($sess->cookie(-path => $con->location));
-  }
-
-  foreach my $spec (@with_init) {
-      if (ref $spec eq 'ARRAY') {
-	my ($name, @value) = @$spec;
-	$sess->param($name, @value > 1 ? \@value : $value[0]);
-      } elsif (not ref $spec or ref $spec eq 'Regexp') {
-	$spec = qr{^\Q$spec} unless ref $spec;
-	foreach my $name ($con->param) {
-	  next unless $name =~ $spec;
-	  my (@value) = $con->param($name);
-	  $sess->param($name, @value > 1 ? \@value : $value[0]);
-	}
-      } else {
-	$self->error("Invalid session initializer: %s"
-		     , terse_dump($spec));
-      }
-  }
-
-  $prop->{session} = $sess;
-}
-
-sub session_destroy {
-  my MY $self = shift;
-  my ConnProp $prop = (my $con = shift)->prop;
-  my $sess = delete $prop->{session};
-
-  $sess->delete;
-  $sess->flush;
-
-  my $name = $self->{cf_session_config}{name} || $self->default_session_sid_key;
-  my @rm = ($name, '', -expires => '-10y', -path => $con->location);
-  $con->set_cookie(@rm);
-}
-
-sub session_flush {
-  my MY $self = shift;
-  my ConnProp $prop = (my $glob = shift)->prop;
-  my $sess = $prop->{session}
-    or return;
-  return if $sess->errstr;
-  $sess->flush;
-  if (my $err = $sess->errstr) {
-    local $prop->{session};
-    $self->error("Can't flush session: %s", $err);
-  }
-}
-
-sub configure_use_session {
-  (my MY $self, my $value) = @_;
-  if ($value) {
-    $self->{cf_session_config}
-      //= ref $value ? $value : [$self->default_session_config];
-    $self->{cf_session_driver} //= [$self->default_session_driver];
-  }
-}
-
-sub default_session_driver  { ("driver:file" => {}) }
-sub default_session_config  { (Directory => '@tmp/sess') }
-sub default_session_expire  { '1d' }
-sub default_session_sid_key { 'SID' }
+use YATT::Lite::Partial::Session;
 
 #========================================
 # misc.

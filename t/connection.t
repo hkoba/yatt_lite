@@ -132,6 +132,7 @@ require_ok('YATT::Lite::WebMVC0');
 		 SERVER_NAME     0
 		 SERVER_PORT     5000
 		 SERVER_PROTOCOL HTTP/1.1
+		 HTTP_REFERER    http://example.com/
 		 psgi.url_scheme http
 	       );
     my $con = $mux->make_connection(undef, env => \%env);
@@ -148,6 +149,8 @@ require_ok('YATT::Lite::WebMVC0');
     is $con->mkurl(undef, undef, local => 1)
       , '/foo'
 	, "[$THEME] mkurl(,,local => 1)";
+
+    is $con->referer, 'http://example.com/', "[$THEME] referer";
   }
 
   {

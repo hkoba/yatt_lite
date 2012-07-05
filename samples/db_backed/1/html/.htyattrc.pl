@@ -3,12 +3,9 @@ use strict;
 use warnings FATAL => qw(all);
 
 use fields qw(dbic
-	      cf_dir_config
 	      cf_datadir cf_dbname);
 
 use YATT::Lite::Entities qw(*CON);
-
-require CGI::Session;
 
 sub DBIC () { __PACKAGE__ . '::DBIC' }
 
@@ -45,114 +42,29 @@ Entity resultset => sub {
   shift->YATT->dbic->resultset(@_);
 };
 
-Entity dir_config => sub {
-  my ($this, $name) = @_;
-  my MY $self = $this->YATT;
-  return $self->{cf_dir_config} unless defined $name;
-  $self->{cf_dir_config}{$name};
-};
-
 #========================================
+Entity LOGIN => sub { 'login' };
+
 Entity sess => sub {
   my ($this) = shift;
-  my $sess = $this->YATT->get_session($CON)
+  my $sess = $CON->get_session
     or return undef;
   $sess->param(@_);
 };
 
 Entity is_logged_in => sub {
-  shift->YATT->get_session($CON);
+  my ($this) = @_;
+  $this->entity_sess($this->entity_LOGIN);
 };
 
 Entity set_logged_in => sub {
-  my ($this, $value, @rest) = @_;
-  if ($value) {
-    $this->YATT->load_session($CON, 1, @rest);
+  my ($this, $login) = @_;
+  if (defined $login and $login ne '') {
+    $CON->load_session($CON, 1, [$this->entity_LOGIN => $login]);
   } else {
-    $this->YATT->remove_session($CON);
+    $CON->delete_session;
   }
 };
-
-use YATT::Lite::Types
-  (['ConnProp']);
-
-sub sid_name {'SID'}
-
-sub get_session {
-  (my MY $self, my $con) = @_;
-  my ConnProp $prop = $con->prop;
-  if (exists $prop->{session}) {
-    $prop->{session};
-  } else {
-    $self->load_session($con);
-  }
-}
-
-sub load_session {
-  (my MY $self, my ($con, $new, @rest)) = @_;
-  my ConnProp $prop = $con->prop;
-  if ($new || $self->_session_sid($prop->{cf_cgi})) {
-    $prop->{session} = $self->_load_session($con, $new, @rest);
-  } else {
-    $prop->{session} = undef;
-  }
-}
-
-sub _session_sid {
-  (my MY $self, my $cgi_or_req) = @_;
-  return unless defined $cgi_or_req;
-  if (my $sub = $cgi_or_req->can('cookies')) {
-    $sub->($cgi_or_req)->{$self->sid_name};
-  } else {
-    scalar $cgi_or_req->cookie($self->sid_name);
-  }
-}
-
-use YATT::Lite::Util qw(lexpand ostream);
-sub default_session_expire {'1d'}
-sub _load_session {
-  (my MY $self, my ($con, $new, @rest)) = @_;
-  my $method = $new ? 'new' : 'load';
-  my %opts = (name => $self->sid_name, lexpand($self->{cf_session_opts}));
-  my $expire = delete($opts{expire}) // $self->default_session_expire;
-  my $sess = CGI::Session->$method
-    ("driver:file", $self->_session_sid($con->cget('cgi')), undef, \%opts);
-
-  if (not $new and $sess and $sess->is_empty) {
-    # die "Session is empty!";
-    return
-  }
-
-  # expire させたくない時は、 session_opts に expire: 0 を仕込むこと。
-  $sess->expire($expire) if $sess;
-
-  if ($new and $sess) {
-    # 本当に良いのかな?
-    $con->set_cookie($sess->cookie(-path => $con->location));
-
-    while (my ($name, $value) = splice @rest, 0, 2) {
-      $sess->param($name, $value);
-    }
-  }
-
-  $sess;
-}
-
-sub remove_session {
-  (my MY $self, my $con) = @_;
-  my $sess = $self->get_session($con)
-    or return;
-
-  my ConnProp $prop = $con->prop;
-  undef $prop->{session};
-
-  $sess->delete;
-  $sess->flush;
-  # -expire じゃなく -expires.
-  my @rm = ($self->sid_name, '', -expires => '-10y'
-	    , -path => $con->location); # 10年早いんだよっと。
-  $con->set_cookie(@rm);
-}
 
 #========================================
 use Digest::MD5 qw(md5_hex);
@@ -300,6 +212,7 @@ sub fetch_email {
 #========================================
 use YATT::Lite::XHF qw(parse_xhf);
 use YATT::Lite::Util qw(terse_dump);
+use YATT::Lite::Util qw(ostream);
 
 sub output_file {
   my ($fn) = @_;

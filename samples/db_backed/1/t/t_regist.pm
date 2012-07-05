@@ -57,7 +57,7 @@ END
 
   unlink $email_fn if -e $email_fn;
 
-  my $got = nocr($app->render('/regist.yatt', {back => 'index.yatt'}));
+  my $got = nocr($app->render('/regist.yatt', {nx => 'index.yatt'}));
 
   eq_or_diff($got, <<'END', 'regist.yatt');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -93,7 +93,7 @@ END
     </tr>
     <tr>
       <td colspan="2">
-        <input type="hidden" name="back" value="index.yatt"/>
+        <input type="hidden" name="nx" value="index.yatt"/>
         <input type="submit" name="!regist"/>
       </td>
     </tr>
@@ -113,7 +113,7 @@ END
 				 password  foo
 				 password2 foo
 				 email     hkoba@foo.bar
-				 back      index.yatt)}));
+				 nx      index.yatt)}));
 
   eq_or_diff($got, <<'END', 'regist.yatt !regist');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">

@@ -184,6 +184,23 @@ sub cf_unknowns {
   @unknown;
 }
 
+sub cf_by_file {
+  (my MY $self, my $fn) = @_[0..1];
+  my ($ext) = $fn =~ m{\.(\w+)$};
+  $self->cf_by_filetype($ext, $fn, @_[3..$#_]);
+}
+
+sub cf_by_filetype {
+  (my MY $self, my ($ext, $fn)) = @_[0..2];
+  $ext //= 'xhf';
+  my $sub = $self->can("read_file_$ext")
+    or croak "Unknown config file type: $fn";
+  $self->_with_loading_file
+    ($fn, sub {
+       $self->configure($sub->($self, $fn));
+     });
+}
+
 sub define {
   my ($class, $name, $sub) = @_;
   *{YATT::Lite::Util::globref($class, $name)} = $sub;

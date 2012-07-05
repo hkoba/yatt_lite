@@ -675,5 +675,5 @@ BODY[
 ]
 
 ACTION[
-remove: ../data/.ht_*
+remove: ../var/data/.ht_*
 ]

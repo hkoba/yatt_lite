@@ -9,8 +9,9 @@ use 5.010;
 use Scalar::Util qw(weaken);
 
 use parent qw(YATT::Lite::NSBuilder File::Spec);
-use YATT::Lite::MFields qw/cf_app_root
-			   cf_doc_root
+use File::Path ();
+
+use YATT::Lite::MFields qw/cf_doc_root
 			   cf_allow_missing_dir
 			   cf_app_base
 
@@ -34,7 +35,8 @@ use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in
 			lookup_dir fields_hash);
 use YATT::Lite::XHF;
 
-use YATT::Lite::ErrorReporter;
+use YATT::Lite::Partial::ErrorReporter;
+use YATT::Lite::Partial::AppPath;
 
 require YATT::Lite;
 
@@ -212,7 +214,7 @@ sub _list_base_spec {
       if ($basespec =~ /^::(.*)/) {
 	ckrequire($1);
 	$pkg = $1;
-      } elsif (-d (my $realpath = $self->app_path($basespec))) {
+      } elsif (my $realpath = $self->app_path_find_dir($basespec)) {
 	if (defined $cycle->{$realpath}) {
 	  next if $is_default;
 	  $self->error("Template config error! base has cycle!: %s\n"
@@ -232,12 +234,6 @@ sub _list_base_spec {
       push @$basevfs, [dir => $yatt->cget('dir')] if $yatt;
     }
   }
-}
-
-sub app_path {
-  (my MY $self, my $path) = @_;
-  return '' unless $path =~ s/^\@//;
-  "$self->{cf_app_root}/$path";
 }
 
 #========================================
@@ -265,7 +261,7 @@ sub configparams_for {
   (
    $self->cf_delegate_known(0, $hash
 			      , qw(output_encoding header_charset debug_cgen
-				   at_done
+				   at_done app_root
 				   namespace only_parse error_handler))
    , die_in_error => ! YATT::Lite::Util::is_debugging());
 }

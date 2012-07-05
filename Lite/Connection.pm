@@ -29,7 +29,7 @@ use fields
    , qw/cf_system cf_yatt cf_backend cf_dbh/
   );
 
-use YATT::Lite::Util qw(globref fields_hash NIMPL);
+use YATT::Lite::Util qw(globref lexpand fields_hash);
 use YATT::Lite::PSGIEnv;
 
 sub prop { my $glob = shift; \%{*$glob}; }
@@ -180,9 +180,9 @@ sub flush_headers {
 
 sub finalize_headers {
   my PROP $prop = (my $glob = shift)->prop;
-  $glob->finalize_cookies if $prop->{cookies_out};
   $prop->{cf_yatt}->finalize_connection($glob)   if $prop->{cf_yatt};
   $prop->{cf_system}->finalize_connection($glob) if $prop->{cf_system};
+  $glob->finalize_cookies if $prop->{cookies_out};
 }
 
 sub flush {
@@ -231,7 +231,8 @@ sub new_cookie {
 sub finalize_cookies {
   my PROP $prop = (my $glob = shift)->prop;
   return unless $prop->{cookies_out};
-  $prop->{headers}{'Set-Cookie'} = [map {"$_"} values %{$prop->{cookies_out}}];
+  $prop->{headers}{'Set-Cookie'} = [map {$_->as_string}
+				    values %{$prop->{cookies_out}}];
 }
 #========================================
 
@@ -245,7 +246,7 @@ sub mkheader {
   my ($code) = shift // $prop->{cf_status} // 200;
   require HTTP::Headers;
   my $headers = HTTP::Headers->new("Content-type", $glob->_mk_content_type
-				   , $glob->list_header
+				   , map($_ ? %$_ : (), $prop->{headers})
 				   , @_);
   YATT::Lite::Util::mk_http_status($code)
       . $headers->as_string . "\015\012";
@@ -274,9 +275,15 @@ sub append_header {
   push @{$prop->{headers}}{$key}, @values;
 }
 
+# For PSGI only.
 sub list_header {
   my PROP $prop = prop(my $glob = shift);
-  (map($_ ? %$_ : (), $prop->{headers}));
+  my $headers = $prop->{headers}
+    or return;
+  map {
+    my $k = $_;
+    map {$k => $_} lexpand($headers->{$k});
+  } keys %$headers;
 }
 
 sub content_type {

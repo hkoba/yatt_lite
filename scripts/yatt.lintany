@@ -19,6 +19,7 @@ use lib $libdir;
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(default);
 use YATT::Lite::Error;
+use YATT::Lite::Factory;
 # XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
 
