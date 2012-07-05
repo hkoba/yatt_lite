@@ -336,3 +336,13 @@ END
 END
     , "$theme find_renderer foo";
 }
+
+{
+  package MyTestApp1;
+  use YATT::Lite -as_base;
+
+  package main;
+  ok my $sym = $MyTestApp1::{'FIELDS'}, "use YATT::Lite -as_base fills *FIELDS";
+  ok my $f = *{$sym}{HASH}, "FIELDS hash exists";
+  is_deeply $f, \%YATT::Lite::FIELDS, "FIELDS hash became same.";
+}

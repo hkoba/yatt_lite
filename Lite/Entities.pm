@@ -5,6 +5,8 @@ use Carp;
 
 # XXX: 残念ながら、要整理。
 
+require YATT::Lite::MFields;
+
 use YATT::Lite::Util;
 
 sub default_export { qw(*YATT) }
@@ -64,9 +66,17 @@ sub import {
 
 sub declare_as_base {
   my ($myPack, $opts, $callpack) = @_;
-  ckeval(<<END);
-package $callpack; use parent qw($myPack);
-END
+  # ckrequire($myPack); # Not needed because $myPack is just used!
+  {
+    my $sym = globref($callpack, 'ISA');
+    unless (*{$sym}{ARRAY}) {
+      *$sym = [];
+    }
+    push @{*{$sym}{ARRAY}}, $myPack;
+  }
+
+  # Fill $callpack's %FIELDS, by current ISA.
+  YATT::Lite::MFields->define_fields($callpack);
 }
 
 #########################################
