@@ -46,8 +46,10 @@ use YATT::Lite::Util qw(lexpand);
     $self->{app_ns} = my $app_ns = $self->{cf_app_ns} // $self->default_app_ns;
     try_require($app_ns);
 
-    my @base_entns = ($self->{default_app}->EntNS
-		      , $self->{default_app}->list_entns(ref $self));
+    my $site_entns = $self->{default_app}->ensure_entns
+      (ref $self, $self->{default_app}->list_entns(ref $self));
+
+    my @base_entns = ($self->{default_app}->EntNS, $site_entns);
 
     # print "default_app is $self->{default_app}\n";
     # print "base entns for $app_ns is: @base_entns\n";
