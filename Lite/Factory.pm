@@ -31,7 +31,7 @@ use YATT::Lite::MFields qw/cf_doc_root
 
 
 use YATT::Lite::Util::AsBase;
-use YATT::Lite::Util qw(lexpand globref untaint_any ckdo ckrequire dofile_in
+use YATT::Lite::Util qw(lexpand globref untaint_any ckrequire dofile_in
 			lookup_dir fields_hash);
 use YATT::Lite::XHF;
 
@@ -68,10 +68,17 @@ sub find_load_factory_script {
   sub load_psgi_script {
     my ($pack, $fn) = @_;
     local $yatt_loading = 1;
-    my $sub = ckdo $fn;
+    my $sub = $pack->sandbox_dofile($fn);
     $sub2app{$sub};
   }
   sub prepare_app { return }
+
+  our $load_count;
+  sub sandbox_dofile {
+    my ($pack, $file) = @_;
+    my $sandbox = sprintf "%s::Sandbox::S%d", __PACKAGE__, ++$load_count;
+    dofile_in($sandbox, $file);
+  }
 }
 
 sub load_factory_script {
@@ -80,7 +87,7 @@ sub load_factory_script {
   if ($fn =~ /\.psgi$/) {
     $pack->load_psgi_script($fn);
   } else {
-    ckdo $fn;
+    $pack->sandbox_dofile($fn);
   }
 }
 

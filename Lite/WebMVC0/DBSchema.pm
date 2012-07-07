@@ -246,7 +246,7 @@ sub dbi_connect {
 #----------------------------------------
 
 #
-# ./lib/MyApp.pm create sqlite data/myapp.db3
+# ./lib/MyModel.pm create sqlite data/myapp.db3
 #
 sub create {
   (my MY $schema, my @spec) = @_;

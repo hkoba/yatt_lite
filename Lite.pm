@@ -35,7 +35,8 @@ use YATT::Lite::Partial::ErrorReporter;
 use YATT::Lite::Partial::AppPath;
 
 use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
-			set_inc ostream try_invoke
+			set_inc ostream try_invoke list_isa symtab
+			look_for_globref
 		      /;
 
 sub Facade () {__PACKAGE__}
@@ -255,27 +256,37 @@ sub root_EntNS { 'YATT::Lite::Entities' }
 
 # ${app_ns}::EntNS を作り、(YATT::Lite::Entities へ至る)継承関係を設定する。
 # $app_ns に EntNS constant を追加する。
-# XXX: 複数回呼んでも大丈夫か?
+# 複数回呼ばれた場合、既に定義済みの entns を返す
+
 sub ensure_entns {
-  my ($mypack, $app_ns) = @_;
+  my ($mypack, $app_ns, @baseclass) = @_;
   my $entns = "${app_ns}::EntNS";
+
   my $sym = do {no strict 'refs'; \*{$entns}};
-  unless (UNIVERSAL::isa($app_ns, 'YATT::Lite::Object')) {
-    add_base_to($app_ns, MY);
+  if (*{$sym}{CODE}) {
+    # croak "EntNS for $app_ns is already defined!";
+    return $entns;
   }
-  my $baseclass = do {
-    if (my $sub = $app_ns->can("EntNS")) {
-      $sub->();
-    } else {
-      $mypack->root_EntNS;
-    }
-  };
-  unless (UNIVERSAL::isa($entns, $baseclass)) {
-    add_base_to($entns, $baseclass);
+
+  # $app_ns が %FIELDS 定義を持たない時(ex YLObjectでもPartialでもない)に限り、
+  # YATT::Lite への継承を設定する
+  unless (YATT::Lite::MFields->has_fields($app_ns)) {
+    # XXX: $mypack への継承にすると、あちこち動かなくなるぜ？なんで？
+    YATT::Lite::MFields->add_isa_to($app_ns, MY)->define_fields($app_ns);
   }
+
+  unless (grep {$_->can("EntNS")} @baseclass) {
+    my $base = try_invoke($app_ns, 'EntNS') // $mypack->root_EntNS;
+    # print "insert base '$base' for entns $entns\n";
+    unshift @baseclass, $base;
+  }
+
+  # print "entns $entns should inherits: @baseclass\n";
+  YATT::Lite::MFields->add_isa_to($entns, @baseclass);
+
   set_inc($entns, 1);
 
-  # EntNS を足すのは最後にしないと、再帰継承に陥る
+  # EntNS() を足すのは最後にしないと、再帰継承に陥る
   unless (my $code = *{$sym}{CODE}) {
     *$sym = sub () { $entns };
   } elsif ((my $old = $code->()) ne $entns) {
@@ -286,22 +297,31 @@ sub ensure_entns {
   $entns
 }
 
+sub list_entns {
+  my ($pack, $inspected) = @_;
+  map {
+    defined(symtab($_)->{'EntNS'}) ? join("::", $_, 'EntNS') : ()
+  } list_isa($inspected)
+}
+
 # use YATT::Lite qw(Entity); で呼ばれ、
 # $callpack に Entity 登録関数を加える.
 sub define_Entity {
   my ($myPack, $opts, $callpack, @base) = @_;
 
-  # Entity を追加する先は、 $callpack が Object 系か、 memberless Pkg 系かによる
-  # Object 系の場合は、 ::EntNS を作ってそちらに加える。
-  # XXX: この判断ロジック自体を public API にするべきではないか？
-  my $is_objclass = UNIVERSAL::isa($callpack, 'YATT::Lite::Object');
-  my $destns = $is_objclass ? $myPack->ensure_entns($callpack, @base) : $callpack;
+  # Entity を追加する先は、 $callpack が Object 系か、 stateless 系かで変化する
+  # Object 系の場合は、 ::EntNS を作ってそちらに加え, 同時に YATT() も定義する
+  my $is_objclass = is_objclass($callpack);
+  my $destns = $is_objclass
+    ? $myPack->ensure_entns($callpack, @base)
+      : $callpack;
 
   # 既にあるなら何もしない。... バグの温床にならないことを祈る。
   my $ent = globref($callpack, 'Entity');
   unless (*{$ent}{CODE}) {
     *$ent = sub {
       my ($name, $sub) = @_;
+      # print "defining entity_$name in $destns\n";
       *{globref($destns, "entity_$name")} = $sub;
     };
   }
@@ -311,16 +331,16 @@ sub define_Entity {
   }
 }
 
-sub add_base_to {
-  my ($pkg, $base) = @_;
-  my $isa = globref($pkg, 'ISA');
-  if (*{$isa}{ARRAY} and @{*{$isa}{ARRAY}}
-      and ${*{$isa}{ARRAY}}[0] ne $base) {
-    die "Inheritance confliction on $pkg: old=${*{$isa}{ARRAY}}[0] new=$base";
-  }
-  *$isa = [] unless *{$isa}{ARRAY};
-  @{*{$isa}{ARRAY}} = $base;
-  $pkg;
+# ここで言う Object系とは、
+#   YATT::Lite::Object を継承してるか、
+#   又は既に %FIELDS が定義されている class
+# のこと
+sub is_objclass {
+  my ($class) = @_;
+  return 1 if UNIVERSAL::isa($class, 'YATT::Lite::Object');
+  my $sym = look_for_globref($class, 'FIELDS')
+    or return 0;
+  *{$sym}{HASH};
 }
 
 BEGIN {
@@ -387,6 +407,13 @@ sub YATT::Lite::EntNS::entity_mkhidden {
 	      , $esc, escape($_));
     } $CON->param($name);
   } @_;
+};
+
+sub YATT::Lite::EntNS::entity_file_rootname {
+  my ($this, $fn) = @_;
+  $fn //= $CON->file();
+  $fn =~ s/\.\w+$//;
+  $fn;
 };
 
 #----------------------------------------

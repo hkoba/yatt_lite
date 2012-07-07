@@ -14,23 +14,52 @@ sub import {
 package
   YATT::Lite::Partial::Meta; sub Meta () {__PACKAGE__}
 use parent qw/YATT::Lite::MFields/;
-use YATT::Lite::MFields qw/cf_requires/;
-use YATT::Lite::Util qw/globref lexpand/;
+use YATT::Lite::MFields qw/cf_requires
+			   cf_export_entities/;
+use YATT::Lite::Util qw/globref lexpand try_invoke fields_hash/;
 use Carp;
 
+sub Base () {'YATT::Lite::Object'};
+
 sub define_partial_class {
-  my ($pack, $callpack) = splice @_, 0, 2;
+  my ($pack, $callpack, @args) = @_;
+
   mro::set_mro($callpack => 'c3');
-  my %opts = @_;
+  # $pack->add_isa_to($callpack, $pack->Base);
+
   my Meta $meta = $pack->get_meta($callpack);
-  if (my (@class) = map {lexpand(delete $opts{$_})} qw/parent parents/) {
-    add_isa_to($callpack, @class);
-  }
-  if (my @fields = lexpand(delete $opts{fields})) {
-    $pack->define_fields($callpack, @fields);
+  my $fields = fields_hash(ref $meta);
+  my (@task, %define);
+  while (@args) {
+    my $key = shift @args;
+    if ($key =~ /^-(.*)/) {
+      my $sub = $meta->can("declare_$1")
+	or croak "Unknown Partial decl: $1";
+      push @task, [$sub, $meta];
+    } else {
+      my $value = shift @args;
+      if (my $sub = $meta->can("declare_$key")) {
+	$define{$key} = $value;
+      } elsif ($fields->{"cf_$key"}) {
+	$meta->{"cf_$key"} = $value;
+      } else {
+	croak "Unknown Partial opt: $key";
+      }
+    }
   }
 
-  $meta->configure(%opts) if %opts;
+  # These should be called in *this* order.
+  foreach my $key (qw/parent parents fields/) {
+    my $value = delete $define{$key}
+      or next;
+    $meta->can("declare_$key")->($meta, $value);
+  }
+  # assert(keys(%define) == 0);
+
+  foreach my $task (@task) {
+    my ($sub, @rest) = @$task;
+    $sub->(@rest);
+  }
 
   # my Meta $meta = $pack->define_fields($callpack, @_);
   *{globref($callpack, 'import')} = sub {
@@ -40,17 +69,31 @@ sub define_partial_class {
   };
 }
 
-sub add_isa_to {
-  (my $fullclass, my @class) = @_;
-  # print "# add $fullclass isa @class\n";
-  my $isa; {
-    my $sym = globref($fullclass, 'ISA');
-    unless ($isa = *{$sym}{ARRAY}) {
-      *$sym = $isa = [];
-    }
-  };
-  push @$isa, @class;
+sub declare_fields {
+  (my Meta $meta, my $value) = @_;
+  $meta->define_fields($meta->{cf_package}, lexpand($value));
 }
+
+*declare_parent = *declare_parents; *declare_parent = *declare_parents;
+sub declare_parents {
+  (my Meta $meta, my $value) = @_;
+  $meta->add_isa_to($meta->{cf_package}, lexpand($value))
+      ->define_fields($meta->{cf_package});
+}
+
+sub declare_Entity {
+  (my Meta $meta) = @_;
+  require YATT::Lite;
+  YATT::Lite->define_Entity({}, $meta->{cf_package}
+			    , try_invoke($meta->{cf_package}, 'EntNS'));
+}
+
+sub declare_CON {
+  (my Meta $meta) = @_;
+  require YATT::Lite::Entities;
+  *{globref($meta->{cf_package}, 'CON')} = YATT::Lite::Entities->symbol_CON;
+}
+
 
 sub export_partial_class_to {
   (my Meta $partial, my $fullclass) = @_;
@@ -63,7 +106,8 @@ sub export_partial_class_to {
       . join(", ", sort @missing) if @missing;
   }
 
-  add_isa_to($fullclass, $partial->{cf_package});
+  YATT::Lite::MFields->add_isa_to($fullclass, $partial->{cf_package})
+      ->define_fields($fullclass);
 
   my Meta $full = Meta->get_meta($fullclass);
 

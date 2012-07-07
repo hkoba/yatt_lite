@@ -21,7 +21,7 @@ BEGIN {
     qw/fields cf_package known_parent/;
 }
 
-use YATT::Lite::Util qw/globref look_for_globref list_isa/;
+use YATT::Lite::Util qw/globref look_for_globref list_isa fields_hash/;
 use Carp;
 
 sub import {
@@ -47,6 +47,11 @@ sub configure_package {
     my ($pack, $callpack) = @_;
     $meta{$callpack} //= $pack->new(package => $callpack);
   }
+}
+
+sub has_fields {
+  my ($pack, $callpack) = @_;
+  fields_hash($callpack);
 }
 
 sub define_fields {
@@ -129,6 +134,22 @@ sub has {
       $atts[0];
     }
   };
+}
+
+sub add_isa_to {
+  my ($pack, $target, @base) = @_;
+  my $sym = globref($target, 'ISA');
+  my $isa;
+  unless ($isa = *{$sym}{ARRAY}) {
+    *$sym = $isa = [];
+  }
+
+  foreach my $base (@base) {
+    next if grep {$_ eq $base} @$isa;
+    push @$isa, $base;
+  }
+
+  $pack;
 }
 
 1;

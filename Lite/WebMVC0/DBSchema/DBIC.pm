@@ -132,10 +132,11 @@ sub build_dbic {
     }
     $tabClass->set_primary_key($schema->get_table_pk($tab)) if $pk;
     foreach my $uniq (@constraints) {
+      my $ixname = join("_", $tabClass, @$uniq);
       print STDERR <<END if $schema->{cf_verbose};
--- $tabClass->add_unique_constraint([@{[join ", ", @$uniq]}])
+-- $tabClass->add_unique_constraint($ixname, [@{[join ", ", @$uniq]}])
 END
-      $tabClass->add_unique_constraint($uniq);
+      $tabClass->add_unique_constraint($ixname, $uniq);
     }
   }
   # Relationship の設定と、 register_class の呼び出し。

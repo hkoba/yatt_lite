@@ -14,7 +14,7 @@ use YATT::Lite::Util qw(lexpand);
   # MyApp::TMPL1::dir::dir::dir::file
   use parent qw(YATT::Lite::Object);
   use Carp;
-  use YATT::Lite::Util qw(ckeval ckrequire set_inc);
+  use YATT::Lite::Util qw(ckeval ckrequire set_inc symtab);
   our %SEEN_NS;
   use YATT::Lite::MFields qw/cf_app_ns app_ns
 			     cf_default_app default_app
@@ -35,17 +35,30 @@ use YATT::Lite::Util qw(lexpand);
 
   sub init_default_app {
     (my MY $self) = @_;
+    # This usually loads YATT::Lite (or YATT::Lite::WebMVC0::DirApp)
     $self->{default_app}
       = $self->{cf_default_app} || $self->default_default_app;
     ckrequire($self->{default_app});
   }
   sub init_app_ns {
     (my MY $self) = @_;
+    # This usually set 'MyApp'
     $self->{app_ns} = my $app_ns = $self->{cf_app_ns} // $self->default_app_ns;
     try_require($app_ns);
+
+    my @base_entns = ($self->{default_app}->EntNS
+		      , $self->{default_app}->list_entns(ref $self));
+
+    # print "default_app is $self->{default_app}\n";
+    # print "base entns for $app_ns is: @base_entns\n";
+
     unless ($app_ns->isa($self->{default_app})) {
-      $self->_eval_use_base($app_ns, $self->{default_app});
+      $self->define_base_of($app_ns, $self->{default_app});
     }
+
+    # Then MyApp::EntNS is composed
+    $self->{default_app}->ensure_entns($app_ns, @base_entns);
+
   }
   sub try_require {
     my ($app_ns) = @_;
@@ -62,6 +75,7 @@ use YATT::Lite::Util qw(lexpand);
   }
   sub buildns {
     (my MY $self, my ($subns, @base)) = @_;
+    # This usually creates MyApp::INST$n and set it's ISA.
     $subns ||= $self->default_subns;
     @base = map {ref $_ || $_} @base;
     if (@base) {
@@ -72,15 +86,17 @@ use YATT::Lite::Util qw(lexpand);
     }
     my $newns = sprintf q{%s::%s%d}, $self->{app_ns}, $subns
       , ++$self->{subns}{$subns};
-    $self->_eval_use_base($newns, @base ? @base : $self->{app_ns});
+    $self->define_base_of($newns, @base ? @base : $self->{app_ns});
+    $self->{default_app}->ensure_entns($newns, map {
+      $_->EntNS
+    } @base ? @base : $self->{app_ns});
     set_inc($newns, 1);
     $newns;
   }
-  sub _eval_use_base {
+  sub define_base_of {
     (my MY $self, my ($newns, @base)) = @_;
-    ckeval($self->lineinfo(1, "$newns.pm") # XXX: ダミーの行情報
-	   , "package $newns;\n"
-	   , @base ? sprintf(qq{use base qw(%s); use YATT::Lite::MFields;\n}, join " ", @base) : ());
+    YATT::Lite::MFields->add_isa_to($newns, @base)
+	->define_fields($newns);
   }
   sub lineinfo { shift; sprintf qq{#line %d "%s"\n}, @_}
 }

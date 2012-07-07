@@ -52,7 +52,11 @@ foreach my $test (@tests) {
 
 sub test_html {
   my ($src, $res, $title) = @_;
-  if (not defined(my $out = qx($^X -I$libdir $script $src)) or $?) {
+  my $args = '';
+  if (-r (my $fn = "$src.in")) {
+    $args .= " " . read_file($fn);
+  }
+  if (not defined(my $out = qx($^X -I$libdir $script $src$args)) or $?) {
     fail $src;
   } else {
     eq_or_diff $out, read_file($res), $title // $src;

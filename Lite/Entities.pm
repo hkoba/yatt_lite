@@ -67,19 +67,10 @@ sub import {
 sub declare_as_base {
   my ($myPack, $opts, $callpack) = @_;
   # ckrequire($myPack); # Not needed because $myPack is just used!
-  {
-    my $sym = globref($callpack, 'ISA');
-    my $isa;
-    unless ($isa = *{$sym}{ARRAY}) {
-      *$sym = $isa = [];
-    }
-    unless (grep {$_ eq $myPack} @$isa) {
-      push @$isa, $myPack;
-    }
-  }
 
   # Fill $callpack's %FIELDS, by current ISA.
-  YATT::Lite::MFields->define_fields($callpack);
+  YATT::Lite::MFields->add_isa_to($callpack, $myPack)
+      ->define_fields($callpack);
 }
 
 #########################################
@@ -145,8 +136,7 @@ sub entity_HTML {
 
 sub entity_dump {
   shift;
-  require YATT::Lite::Util;
-  YATT::Lite::Util::terse_dump(@_);
+  terse_dump(@_);
 }
 
 sub entity_can_render {

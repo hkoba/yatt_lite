@@ -108,14 +108,19 @@ if [[ -n $o_cover ]] && [[ -d $cover_db ]]; then
     # ``t/cover'' is modified to accpet charset option.
     $bindir/cover -charset $charset $ignore $cover_db
 
-    chmod a+rx $cover_db $cover_db/**/*(/N)
-    cat <<EOF > $cover_db/.htaccess
+    if [[ $PWD == $docroot/* ]]; then
+
+	chmod a+rx $cover_db $cover_db/**/*(/N)
+	cat <<EOF > $cover_db/.htaccess
 allow from localhost
 DirectoryIndex coverage.html
 AddHandler default-handler .html
 AddType "text/html; charset=$charset" .html
 EOF
 
-    print Coverage URL: http://localhost${cover_db#$docroot}/
+	print Coverage URL: http://localhost${cover_db#$docroot}/
+    elif (($+commands[xdg-open])); then
+	xdg-open $cover_db/coverage.html
+    fi
 fi
 

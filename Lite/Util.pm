@@ -10,7 +10,7 @@ require Scalar::Util;
   BEGIN {
     $INC{'YATT/Lite/Util.pm'} = 1;
     our @EXPORT = qw/numLines coalesce default globref symtab lexpand escape
-		     untaint_any ckeval ckrequire ckdo untaint_unless_tainted
+		     untaint_any ckeval ckrequire untaint_unless_tainted
 		     dict_sort terse_dump catch
 		     nonempty
 		   /;
@@ -59,15 +59,17 @@ require Scalar::Util;
   sub symtab {
     *{globref(shift, '')}{HASH}
   }
+  # XXX: Nice to have look_for_symtab, too.
   sub look_for_globref {
     my ($class, $name) = @_;
     my $symtab = symtab($class);
     return undef unless defined $symtab->{$name};
     globref($class, $name);
   }
-
   sub fields_hash {
-    *{globref(shift, 'FIELDS')}{HASH};
+    my $sym = look_for_globref(shift, 'FIELDS')
+      or return undef;
+    *{$sym}{HASH};
   }
   sub lexpand {
     # lexpand can be used to counting.
@@ -120,17 +122,6 @@ require Scalar::Util;
   }
   sub ckrequire {
     ckeval("require $_[0]");
-  }
-  sub ckdo {
-    local $@;
-    my @__RESULT__;
-    if (wantarray) {
-      @__RESULT__ = do $_[0];
-    } else {
-      $__RESULT__[0] = do $_[0];
-    }
-    die $@ if $@;
-    wantarray ? @__RESULT__ : $__RESULT__[0];
   }
   use Scalar::Util qw(refaddr);
   sub cached_in {
@@ -526,7 +517,7 @@ sub try_invoke {
   if (my $sub = UNIVERSAL::can($obj, $method)) {
     $sub->($obj, @args);
   } else {
-    $default;
+    wantarray ? () : $default;
   }
 }
 

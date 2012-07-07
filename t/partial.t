@@ -116,6 +116,12 @@ my $T;
 
 {
   $T = '[Partial]';
+  error_like(<<'END'
+    package t3_Err; use YATT::Lite::Inc; sub MY () {__PACKAGE__}
+    use YATT::Lite::Partial unknown => 'opt';
+END
+	     , qr/^Unknown Partial opt: unknown/);
+
   eval_ok(q{
     package t3_Foo; use YATT::Lite::Inc; sub MY () {__PACKAGE__}
     use YATT::Lite::Partial
@@ -188,7 +194,7 @@ my $T;
   eval_ok(q{
     package t4_Bar; use YATT::Lite::Inc; sub MY () {__PACKAGE__}
     use YATT::Lite::Partial
-      (fields => [qw/bara barb/], parents => ['t3_Bar']);
+      (parents => ['t3_Bar'], fields => [qw/bara barb/]);
   }, "$T partial t4_Bar");
 
   $dummy = %t4_Bar::FIELDS;
@@ -196,7 +202,7 @@ my $T;
     , [qw/bara barb barx bary barz/]
       , "$T \%FIELDS";
 
-  eval_ok(q{
+  eval_ok(<<'END'
     package t4_App1; use YATT::Lite::Inc; sub MY () {__PACKAGE__}
     use base qw/YATT::Lite::Object/;
     use t4_Foo;
@@ -206,7 +212,9 @@ my $T;
       join "", $x->{foo1}, $x->{foo2}, $x->{barx}, $x->{bary}, $x->{barz};
     }
     1;
-  }, "$T partital t4_App1");
+END
+
+  , "$T partital t4_App1");
 
   is_deeply \@t4_App1::ISA
     , [qw/YATT::Lite::Object t4_Foo t4_Bar/]
@@ -218,7 +226,7 @@ my $T;
       , "$T partial t4_App1 fields";
 
 
-  error_like(q{
+  error_like(<<'END'
     package t4_App2; use YATT::Lite::Inc; sub MY () {__PACKAGE__}
     use base qw/YATT::Lite::Object/;
     use t4_Foo;
@@ -228,7 +236,7 @@ my $T;
       $self->{ng};
     }
     1;
-  }
+END
 	     , qr/^No such class field "ng" in variable \$self of type t4_App2/
 	     , "$T partital t4_App2 field error is detected at compile time.");
 
@@ -266,4 +274,21 @@ my $T;
   is_deeply [sort keys %t5_Diamond::FIELDS]
     , [qw/bar1 bar2 barx bary d1 d2 foo1 foo2 foo3/]
       , "$T \%FIELDS";
+}
+
+{
+  $T = '[-Entity, -CON]';
+  eval_ok(q{
+    package t6_Foo; use YATT::Lite::Inc; sub MY () {__PACKAGE__}
+    use YATT::Lite::Partial
+      (fields => [qw/foo3 foo4/], -Entity, -CON);
+    Entity bar => sub {
+      my ($this) = shift;
+      defined $CON;
+    };
+  }, "$T defined.(without error for \$CON)");
+
+  no warnings 'once';
+  ok $t6_Foo::{'EntNS'}, "$T *EntNS";
+  ok t6_Foo::EntNS->can('entity_bar'), "$T EntNS->entity_bar()";
 }

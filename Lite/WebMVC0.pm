@@ -80,6 +80,7 @@ sub AUTOLOAD {
 
 sub get_lochandler {
   (my MY $self, my ($location, $tmpldir)) = @_;
+  $tmpldir //= $self->{cf_doc_root};
   $self->get_yatt($location) || do {
     $self->{loc2yatt}{$location} = $self->load_yatt("$tmpldir$location");
   };
