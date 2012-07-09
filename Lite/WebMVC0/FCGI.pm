@@ -64,7 +64,7 @@ sub runas_fcgi {
     my $error = catch {
       my @params = $self->make_cgi($env, $args, \%opts);
       $con = $self->make_connection($stdout, @params);
-      $self->run_dirhandler($con, @params);
+      $self->cgi_dirhandler($con, @params);
     };
 
     $self->cgi_process_error($error, $con, $stdout, $env);

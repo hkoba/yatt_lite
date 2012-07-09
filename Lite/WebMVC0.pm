@@ -213,7 +213,7 @@ sub call {
   my $con = $self->make_connection(undef, @params, noheader => 1);
 
   my $error = catch {
-    $dh->with_system($self, handle => $dh->cut_ext($file), $con, $file);
+    $self->run_dirhandler($dh, $con, $file);
   };
 
   try_invoke($con, 'flush_headers');
@@ -277,10 +277,30 @@ sub render {
 
   my $con = $self->make_connection(undef, @params, noheader => 1);
 
-  $dh->render_into($con, @rest ? [$file, @rest] : $file, $args, @opts);
+  $self->invoke_dirhandler($dh, $con
+			   , render_into => $con
+			   , @rest ? [$file, @rest] : $file
+			   , $args, @opts);
 
   $con->buffer;
 }
+
+#========================================
+#
+# Hook for subclass.
+#
+sub run_dirhandler {
+  (my MY $self, my ($dh, $con, $file)) = @_;
+  $self->invoke_dirhandler($dh, $con
+			   , handle => $dh->cut_ext($file), $con, $file);
+}
+
+sub invoke_dirhandler {
+  (my MY $self, my ($dh, $con, $method, @args)) = @_;
+  $dh->with_system($self, $method, @args);
+}
+
+#========================================
 
 sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;

@@ -25,7 +25,7 @@ sub runas_cgi {
 
     my @params = $self->make_cgi($env, $args, \%opts);
     my $con = $self->make_connection($fh, @params);
-    $self->run_dirhandler($con, @params);
+    $self->cgi_dirhandler($con, @params);
 
   } elsif ($env->{GATEWAY_INTERFACE}) {
     # Normal CGI
@@ -37,7 +37,7 @@ sub runas_cgi {
     my $error = catch {
       my @params = $self->make_cgi($env, $args, \%opts);
       $con = $self->make_connection($fh, @params);
-      $self->run_dirhandler($con, @params);
+      $self->cgi_dirhandler($con, @params);
     };
 
     $self->cgi_process_error($error, $con, $fh, $env);
@@ -46,13 +46,13 @@ sub runas_cgi {
     # dispatch without catch.
     my @params = $self->make_cgi($env, $args, \%opts);
     my $con = $self->make_connection($fh, @params);
-    $self->run_dirhandler($con, @params);
+    $self->cgi_dirhandler($con, @params);
   }
 }
 
 #========================================
 
-sub run_dirhandler {
+sub cgi_dirhandler {
   (my MY $self, my ($con, %params)) = @_;
   # dirhandler は必ず load することにする。 *.yatt だけでなくて *.ydo でも。
   # 結局は機能集約モジュールが欲しくなるから。
@@ -62,9 +62,7 @@ sub run_dirhandler {
     or die "Unknown directory: $params{dir}";
   # XXX: cache のキーは相対パスか、絶対パスか?
 
-  $dh->with_system($self
-		   , handle => $dh->cut_ext($params{file})
-		   , $con, $params{file});
+  $self->run_dirhandler($dh, $con, $params{file});
 
   wantarray ? ($dh, $con) : $con;
 }
