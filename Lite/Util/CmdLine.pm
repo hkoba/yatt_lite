@@ -5,7 +5,7 @@ use warnings FATAL => qw(all);
 BEGIN {require Exporter; *import = \&Exporter::import}
 
 our @EXPORT = qw(parse_opts parse_params);
-our @EXPORT_OK = (@EXPORT, qw(run));
+our @EXPORT_OK = (@EXPORT, qw(run process_result));
 
 # posix style option.
 sub parse_opts {
@@ -67,21 +67,25 @@ sub run {
   if (my $sub = $app->can("cmd_$cmd")) {
     $sub->($app, @$list);
   } elsif ($sub = $app->can($cmd)) {
-    my @res = $sub->($app, @$list);
-    if (not @res
-	or @res == 1 and not $res[0]) {
-      exit 1;
-    } elsif (@res == 1 and $res[0] eq 1) {
-      # nop
-    } else {
-      require YATT::Lite::Util;
-      print ref $_ ? YATT::Lite::Util::terse_dump($_) : $_, "\n" for @res;
-    }
+    process_result($sub->($app, @$list));
   } else {
     die "$0: Unknown subcommand '$cmd'\n"
   }
   if (my $sub = $app->can('DESTROY')) {
     $sub->($app);
+  }
+}
+
+sub process_result {
+  my (@res) = @_;
+  if (not @res
+      or @res == 1 and not $res[0]) {
+    exit 1;
+  } elsif (@res == 1 and $res[0] eq 1) {
+    # nop
+  } else {
+    require YATT::Lite::Util;
+    print ref $_ ? YATT::Lite::Util::terse_dump($_) : $_, "\n" for @res;
   }
 }
 

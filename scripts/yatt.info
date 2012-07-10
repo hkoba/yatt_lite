@@ -58,6 +58,8 @@ sub cmd_isa {
     if (defined $file) {
       my ($part, $sub, $pkg) = $dh->open_trans->find_part_handler($file);
       $self->show_isa(File => $pkg);
+#      my ($tmpl) = $dh->open_trans->find_file($file);
+#      $self->show_isa(File => $tmpl->cget('entns'));
     } else {
       $self->show_isa(DirApp => ref $dh);
     }

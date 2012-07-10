@@ -286,21 +286,6 @@ sub render {
 }
 
 #========================================
-#
-# Hook for subclass.
-#
-sub run_dirhandler {
-  (my MY $self, my ($dh, $con, $file)) = @_;
-  $self->invoke_dirhandler($dh, $con
-			   , handle => $dh->cut_ext($file), $con, $file);
-}
-
-sub invoke_dirhandler {
-  (my MY $self, my ($dh, $con, $method, @args)) = @_;
-  $dh->with_system($self, $method, @args);
-}
-
-#========================================
 
 sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;
@@ -429,8 +414,6 @@ sub connection_param {
    , subpath => $subpath
    , system => $self
 
-   , defined $self->{cf_backend} ? (backend => $self->{cf_backend}) : ()
-
    # May be overridden.
    , root => $self->{cf_doc_root}  # XXX: is this ok?
    , $self->cf_delegate_defined(qw(is_psgi))
@@ -458,6 +441,11 @@ sub make_connection {
       (undef, parent_fh => $fh);
     }
   };
+
+  if (my $back = $self->{cf_backend}) {
+    push @opts, (backend => try_invoke($back, 'clone') // $back);
+  }
+
   if (my $enc = $$self{cf_output_encoding}) {
     push @opts, encoding => $enc;
   }

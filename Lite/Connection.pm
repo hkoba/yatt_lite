@@ -32,7 +32,13 @@ use fields
 use YATT::Lite::Util qw(globref lexpand fields_hash);
 use YATT::Lite::PSGIEnv;
 
-sub prop { my $glob = shift; \%{*$glob}; }
+sub prop { *{shift()}{HASH} }
+
+# # XXX: Experimental. This can slowdown 20%! the code like: print $CON (text);
+# use overload qw/%{}  as_hash
+# 		bool as_bool/;
+# sub as_hash { *{shift()}{HASH} }
+# sub as_bool { defined $_[0] }
 
 #========================================
 # Constructors
@@ -310,6 +316,12 @@ sub set_charset {
 
 sub backend {
   my PROP $prop = (my $glob = shift)->prop;
+
+  # XXX: Exposing bare backend may harm.
+  #      But anyway, you can get backend via cget('backend').
+  #
+  return $prop->{cf_backend} unless @_;
+
   my $method = shift;
   unless (defined $method) {
     $glob->error("backend: null method is called");
@@ -322,9 +334,14 @@ sub backend {
   }
 }
 
-sub model {
-  my PROP $prop = (my $glob = shift)->prop;
-  $prop->{cf_backend}->model(@_);
+{
+  foreach (qw/model resultset txn_do/) {
+    my $method = $_;
+    *{globref(__PACKAGE__, $method)} = sub {
+      my PROP $prop = (my $glob = shift)->prop;
+      $prop->{cf_backend}->$method(@_);
+    };
+  }
 }
 
 1;

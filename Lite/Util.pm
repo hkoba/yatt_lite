@@ -31,6 +31,8 @@ require Scalar::Util;
 				  look_for_globref
 				  try_invoke
 				  NIMPL
+
+				  shallow_copy
 				/);
   }
   use Carp;
@@ -524,6 +526,18 @@ sub try_invoke {
 sub NIMPL {
   my ($pack, $file, $line, $sub, $hasargs) = caller($_[0] // 1);
   croak "Not implemented call of '$sub'";
+}
+
+sub shallow_copy {
+  if (ref $_[0] eq 'HASH') {
+    +{%{$_[0]}};
+  } elsif (ref $_[0] eq 'ARRAY') {
+    +[@{$_[0]}];
+  } elsif (not ref $_[0]) {
+    my $copy = $_[0];
+  } else {
+    croak "Unsupported data type for shallow_copy: " . ref $_[0];
+  }
 }
 
 1;

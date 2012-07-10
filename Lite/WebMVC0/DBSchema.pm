@@ -47,7 +47,9 @@ use YATT::Lite::Types
 			     )]]]
 );
 
-use YATT::Lite::Util qw(coalesce globref ckeval terse_dump lexpand);
+use YATT::Lite::Util qw/coalesce globref ckeval terse_dump lexpand
+			shallow_copy
+		       /;
 
 #========================================
 sub DESTROY {
@@ -68,6 +70,25 @@ sub new {
   $self->add_schema(@_) if @_;
   $self->verify_schema;
   $self;
+}
+
+sub clone {
+  my MY $orig = shift;
+  croak "Can't clone non-object: $orig" unless ref $orig;
+  my MY $new = bless {}, ref($orig);
+  foreach my $k (keys %$orig) {
+    my $v = $orig->{$k};
+    $new->{$k} = ref $v ? shallow_copy($v) : $v;
+  }
+  $new->reset;
+  $new->configure(@_) if @_;
+  # print "cloned dbschema, now=", terse_dump(sort keys %$new), "\n";
+  $new;
+}
+
+sub reset {
+  (my MY $self) = @_;
+  delete $self->{cf_DBH};
 }
 
 sub is_known_role {
@@ -130,7 +151,7 @@ sub startup {
   }
 
   if ($schema->{cf_connect_atstart}) {
-    $schema->dbh;
+    $schema->make_connection;
   }
 }
 

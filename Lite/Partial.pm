@@ -15,7 +15,7 @@ package
   YATT::Lite::Partial::Meta; sub Meta () {__PACKAGE__}
 use parent qw/YATT::Lite::MFields/;
 use YATT::Lite::MFields qw/cf_requires
-			   cf_export_entities/;
+			   has_entns/;
 use YATT::Lite::Util qw/globref lexpand try_invoke fields_hash/;
 use Carp;
 
@@ -84,8 +84,8 @@ sub declare_parents {
 sub declare_Entity {
   (my Meta $meta) = @_;
   require YATT::Lite;
-  YATT::Lite->define_Entity({}, $meta->{cf_package}
-			    , try_invoke($meta->{cf_package}, 'EntNS'));
+  $meta->{has_entns} = YATT::Lite->define_Entity
+    ({}, $meta->{cf_package}, try_invoke($meta->{cf_package}, 'EntNS'));
 }
 
 sub declare_CON {
@@ -108,6 +108,13 @@ sub export_partial_class_to {
 
   YATT::Lite::MFields->add_isa_to($fullclass, $partial->{cf_package})
       ->define_fields($fullclass);
+
+  if (my $entns = $partial->{has_entns}) {
+    #print "partial $partial->{cf_package} has EntNS $entns, "
+    #  , "injected to $fullclass\n";
+    YATT::Lite::MFields->add_isa_to(YATT::Lite->ensure_entns($fullclass)
+				    , $partial->{has_entns});
+  }
 
   my Meta $full = Meta->get_meta($fullclass);
 

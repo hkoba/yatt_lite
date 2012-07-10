@@ -20,13 +20,26 @@ use YATT::Lite::Types
 use YATT::Lite::Util qw(globref lexpand terse_dump);
 
 sub dbic {
-  (my MY $schema) = @_; $schema->{DBIC};
+  (my MY $schema) = @_;
+  $schema->{DBIC}
+    //= $schema->{cf_DBIC}->connect(sub {$schema->make_connection});
 }
 
 sub connect {
-  my MY $schema = ref $_[0] ? shift() : shift->new;
+  my MY $schema = ref $_[0] ? shift->clone : shift->new;
   $schema->{DBIC} = $schema->{cf_DBIC}->connect(@_);
   $schema;
+}
+
+sub reset {
+  (my MY $self) = @_;
+  $self->SUPER::reset;
+  delete $self->{DBIC};
+}
+
+sub txn_do {
+  (my MY $schema, my $sub) = splice @_, 0, 2;
+  $schema->dbic->txn_do($sub, @_ ? @_ : $schema->{DBIC});
 }
 
 sub startup {

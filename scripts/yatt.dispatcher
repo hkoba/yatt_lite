@@ -22,7 +22,7 @@ use YATT::Lite qw(*YATT);
 use YATT::Lite::Util qw(rootname);
 use YATT::Lite::Breakpoint;
 
-use YATT::Lite::Util::CmdLine qw/run/;
+use YATT::Lite::Util::CmdLine qw/parse_opts process_result/;
 
 use Getopt::Long;
 
@@ -44,7 +44,17 @@ END
 
 my $command = $ARGV[0];
 if ($dispatcher->can("cmd_$command") || $dispatcher->can($command)) {
-  run($dispatcher, \@ARGV);
+  my @opts = parse_opts(undef, \@ARGV);
+  my $cmd = shift @ARGV || 'help';
+  push @opts, parse_opts(undef, \@ARGV);
+  my $con = $dispatcher->make_connection(\*STDOUT, noheader => 1);
+  if ($dispatcher->can(my $method = "cmd_$command")) {
+    $dispatcher->cf_let(\@opts, $method, $con, @ARGV);
+  } elsif ($dispatcher->can($command)) {
+    process_result($dispatcher->cf_let(\@opts, $method, $con, @ARGV));
+  } else {
+    die "Should not reached here!";
+  }
 } elsif ($if_can) {
   exit
 } else {

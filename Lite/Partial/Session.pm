@@ -32,9 +32,7 @@ sub session_load {
   require CGI::Session;
   my $method = $brand_new ? 'new' : 'load';
 
-  my ($type, %driver_opts) = $self->{cf_session_driver}
-    ? lexpand($self->{cf_session_driver})
-      : $self->default_session_driver;
+  my ($type, %driver_opts) = $self->session_driver;
 
   my %opts = $self->{cf_session_config}
     ? lexpand($self->{cf_session_config})
@@ -81,6 +79,13 @@ sub session_load {
   $prop->{session} = $sess;
 }
 
+sub session_driver {
+  (my MY $self) = @_;
+  $self->{cf_session_driver}
+    ? lexpand($self->{cf_session_driver})
+      : $self->default_session_driver;
+}
+
 sub session_delete {
   my MY $self = shift;
   my ConnProp $prop = (my $con = shift)->prop;
@@ -124,6 +129,20 @@ sub default_session_driver  {
   ("driver:file"
    , Directory => $self->app_path_ensure_existing('@var/tmp/sess')
   )
+}
+
+
+sub cmd_session_list {
+  (my MY $self, my @param) = @_;
+  print join("\t", qw(id created accessed), @param), "\n";
+  require CGI::Session;
+  my ($type, %driver_opts) = $self->session_driver;
+  CGI::Session->find($type, sub {
+    my ($sess) = @_;
+    print join("\t", map {defined $_ ? $_ : "(undef)"}
+	       $sess->id, $sess->ctime, $sess->atime
+	       , map {$sess->param($_)} @param), "\n";
+  }, \%driver_opts);
 }
 
 1;

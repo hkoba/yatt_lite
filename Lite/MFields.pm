@@ -146,7 +146,14 @@ sub add_isa_to {
 
   foreach my $base (@base) {
     next if grep {$_ eq $base} @$isa;
-    push @$isa, $base;
+#    if (my $err = do {local $@; eval {
+      push @$isa, $base
+#    }; $@}) {
+#      if ($err =~ /^Inconsistent hierarchy during C3 merge of class/) {
+#	print "[inserting $base to $target] $err";
+#	next;
+#      }
+#    }
   }
 
   $pack;

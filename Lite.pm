@@ -4,6 +4,7 @@ use warnings FATAL => qw(all);
 use 5.010;
 use Carp qw(carp croak confess);
 our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
+#use mro 'c3';
 
 #
 # YATT Internalへの Facade. YATT の初期化パラメータの保持者でもある。
@@ -268,6 +269,8 @@ sub ensure_entns {
     return $entns;
   }
 
+  # mro::set_mro($entns, 'c3');
+
   # $app_ns が %FIELDS 定義を持たない時(ex YLObjectでもPartialでもない)に限り、
   # YATT::Lite への継承を設定する
   unless (YATT::Lite::MFields->has_fields($app_ns)) {
@@ -321,7 +324,8 @@ sub define_Entity {
   unless (*{$ent}{CODE}) {
     *$ent = sub {
       my ($name, $sub) = @_;
-      # print "defining entity_$name in $destns\n";
+      print "defining entity_$name in $destns\n" if $ENV{DEBUG_ENTNS};
+      # XXX: Set sub_name if available.
       *{globref($destns, "entity_$name")} = $sub;
     };
   }
@@ -329,6 +333,8 @@ sub define_Entity {
   if ($is_objclass) {
     *{globref($destns, 'YATT')} = *YATT;
   }
+
+  return $destns;
 }
 
 # ここで言う Object系とは、

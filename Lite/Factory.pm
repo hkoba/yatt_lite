@@ -135,7 +135,7 @@ sub _after_after_new {
 
 #========================================
 
-# location => yatt
+# location => yatt (dirhandler, dirapp)
 
 sub get_yatt {
   (my MY $self, my $loc) = @_;
@@ -284,7 +284,7 @@ sub trim_slash {
   $_[0];
 }
 
-#----------------------------------------
+#========================================
 sub Connection () {'YATT::Lite::Connection'};
 
 sub make_connection {
@@ -294,5 +294,20 @@ sub make_connection {
 }
 
 sub finalize_connection {}
+
+#========================================
+#
+# Hook for subclassing
+#
+sub run_dirhandler {
+  (my MY $self, my ($dh, $con, $file)) = @_;
+  $self->invoke_dirhandler($dh, $con
+			   , handle => $dh->cut_ext($file), $con, $file);
+}
+
+sub invoke_dirhandler {
+  (my MY $self, my ($dh, $con, $method, @args)) = @_;
+  $dh->with_system($self, $method, @args);
+}
 
 1;

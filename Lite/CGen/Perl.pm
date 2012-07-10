@@ -22,8 +22,15 @@ use YATT::Lite::Constants;
   #========================================
   sub list_inheritance {
     (my MY $self, my Template $tmpl) = @_;
+    # XXX: Duplicate detection should be handled higer layer.
+    my %dup;
     map {
-      my Folder $f = $_; $f->{cf_entns}
+      my Folder $f = $_;
+      if ($dup{$f->{cf_entns}}++) {
+	()
+      } else {
+	$f->{cf_entns}
+      }
     } $tmpl->list_base
   }
   sub setup_inheritance {
@@ -167,7 +174,7 @@ use YATT::Lite::Constants;
     my $flush = sub {
       my ($has_nl, $task, $pad) = @_;
       push @result, $pad if defined $pad;
-      push @result, q{print {$CON} (}.join(", ", @queue).");" if @queue;
+      push @result, q{print $CON (}.join(", ", @queue).");" if @queue;
       # もう token が残っていなくて、かつ $last が与えられていたら、 $last を足す。
       push @result, $task->() if $task;
       $result[-1] .= $last and undef $last if $last and not @{$self->{curtoks}};
