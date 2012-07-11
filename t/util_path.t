@@ -105,6 +105,8 @@ $i++;
   MY->mkfile("$html/real/code.ydo", 'code in realsub');
   MY->mkfile("$html/rootcode.ydo", 'rootcode');
 
+  MY->mkfile("$html/js/jquery/jquery.min.js", 'yes this is dummy;-)');
+
   my $tmpl = "$realdir/runyatt.ytmpl";
   MY->mkfile("$tmpl/index.yatt", 'virtual index');
   MY->mkfile("$tmpl/virt/index.yatt", 'virtual index in virt');
@@ -158,6 +160,11 @@ $i++;
 	  , $res = [$tmpl, '/virt/', 'code.ydo', '']);
   $test->("/virtcode.ydo"
 	  , $res = [$tmpl, '/', 'virtcode.ydo', '']);
+
+  $test->("/js/jquery/jquery.min.js"
+	  , $res = [$html, '/js/jquery/', 'jquery.min.js', '']);
+  $test->("/js/jquery/jquery.min.js/foo/bar"
+	  , $res = [$html, '/js/jquery/', 'jquery.min.js', '/foo/bar']);
 
   $test->("/virt/index.yatt"
 	  , $res = [$tmpl, '/virt/', 'index.yatt', '']);

@@ -85,7 +85,23 @@ sub process_result {
     # nop
   } else {
     require YATT::Lite::Util;
-    print ref $_ ? YATT::Lite::Util::terse_dump($_) : $_, "\n" for @res;
+    foreach my $res (@res) {
+      unless (defined $res) {
+	print "(undef)\n";
+      } elsif (not ref $res) {
+	print $res, "\n";
+      } elsif (my $sub = $res->can('get_columns')) {
+	my @kv = $sub->($res);
+	my $cnt;
+	while (my ($k, $v) = splice @kv, 0, 2) {
+	  print "\t" if $cnt++;
+	  print "$k=", YATT::Lite::Util::terse_dump($v);
+	}
+	print "\n";
+      } else {
+	print YATT::Lite::Util::terse_dump($res), "\n";
+      }
+    }
   }
 }
 

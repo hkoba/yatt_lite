@@ -46,5 +46,5 @@ sub do_sqlite {
   $dbh ||= DBI->connect("dbi:SQLite:dbname=$fn", undef, undef
 			, {PrintError => 0, RaiseError => 1, AutoCommit => 0});
   $dbh->do($sql);
-  $dbh->commit;
+  $dbh->commit unless $dbh->{AutoCommit};
 }

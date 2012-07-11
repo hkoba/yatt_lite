@@ -335,7 +335,10 @@ sub backend {
 }
 
 {
-  foreach (qw/model resultset txn_do/) {
+  foreach (qw/model resultset
+	      txn_do txn_begin txn_commit txn_rollback
+	      txn_scope_guard
+	     /) {
     my $method = $_;
     *{globref(__PACKAGE__, $method)} = sub {
       my PROP $prop = (my $glob = shift)->prop;

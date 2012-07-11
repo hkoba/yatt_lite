@@ -204,9 +204,7 @@ sub build_yatt {
 		 , $path, join(", ", @unk));
   }
 
-  my $yatt = $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
-  push @{$self->{tmpldirs}}, $path;
-  $yatt;
+  $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
 }
 
 sub _list_base_spec {

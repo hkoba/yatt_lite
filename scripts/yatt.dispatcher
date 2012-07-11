@@ -2,6 +2,7 @@
 #----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
+use sigtrap die => qw(normal-signals);
 sub MY () {__PACKAGE__}
 use base qw(File::Spec);
 use File::Basename;
@@ -18,16 +19,16 @@ use lib $libdir;
 use YATT::Lite::Util::FindMethods;
 
 use YATT::Lite::Factory;
-use YATT::Lite qw(*YATT);
+use YATT::Lite qw(*YATT *CON);
 use YATT::Lite::Util qw(rootname);
 use YATT::Lite::Breakpoint;
 
 use YATT::Lite::Util::CmdLine qw/parse_opts process_result/;
 
-use Getopt::Long;
+# Getopt::Long was bit too greed.
+my %opts = parse_opts(undef, \@ARGV);
 
-GetOptions("if_can" => \ my $if_can)
-  or exit 1;
+my $if_can = delete $opts{if_can};
 
 my $dispatcher = YATT::Lite::Factory->find_load_factory_script
   or die "Can't find YATT app script!\n";
@@ -40,23 +41,26 @@ Usage: @{[basename($0)]} COMMAND args...
 
 Available commands are:
 END
+
 }
 
 my $command = $ARGV[0];
 if ($dispatcher->can("cmd_$command") || $dispatcher->can($command)) {
-  my @opts = parse_opts(undef, \@ARGV);
   my $cmd = shift @ARGV || 'help';
-  push @opts, parse_opts(undef, \@ARGV);
-  my $con = $dispatcher->make_connection(\*STDOUT, noheader => 1);
+  my @opts = (%opts, parse_opts(undef, \@ARGV));
+  local $CON = $dispatcher->make_connection(\*STDOUT, noheader => 1);
   if ($dispatcher->can(my $method = "cmd_$command")) {
-    $dispatcher->cf_let(\@opts, $method, $con, @ARGV);
+    $dispatcher->cf_let(\@opts, $method, $CON, @ARGV);
   } elsif ($dispatcher->can($command)) {
-    process_result($dispatcher->cf_let(\@opts, $method, $con, @ARGV));
+    process_result($dispatcher->cf_let(\@opts, $command, $CON, @ARGV));
   } else {
     die "Should not reached here!";
   }
+  #print "at last,transdepth=", $con->backend->storage->transaction_depth, "\n";
+  # $con->txn_commit;
 } elsif ($if_can) {
   exit
 } else {
   die "No such command: $command\n";
 }
+

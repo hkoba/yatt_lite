@@ -212,8 +212,9 @@ require Scalar::Util;
     my $pi = $path_info;
     my ($loc, $cur, $ext) = ("", "");
   DIG:
-    while ($pi =~ s{^/+([^/\.]+)(\.\w+)?}{}) {
-      ($cur, $ext) = ($1, $2);
+    while ($pi =~ s{^/+([^/]+)}{}) {
+      $cur = $1;
+      $ext = ($cur =~ s/(\.[^\.]+)$// ? $1 : undef);
       foreach my $dir (@dirlist) {
 	my $base = "$dir$loc/$cur";
 	if (defined $ext) {
@@ -535,6 +536,9 @@ sub shallow_copy {
     +[@{$_[0]}];
   } elsif (not ref $_[0]) {
     my $copy = $_[0];
+  } elsif ($_[1]) {
+    # Pass thru unknown refs if 2nd arg is true.
+    $_[0];
   } else {
     croak "Unsupported data type for shallow_copy: " . ref $_[0];
   }

@@ -61,9 +61,9 @@ use YATT::Lite::Util qw/coalesce globref ckeval terse_dump lexpand
 #========================================
 sub DESTROY {
   my MY $schema = shift;
-  if ($schema->{cf_DBH}) {
-    # XXX: sqlite specific commit.
-    $schema->{cf_DBH}->commit;
+  # print "in destroy.(DBSchema) $schema\n";
+  if (my $dbh = delete $schema->{cf_DBH}) {
+    $dbh->commit unless $dbh->{AutoCommit};
   }
 }
 
@@ -85,7 +85,8 @@ sub clone {
   my MY $new = bless {}, ref($orig);
   foreach my $k (keys %$orig) {
     my $v = $orig->{$k};
-    $new->{$k} = ref $v ? shallow_copy($v) : $v;
+    # shallow_copy with pass-thru flag.
+    $new->{$k} = ref $v ? shallow_copy($v, 1) : $v;
   }
   $new->reset;
   $new->configure(@_) if @_;
@@ -95,7 +96,7 @@ sub clone {
 
 sub reset {
   (my MY $self) = @_;
-  delete $self->{cf_DBH};
+  delete $self->{cf_DBH} unless $self->{cf_connect_atstart};
 }
 
 sub is_known_role {
@@ -208,6 +209,7 @@ sub make_connection {
   } else {
     croak "Unknown connection spec obj: $spec";
   }
+  # print STDERR "dbh for $schema=$schema->{cf_DBH}\n";
   $schema->{cf_DBH};
 }
 
@@ -240,7 +242,8 @@ sub connect_to_dbi {
 
 sub connect_to_sqlite {
   (my MY $schema, my ($dsn_or_sqlite_fn, %opts)) = @_;
-  # XXX: Adapt begin immediate transaction, for SQLITE_BUSY
+  require DBD::SQLite; my $minver = 1.30_02;
+
   my ($sqlite_fn, $dbi_dsn) = do {
     if ($dsn_or_sqlite_fn =~ /^dbi:SQLite:(?:dbname=)?(.*)$/i) {
       ($1, $dsn_or_sqlite_fn);
@@ -248,27 +251,30 @@ sub connect_to_sqlite {
       ($dsn_or_sqlite_fn, "dbi:SQLite:dbname=$dsn_or_sqlite_fn");
     }
   };
-  my $ro = delete($opts{RO}) // 0;
+  unless (delete $opts{RO}) {
+    $opts{sqlite_use_immediate_transaction} = 1
+      if $DBD::SQLite::VERSION >= $minver;
+  }
   $schema->{dbtype} //= 'sqlite';
   my $first_time = not -e $sqlite_fn;
-  $schema->configure(%opts) if %opts;
   $schema->{cf_auto_create} //= 1;
-  $schema->dbi_connect($dbi_dsn, undef, undef, AutoCommit => $ro);
+  $schema->dbi_connect($dbi_dsn, undef, undef, %opts);
   $schema->dbinit_sqlite($sqlite_fn) if $first_time;
   $schema;
 }
 
 sub dbi_connect {
-  (my MY $schema, my ($dbi_dsn, $user, $auth, %opts)) = @_;
-  my %attr;
-  foreach ([RaiseError => 1], [PrintError => 0], [AutoCommit => 0]) {
-    $attr{$$_[0]} = delete($opts{$$_[0]}) // $$_[1];
-  }
-  $schema->configure(%opts) if %opts;
+  (my MY $schema, my ($dbi_dsn, $user, $auth, %attr)) = @_;
+  my %default = $schema->default_dbi_attr;
+  $attr{$_} //= $default{$_} for keys %default;
   require DBI;
   my $dbh = $schema->{cf_DBH} = DBI->connect($dbi_dsn, $user, $auth, \%attr);
   $schema->after_connect;
   $schema;
+}
+
+sub default_dbi_attr {
+  (RaiseError => 1, PrintError => 0, AutoCommit => 0);
 }
 
 #----------------------------------------

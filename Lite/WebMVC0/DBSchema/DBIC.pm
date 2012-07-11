@@ -58,6 +58,10 @@ sub startup {
   }
 }
 
+sub default_dbi_attr {
+  (shift->SUPER::default_dbi_attr, AutoCommit => 1);
+}
+
 sub import {
   YATT::Lite::Util::AsBase::parse_args(\@_, scalar caller);
   return unless @_ >= 2;

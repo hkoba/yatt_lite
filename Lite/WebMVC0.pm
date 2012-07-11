@@ -169,11 +169,16 @@ sub call {
   my ($tmpldir, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
 
   if ($self->{cf_debug_psgi}) {
+    # XXX: should be configurable.
     if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
-      print $errfh join("\t", "tmpldir=$tmpldir", "loc=$loc"
-			, "file=$file", "trailer=$trailer"
-			, "docroot=$self->{cf_doc_root}"
-			, terse_dump($env)
+      print $errfh join("\t"
+			, "# REQ: "
+			, terse_dump([tmpldir   => $tmpldir]
+				     , [loc     => $loc]
+				     , [file    => $file]
+				     , [trailer => $trailer]
+				     , ['all templdirs', $self->{tmpldirs}]
+				     , map {[$_ => $env->{$_}]} sort keys %$env)
 		       ), "\n";
     }
   }
