@@ -226,7 +226,7 @@ sub add_delegate {
   };
   *{globref($pack, $alias)} = sub {
     my MY $self = shift;
-    $self->{DBIC}->$dbic_method(@_);
+    $self->dbic->$dbic_method(@_);
   };
 }
 

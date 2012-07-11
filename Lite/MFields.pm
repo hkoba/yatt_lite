@@ -13,7 +13,8 @@ BEGIN {
     qw/cf_is cf_isa cf_required cf_name
        cf_package
        cf_default
-       cf_doc/;
+       cf_doc cf_label
+      /;
 }
 
 BEGIN {

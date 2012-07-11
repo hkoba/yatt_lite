@@ -44,6 +44,13 @@ use YATT::Lite::Types
 			       cf_indexed
 			       cf_primary_key
 			       cf_autoincrement
+
+			       cf_default
+			       cf_null
+
+			       cf_usage
+			       cf_label
+			       cf_max_length
 			     )]]]
 );
 
@@ -520,8 +527,14 @@ sub add_table_primary_key {
 
 sub add_table_unique {
   (my MY $self, my Table $tab, my @cols) = @_;
-  # XXX: 重複検査
+  # XXX: 重複検査, 有無検査
   push @{$tab->{chk_unique}}, [@cols];
+}
+
+sub add_table_index {
+  (my MY $self, my Table $tab, my @cols) = @_;
+  # XXX: 重複検査, 有無検査
+  push @{$tab->{chk_index}}, [@cols];
 }
 
 # -opt は引数無フラグ、又は [-opt, ...] として可変長オプションに使う
@@ -621,6 +634,8 @@ sub verify_schema {
   sub known_rels {
     (my MY $self, my ($desc, $myColName, @args)) = @_;
     # ['-has_many:rel:fk' => 'table']
+    # has_many   ..fk is their_fk
+    # belongs_to ..fk is our_fk
     my ($relType, $relName, $fkName) = split /:/, $desc, 3;
     return unless $known_rels{$relType};
     ($relType, $relName, $fkName || $myColName)
@@ -645,7 +660,7 @@ sub sql_create_table {
     push @cols, $sub->($schema, $tab, $col, $opts);
     push @indices, $col if $col->{cf_indexed};
   }
-  foreach my $constraint (map {$_ ? @$_ : ()} $tab->{chk_unique}) {
+  foreach my $constraint (lexpand($tab->{chk_unique})) {
     push @cols, sprintf q{unique(%s)}, join(", ", @$constraint);
   }
 
@@ -659,6 +674,14 @@ sub sql_create_table {
     push @create
       , sprintf q{CREATE INDEX %1$s_%2$s on %1$s(%2$s)}
 	, $tab->{cf_name}, $ix->{cf_name};
+  }
+
+  foreach my $colnames (lexpand($tab->{chk_index})) {
+    my $ixname = join "_", $tab->{cf_name}, @$colnames;
+    push @create, sprintf(q{CREATE INDEX %s on %s(%s)}
+			  , $tab->{cf_name}
+			  , join("_", $tab->{cf_name}, @$colnames)
+			  , join(",", @$colnames));
   }
 
   # after delete on user for each row begin
