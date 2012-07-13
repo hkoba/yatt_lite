@@ -294,7 +294,10 @@ sub create {
 sub ensure_created_on {
   (my MY $schema, my $dbh) = @_;
   # Carp::cluck("ensure_created is called");
-  my (@created, $other_changes);
+
+  $schema->dbtype_try_invoke('begin_create');
+
+  my (@sql, @created);
   foreach my Table $table ($schema->list_tables(raw => 1)) {
     next if $schema->has_table($table->{cf_name}, $dbh);
     push @created, $table;
@@ -305,7 +308,7 @@ sub ensure_created_on {
       } elsif ($schema->{cf_verbose} and $create =~ /^create table /i) {
 	print STDERR "CREATE TABLE $table->{cf_name}\n";
       }
-      $dbh->do($create);
+      push @sql, $create;
     }
   }
   foreach my Table $view ($schema->list_views(raw => 1)) {
@@ -314,15 +317,15 @@ sub ensure_created_on {
     if ($schema->{cf_verbose}) {
       print STDERR "CREATE VIEW $view->{cf_name}\n";
     }
-    $dbh->do("CREATE VIEW $view->{cf_name}\nAS $view->{cf_view}");
-    $other_changes++;
+    push @sql, "CREATE VIEW $view->{cf_name}\nAS $view->{cf_view}";
   }
+  $dbh->do($_) for @sql;
   if (@created) {
     foreach my Table $tab (@created) {
       $schema->ensure_table_populated($dbh, $tab);
     }
   }
-  if (@created or $other_changes) {
+  if (@sql) {
     $dbh->commit unless $dbh->{AutoCommit};
   }
   @created;
@@ -352,6 +355,12 @@ sub ensure_table_populated {
   }
 }
 
+sub sqlite_begin_create {
+  (my MY $schema) = @_;
+  # To speedup create statements.
+  $schema->dbh->do("PRAGMA synchronous = OFF");
+}
+
 sub expand_codevalue {
   (my MY $schema, my $tab, my $record) = @_;
   map {ref $_ ? $_->($schema, $tab) : $_} @$record;
@@ -369,6 +378,14 @@ sub has_type {
     $dbh ||= $schema->dbh;
     $dbh->tables("", "", $table, uc($type));
   }
+}
+
+sub dbtype_try_invoke {
+  (my MY $schema, my ($method, @args)) = @_;
+  return unless $schema->{dbtype};
+  my $sub = $schema->can("$schema->{dbtype}_$method")
+    or return;
+  $sub->($schema, @args);
 }
 
 sub sqlite_has_type {
@@ -926,8 +943,10 @@ use YATT::Lite::XHF::Dumper;
 sub cmd_deploy {
   (my MY $schema) = @_;
   local $schema->{cf_verbose} = 1;
-  $schema->ensure_created_on($schema->dbh)
-    if not $schema->{cf_auto_create};
+  my $dbh = $schema->dbh;
+  local $dbh->{AutoCommit};
+  $schema->ensure_created_on($dbh);
+  $dbh->commit;
 }
 
 sub cmd_schema {

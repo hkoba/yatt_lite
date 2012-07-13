@@ -463,7 +463,7 @@ sub finalize_connection {
   $self->session_flush($glob) if $prop->{session};
 }
 
-use YATT::Lite::Partial::Session;
+use YATT::Lite::WebMVC0::Partial::Session;
 
 #========================================
 # misc.

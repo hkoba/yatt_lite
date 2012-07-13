@@ -1,4 +1,4 @@
-package YATT::Lite::Partial::Session;
+package YATT::Lite::WebMVC0::Partial::Session;
 sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw/all/;
