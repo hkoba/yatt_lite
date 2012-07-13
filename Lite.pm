@@ -38,6 +38,7 @@ use YATT::Lite::Partial::AppPath;
 use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			set_inc ostream try_invoke list_isa symtab
 			look_for_globref
+			subname
 		      /;
 
 sub Facade () {__PACKAGE__}
@@ -324,8 +325,9 @@ sub define_Entity {
   unless (*{$ent}{CODE}) {
     *$ent = sub {
       my ($name, $sub) = @_;
+      my $longname = join "::", $destns, "entity_$name";
+      subname($longname, $sub);
       print "defining entity_$name in $destns\n" if $ENV{DEBUG_ENTNS};
-      # XXX: Set sub_name if available.
       *{globref($destns, "entity_$name")} = $sub;
     };
   }

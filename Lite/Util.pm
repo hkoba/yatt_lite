@@ -13,6 +13,7 @@ require Scalar::Util;
 		     untaint_any ckeval ckrequire untaint_unless_tainted
 		     dict_sort terse_dump catch
 		     nonempty
+		     subname
 		   /;
     our @EXPORT_OK = (@EXPORT, qw/cached_in split_path rootname dict_order
 				  lookup_path lookup_dir
@@ -480,6 +481,14 @@ sub dispatch_one {
   }
 }
 
+sub safe_render {
+  my ($this, $con, $wspec, @args) = @_;
+  my $wname = join _ => lexpand($wspec);
+  my $sub = $this->can("render_$wname")
+    or $con->error("Can't find widget '%s'", $wname);
+  $sub->($this, $con, @args);
+}
+
 sub mk_http_status {
   my ($code) = @_;
   require HTTP::Status;
@@ -543,5 +552,12 @@ sub shallow_copy {
     croak "Unsupported data type for shallow_copy: " . ref $_[0];
   }
 }
+
+if (catch {require Sub::Name}) {
+  *subname = sub { my ($name, $sub) = @_; $sub }
+} else {
+  *subname = *Sub::Name::subname;
+}
+
 
 1;

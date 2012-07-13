@@ -872,7 +872,7 @@ sub entmacro_lexpand {
 sub entmacro_render {
   (my MY $self, my $node) = @_;
   my ($wname, @expr) = $self->gen_entlist(undef, entx($node));
-  \ sprintf q{$this->can('render_'.%s)->($this, $CON, %s)}
+  \ sprintf q{YATT::Lite::Util::safe_render($this, $CON, %s, %s)}
     , $wname, join(", ", @expr);
 }
 
