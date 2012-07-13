@@ -52,23 +52,13 @@ sub runas {
   $sub->($self, @_);
 }
 
-sub runas_cgi;
-sub runas_fcgi;
-
-DESTROY {}
-sub AUTOLOAD {
-  unless (ref $_[0]) {
-    confess "BUG! \$self isn't object!";
-  }
-  my $subName = our $AUTOLOAD;
-  (my $meth = $subName) =~ s/.*:://;
-  my ($type) = $meth =~ /^runas_(\w+)$/
-    or confess "Unknown method! $meth";
-  my $modname = MY . '::' . uc($type);
-  ckrequire($modname);
-  my $sub = MY->can($meth)
-    or confess "Can't load implementation of '$meth'";
-  goto &$sub;
+sub runas_cgi {
+  require YATT::Lite::WebMVC0::SiteApp::CGI;
+  shift->_runas_cgi(@_);
+}
+sub runas_fcgi {
+  require YATT::Lite::WebMVC0::SiteApp::FCGI;
+  shift->_runas_fcgi(@_);
 }
 
 #========================================

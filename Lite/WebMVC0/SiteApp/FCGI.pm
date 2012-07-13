@@ -18,7 +18,7 @@ package YATT::Lite::WebMVC0::SiteApp;
 # runas_fcgi() is basically designed for Apache's dynamic fastcgi.
 # If you want psgi.multiprocess, use psgi mode directly.
 
-sub runas_fcgi {
+sub _runas_fcgi {
   (my MY $self, my $fhset, my Env $init_env, my ($args, %opts)) = @_;
   # $fhset is either stdout or [\*STDIN, \*STDOUT, \*STDERR].
   # $init_env is just discarded.

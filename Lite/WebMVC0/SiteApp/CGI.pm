@@ -7,7 +7,7 @@ use YATT::Lite::WebMVC0::SiteApp; # To make lint happy, this is required.
 
 package YATT::Lite::WebMVC0::SiteApp;
 
-sub runas_cgi {
+sub _runas_cgi {
   (my MY $self, my $fh, my Env $env, my ($args, %opts)) = @_;
   if (-e ".htdebug_env") {
     $self->printenv($fh, $env);
