@@ -22,9 +22,9 @@ BEGIN {
 }
 use lib @libdir;
 
-use YATT::Lite::WebMVC0;
+use YATT::Lite::WebMVC0::SiteApp;
 
-my $dispatcher = YATT::Lite::WebMVC0->new
+my $dispatcher = YATT::Lite::WebMVC0::SiteApp->new
   (app_ns => 'MyApp'
    , app_root => $app_root
    , doc_root => "$app_root/html"

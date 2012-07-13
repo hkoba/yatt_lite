@@ -41,8 +41,8 @@ Lite/Util/FindMethods.pm
 Lite/VarMaker.pm
 Lite/VarTypes.pm
 Lite/VFS.pm
-Lite/WebMVC0.pm
-Lite/WebMVC0/App.pm
+Lite/WebMVC0/SiteApp.pm
+Lite/WebMVC0/DirApp.pm
 Lite/WebMVC0/Connection.pm
 Lite/WebMVC0/DBSchema.pm
 Lite/WebMVC0/DBSchema/DBIC.pm

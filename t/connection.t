@@ -99,13 +99,13 @@ $i++;
   }
 }
 
-# 次は YATT::Lite::WebMVC0 から make_connection して...
+# 次は YATT::Lite::WebMVC0::SiteApp から make_connection して...
 
 $i++;
-require_ok('YATT::Lite::WebMVC0');
+require_ok('YATT::Lite::WebMVC0::SiteApp');
 {
 
-  my $mux = YATT::Lite::WebMVC0->new
+  my $mux = YATT::Lite::WebMVC0::SiteApp->new
     (doc_root => rootname($0) . ".d"
      , app_ns => myapp($i)
      , die_in_error => 1

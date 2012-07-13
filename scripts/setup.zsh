@@ -291,7 +291,7 @@ use warnings FATAL => qw(all);
 use FindBin;
 use lib \$FindBin::RealBin;
 
-use YATT::Lite::WebMVC0::App -as_base, qw(*YATT *CON Entity);
+use YATT::Lite::WebMVC0::DirApp -as_base, qw(*YATT *CON Entity);
 
 1;
 EOF

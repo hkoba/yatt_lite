@@ -31,8 +31,8 @@ GetOptions("if_can" => \ my $if_can
   or exit 1;
 
 my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
-    require YATT::Lite::WebMVC0;
-    YATT::Lite::WebMVC0->new
+    require YATT::Lite::WebMVC0::SiteApp;
+    YATT::Lite::WebMVC0::SiteApp->new
 	(app_ns => 'MyApp'
 	 , namespace => ['yatt', 'perl', 'js']
 	 , header_charset => 'utf-8'

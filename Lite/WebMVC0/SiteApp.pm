@@ -1,4 +1,4 @@
-package YATT::Lite::WebMVC0;
+package YATT::Lite::WebMVC0::SiteApp;
 use strict;
 use warnings FATAL => qw(all);
 use Carp;
@@ -27,9 +27,9 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			default ckrequire
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
-use YATT::Lite::WebMVC0::App ();
-sub DirApp () {'YATT::Lite::WebMVC0::App'}
-sub default_default_app () {'YATT::Lite::WebMVC0::App'}
+use YATT::Lite::WebMVC0::DirApp ();
+sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
+sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_index_name { 'index' }
 
 use File::Basename;

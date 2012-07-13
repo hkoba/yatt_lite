@@ -36,7 +36,7 @@ BEGIN {
 }
 
 use HTTP::Request::Common;
-use YATT::Lite::WebMVC0;
+use YATT::Lite::WebMVC0::SiteApp;
 use YATT::Lite::PSGIEnv;
 
 my $rootname = untaint_any($FindBin::Bin."/".rootname($FindBin::RealScript));
@@ -53,7 +53,7 @@ sub is_or_like($$;$) {
 }
 
 {
-  my $app = YATT::Lite::WebMVC0
+  my $app = YATT::Lite::WebMVC0::SiteApp
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
 	  , app_ns => 'MyApp'
@@ -131,7 +131,7 @@ END
     }
   }
   my $backend = MyBackend1->new(name => 'backend test');
-  my $app = YATT::Lite::WebMVC0
+  my $app = YATT::Lite::WebMVC0::SiteApp
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
 	  , app_ns => 'MyApp2'

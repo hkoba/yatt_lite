@@ -36,7 +36,7 @@ use_ok(NSBuilder);
 }
 
 {
-  my $WDH = 'YATT::Lite::WebMVC0::App';
+  my $WDH = 'YATT::Lite::WebMVC0::DirApp';
   {
     package MyTest_NSB_Web;
     use base qw(YATT::Lite::NSBuilder);

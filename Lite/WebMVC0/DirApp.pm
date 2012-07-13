@@ -1,4 +1,4 @@
-package YATT::Lite::WebMVC0::App; sub MY () {__PACKAGE__}
+package YATT::Lite::WebMVC0::DirApp; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use YATT::Lite -as_base, qw/*SYS
