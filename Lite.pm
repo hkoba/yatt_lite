@@ -334,6 +334,10 @@ sub define_Entity {
 
   if ($is_objclass) {
     *{globref($destns, 'YATT')} = *YATT;
+
+    unless ($callpack->can("entity")) {
+      *{globref($callpack, "entity")} = $myPack->can('entity');
+    }
   }
 
   return $destns;
@@ -349,6 +353,12 @@ sub is_objclass {
   my $sym = look_for_globref($class, 'FIELDS')
     or return 0;
   *{$sym}{HASH};
+}
+
+sub entity {
+  (my MY $yatt, my $name) = splice @_, 0, 2;
+  my $this = $yatt->EntNS;
+  $this->can("entity_$name")->($this, @_);
 }
 
 BEGIN {
@@ -367,7 +377,8 @@ foreach
       ensure_parsed
 
       add_to
-    /) {
+    /
+  ) {
   my $meth = $_;
   *{globref(MY, $meth)} = sub { shift->get_trans->$meth(@_) };
 }

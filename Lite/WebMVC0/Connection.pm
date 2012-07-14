@@ -9,6 +9,8 @@ use fields qw/cf_cgi
 
 	      cf_dir cf_file cf_subpath
 	      cf_root cf_location
+
+	      current_user
 	    /;
 use YATT::Lite::Util qw(globref url_encode nonempty);
 use YATT::Lite::PSGIEnv;
@@ -269,6 +271,27 @@ sub load_session {
 sub delete_session {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_system}->session_delete($glob);
+}
+
+#========================================
+
+sub current_user {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $cu = do {
+    if (exists $prop->{current_user}) {
+      $prop->{current_user}
+    } elsif (defined $prop->{cf_system}) {
+      $prop->{current_user} = $prop->{cf_system}->load_current_user($glob);
+    } else {
+      $prop->{current_user} = undef;
+    }
+  };
+
+  return $cu unless @_;
+  $glob->error("current_user is empty") unless defined $cu;
+  my $method = shift;
+
+  $cu->$method(@_);
 }
 
 #========================================
