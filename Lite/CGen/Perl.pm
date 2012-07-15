@@ -160,6 +160,7 @@ use YATT::Lite::Constants;
   our @DISPATCH;
   $DISPATCH[TYPE_LINEINFO] = \&from_lineinfo;
   $DISPATCH[TYPE_COMMENT]  = \&from_comment;
+  $DISPATCH[TYPE_MLMSG]    = \&from_mlmsg;
   $DISPATCH[TYPE_ENTITY]   = \&from_entity;
   $DISPATCH[TYPE_PI]       = \&from_pi;
   $DISPATCH[TYPE_ELEMENT]  = \&from_element;
@@ -495,10 +496,71 @@ use YATT::Lite::Constants;
   sub from_lineinfo { }
   sub from_comment {
     (my MY $self, my $node) = @_;
-    (undef, my ($nlines, $body)) = nx($node);
+    (undef, my ($nlines, $body)) = nx($node); # XXX: ok?
     $self->{curline} += $nlines;
     return \ ("\n" x $nlines);
   }
+  sub from_mlmsg {
+    (my MY $self, my $node) = @_;
+    my ($path, $body) = nx($node);
+    # $body is list of tokenlist.
+    # Other than plural, @$body == 1.
+    if (@$body >= 2 or @$path >= 2) {
+      # ngettext
+      my ($uniq, $args, $numexpr) = ({}, []);
+      my (@msgids) = map {
+	scalar $self->gen_mlmsg($node, $_, $uniq, $args, \$numexpr);
+      } @$body;
+      sprintf q{sprintf($CON->ngettext(%s, %s), %s)}
+	, join(", ", map {qtext($_)} @msgids), $numexpr, join(", ", @$args);
+    } else {
+      my ($msgid, @args) = $self->gen_mlmsg($node, $body->[0]);
+      sprintf q{sprintf($CON->gettext(%s), %s)}
+	, qtext($msgid), join(", ", @args);
+    }
+  }
+  sub gen_mlmsg {
+    (my MY $self, my ($node, $list, $uniq, $args, $ref_numeric)) = @_;
+    my ($msgid, $vspec) = ("");
+    if (@$list >= 2 and not ref $list->[0] and not ref $list->[-1]
+	and $list->[0] =~ /^\n+$/ and $list->[-1] =~ /^\n+$/) {
+      shift @$list; pop @$list;
+      if (@$list and not ref $list->[0]) {
+	$list->[0] =~ s/^\s+//;
+      }
+    }
+    foreach my $item (@$list) {
+      unless (ref $item) {
+	$msgid .= $item;
+      } elsif ($item->[NODE_TYPE] != TYPE_ENTITY) {
+	die "SYNERR";
+      } elsif (ref ($vspec = $item->[NODE_BODY]) ne 'ARRAY'
+	       || $vspec->[0] ne 'var') {
+	die "SYNERR";
+      } else {
+	my $name = $vspec->[1];
+	my $var = $self->find_var($name)
+	  or die $self->generror(q{No such variable '%s'}, $name);
+	unless ($uniq->{$name}) {
+	  push @$args, $self->as_escaped($var);
+	  $uniq->{$name} = 1 + keys %$uniq;
+	}
+	my $argno = $ref_numeric ? $uniq->{$name} . '$' : '';
+	# XXX: type==value is alias of scalar.
+	if ($ref_numeric and $var->type->[0] eq 'scalar') {
+	  $msgid .= "%${argno}d"; # XXX: format selection... but how? from entity?
+	  if ($$ref_numeric) {
+	    die "SYNERR";
+	  }
+	  $$ref_numeric = $self->as_lvalue($var);
+	} else {
+	  $msgid .= "%${argno}s";
+	}
+      }
+    }
+    wantarray ? ($msgid, @$args) : $msgid;
+  }
+
   sub from_elematt {
     (my MY $self, my $node) = @_;
     # <:yatt:elematt>....</:yatt:elematt> は NOP へ。

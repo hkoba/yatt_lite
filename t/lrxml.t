@@ -406,3 +406,51 @@ END
 '
 ], "var in nested body."
 }
+
+if (1) {
+  my $tmpl = $CLASS->Template->new;
+  $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<h2>&yatt[[;Hello &yatt:world;!&yatt]];</h2>
+
+<p>&yatt#num[[;
+  &yatt:n; file removed from directory &yatt:dir;
+&yatt||;
+  &yatt:n; files removed from directory &yatt:dir;
+&yatt]];</p>
+END
+
+  my $name = '';
+  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    , "tmpl Item '$name'";
+
+  is_deeply $w->{tree}
+, ['<h2>'
+   , [TYPE_MLMSG, 4, 39, 1, [qw(yatt)]
+      , [["Hello "
+	 , [TYPE_ENTITY, 18, 30, 1, yatt => [qw/var world/]]
+	 , "!"
+	]]]
+   , "</h2>\n"
+   , "\n"
+   , "<p>"
+   , [TYPE_MLMSG, 49, 180, 3, [qw(yatt num)]
+      , [["\n", "  "
+	  , [TYPE_ENTITY, 64, 72, 4, yatt => [qw/var n/]]
+	  , " file removed from directory "
+	  , [TYPE_ENTITY, 101, 111, 4, yatt => [qw/var dir/]]
+	  , "\n"
+	 ]
+	 , ["\n", "  "
+	  , [TYPE_ENTITY, 123, 131, 6, yatt => [qw/var n/]]
+	  , " files removed from directory "
+	  , [TYPE_ENTITY, 161, 171, 6, yatt => [qw/var dir/]]
+	  , "\n"
+	 ]
+	]
+     ]
+   , "</p>"
+   , "\n"
+], "Embeded m18n message.";
+}
+
+# (- (region-end) (region-beginning))

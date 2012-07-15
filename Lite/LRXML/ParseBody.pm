@@ -17,26 +17,22 @@ sub _parse_body {
 
   while (s{^(.*?)$$self{re_body}}{}xs or my $retry = $self->_get_chunk($sink)) {
     next if $retry;
-    $self->{endln} += numLines($&);
-    if ($self->add_posinfo(length($1), 1)) {
-      push @$sink, splitline($1);
-      $$par_ln = $self->{startln}
-	if nonspace($1) and not $has_nonspace++ and $parent;
-      $self->{startln} += numLines($1);
-    }
-    $self->{curpos} += length($&) - length($1);
-    $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
-    if ($+{entity} or $+{special}) {
+
+    $self->accept_leading_text($sink, $parent, $par_ln, \$has_nonspace);
+
+    if ($+{mlmsg}) {
+      if ($+{msgopn}) {
+	push @$sink, $self->_parse_mlmsg
+	  ($+{entity}, $parent, $par_ln, \$has_nonspace);
+      } else {
+	die $self->synerror_at
+	  ($self->{startln}, q{Mismatched m18n msg});
+      }
+    } elsif ($+{entity} or $+{special}) {
       # &yatt(?=:) までマッチしてる。
       # XXX: space 許容モードも足すか。
-      push @$sink, my $node = $self->mkentity
-	($self->{startpos}, undef, $self->{endln});
-      # ; まで
-      $node->[NODE_END] = $self->{curpos};
-      $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
-      $self->add_lineinfo($sink);
-      $$par_ln = $self->{startln}
-	if nonspace($1) and not $has_nonspace++ and $parent;
+      $self->accept_entity($sink, $parent, $par_ln, \$has_nonspace);
+
     } elsif (my $path = $+{elem}) {
       if ($+{clo}) {
 	$parent->[NODE_BODY_END] = $self->{startpos};
@@ -166,6 +162,31 @@ sub _parse_body {
   }
 }
 
+sub accept_leading_text {
+  (my MY $self, my ($sink, $parent, $par_ln, $rhas_nonspace)) = @_;
+  $self->{endln} += numLines($&);
+  if ($self->add_posinfo(length($1), 1)) {
+    push @$sink, splitline($1);
+    $$par_ln = $self->{startln}
+      if nonspace($1) and not $$rhas_nonspace++ and $parent;
+    $self->{startln} += numLines($1);
+  }
+  $self->{curpos} += length($&) - length($1);
+  $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
+}
+
+sub accept_entity {
+  (my MY $self, my ($sink, $parent, $par_ln, $rhas_nonspace)) = @_;
+  push @$sink, my $node = $self->mkentity
+    ($self->{startpos}, undef, $self->{endln});
+  # ; まで
+  $node->[NODE_END] = $self->{curpos};
+  $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
+  $self->add_lineinfo($sink);
+  $$par_ln = $self->{startln}
+    if nonspace($1) and not $$rhas_nonspace++ and $parent;
+}
+
 sub verify_tag {
   (my MY $self, my ($path, $close)) = @_;
   # XXX: デバッグ時、この段階での sink の様子を見たくなる。
@@ -179,6 +200,57 @@ sub verify_tag {
     die $self->synerror_at($self->{endln}, q{TAG Mismatch! <%s> closed by </%s>}
 			, $close, $path);
   }
+}
+
+# $_ から &yatt]]; までを削って $node を返す
+
+sub _parse_mlmsg {
+  (my MY $self, my ($ns, $parent, $par_ln, $rhas_nonspace)) = @_;
+
+  my $path = [$ns];
+  if (s/^(?:\#(\w+))?\[{2,};//) {
+    push @$path, $1 if $1;
+  } else {
+    die $self->synerror_at
+      ($self->{startln}
+       , q{parse_mlmsg is called from invalid context: %s }, $_);
+  }
+
+
+  my $node = [TYPE_MLMSG, $self->{startpos}, undef, $self->{endln}
+	      , $path
+	      , my $body = [my $sink = []]];
+
+  $self->{curpos} += length $&;
+
+  while (length $_ and s{^(.*?)$$self{re_entopn}}{}s) {
+    $self->accept_leading_text($sink, $parent, $par_ln, $rhas_nonspace);
+    if ($+{msgopn}) {
+      die $self->synerror_at
+	($self->{startln}, q{nesting of m18n msg is not allowed});
+    } elsif ($+{msgsep}) {
+      s/^\|{2,};//;
+      $self->{curpos} += length $&;
+      # switch to next sink.
+      push @$body, $sink = [];
+
+    } elsif ($+{msgclo}) {
+      s/^\]{2,};//;
+      $self->{curpos} += length $&;
+      $node->[NODE_END] = $self->{curpos};
+      return $node;
+
+    } elsif ($+{entity} or $+{special}) {
+      $self->accept_entity($sink, $parent, $par_ln, $rhas_nonspace);
+    } else {
+      die $self->synerror_at
+	($self->{startln}, q{Unknown input: %s}, $_);
+    }
+  }
+
+  die $self->synerror_at
+    ($self->{startln}
+     , q{parse_mlmsg is not closed: %s}, $_);
 }
 
 sub _undef_if_empty {

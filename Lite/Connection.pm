@@ -27,6 +27,9 @@ use fields
 
    # Invocation context
    , qw/cf_system cf_yatt cf_backend cf_dbh/
+
+   # User's choice of message language.
+   , qw/cf_lang/
   );
 
 use YATT::Lite::Util qw(globref lexpand fields_hash);
@@ -244,6 +247,7 @@ sub finalize_cookies {
 
 sub buffer {
   my PROP $prop = prop(my $glob = shift);
+  $glob->IO::Handle::flush();
   ${$prop->{cf_buffer}}
 }
 
@@ -310,6 +314,18 @@ sub set_charset {
   my PROP $prop = prop(my $glob = shift);
   $prop->{cf_charset} = shift;
   $glob;
+}
+
+#========================================
+
+sub gettext {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_yatt}->lang_gettext($prop->{cf_lang}, @_);
+}
+
+sub ngettext {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_yatt}->lang_ngettext($prop->{cf_lang}, @_);
 }
 
 #========================================

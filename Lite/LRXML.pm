@@ -12,6 +12,7 @@ use fields qw/re_decl
 	      re_name
 	      re_evar ch_etext
 	      re_eopen re_eclose
+
 	      template
 	      chunklist
 	      startln endln
@@ -53,7 +54,15 @@ sub after_new {
   $self->{re_decl} ||= qr{<!(?:(?<declname>$nspat(?::\w++)+)
 			  |(?:--\#(?<comment>$nspat(?::\w++)*)))\b}xs;
   my $entOpen = do {
-    my @entPat = qq{(?<entity>$nspat(?=:))};
+    # qq なので注意
+    my $entbase = qq{(?<entity>$nspat)};
+    $entbase .= sprintf(q{(?=%s)}, join "|"
+			, ':'
+			, sprintf(q{(?<mlmsg>%s)}, join "|"
+				  , q{(?<msgopn>(?:\#\w+)?\[{2,})}
+				  , q{(?<msgsep>\|{2,})}
+				  , q{(?<msgclo>\]{2,})}));
+    my @entPat = $entbase;
     # special の場合は entgroup を呼びたいので、 先に open ( を削っておく。
     push @entPat, sprintf q{(?<special>(?:%s))\(}
       , join "|", lexpand($self->{cf_special_entities})
@@ -261,6 +270,10 @@ sub parse_attlist {
 	 , $self->parse_attlist($_[0], @opt)];
       } elsif ($+{entity} or $+{special}) {
 	# XXX: 間に space が入ってたら?
+	if ($+{mlmsg}) {
+	  die $self->synerror_at($self->{startln}
+				 , q{m18n msg is not allowed here});
+	}
 	[TYPE_ATT_TEXT, @common, $+{attname}, [$self->mkentity(@common)]];
       } else {
 	# XXX: stringify したくなるかもだから、 sq/dq の区別も保存するべき?
@@ -279,6 +292,7 @@ sub parse_attlist {
 
 sub mkentity {
   (my MY $self) = shift;
+  # assert @_ == 3;
   [TYPE_ENTITY, @_, do {
     if (my $ns = $+{entity}) {
       ($ns, $self->_parse_entpath);
@@ -575,8 +589,12 @@ sub synerror_at {
   $self->_error(\%opts, @_);
 }
 sub _error {
-  my MY $self = shift;
-  $self->{cf_vfs}->error(@_);
+  (my MY $self, my ($opts, $fmt)) = splice @_, 0, 3;
+  if (my $vfs = $self->{cf_vfs}) {
+    $vfs->error($opts, $fmt, @_);
+  } else {
+    sprintf($fmt, @_);
+  }
 }
 sub _tmpl_file_line {
   (my MY $self, my $ln) = @_;

@@ -38,7 +38,7 @@ use YATT::Lite::Partial::AppPath;
 use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			set_inc ostream try_invoke list_isa symtab
 			look_for_globref
-			subname
+			subname ckeval
 		      /;
 
 sub Facade () {__PACKAGE__}
@@ -364,6 +364,12 @@ sub entity {
 BEGIN {
   MY->define_Entity(undef, MY);
 }
+
+#========================================
+# Locale gettext support.
+#========================================
+
+use YATT::Lite::Partial::Gettext;
 
 #========================================
 # YATT public? API, visible via Facade:

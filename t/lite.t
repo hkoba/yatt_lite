@@ -72,7 +72,7 @@ END
 &yatt:x;[<yatt:foo:bar x y/>]&yatt:y;
 END
 	      }]
-     , debug_cgen => $ENV{DEBUG});
+     , debug_cgen => $ENV{DEBUG} || $ENV{DEBUG_CGEN});
 
   {
     my $SUB = 'foo';
@@ -313,6 +313,139 @@ line: 1<br>
 END
 
   }
+  SKIP: {
+    if (catch {require Locale::PO}) {
+      skip "Locale::PO is not installed", 2;
+    }
+
+    my $SUB = 'm18nmsg';
+
+    my $mkmsg = sub {
+      my ($msgid, $msgstr, @rest) = @_;
+      Locale::PO->new(-msgid => $msgid, -msgstr => $msgstr, @rest);
+    };
+
+    my $mklocale = sub {
+      +{map {($_->dequote($_->msgid), $_)} @_}
+    };
+
+    my $mheader = Locale::PO->new(-msgid => ''
+				  , -msgstr =>
+				  'Plural-Forms: nplurals=1; plural=0;\n');
+    my $mhello = Locale::PO->new(-msgid => 'Hello %s!'
+				 , -msgstr => '%s さん、こんにちは！');
+
+    my @en = ('You have 1 message in %1$s'
+	      , 'You have %2$d messages in %1$s');
+    my $muhv = Locale::PO->new(-msgid => $en[0], -msgid_plural => $en[1]
+			       , -msgstr_n =>
+			       +{ 0 => '%1$s に %2$d 個のメッセージがあります'
+				}
+			      );
+
+    {
+      is $yatt->lang_gettext(undef, "Message without locale data")
+	, "Message without locale data"
+	  , "$theme $SUB lang_gettext pass thru";
+
+      $yatt->configure(locale =>
+		       [data => {ja => $mklocale->($mhello)}]);
+
+      is $yatt->lang_gettext(undef, 'Hello %s!')
+	, 'Hello %s!'
+	  , "$theme $SUB lang_gettext pass thru, with locale defs";
+
+      is $yatt->lang_gettext('??', 'Hello %s!')
+	, 'Hello %s!'
+	  , "$theme $SUB lang_gettext unknown locale fallback";
+
+      is $yatt->lang_gettext('ja', 'Hello %s!')
+	, '%s さん、こんにちは！'
+	  , "$theme $SUB lang_gettext ja Hello!";
+    }
+
+    {
+      is $yatt->lang_ngettext(undef, @en, 1)
+	, $en[0]
+	  , "$theme $SUB lang_ngettext default singular";
+
+      is $yatt->lang_ngettext(undef, @en, 2)
+	, $en[1]
+	  , "$theme $SUB lang_ngettext default plural";
+
+      $yatt->configure(locale =>
+		       [data => {ja => $mklocale->($mheader, $muhv)}]);
+
+
+      is $yatt->lang_ngettext(ja => @en, 1)
+	, '%1$s に %2$d 個のメッセージがあります'
+	  , "$theme $SUB lang_ngettext ja with plural formula.";
+    }
+
+    ok(my $pos_t = $yatt->add_to($SUB => <<'END'), "$theme add_to $SUB");
+<!yatt:args user folder num=value>
+<h2>&yatt[[;Hello &yatt:user;!&yatt]];</h2>
+
+<p>&yatt#num[[;
+  You have 1 message in &yatt:folder;
+&yatt||;
+  You have &yatt:num; messages in &yatt:folder;
+&yatt]];</p>
+END
+
+    use YATT::Lite::Connection;
+    my $mkcon = sub {
+      YATT::Lite::Connection->create(undef, yatt => $yatt, noheader => 1, @_)
+    };
+
+    {
+      my $con = $mkcon->();
+      $yatt->render_into($con, $SUB, ['guest', 'inbox', 1]);
+
+      eq_or_diff($con->buffer, <<END
+<h2>Hello guest!</h2>
+
+<p>You have 1 message in inbox</p>
+END
+
+		 , "$theme $SUB Default lang message, with num=1");
+    }
+
+    {
+      my $con = $mkcon->();
+      $yatt->render_into($con, $SUB, ['guest', 'inbox', 3]);
+
+      eq_or_diff($con->buffer, <<END
+<h2>Hello guest!</h2>
+
+<p>You have 3 messages in inbox</p>
+END
+
+		 , "$theme $SUB Default lang message, with num=3");
+    }
+
+    {
+
+      my $locale = +{map {$_->msgid => $_} $mheader, $mhello, $muhv};
+
+      $yatt->configure(locale =>
+		       [data => {ja => $mklocale->($mheader, $mhello, $muhv)}]);
+
+      my $con = $mkcon->(lang => 'ja');
+      $yatt->render_into($con, $SUB, ['guest', 'inbox', 3]);
+
+      eq_or_diff($con->buffer, <<END
+<h2>guest さん、こんにちは！</h2>
+
+<p>inbox に 3 個のメッセージがあります</p>
+END
+
+		 , "$theme $SUB alt lang message, with num=3");
+    }
+
+  }
+
+
 }
 
 {
