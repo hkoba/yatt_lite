@@ -326,7 +326,7 @@ END
     };
 
     my $mklocale = sub {
-      +{map {($_->dequote($_->msgid), $_)} @_}
+      [@_];
     };
 
     my $mheader = Locale::PO->new(-msgid => ''
@@ -342,6 +342,8 @@ END
 			       +{ 0 => '%1$s に %2$d 個のメッセージがあります'
 				}
 			      );
+    my $muhv_en = Locale::PO->new(-msgid => $en[0], -msgid_plural => $en[1]);
+
 
     {
       is $yatt->lang_gettext(undef, "Message without locale data")
@@ -374,7 +376,8 @@ END
 	  , "$theme $SUB lang_ngettext default plural";
 
       $yatt->configure(locale =>
-		       [data => {ja => $mklocale->($mheader, $muhv)}]);
+		       [data => {ja => $mklocale->($mheader, $muhv)
+				, en => $mklocale->($muhv_en)}]);
 
 
       is $yatt->lang_ngettext(ja => @en, 1)
@@ -398,8 +401,10 @@ END
       YATT::Lite::Connection->create(undef, yatt => $yatt, noheader => 1, @_)
     };
 
+      $yatt->configure(locale => [data => {ja => [], en => []}]);
+
     {
-      my @msgobjs = $yatt->extract_mlmsg($SUB);
+      my @msgobjs = $yatt->lang_extract_mlmsg(en => $SUB);
       is_deeply [map {
 	my $o = $_;
 	[$o->dequote($_->msgid)
@@ -409,6 +414,9 @@ END
 	  , "$theme $SUB extract_mlmsg";
     }
 
+    $yatt->configure(locale =>
+		     [data => {ja => $mklocale->($mheader, $muhv)
+			       , en => $mklocale->($muhv_en)}]);
 
     {
       my $con = $mkcon->();

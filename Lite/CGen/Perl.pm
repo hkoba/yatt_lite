@@ -571,6 +571,8 @@ use YATT::Lite::Constants;
 	}
       }
     }
+    $msgid =~ s/\r//g;
+    # XXX: Unfortunately, this is not good for multiline message.
     wantarray ? ($msgid, lexpand($args)) : $msgid;
   }
 

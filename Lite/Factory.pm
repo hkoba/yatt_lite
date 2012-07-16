@@ -38,7 +38,7 @@ use YATT::Lite::XHF;
 use YATT::Lite::Partial::ErrorReporter;
 use YATT::Lite::Partial::AppPath;
 
-require YATT::Lite;
+use YATT::Lite qw/*SYS *YATT *CON/;
 
 #========================================
 #
@@ -299,9 +299,15 @@ sub finalize_connection {}
 #
 sub run_dirhandler {
   (my MY $self, my ($dh, $con, $file)) = @_;
+  local ($SYS, $YATT, $CON) = ($self, $dh, $con);
+  $self->before_dirhandler($dh, $con, $file);
   $self->invoke_dirhandler($dh, $con
 			   , handle => $dh->cut_ext($file), $con, $file);
+  $self->after_dirhandler($dh, $con, $file);
 }
+
+sub before_dirhandler {}
+sub after_dirhandler {}
 
 sub invoke_dirhandler {
   (my MY $self, my ($dh, $con, $method, @args)) = @_;

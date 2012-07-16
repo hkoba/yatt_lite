@@ -88,6 +88,22 @@ sub header_charset {
 }
 
 #========================================
+
+sub get_lang_msg {
+  (my MY $self, my $lang) = @_;
+  $self->{locale_cache}{$lang} || do {
+    if (-r (my $fn = $self->fn_msgfile($lang))) {
+      $self->lang_load_msgcat($lang, $fn);
+    }
+  };
+}
+
+sub fn_msgfile {
+  (my MY $self, my $lang) = @_;
+  "$self->{cf_dir}/.htyattmsg.$lang.po";
+}
+
+#========================================
 sub error_handler {
   (my MY $self, my ($type, $err)) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？

@@ -24,6 +24,8 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dont_debug_param
 	      cf_info
 	      cf_mlmsg_sink
+
+	      cf_default_lang
 	    /;
 
 # Entities を多重継承する理由は import も継承したいから。
@@ -373,6 +375,22 @@ BEGIN {
 
 use YATT::Lite::Partial::Gettext;
 
+# Extract (and cache, for later merging) m18n msgs from filelist.
+sub lang_extract_mlmsg {
+  (my MY $self, my ($lang, $filelist)) = @_;
+
+  my ($msglist, $msgdict) = $self->lang_msgcat($lang)
+    or return;
+
+  $self->get_trans->extract_mlmsg($filelist, $msglist, $msgdict);
+}
+
+sub default_default_lang { 'en' }
+sub default_lang {
+  (my MY $self) = @_;
+  $self->{cf_default_lang} || $self->default_default_lang;
+}
+
 #========================================
 # Delegation to the core(Translator, which is useless for non-templating.)
 #========================================
@@ -383,7 +401,6 @@ foreach
       find_renderer
       find_part_handler
       ensure_parsed
-      extract_mlmsg
 
       list_items
 
@@ -391,7 +408,8 @@ foreach
     /
   ) {
   my $meth = $_;
-  *{globref(MY, $meth)} = sub { shift->get_trans->$meth(@_) };
+  *{globref(MY, $meth)} = subname(join("::", MY, $meth)
+				  , sub { shift->get_trans->$meth(@_) });
 }
 
 sub dump {

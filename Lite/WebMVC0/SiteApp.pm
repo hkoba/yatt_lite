@@ -205,7 +205,7 @@ sub call {
   my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]
 				       , is_psgi => 1, cgi => $req);
 
-  my $con = $self->make_connection(undef, @params, noheader => 1);
+  my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
 
   my $error = catch {
     $self->run_dirhandler($dh, $con, $file);
@@ -270,7 +270,7 @@ sub render {
     push @params, hmv => Hash::MultiValue->from_mixed($args);
   }
 
-  my $con = $self->make_connection(undef, @params, noheader => 1);
+  my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
 
   $self->invoke_dirhandler($dh, $con
 			   , render_into => $con

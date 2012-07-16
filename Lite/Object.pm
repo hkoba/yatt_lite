@@ -69,13 +69,13 @@ my $NO_SUCH_CONFIG_ITEM = sub {
 };
 
 sub cget {
-  my ($self, $key) = @_;
+  my ($self, $key, $default) = @_;
   my $name = "cf_$key";
   my $fields = YATT::Lite::Util::fields_hash($self);
   unless (not exists $fields->{"cf_$name"}) {
     confess $NO_SUCH_CONFIG_ITEM->($self, $name);
   }
-  $self->{$name};
+  $self->{$name} // $default;
 }
 
 sub configure {

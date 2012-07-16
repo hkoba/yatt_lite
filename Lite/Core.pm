@@ -136,7 +136,16 @@ sub create_file {
 
 #========================================
 {
-  sub Parser {require YATT::Lite::LRXML; 'YATT::Lite::LRXML'}
+  sub Parser {
+#    local $@;
+#    my $err = catch {
+      require YATT::Lite::LRXML;
+#    };
+#    unless ($err =~ /^Can't locate loadable object for module main::Tie::Hash::NamedCapture/) {
+#      die $err || $@ || "(unknown reason)";
+#    }
+    'YATT::Lite::LRXML'
+  }
   sub cgen_perl { 'YATT::Lite::CGen::Perl' }
   sub stat_mtime {
     my ($fn) = @_;
@@ -336,13 +345,18 @@ sub create_file {
   sub define_mlmsg_in {
     (my MY $self, my ($list, $dict, $place, $msgid, $other_msgs, $args)) = @_;
     if (my $obj = $dict->{$msgid}) {
-      $obj->reference(join " ", $obj->reference, $place);
+      $obj->reference(join " ", grep {defined $_} $obj->reference, $place);
     } else {
-      my @o = (-msgid => $msgid, -refrence => $place);
-      push @o, -msgid_plural => $other_msgs->[0]
-	if $other_msgs and $other_msgs->[0];
+      my @o = (-msgid => $msgid);
+      if ($other_msgs and $other_msgs->[0]) {
+	push @o, -msgid_plural => $other_msgs->[0]
+	  , -msgstr_n => {0 => '', 1 => ''};
+      } else {
+	push @o, -msgstr => '';
+      }
       push @$list, my $po = $dict->{$msgid} = Locale::PO->new(@o);
       $po->add_flag('perl-format');
+      $po->reference($place);
     }
   }
 

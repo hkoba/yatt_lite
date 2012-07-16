@@ -353,7 +353,7 @@ sub accept_language {
   if ($detail) {
     @langlist
   } else {
-    map {$$_[0]} @langlist;
+    wantarray ? (map {$$_[0]} @langlist) : $langlist[0][0];
   }
 }
 

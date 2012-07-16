@@ -27,11 +27,12 @@
   #----------------------------------------
   use parent qw/YATT::Lite::Object/;
   use YATT::Lite::MFields
-    qw/dispatcher
+    qw/site
        cf_write
        cf_lang
        cf_quiet
        cf_dir
+       cf_merge
       /;
 
   #----------------------------------------
@@ -40,19 +41,27 @@
 				      , {w => 'write'
 					 , q => 'quiet'
 					 , d => 'dir'
+					 , m => 'merge'
 					}));
 
-  my $disp = YATT::Lite::Factory->find_load_factory_script($cmd->{cf_dir})
+  my $site = YATT::Lite::Factory->find_load_factory_script($cmd->{cf_dir})
     or die "Can't find YATT app script!\n";
 
-  $cmd->{dispatcher} = $disp;
+  $cmd->{site} = $site;
 
-  foreach my $path (@ARGV ? @ARGV : $disp->cget('doc_root')) {
+  foreach my $path (@ARGV ? @ARGV : $site->cget('doc_root')) {
     if (-d $path) {
-      my $yatt = $disp->load_yatt($path);
-      my @msglist = $yatt->extract_mlmsg([$yatt->list_items]);
+      my $yatt = $site->load_yatt($path);
+      my $saveas = $yatt->fn_msgfile($cmd->{cf_lang});
+      if ($cmd->{cf_merge} || $cmd->{cf_write}) {
+	$yatt->get_lang_msg($cmd->{cf_lang});
+      }
+      my @msglist = $yatt->lang_extract_mlmsg($cmd->{cf_lang}
+					      , [$yatt->list_items]);
+      unless (-r $saveas) {
+	unshift @msglist, $cmd->default_header;
+      }
       if ($cmd->{cf_write}) {
-	my $saveas = "$path/.htyattmsg.$cmd->{cf_lang}.po";
 	Locale::PO->save_file_fromarray($saveas, \@msglist);
 	print "Saved: $saveas\n";
       } else {
@@ -70,3 +79,23 @@ sub after_new {
 }
 
 sub default_lang {'en'}
+
+use POSIX qw/strftime/;
+sub default_header {
+  my ($pack) = @_;
+  my $po = Locale::PO->new(-msgid => '', -msgstr =>
+"Project-Id-Version: PACKAGE VERSION\n"
+."Report-Msgid-Bugs-To: \n"
+."POT-Creation-Date: ".strftime('%Y-%m-%d %H:%M%z', localtime time)."\n"
+."PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+."Last-Translator: FULL NAME <EMAIL\@ADDRESS>\n"
+."Language-Team: LANGUAGE <LL\@li.org>\n"
+."Language: \n"
+."MIME-Version: 1.0\n"
+."Content-Type: text/plain; charset=UTF-8\n"
+."Content-Transfer-Encoding: 8bit\n");
+  $po->fuzzy(1);
+  $po;
+}
+
+# 2011-12-07 18:16+0900
