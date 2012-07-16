@@ -1,0 +1,72 @@
+#!/usr/bin/env perl
+# -*- coding: utf-8 -*-
+{
+  use strict;
+  use warnings FATAL => qw/all/;
+  sub MY () {__PACKAGE__}
+  use parent qw(File::Spec);
+  use File::Basename;
+  use FindBin;
+  my $libdir;
+  BEGIN {
+    unless (grep {$_ eq 'YATT'} MY->splitdir($FindBin::Bin)) {
+      die "Can't find YATT in runtime path: $FindBin::Bin\n";
+    }
+    $libdir = dirname(dirname($FindBin::Bin));
+  }
+  use lib $libdir;
+  #----------------------------------------
+  use YATT::Lite::Factory;
+  use YATT::Lite::Entities qw(*YATT *CON *SYS);
+  use YATT::Lite::Util::CmdLine qw(parse_opts parse_params);
+  use YATT::Lite::Breakpoint;
+
+  use YATT::Lite::Util::FindMethods; # For debugging aid.
+  # Try x FindMethods($this, qr/^entity_/)
+
+  #----------------------------------------
+  use parent qw/YATT::Lite::Object/;
+  use YATT::Lite::MFields
+    qw/dispatcher
+       cf_write
+       cf_lang
+       cf_quiet
+       cf_dir
+      /;
+
+  #----------------------------------------
+
+  my MY $cmd = MY->new(MY->parse_opts(\@ARGV, undef
+				      , {w => 'write'
+					 , q => 'quiet'
+					 , d => 'dir'
+					}));
+
+  my $disp = YATT::Lite::Factory->find_load_factory_script($cmd->{cf_dir})
+    or die "Can't find YATT app script!\n";
+
+  $cmd->{dispatcher} = $disp;
+
+  foreach my $path (@ARGV ? @ARGV : $disp->cget('doc_root')) {
+    if (-d $path) {
+      my $yatt = $disp->load_yatt($path);
+      my @msglist = $yatt->extract_mlmsg([$yatt->list_items]);
+      if ($cmd->{cf_write}) {
+	my $saveas = "$path/.htyattmsg.$cmd->{cf_lang}.po";
+	Locale::PO->save_file_fromarray($saveas, \@msglist);
+	print "Saved: $saveas\n";
+      } else {
+	print $_->dump for @msglist;
+      }
+    } else {
+      die "NIMPL";
+    }
+  }
+}
+
+sub after_configure {
+  (my MY $self) = @_;
+  $self->{cf_lang} ||= $self->default_lang;
+}
+
+sub default_lang {'en'}

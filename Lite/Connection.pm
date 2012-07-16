@@ -245,6 +245,7 @@ sub finalize_cookies {
 }
 #========================================
 
+# XXX: Should be renamed to result, text, as_text, as_string or value;
 sub buffer {
   my PROP $prop = prop(my $glob = shift);
   $glob->IO::Handle::flush();

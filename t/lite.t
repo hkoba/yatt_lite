@@ -399,6 +399,18 @@ END
     };
 
     {
+      my @msgobjs = $yatt->extract_mlmsg($SUB);
+      is_deeply [map {
+	my $o = $_;
+	[$o->dequote($_->msgid)
+	 , map($_ ? $o->dequote($_) : undef, $_->msgid_plural)]
+      } @msgobjs]
+	, [['Hello %s!', undef], \@en]
+	  , "$theme $SUB extract_mlmsg";
+    }
+
+
+    {
       my $con = $mkcon->();
       $yatt->render_into($con, $SUB, ['guest', 'inbox', 1]);
 
@@ -475,7 +487,9 @@ END
   use YATT::Lite -as_base;
 
   package main;
-  ok my $sym = $MyTestApp1::{'FIELDS'}, "use YATT::Lite -as_base fills *FIELDS";
-  ok my $f = *{$sym}{HASH}, "FIELDS hash exists";
-  is_deeply $f, \%YATT::Lite::FIELDS, "FIELDS hash became same.";
+  my $theme = "[as exporter]";
+  ok my $sym = $MyTestApp1::{'FIELDS'}
+    , "$theme use YATT::Lite -as_base fills *FIELDS";
+  ok my $f = *{$sym}{HASH}, "$theme FIELDS hash exists";
+  is_deeply $f, \%YATT::Lite::FIELDS, "$theme FIELDS hash became same.";
 }

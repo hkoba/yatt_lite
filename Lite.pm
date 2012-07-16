@@ -23,6 +23,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dont_map_args
 	      cf_dont_debug_param
 	      cf_info
+	      cf_mlmsg_sink
 	    /;
 
 # Entities を多重継承する理由は import も継承したいから。
@@ -242,6 +243,7 @@ sub build_trans {
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
 				     rc_script
+				     mlmsg_sink
 				     only_parse/));
 }
 
@@ -372,7 +374,7 @@ BEGIN {
 use YATT::Lite::Partial::Gettext;
 
 #========================================
-# YATT public? API, visible via Facade:
+# Delegation to the core(Translator, which is useless for non-templating.)
 #========================================
 foreach
   (qw/find_part
@@ -381,6 +383,9 @@ foreach
       find_renderer
       find_part_handler
       ensure_parsed
+      extract_mlmsg
+
+      list_items
 
       add_to
     /

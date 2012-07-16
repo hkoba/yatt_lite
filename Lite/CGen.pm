@@ -8,7 +8,9 @@ use fields qw/curtmpl curwidget curtoks curline
 	      cf_only_parse
 	      cf_no_lineinfo cf_check_lineno
 	      no_last_newline
-	      cf_vfs cf_parser cf_sink scope/;
+	      cf_vfs cf_parser cf_sink scope
+	      cf_mlmsg_sink
+	     /;
 
 use YATT::Lite::Core qw(Template Part);
 use YATT::Lite::Constants;
@@ -26,9 +28,12 @@ sub ensure_generated {
     if not $kind or not $self->{cf_only_parse}
       or $self->{cf_only_parse}{$kind};
   $self->setup_inheritance($tmpl);
-  $self->{cf_sink}->({folder => $tmpl, package => $pkg, kind => 'body'
-		     , depth => $self->{depth}}
-		     , $self->generate($tmpl, $kind));
+  my @res = $self->generate($tmpl, $kind);
+  if (my $sub = $self->{cf_sink}) {
+    $sub->({folder => $tmpl, package => $pkg, kind => 'body'
+	     , depth => $self->{depth}}
+	    , @res);
+  }
   $pkg;
 }
 

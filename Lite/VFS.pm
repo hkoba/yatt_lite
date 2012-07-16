@@ -72,6 +72,11 @@ use Carp;
       or croak "Can't extract part name from filename '$filename'";
     $vfs->{root}->lookup($vfs, $name);
   }
+  sub list_items {
+    (my VFS $vfs) = @_;
+    $vfs->{root}->list_items($vfs);
+  }
+
   #========================================
   sub find_part {
     my VFS $vfs = shift;
@@ -94,6 +99,11 @@ use Carp;
   }
 
   use Scalar::Util qw(refaddr);
+  sub YATT::Lite::VFS::File::fake_filename {
+    (my vfs_file $file) = @_;
+    $file->{cf_path} // $file->{cf_name};
+  }
+
   sub YATT::Lite::VFS::File::lookup {
     (my vfs_file $file, my VFS $vfs, my $name) = splice @_, 0, 3;
     unless (@_) {
@@ -141,6 +151,25 @@ use Carp;
 	       , $file->{cf_parent})
 	 # and then, $dir/$file.ytmpl
 	 , $file->{cf_overlay});
+  }
+  sub YATT::Lite::VFS::File::list_items {
+    die "NIMPL";
+  }
+  sub YATT::Lite::VFS::Dir::list_items {
+    (my vfs_dir $in, my VFS $vfs) = @_;
+    return unless defined $in->{cf_path};
+    my %dup;
+    my @exts = map {
+      if (defined $_ and not $dup{$_}++) {
+	$_
+      } else { () }
+    } ($vfs->{cf_ext_public}, $vfs->{cf_ext_private});
+    my %dup2;
+    map {
+      my $name = substr($_, length($in->{cf_path})+1);
+      $name =~ s/\.\w+$//;
+      $dup2{$name}++ ? () : $name;
+    } glob("$in->{cf_path}/[a-z]*.{".join(",", @exts)."}");
   }
   #----------------------------------------
   sub YATT::Lite::VFS::Dir::load {

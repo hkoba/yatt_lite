@@ -103,6 +103,9 @@ END
   my $root = VFS->new([dir => $cwd], @CF);
   is $root->find_part('foo', ''), "AAA\nBBB\n", "$theme - foo ''";
   is $root->find_part('foo', 'bar'), "barrrr\n", "$theme - foo bar";
+  is_deeply [sort $root->list_items]
+    , [qw/base foo/]
+      , "$theme - list_items";
 }
 
 {

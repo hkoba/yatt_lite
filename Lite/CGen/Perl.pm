@@ -60,7 +60,7 @@ use YATT::Lite::Constants;
     my @stats;
     unless ($self->{cf_no_lineinfo}) {
       my $line = qq{#line }. $self->{curline};
-      if (defined(my $fn = ($tmpl->{cf_path} // $tmpl->{cf_name}))) {
+      if (defined(my $fn = $tmpl->fake_filename)) {
 	# cf_name is dummy filename.
 	$line .= qq{ "$fn"};
       }
@@ -504,17 +504,26 @@ use YATT::Lite::Constants;
     (my MY $self, my $node) = @_;
     my ($path, $body) = nx($node);
     # $body is list of tokenlist.
-    # Other than plural, @$body == 1.
+    my $place = $self->{curtmpl}->fake_filename . ":" . $node->[NODE_LNO];
+
+    # XXX: builtin xgettext
     if (@$body >= 2 or @$path >= 2) {
       # ngettext
       my ($uniq, $args, $numexpr) = ({}, []);
-      my (@msgids) = map {
+      my ($msgid, @plural) = map {
 	scalar $self->gen_mlmsg($node, $_, $uniq, $args, \$numexpr);
       } @$body;
+      if (my $sub = $self->{cf_mlmsg_sink}) {
+	$sub->($place, $msgid, \@plural, $args);
+      }
       sprintf q{sprintf($CON->ngettext(%s, %s), %s)}
-	, join(", ", map {qtext($_)} @msgids), $numexpr, join(", ", @$args);
+	, join(", ", map {qtext($_)} ($msgid, @plural))
+	  , $numexpr, join(", ", @$args);
     } else {
       my ($msgid, @args) = $self->gen_mlmsg($node, $body->[0]);
+      if (my $sub = $self->{cf_mlmsg_sink}) {
+	$sub->($place, $msgid, undef, \@args);
+      }
       sprintf q{sprintf($CON->gettext(%s), %s)}
 	, qtext($msgid), join(", ", @args);
     }

@@ -9,6 +9,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_parse_while_loading cf_only_parse
 	      cf_die_in_error cf_error_handler
 	      cf_special_entities
+	      cf_mlmsg_sink
 
 	      cgen_class
 	    /;
@@ -292,7 +293,8 @@ sub create_file {
       my $cg_class = $self->get_cgen_class($type);
       my $cgen = $cg_class->new
 	(vfs => $self
-	 , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse))
+	 , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
+				 mlmsg_sink))
 	 , parser => $self->get_parser
 	 , sink => $opts{sink} || sub {
 	   my ($info, @script) = @_;
@@ -304,6 +306,45 @@ sub create_file {
     };
     $tmpl->{product}{$type};
   }
+
+  #
+  # extract_mlmsg
+  #  - filelist is a list(or scalar) of filename or item name(no ext).
+  #  - msgdict is used to share same msgid.
+  #  - msglist is used to keep msg order.
+  #
+  # XXX: find_product and extract_mlmsg is exclusive.
+  sub extract_mlmsg {
+    (my MY $self, my ($filelist, $msglist, $msgdict)) = @_;
+    $msglist //= [];
+    $msgdict //= {};
+    local $self->{cf_mlmsg_sink} = sub {
+      $self->define_mlmsg_in($msglist, $msgdict, @_);
+    };
+    my $type = 'perl';
+    foreach my $name (lexpand($filelist)) {
+      my Template $tmpl = $self->find_file($name)
+	or croak "No such template: $name";
+      $self->find_product($type => $tmpl);
+    }
+    # XXX: not wantarray
+    @$msglist;
+  }
+
+
+  sub define_mlmsg_in {
+    (my MY $self, my ($list, $dict, $place, $msgid, $other_msgs, $args)) = @_;
+    if (my $obj = $dict->{$msgid}) {
+      $obj->reference(join " ", $obj->reference, $place);
+    } else {
+      my @o = (-msgid => $msgid, -refrence => $place);
+      push @o, -msgid_plural => $other_msgs->[0]
+	if $other_msgs and $other_msgs->[0];
+      push @$list, my $po = $dict->{$msgid} = Locale::PO->new(@o);
+      $po->add_flag('perl-format');
+    }
+  }
+
   sub YATT::Lite::Core::Template::after_create {
     (my Template $tmpl, my MY $self) = @_;
     # XXX: ここでは SUPER が使えない。
