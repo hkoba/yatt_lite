@@ -215,8 +215,9 @@ use YATT::Lite::Constants;
     $flush->();
     join " ", @result;
   }
-  sub gen_by {
-    (my MY $self, my ($dispatch, $escape, $text_quote)) = splice @_, 0, 4;
+  sub gen_as {
+    (my MY $self, my ($type, $dispatch, $escape, $text_quote))
+      = splice @_, 0, 5;
     local $self->{needs_escaping} = $escape;
     my (@result);
     # Empty expr (ie <:yatt:arg></:yatt:arg>) should generate q|| as code.
@@ -232,7 +233,8 @@ use YATT::Lite::Constants;
       }
       # 許されるのは entity だけでは？ でもないか。 element 引数の時は、capture したいはず。
       my $sub = $dispatch->[$node->[0]]
-	or die $self->generror("Unknown node type: %d", $node->[0]);
+	or die $self->generror("gen_as %s: Unknown node type: %d"
+			       , $type, $node->[0]);
       my $expr = $sub->($self, $node);
       next unless defined $expr;
       if (ref $expr) {
@@ -245,23 +247,25 @@ use YATT::Lite::Constants;
 
   # as_list と対になる。
   our @AS_TEXT;
+  $AS_TEXT[TYPE_MLMSG]    = \&from_mlmsg;
   $AS_TEXT[TYPE_ENTITY]   = \&from_entity;
   $AS_TEXT[TYPE_PI]       = \&text_from_pi;
-  $AS_TEXT[TYPE_ELEMENT]  = \&text_from_element;
-  $AS_TEXT[TYPE_ATT_NESTED]  = sub {undef}; # gen_by が scalar 受けゆえ
+  $AS_TEXT[TYPE_ELEMENT]  = \&text_from_element; # XXX: ?? Used??
+  $AS_TEXT[TYPE_ATT_NESTED]  = sub {undef}; # gen_as が scalar 受けゆえ
   # as_text は、escape 不要。なぜなら、 print 時に escape されるから。
   # でも、 escape 有無を flag で渡せた方が、 html 型にも使えて便利では?
   # というか、 html 型には capture が必要か。 capture は buffering したいよね？
   sub as_text {
-    join '.', shift->gen_by(\@AS_TEXT, 0, 1, @_);
+    join '.', shift->gen_as(text => \@AS_TEXT, 0, 1, @_);
   }
+
   our @AS_LIST;
   $AS_LIST[TYPE_ENTITY]   = \&from_entity;
   $AS_LIST[TYPE_PI]       = \&list_from_pi;
   $AS_LIST[TYPE_ELEMENT]  = \&list_from_element;
   $AS_LIST[TYPE_ATT_NESTED] = sub {undef}; # XXX: 微妙
   sub as_list {
-    shift->gen_by(\@AS_LIST, 0, 0, @_);
+    shift->gen_as(list => \@AS_LIST, 0, 0, @_);
   }
   #========================================
   sub from_element {
@@ -428,7 +432,7 @@ use YATT::Lite::Constants;
       $self->{curline} += numLines($value);
       return qtext($value);
     }
-    join '.', shift->gen_by(\@AS_TEXT, 1, 1, @$value);
+    join '.', shift->gen_as(text => \@AS_TEXT, 1, 1, @$value);
   }
   sub as_cast_to_scalar {
     (my MY $self, my ($var, $value)) = @_;
@@ -567,7 +571,7 @@ use YATT::Lite::Constants;
 	}
       }
     }
-    wantarray ? ($msgid, @$args) : $msgid;
+    wantarray ? ($msgid, lexpand($args)) : $msgid;
   }
 
   sub from_elematt {

@@ -83,7 +83,7 @@ foreach my $cmd (@command) {
   # $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $CON = $dispatcher->make_connection
     (\*STDOUT, cgi => CGI->new({}), file => $file, noheader => 1
-     , system => $SYS);
+     , system => $SYS, yatt => $YATT);
   $sub->($this, $CON, @args);
 }
 

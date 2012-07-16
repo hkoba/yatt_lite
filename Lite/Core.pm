@@ -316,6 +316,7 @@ sub create_file {
   # XXX: find_product and extract_mlmsg is exclusive.
   sub extract_mlmsg {
     (my MY $self, my ($filelist, $msglist, $msgdict)) = @_;
+    require Locale::PO;
     $msglist //= [];
     $msgdict //= {};
     local $self->{cf_mlmsg_sink} = sub {

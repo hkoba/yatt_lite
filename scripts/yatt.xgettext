@@ -64,7 +64,7 @@
   }
 }
 
-sub after_configure {
+sub after_new {
   (my MY $self) = @_;
   $self->{cf_lang} ||= $self->default_lang;
 }
