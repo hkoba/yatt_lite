@@ -59,7 +59,7 @@ sub after_new {
     my $entbase = qq{(?<entity>$nspat)};
     $entbase .= sprintf(q{(?=%s)}, join "|"
 			, ':'
-			, sprintf(q{(?<mlmsg>%s)}, join "|"
+			, sprintf(q{(?<lcmsg>%s)}, join "|"
 				  , q{(?<msgopn>(?:\#\w+)?\[{2,})}
 				  , q{(?<msgsep>\|{2,})}
 				  , q{(?<msgclo>\]{2,})}));
@@ -271,9 +271,9 @@ sub parse_attlist {
 	 , $self->parse_attlist($_[0], @opt)];
       } elsif ($+{entity} or $+{special}) {
 	# XXX: 間に space が入ってたら?
-	if ($+{mlmsg}) {
+	if ($+{lcmsg}) {
 	  die $self->synerror_at($self->{startln}
-				 , q{m18n msg is not allowed here});
+				 , q{l10n msg is not allowed here});
 	}
 	[TYPE_ATT_TEXT, @common, $+{attname}, [$self->mkentity(@common)]];
       } else {

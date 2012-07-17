@@ -318,7 +318,7 @@ END
       skip "Locale::PO is not installed", 2;
     }
 
-    my $SUB = 'm18nmsg';
+    my $SUB = 'l10nmsg';
 
     my $mkmsg = sub {
       my ($msgid, $msgstr, @rest) = @_;
@@ -404,14 +404,14 @@ END
       $yatt->configure(locale => [data => {ja => [], en => []}]);
 
     {
-      my @msgobjs = $yatt->lang_extract_mlmsg(en => $SUB);
+      my @msgobjs = $yatt->lang_extract_lcmsg(en => $SUB);
       is_deeply [map {
 	my $o = $_;
 	[$o->dequote($_->msgid)
 	 , map($_ ? $o->dequote($_) : undef, $_->msgid_plural)]
       } @msgobjs]
 	, [['Hello %s!', undef], \@en]
-	  , "$theme $SUB extract_mlmsg";
+	  , "$theme $SUB extract_lcmsg";
     }
 
     $yatt->configure(locale =>

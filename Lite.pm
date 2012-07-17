@@ -23,7 +23,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dont_map_args
 	      cf_dont_debug_param
 	      cf_info
-	      cf_mlmsg_sink
+	      cf_lcmsg_sink
 
 	      cf_default_lang
 	    /;
@@ -245,7 +245,7 @@ sub build_trans {
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
 				     rc_script
-				     mlmsg_sink
+				     lcmsg_sink
 				     only_parse/));
 }
 
@@ -375,14 +375,14 @@ BEGIN {
 
 use YATT::Lite::Partial::Gettext;
 
-# Extract (and cache, for later merging) m18n msgs from filelist.
-sub lang_extract_mlmsg {
+# Extract (and cache, for later merging) l10n msgs from filelist.
+sub lang_extract_lcmsg {
   (my MY $self, my ($lang, $filelist)) = @_;
 
   my ($msglist, $msgdict) = $self->lang_msgcat($lang)
     or return;
 
-  $self->get_trans->extract_mlmsg($filelist, $msglist, $msgdict);
+  $self->get_trans->extract_lcmsg($filelist, $msglist, $msgdict);
 }
 
 sub default_default_lang { 'en' }

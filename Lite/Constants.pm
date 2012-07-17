@@ -8,7 +8,7 @@ require Carp;
 # 今回は LRXML の serializability を捨てる
 use YATT::Lite::Util::Enum
   (TYPE_ => [qw(LINEINFO COMMENT
-		MLMSG
+		LCMSG
 		  ENTITY PI ELEMENT
 		  ATTRIBUTE=ATT_NAMEONLY ATT_BARENAME ATT_TEXT ATT_NESTED
 		  ATT_MACRO=DECL_ENTITY)]

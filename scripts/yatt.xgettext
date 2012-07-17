@@ -56,7 +56,7 @@
       if ($cmd->{cf_merge} || $cmd->{cf_write}) {
 	$yatt->get_lang_msg($cmd->{cf_lang});
       }
-      my @msglist = $yatt->lang_extract_mlmsg($cmd->{cf_lang}
+      my @msglist = $yatt->lang_extract_lcmsg($cmd->{cf_lang}
 					      , [$yatt->list_items]);
       unless (-r $saveas) {
 	unshift @msglist, $cmd->default_header;

@@ -113,7 +113,7 @@ sub lang_msgcat {
   return unless defined $lang
     and $catalog = $self->{locale_cache}{$lang};
   if (wantarray) {
-    # For later use in lang_extract_mlmsg
+    # For later use in lang_extract_lcmsg
     ($catalog->[_E_LIST] //= [], $catalog->[_E_DICT] //= {});
   } else {
     $catalog;

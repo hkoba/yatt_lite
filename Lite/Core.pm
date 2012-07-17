@@ -9,7 +9,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_parse_while_loading cf_only_parse
 	      cf_die_in_error cf_error_handler
 	      cf_special_entities
-	      cf_mlmsg_sink
+	      cf_lcmsg_sink
 
 	      cgen_class
 	    /;
@@ -303,7 +303,7 @@ sub create_file {
       my $cgen = $cg_class->new
 	(vfs => $self
 	 , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
-				 mlmsg_sink))
+				 lcmsg_sink))
 	 , parser => $self->get_parser
 	 , sink => $opts{sink} || sub {
 	   my ($info, @script) = @_;
@@ -317,19 +317,19 @@ sub create_file {
   }
 
   #
-  # extract_mlmsg
+  # extract_lcmsg
   #  - filelist is a list(or scalar) of filename or item name(no ext).
   #  - msgdict is used to share same msgid.
   #  - msglist is used to keep msg order.
   #
-  # XXX: find_product and extract_mlmsg is exclusive.
-  sub extract_mlmsg {
+  # XXX: find_product and extract_lcmsg is exclusive.
+  sub extract_lcmsg {
     (my MY $self, my ($filelist, $msglist, $msgdict)) = @_;
     require Locale::PO;
     $msglist //= [];
     $msgdict //= {};
-    local $self->{cf_mlmsg_sink} = sub {
-      $self->define_mlmsg_in($msglist, $msgdict, @_);
+    local $self->{cf_lcmsg_sink} = sub {
+      $self->define_lcmsg_in($msglist, $msgdict, @_);
     };
     my $type = 'perl';
     foreach my $name (lexpand($filelist)) {
@@ -342,7 +342,7 @@ sub create_file {
   }
 
 
-  sub define_mlmsg_in {
+  sub define_lcmsg_in {
     (my MY $self, my ($list, $dict, $place, $msgid, $other_msgs, $args)) = @_;
     if (my $obj = $dict->{$msgid}) {
       $obj->reference(join " ", grep {defined $_} $obj->reference, $place);

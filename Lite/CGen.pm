@@ -9,7 +9,7 @@ use fields qw/curtmpl curwidget curtoks curline
 	      cf_no_lineinfo cf_check_lineno
 	      no_last_newline
 	      cf_vfs cf_parser cf_sink scope
-	      cf_mlmsg_sink
+	      cf_lcmsg_sink
 	     /;
 
 use YATT::Lite::Core qw(Template Part);

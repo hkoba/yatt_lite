@@ -20,13 +20,13 @@ sub _parse_body {
 
     $self->accept_leading_text($sink, $parent, $par_ln, \$has_nonspace);
 
-    if ($+{mlmsg}) {
+    if ($+{lcmsg}) {
       if ($+{msgopn}) {
-	push @$sink, $self->_parse_mlmsg
+	push @$sink, $self->_parse_lcmsg
 	  ($+{entity}, $parent, $par_ln, \$has_nonspace);
       } else {
 	die $self->synerror_at
-	  ($self->{startln}, q{Mismatched m18n msg});
+	  ($self->{startln}, q{Mismatched l10n msg});
       }
     } elsif ($+{entity} or $+{special}) {
       # &yatt(?=:) までマッチしてる。
@@ -204,7 +204,7 @@ sub verify_tag {
 
 # $_ から &yatt]]; までを削って $node を返す
 
-sub _parse_mlmsg {
+sub _parse_lcmsg {
   (my MY $self, my ($ns, $parent, $par_ln, $rhas_nonspace)) = @_;
 
   my $path = [$ns];
@@ -213,11 +213,11 @@ sub _parse_mlmsg {
   } else {
     die $self->synerror_at
       ($self->{startln}
-       , q{parse_mlmsg is called from invalid context: %s }, $_);
+       , q{parse_lcmsg is called from invalid context: %s }, $_);
   }
 
 
-  my $node = [TYPE_MLMSG, $self->{startpos}, undef, $self->{endln}
+  my $node = [TYPE_LCMSG, $self->{startpos}, undef, $self->{endln}
 	      , $path
 	      , my $body = [my $sink = []]];
 
@@ -227,7 +227,7 @@ sub _parse_mlmsg {
     $self->accept_leading_text($sink, $parent, $par_ln, $rhas_nonspace);
     if ($+{msgopn}) {
       die $self->synerror_at
-	($self->{startln}, q{nesting of m18n msg is not allowed});
+	($self->{startln}, q{nesting of l10n msg is not allowed});
     } elsif ($+{msgsep}) {
       s/^\|{2,};//;
       $self->{curpos} += length $&;
@@ -250,7 +250,7 @@ sub _parse_mlmsg {
 
   die $self->synerror_at
     ($self->{startln}
-     , q{parse_mlmsg is not closed: %s}, $_);
+     , q{parse_lcmsg is not closed: %s}, $_);
 }
 
 sub _undef_if_empty {

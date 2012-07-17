@@ -160,7 +160,7 @@ use YATT::Lite::Constants;
   our @DISPATCH;
   $DISPATCH[TYPE_LINEINFO] = \&from_lineinfo;
   $DISPATCH[TYPE_COMMENT]  = \&from_comment;
-  $DISPATCH[TYPE_MLMSG]    = \&from_mlmsg;
+  $DISPATCH[TYPE_LCMSG]    = \&from_lcmsg;
   $DISPATCH[TYPE_ENTITY]   = \&from_entity;
   $DISPATCH[TYPE_PI]       = \&from_pi;
   $DISPATCH[TYPE_ELEMENT]  = \&from_element;
@@ -247,7 +247,7 @@ use YATT::Lite::Constants;
 
   # as_list と対になる。
   our @AS_TEXT;
-  $AS_TEXT[TYPE_MLMSG]    = \&from_mlmsg;
+  $AS_TEXT[TYPE_LCMSG]    = \&from_lcmsg;
   $AS_TEXT[TYPE_ENTITY]   = \&from_entity;
   $AS_TEXT[TYPE_PI]       = \&text_from_pi;
   $AS_TEXT[TYPE_ELEMENT]  = \&text_from_element; # XXX: ?? Used??
@@ -504,7 +504,7 @@ use YATT::Lite::Constants;
     $self->{curline} += $nlines;
     return \ ("\n" x $nlines);
   }
-  sub from_mlmsg {
+  sub from_lcmsg {
     (my MY $self, my $node) = @_;
     my ($path, $body) = nx($node);
     # $body is list of tokenlist.
@@ -515,24 +515,24 @@ use YATT::Lite::Constants;
       # ngettext
       my ($uniq, $args, $numexpr) = ({}, []);
       my ($msgid, @plural) = map {
-	scalar $self->gen_mlmsg($node, $_, $uniq, $args, \$numexpr);
+	scalar $self->gen_lcmsg($node, $_, $uniq, $args, \$numexpr);
       } @$body;
-      if (my $sub = $self->{cf_mlmsg_sink}) {
+      if (my $sub = $self->{cf_lcmsg_sink}) {
 	$sub->($place, $msgid, \@plural, $args);
       }
       sprintf q{sprintf($CON->ngettext(%s, %s), %s)}
 	, join(", ", map {qtext($_)} ($msgid, @plural))
 	  , $numexpr, join(", ", @$args);
     } else {
-      my ($msgid, @args) = $self->gen_mlmsg($node, $body->[0]);
-      if (my $sub = $self->{cf_mlmsg_sink}) {
+      my ($msgid, @args) = $self->gen_lcmsg($node, $body->[0]);
+      if (my $sub = $self->{cf_lcmsg_sink}) {
 	$sub->($place, $msgid, undef, \@args);
       }
       sprintf q{sprintf($CON->gettext(%s), %s)}
 	, qtext($msgid), join(", ", @args);
     }
   }
-  sub gen_mlmsg {
+  sub gen_lcmsg {
     (my MY $self, my ($node, $list, $uniq, $args, $ref_numeric)) = @_;
     my ($msgid, $vspec) = ("");
     if (@$list >= 2 and not ref $list->[0] and not ref $list->[-1]

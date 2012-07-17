@@ -425,7 +425,7 @@ END
 
   is_deeply $w->{tree}
 , ['<h2>'
-   , [TYPE_MLMSG, 4, 39, 1, [qw(yatt)]
+   , [TYPE_LCMSG, 4, 39, 1, [qw(yatt)]
       , [["Hello "
 	 , [TYPE_ENTITY, 18, 30, 1, yatt => [qw/var world/]]
 	 , "!"
@@ -433,7 +433,7 @@ END
    , "</h2>\n"
    , "\n"
    , "<p>"
-   , [TYPE_MLMSG, 49, 180, 3, [qw(yatt num)]
+   , [TYPE_LCMSG, 49, 180, 3, [qw(yatt num)]
       , [["\n", "  "
 	  , [TYPE_ENTITY, 64, 72, 4, yatt => [qw/var n/]]
 	  , " file removed from directory "
@@ -450,7 +450,7 @@ END
      ]
    , "</p>"
    , "\n"
-], "Embeded m18n message.";
+], "Embeded l10n message.";
 }
 
 # (- (region-end) (region-beginning))
