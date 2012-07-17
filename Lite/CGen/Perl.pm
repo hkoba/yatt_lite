@@ -544,11 +544,14 @@ use YATT::Lite::Constants;
     }
     foreach my $item (@$list) {
       unless (ref $item) {
-	$msgid .= $item;
+	# XXX: How about backslash?
+	(my $cp = $item) =~ s/%/%%/g;
+	$msgid .= $cp;
       } elsif ($item->[NODE_TYPE] != TYPE_ENTITY) {
 	die "SYNERR";
       } elsif (ref ($vspec = $item->[NODE_BODY]) ne 'ARRAY'
 	       || $vspec->[0] ne 'var') {
+	# || @$vspec != 2
 	die "SYNERR";
       } else {
 	my $name = $vspec->[1];

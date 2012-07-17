@@ -376,11 +376,15 @@ BEGIN {
 use YATT::Lite::Partial::Gettext;
 
 # Extract (and cache, for later merging) l10n msgs from filelist.
+# By default, it merges $filelist into existing locale_cache.
+# To get fresh list, explicitly pass $msglist=[].
+#
 sub lang_extract_lcmsg {
-  (my MY $self, my ($lang, $filelist)) = @_;
+  (my MY $self, my ($lang, $filelist, $msglist, $msgdict)) = @_;
 
-  my ($msglist, $msgdict) = $self->lang_msgcat($lang)
-    or return;
+  if (not $msglist and not $msgdict) {
+    ($msglist, $msgdict) = $self->lang_msgcat($lang)
+  }
 
   $self->get_trans->extract_lcmsg($filelist, $msglist, $msgdict);
 }

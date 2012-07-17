@@ -404,7 +404,7 @@ END
       $yatt->configure(locale => [data => {ja => [], en => []}]);
 
     {
-      my @msgobjs = $yatt->lang_extract_lcmsg(en => $SUB);
+      my @msgobjs = $yatt->lang_extract_lcmsg(en => $SUB, []);
       is_deeply [map {
 	my $o = $_;
 	[$o->dequote($_->msgid)
@@ -412,6 +412,18 @@ END
       } @msgobjs]
 	, [['Hello %s!', undef], \@en]
 	  , "$theme $SUB extract_lcmsg";
+    }
+
+    {
+      my $NM = "lcmsg_escape";
+      ok(my $pos_t = $yatt->add_to($NM => <<'END'), "$theme add_to $NM");
+<!yatt:args x>
+<h2>&yatt[[;Total 100%. 100%! &yatt:x; 1%&yatt]];</h2>
+END
+
+      my ($msgobj) = $yatt->lang_extract_lcmsg(en => $NM, []);
+      is $msgobj->dequote($msgobj->msgid), 'Total 100%%. 100%%! %s 1%%'
+	, "$theme $NM percent escape";
     }
 
     $yatt->configure(locale =>
