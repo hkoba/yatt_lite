@@ -32,7 +32,7 @@ use fields
    , qw/cf_lang/
   );
 
-use YATT::Lite::Util qw(globref lexpand fields_hash);
+use YATT::Lite::Util qw(globref lexpand fields_hash incr_opt);
 use YATT::Lite::PSGIEnv;
 
 sub prop { *{shift()}{HASH} }
@@ -151,7 +151,7 @@ sub as_error {
 
 sub error {
   # XXX: as_error?
-  shift->raise(error => @_);
+  shift->raise(error => incr_opt(depth => \@_), @_);
 }
 
 sub raise {
@@ -159,7 +159,7 @@ sub raise {
   my ($type, @err) = @_; # To keep args visible in backtrace.
   $prop->{raised} = $type;
   if (my $system = $prop->{cf_system}) {
-    $system->raise($type, @err);
+    $system->raise($type, incr_opt(depth => \@err), @err);
   } else {
     shift @err if @err and ref $err[0] eq 'HASH'; # drop opts.
     my $fmt = shift @err;

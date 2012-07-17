@@ -34,6 +34,7 @@ require Scalar::Util;
 				  NIMPL
 
 				  shallow_copy
+				  incr_opt
 				/);
   }
   use Carp;
@@ -485,12 +486,12 @@ sub safe_render {
   my ($this, $con, $wspec, @args) = @_;
   my @nsegs = lexpand($wspec);
   if (grep {not defined $_} @nsegs) {
-    $con->error("Undefined widget name for render");
-    die(sprintf "dump: %s", terse_dump(@nsegs));
+    # XXX: depth option is bad (because $con can delegate this to other calls)
+    die $con->error("Undefined widget name segment for render");
   }
   my $wname = join _ => @nsegs;
   my $sub = $this->can("render_$wname")
-    or $con->error("Can't find widget '%s'", $wname);
+    or die $con->error("Can't find widget '%s'", $wname);
   $sub->($this, $con, @args);
 }
 
@@ -564,5 +565,17 @@ if (catch {require Sub::Name}) {
   *subname = *Sub::Name::subname;
 }
 
+sub incr_opt {
+  my ($key, $list) = @_;
+  my $hash = do {
+    if (@$list and defined $list->[0] and ref $list->[0] eq 'HASH') {
+      shift @$list;
+    } else {
+      +{}
+    }
+  };
+  $hash->{$key}++;
+  $hash;
+}
 
 1;

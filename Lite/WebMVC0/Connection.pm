@@ -227,7 +227,7 @@ sub redirect {
       $$arg;
     } elsif ($_[0] =~ m{^(?:\w+:)?//([^/]+)}
 	     and $1 ne ($glob->mkhost // '')) {
-      $glob->error("External redirect is not allowed: %s", $_[0]);
+      die $glob->error("External redirect is not allowed: %s", $_[0]);
     } else {
       # taint check
       shift;
@@ -262,7 +262,7 @@ sub get_session {
 sub load_session {
   my PROP $prop = (my $glob = shift)->prop;
   if (exists $prop->{session}) {
-    $glob->error("load_session is called twice!");
+    die $glob->error("load_session is called twice!");
   } else {
     $prop->{cf_system}->session_load($glob, @_);
   }
@@ -288,7 +288,7 @@ sub current_user {
   };
 
   return $cu unless @_;
-  $glob->error("current_user is empty") unless defined $cu;
+  die $glob->error("current_user is empty") unless defined $cu;
   my $method = shift;
 
   $cu->$method(@_);
@@ -313,15 +313,15 @@ sub param_type {
   if (defined $value && $value =~ $pat) {
     return $&; # Also for taint check.
   } elsif ($diag) {
-    $glob->error((ref $diag eq 'CODE' ? $diag->($value) : $diag)
-		 , $name, $value);
+    die $glob->error((ref $diag eq 'CODE' ? $diag->($value) : $diag)
+		     , $name, $value);
   } elsif (not defined $value) {
     return undef if $opts->{allow_undef};
-    $glob->error("Parameter '%s' is missing!", $name);
+    die $glob->error("Parameter '%s' is missing!", $name);
   } else {
     # Just for default message. Production code should provide $diag.
-    $glob->error("Parameter '%s' must match %s!: '%s'"
-		, $name, $type, $value);
+    die $glob->error("Parameter '%s' must match %s!: '%s'"
+		     , $name, $type, $value);
   }
 }
 

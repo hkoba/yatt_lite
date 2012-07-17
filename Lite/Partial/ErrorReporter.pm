@@ -10,6 +10,7 @@ use YATT::Lite::Partial
 use Carp qw/longmess/;
 
 use YATT::Lite::Error; sub Error () {'YATT::Lite::Error'}
+use YATT::Lite::Util qw/incr_opt/;
 
 #========================================
 # error reporting.
@@ -17,7 +18,7 @@ use YATT::Lite::Error; sub Error () {'YATT::Lite::Error'}
 
 sub error {
   (my MY $self) = map {ref $_ ? $_ : MY} shift;
-  $self->raise(error => @_);
+  $self->raise(error => incr_opt(depth => \@_), @_);
 }
 
 sub make_error {
@@ -37,8 +38,8 @@ sub raise {
   (my MY $self, my $type) = splice @_, 0, 2;
   my $opts = shift if @_ and ref $_[0] eq 'HASH';
   # shift/splice しないのは、引数を stack trace に残したいから
-  my $err = $self->make_error(1 + (delete($opts->{depth}) // 1), $opts, @_);
-
+  my $depth = (delete($opts->{depth}) // 0);
+  my $err = $self->make_error(2 + $depth, $opts, @_); # 2==raise+make_error
   if (ref $self and my $sub = $self->{cf_error_handler}) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
