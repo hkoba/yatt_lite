@@ -2,7 +2,7 @@
 USE_COOKIE: 1
 
 ACTION[
-remove: ../data/.ht_*
+remove: ../var/data/.ht_*
 ]
 
 TITLE: 1st index

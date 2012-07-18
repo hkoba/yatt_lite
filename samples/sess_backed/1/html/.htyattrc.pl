@@ -16,23 +16,16 @@ Entity config => sub {
 
 #========================================
 
-Entity sess => sub {
-  my ($this) = shift;
-  my $sess = $CON->get_session
-    or return undef;
-  $sess->param(@_);
-};
-
 Entity session_start => sub {
   my ($this) = shift;
-  $CON->load_session(1, @_ ? @_ : qr/^\w+$/);
+  $CON->start_session(@_ ? @_ : qr/^\w+$/);
   '';
 };
 
 # Normally, calling &yatt:sess(); is enough.
 Entity session_resume => sub {
   my ($this) = shift;
-  $CON->load_session(0, @_);
+  $CON->get_session;
   '';
 };
 

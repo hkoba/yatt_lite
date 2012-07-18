@@ -45,13 +45,6 @@ Entity resultset => sub {
 #========================================
 Entity LOGIN => sub { 'login' };
 
-Entity sess => sub {
-  my ($this) = shift;
-  my $sess = $CON->get_session
-    or return undef;
-  $sess->param(@_);
-};
-
 Entity is_logged_in => sub {
   my ($this) = @_;
   $this->entity_sess($this->entity_LOGIN);
@@ -60,7 +53,7 @@ Entity is_logged_in => sub {
 Entity set_logged_in => sub {
   my ($this, $login) = @_;
   if (defined $login and $login ne '') {
-    $CON->load_session($CON, 1, [$this->entity_LOGIN => $login]);
+    $CON->start_session([$this->entity_LOGIN => $login]);
   } else {
     $CON->delete_session;
   }

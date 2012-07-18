@@ -32,7 +32,7 @@ use fields
    , qw/cf_lang/
   );
 
-use YATT::Lite::Util qw(globref lexpand fields_hash incr_opt);
+use YATT::Lite::Util qw(globref lexpand fields_hash incr_opt terse_dump);
 use YATT::Lite::PSGIEnv;
 
 sub prop { *{shift()}{HASH} }
@@ -165,6 +165,24 @@ sub raise {
     my $fmt = shift @err;
     croak sprintf($fmt, @err);
   }
+}
+
+sub logdump {
+  my PROP $prop = prop(my $glob = shift);
+  my Env $env = $prop->{cf_env}
+    or return;
+  my $fh = $env->{'psgi.errors'}
+    or return;
+  print $fh terse_dump(@_), "\n"; # XXX: timestamp? precise?
+}
+
+sub logbacktrace {
+  my PROP $prop = prop(my $glob = shift);
+  my Env $env = $prop->{cf_env}
+    or return;
+  my $fh = $env->{'psgi.errors'}
+    or return;
+  print $fh terse_dump(@_), Carp::longmess(), "\n";
 }
 
 #========================================

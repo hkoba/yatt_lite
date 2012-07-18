@@ -12,7 +12,7 @@ use fields qw/cf_cgi
 
 	      current_user
 	    /;
-use YATT::Lite::Util qw(globref url_encode nonempty);
+use YATT::Lite::Util qw(globref url_encode nonempty lexpand);
 use YATT::Lite::PSGIEnv;
 
 #----------------------------------------
@@ -247,7 +247,10 @@ sub redirect {
 
 #========================================
 # Session support is delegated to 'system'.
-# 'system' must implement session_{load,flush,destroy}
+# 'system' must implement session_{start,resume,flush,destroy}
+
+# To avoid confusion against $system->session_$verb,
+# connection side interface is named ${verb}_session.
 
 sub get_session {
   my PROP $prop = (my $glob = shift)->prop;
@@ -255,22 +258,26 @@ sub get_session {
   if (exists $prop->{session}) {
     $prop->{session};
   } else {
-    $prop->{cf_system}->session_load($glob);
+    $prop->{cf_system}->session_resume($glob);
   }
 }
 
-sub load_session {
+sub start_session {
   my PROP $prop = (my $glob = shift)->prop;
-  if (exists $prop->{session}) {
-    die $glob->error("load_session is called twice!");
-  } else {
-    $prop->{cf_system}->session_load($glob, @_);
+  if (defined (my $sess = $prop->{session})) {
+    die $glob->error("load_session is called twice! sid=%s", $sess->id);
   }
+  $prop->{cf_system}->session_start($glob, @_);
 }
 
 sub delete_session {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_system}->session_delete($glob);
+}
+
+sub flush_session {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_system}->session_flush($glob);
 }
 
 #========================================
@@ -339,7 +346,14 @@ sub re_any { qr{^.*$}s }
 
 sub accept_language {
   my PROP $prop = (my $glob = shift)->prop;
-  my ($detail) = @_;
+  my (%opts) = @_;
+  my $filter = delete $opts{filter};
+  my $detail = delete $opts{detail};
+  if (keys %opts) {
+    die $glob->error("Unknown option for accept_language: %s"
+		     , join ", ", keys %opts);
+  }
+
   my Env $env = $prop->{cf_env};
   my $langlist = $env->{HTTP_ACCEPT_LANGUAGE}
     or return;
@@ -350,6 +364,23 @@ sub accept_language {
     [$lang, $qual // 1]
   } split /\s*,\s*/, $langlist;
 
+  if ($filter) {
+    my $filtsub = do {
+      if (ref $filter eq 'CODE') {
+	$filter
+      } elsif (ref $filter eq 'Regexp') {
+	sub { grep {$$_[0] =~ $filter} @_ }
+      } elsif (ref $filter eq 'HASH') {
+	sub { grep {$filter->{$$_[0]}} @_ }
+      } elsif (ref $filter eq 'ARRAY') {
+	my $hash = +{map {$_ => 1} lexpand($filter)};
+	sub { grep {$hash->{$$_[0]}} @_ }
+      } else {
+	die $glob->error("Unknown filter type for accept_language");
+      }
+    };
+    @langlist = $filtsub->(@langlist);
+  }
   if ($detail) {
     @langlist
   } else {
