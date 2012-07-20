@@ -86,7 +86,6 @@ ERROR: No such variable 'x'
 
 
 TITLE: my body source and code
-BREAK: 1
 IN:
  <!yatt:args x y>
  <yatt:my [code:code src:source]>
@@ -110,3 +109,24 @@ OUT:
    <h2>foo</h2>
    bar
  
+
+TITLE: Conflict detection
+IN:
+ <!yatt:args x y>
+ <yatt:my x/>
+ERROR: Conflicting variable 'x' \(previously defined at line 1\)
+
+
+FILE: otherfile.yatt
+IN:
+ <yatt:my x="foo"/>
+ &yatt:x;
+
+TITLE: Scope isolation.
+IN:
+ <yatt:my x="bar"/>
+ <yatt:otherfile/>
+ &yatt:x;
+OUT:
+ foo
+ bar

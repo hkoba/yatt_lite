@@ -91,7 +91,7 @@ use YATT::Lite::Constants;
        , {this => $self->mkvar_at(undef, text => 'this')
 	  , 'CON' => $self->mkvar_at(undef, text => 'CON')
 	  , '_' => $self->mkvar_at(undef, text => '_')}
-       , $self->{scope});
+      );
     local $self->{curtoks} = [@{$widget->{tree}}];
     ($self->sync_curline($widget->{cf_startln})
      , "sub render_$$widget{cf_name} {"
@@ -799,8 +799,11 @@ sub feed_arg_spec {
     my $adder = sub {
       my ($default_type, $arg, $valNode, $skip) = @_;
       my ($name, $typename) = argName($arg, $skip);
-      my $oldvar = $self->find_var($name)
-	and die $self->generror("Variable '%s' redefined", $name);
+      if (my $oldvar = $self->find_var($name)) {
+	die $self->generror("Conflicting variable '%s'"
+			    ." (previously defined at line %s)"
+			    , $name, $oldvar->lineno // '(unknown)');
+      }
       $typename ||= $default_type;
       if (my $sub = $self->can("_macro_my_$typename")) {
 	$sub->($self, $node, $name, $valNode);

@@ -2,9 +2,10 @@ package YATT::Lite::VarMaker; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::Object);
-use fields qw/type_alias/;
+use fields qw/type_alias
+	      curline/;
 
-use YATT::Lite::VarTypes qw(:type);
+use YATT::Lite::VarTypes qw(:type :VSLOT);
 use YATT::Lite::Util qw(lexpand default);
 
 # XXX: Should integrated to VarTypes.
@@ -37,7 +38,9 @@ sub mkvar_at {
 		      , $type, $name);
   };
 
-  $sub->()->new([$type, @subtype], $name, @args);
+  my $var = $sub->()->new([$type, @subtype], $name, @args);
+  $var->[VSLOT_LINENO] //= $lineno //= $self->{curline};
+  $var;
 }
 
 1;

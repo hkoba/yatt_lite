@@ -2,7 +2,7 @@ package YATT::Lite::CGen; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use base qw(YATT::Lite::VarMaker);
-use fields qw/curtmpl curwidget curtoks curline
+use fields qw/curtmpl curwidget curtoks
 	      altgen needs_escaping depth
 	      cf_cgen_loader
 	      cf_only_parse
