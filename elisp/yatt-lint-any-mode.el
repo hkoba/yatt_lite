@@ -239,7 +239,7 @@ Currently only RHEL is supported."
 	;; う～ん、setq がダサくないか? かといって、any-matchのインデントが深くなるのも嫌だし...
 	(cond ((setq match
 		     (yatt-lint-any-match
-		      "^\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
+		      "\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
 		      err 'file 1 'line 2))
 	       (setq diag (substring err (plist-get match 'end)
 				     (plist-get (yatt-lint-any-match
@@ -338,6 +338,11 @@ Currently only RHEL is supported."
        "syntax error at ./index.yatt line 37, at EOF"))
   (yatt-lint-any-match
    " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
+   err 'file 1 'line 2))
+
+'(let ((err "error [[file] /home/hkoba/html/foo.yatt [line] 2]\n No such variable 'bar'")) 
+  (yatt-lint-any-match
+   "\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
    err 'file 1 'line 2))
 
 (provide 'yatt-lint-any-mode)
