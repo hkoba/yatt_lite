@@ -71,7 +71,7 @@ use YATT::Lite::Constants;
     push @stats, $self->generate_inheritance($tmpl);
     push @stats, "use utf8; " if $$tmpl{cf_utf8};
     push @stats, q|no warnings qw(redefine); | if $$tmpl{cf_age}++;
-    #$str .= sprintf q|sub name {%s} |, qtext($$tmpl{cf_name} // '');
+    push @stats, sprintf q|sub filename {__FILE__}; |;
     @stats
   }
   sub generate_page {

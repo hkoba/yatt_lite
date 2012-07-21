@@ -74,7 +74,11 @@ sub show_isa {
       print "  $super\n";
     }
   } else {
-    print $class, "\n";
+    print $class;
+    if (my $fn = $self->get_class_filename($class)) {
+      print "\t[$fn]";
+    }
+    print "\n";
     $self->show_isa_tree(0, {}, *{globref($class, 'ISA')}{ARRAY});
   }
 }
@@ -84,7 +88,11 @@ sub show_isa_tree {
   $depth++;
   foreach my $super (@$supers) {
     my $cnt = $seen->{$super}++;
-    print "  " x $depth, $cnt ? "*" : " ", $super, "\n";
+    print "  " x $depth, $cnt ? "*" : " ", $super;
+    if (my $fn = $self->get_class_filename($super)) {
+      print "\t[$fn]";
+    }
+    print "\n";
     next if $cnt;
     my $sym = look_for_globref($super, 'ISA')
       or next;
@@ -92,4 +100,13 @@ sub show_isa_tree {
       or next;
     $self->show_isa_tree($depth, $seen, $isa);
   }
+}
+
+sub get_class_filename {
+  (my MY $self, my ($cls, $default)) = @_;
+  my $fnsym = look_for_globref($cls, 'filename')
+    or return $default;
+  my $sub = *{$fnsym}{CODE}
+    or return $default;
+  $sub->() // $default;
 }

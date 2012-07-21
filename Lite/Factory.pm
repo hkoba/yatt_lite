@@ -77,7 +77,17 @@ sub find_load_factory_script {
   sub sandbox_dofile {
     my ($pack, $file) = @_;
     my $sandbox = sprintf "%s::Sandbox::S%d", __PACKAGE__, ++$load_count;
-    dofile_in($sandbox, $file);
+    my @__result__;
+    if (wantarray) {
+      @__result__ = dofile_in($sandbox, $file);
+    } else {
+      $__result__[0] = dofile_in($sandbox, $file);
+    }
+    my $sym = globref($sandbox, 'filename');
+    unless (*{$sym}{CODE}) {
+      *$sym = sub {$file};
+    }
+    wantarray ? @__result__ : $__result__[0];
   }
 }
 
@@ -186,7 +196,7 @@ sub build_yatt {
     $self->_list_base_spec($default, 1, $cycle, \@basepkg, \@basevfs);
   }
 
-  my $app_ns = $self->buildns(INST => @basepkg);
+  my $app_ns = $self->buildns(INST => \@basepkg, $path);
 
   if (-e (my $rc = "$path/.htyattrc.pl")) {
     # Note: This can do "use fields (...)"
@@ -244,11 +254,12 @@ sub _list_base_spec {
 #========================================
 
 sub buildns {
-  (my MY $self, my ($kind, @base)) = @_;
-  my $newns = $self->SUPER::buildns($kind, @base);
+  (my MY $self, my ($kind, $baselist, $path)) = @_;
+  my $newns = $self->SUPER::buildns($kind, $baselist, $path);
 
   # EntNS を足し、Entity も呼べるようにする。
-  $self->{default_app}->define_Entity(undef, $newns, map {$_->EntNS} @base);
+  $self->{default_app}->define_Entity(undef, $newns
+				      , map {$_->EntNS} @$baselist);
 
   # instns には MY を定義しておく。
   my $my = globref($newns, 'MY');

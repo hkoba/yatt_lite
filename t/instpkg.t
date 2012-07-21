@@ -19,7 +19,7 @@ BEGIN {
 use lib $libdir;
 #----------------------------------------
 
-use YATT::Lite::Util qw(appname list_isa);
+use YATT::Lite::Util qw(appname list_isa globref);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 use Test::More qw(no_plan);
@@ -75,11 +75,14 @@ my $i = 0;
   my $base1 = $builder->buildns('TMPL');
   # my $base2 = $builder->buildns('TMPL');
 
-  my $sub1 = $builder->buildns(INST => $base1);
+  my $sub1 = $builder->buildns(INST => [$base1]
+			       , my $fake_fn =  __FILE__ . "/fake.yatt");
 
   is_deeply [list_isa($sub1, 1)]
     , [[$base1, [$NS, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]]
       , "sub1 inherits base1";
+
+  is $sub1->filename, $fake_fn, "sub1->filename is defined";
 }
 
 {
@@ -93,14 +96,21 @@ my $i = 0;
   my $NS = myapp(++$i);
   my $builder = NSBuilder->new(app_ns => $NS);
 
-  my $sub = $builder->buildns(INST => $YL);
+  my $sub = $builder->buildns(INST => [$YL]
+			      , my $fake2 = __FILE__ . "/fakefn2");
   is_deeply [list_isa($sub, 1)]
     , [[$YL, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]
       , "sub inherits $YL only.";
 
+  {
+    my $sym = globref($sub, 'filename');
+    ok my $code = *{$sym}{CODE}, "sub has filename()";
+    is $code->(), $fake2, "filename is correct";
+  }
+
   my $unknown = 'MyTest_instpkg_unk';
   eval {
-    $builder->buildns(INST => $unknown);
+    $builder->buildns(INST => [$unknown]);
   };
   like $@, qr/^None of baseclass inherits YATT::Lite: $unknown/
     , "Unknown baseclass should raise error";

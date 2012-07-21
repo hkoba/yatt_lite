@@ -14,7 +14,7 @@ use YATT::Lite::Util qw(lexpand);
   # MyApp::TMPL1::dir::dir::dir::file
   use parent qw(YATT::Lite::Object);
   use Carp;
-  use YATT::Lite::Util qw(ckeval ckrequire set_inc symtab);
+  use YATT::Lite::Util qw(ckeval ckrequire set_inc symtab globref);
   our %SEEN_NS;
   use YATT::Lite::MFields qw/cf_app_ns app_ns
 			     cf_default_app default_app
@@ -76,10 +76,10 @@ use YATT::Lite::Util qw(lexpand);
     }
   }
   sub buildns {
-    (my MY $self, my ($subns, @base)) = @_;
+    (my MY $self, my ($subns, $baselist, $path)) = @_;
     # This usually creates MyApp::INST$n and set it's ISA.
     $subns ||= $self->default_subns;
-    @base = map {ref $_ || $_} @base;
+    my @base = map {ref $_ || $_} @$baselist;
     if (@base) {
       try_require($_) for @base;
       unless (grep {$_->isa($self->{default_app})} @base) {
@@ -89,9 +89,17 @@ use YATT::Lite::Util qw(lexpand);
     my $newns = sprintf q{%s::%s%d}, $self->{app_ns}, $subns
       , ++$self->{subns}{$subns};
     $self->define_base_of($newns, @base ? @base : $self->{app_ns});
-    $self->{default_app}->ensure_entns($newns, map {
+    my $entns = $self->{default_app}->ensure_entns($newns, map {
       $_->EntNS
     } @base ? @base : $self->{app_ns});
+
+    foreach my $ns ($entns, $newns) {
+      my $sym = globref($ns, 'filename');
+      unless (*{$sym}{CODE}) {
+	*$sym = sub { $path };
+      }
+    }
+
     set_inc($newns, 1);
     $newns;
   }
