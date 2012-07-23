@@ -158,7 +158,9 @@ sub raise {
   my PROP $prop = prop(my $glob = shift);
   my ($type, @err) = @_; # To keep args visible in backtrace.
   $prop->{raised} = $type;
-  if (my $system = $prop->{cf_system}) {
+  if (my $yatt = $prop->{cf_yatt}) {
+    $yatt->raise($type, incr_opt(depth => \@err), @err);
+  } elsif (my $system = $prop->{cf_system}) {
     $system->raise($type, incr_opt(depth => \@err), @err);
   } else {
     shift @err if @err and ref $err[0] eq 'HASH'; # drop opts.
