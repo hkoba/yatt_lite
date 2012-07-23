@@ -172,3 +172,58 @@ OUT:
  
  footer
 
+
+TITLE: render([foo,bar],args) => foo_bar
+IN:
+ <!yatt:args ls=list>
+ &yatt:render(:ls,X);
+ 
+ <!yatt:widget foo_bar x>
+ foo &yatt:x; bar
+ <!yatt:widget foo_ x>
+ fooonly x=&yatt:x;
+ <!yatt:widget _bar x>
+ baronly x=&yatt:x;
+PARAM[
+[
+- foo
+- bar
+]
+]
+OUT:
+ foo X bar
+ 
+
+TITLE: render([=undef,bar],args);
+PARAM[
+[
+= #null
+- bar
+]
+]
+OUT:
+ baronly x=X
+ 
+
+TITLE: render([foo,=undef],args);
+PARAM[
+[
+- foo
+= #null
+]
+]
+OUT:
+ fooonly x=X
+ 
+
+TITLE: datetime
+IN:
+ <!yatt:args>
+ <yatt:my dt:value="&yatt:datetime(new,year,1964,month,10,day,10);"/>
+ &yatt:dt:year();
+ &yatt:dt:month();
+ &yatt:dt:day();
+OUT:
+ 1964
+ 10
+ 10

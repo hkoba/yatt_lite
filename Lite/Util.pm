@@ -485,11 +485,7 @@ sub dispatch_one {
 sub safe_render {
   my ($this, $con, $wspec, @args) = @_;
   my @nsegs = lexpand($wspec);
-  if (grep {not defined $_} @nsegs) {
-    # XXX: depth option is bad (because $con can delegate this to other calls)
-    die $con->error("Undefined widget name segment for render");
-  }
-  my $wname = join _ => @nsegs;
+  my $wname = join _ => map {defined $_ ? $_ : ''} @nsegs;
   my $sub = $this->can("render_$wname")
     or die $con->error("Can't find widget '%s'", $wname);
   $sub->($this, $con, @args);

@@ -164,6 +164,13 @@ sub entity_mkhash {
   \%hash;
 }
 
+sub entity_datetime {
+  my ($this, $method, @args) = @_;
+  $method //= 'now';
+  require DateTime;
+  DateTime->$method(@args);
+}
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 
