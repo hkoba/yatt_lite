@@ -293,8 +293,10 @@ use YATT::Lite::Constants;
 	->($self, $var, $node);
     }
 
-    my Widget $widget = $self->lookup_widget(@path)
-      or die $self->generror(q{No such widget <%s>}, $wname);
+    my Widget $widget = $self->lookup_widget(@path) or do {
+      my $err = $self->generror(q{No such widget <%s>}, $wname);
+      die $err;
+    };
     $self->ensure_generated(perl => my Template $tmpl = $widget->{cf_folder});
     my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_entns};
     \ sprintf(q{%s->render_%s($CON, %s)}

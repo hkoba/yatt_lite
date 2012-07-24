@@ -9,7 +9,7 @@ our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
 #
 # YATT Internalへの Facade. YATT の初期化パラメータの保持者でもある。
 #
-use parent qw/YATT::Lite::Object/;
+use parent qw/YATT::Lite::Object File::Spec/;
 use YATT::Lite::MFields qw/YATT
 	      cf_dir
 	      cf_vfs cf_base

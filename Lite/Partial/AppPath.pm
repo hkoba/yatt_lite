@@ -4,7 +4,8 @@ use warnings FATAL => qw/all/;
 
 use File::Path ();
 
-use YATT::Lite::Partial fields => [qw/cf_app_root/], requires => [qw/error/];
+use YATT::Lite::Partial fields => [qw/cf_app_root/]
+  , requires => [qw/error rel2abs/];
 
 # Note: Do *not* use YATT::Lite. YATT::Lite *uses* this.
 
@@ -13,11 +14,19 @@ sub app_path_is_replaced {
   $_[0] =~ s|^\@|$self->{cf_app_root}/|;
 }
 
-sub app_path_find_dir {
-  (my MY $self, my $path) = @_;
+sub app_path_find_dir_in {
+  (my MY $self, my ($in, $path)) = @_;
   $self->app_path_is_replaced($path);
-  return '' unless -d $path;
-  $path;
+  $path = $self->app_path_normalize($path, $in);
+  -d $path ? $path : '';
+}
+
+sub app_path_normalize {
+  (my MY $self, my ($path, $base)) = @_;
+  my $normalized = $path =~ m{^/} ? $path : $self->rel2abs($path, $base);
+  1 while $normalized =~ s{/[^/\.]+/\.\.(?:/|$)}{/};
+  # XXX: Should not point outside of $app_root.
+  $normalized;
 }
 
 sub app_path_ensure_existing {

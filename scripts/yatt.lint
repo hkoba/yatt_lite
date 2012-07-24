@@ -16,6 +16,7 @@ BEGIN {
 use lib $libdir;
 #----------------------------------------
 
+use YATT::Lite qw/*SYS/;
 use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(default rootname);
@@ -27,7 +28,7 @@ use YATT::Lite::CGen::Perl; # Just for debugging aid.
 
 # library の追加は？ <= .htyattrc で？違うよね?
 
-my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+$SYS = my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
   require YATT::Lite::WebMVC0::SiteApp;
   YATT::Lite::WebMVC0::SiteApp->new
       (app_ns => 'MyApp'

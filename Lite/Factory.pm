@@ -20,6 +20,8 @@ use YATT::Lite::MFields qw/cf_doc_root
 			   loc2yatt
 			   path2yatt
 
+			   tmpl_cache
+
 			   cf_binary_config
 
 			   cf_tmpl_encoding cf_output_encoding
@@ -163,7 +165,7 @@ sub get_yatt {
 
 sub load_yatt {
   (my MY $self, my ($path, $cycle)) = @_;
-  $path = $self->canonpath($path);
+  $path = $self->rel2abs($path, $self->{cf_app_root});
   if (my $yatt = $self->{path2yatt}{$path}) {
     return $yatt;
   }
@@ -191,9 +193,9 @@ sub build_yatt {
   #
   my (@basepkg, @basevfs);
   if (my $explicit = delete $opts{base}) {
-    $self->_list_base_spec($explicit, 0, $cycle, \@basepkg, \@basevfs);
+    $self->_list_base_spec_in($path,$explicit, 0, $cycle, \@basepkg, \@basevfs);
   } elsif (my $default = $self->{cf_app_base}) {
-    $self->_list_base_spec($default, 1, $cycle, \@basepkg, \@basevfs);
+    $self->_list_base_spec_in($path, $default, 1, $cycle, \@basepkg, \@basevfs);
   }
 
   my $app_ns = $self->buildns(INST => \@basepkg, $path);
@@ -207,6 +209,7 @@ sub build_yatt {
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
+	      , tmpl_cache => $self->{tmpl_cache} //= {}
 	      , $self->configparams_for(fields_hash($app_ns)));
 
   if (my @unk = $app_ns->YATT::Lite::Object::cf_unknowns(%opts)) {
@@ -217,8 +220,8 @@ sub build_yatt {
   $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
 }
 
-sub _list_base_spec {
-  (my MY $self, my ($desc, $is_default, $cycle, $basepkg, $basevfs)) = @_;
+sub _list_base_spec_in {
+  (my MY $self, my ($in, $desc, $is_default, $cycle, $basepkg, $basevfs)) = @_;
   my ($base, @mixin) = lexpand($desc)
     or return;
 
@@ -229,7 +232,7 @@ sub _list_base_spec {
       if ($basespec =~ /^::(.*)/) {
 	ckrequire($1);
 	$pkg = $1;
-      } elsif (my $realpath = $self->app_path_find_dir($basespec)) {
+      } elsif (my $realpath = $self->app_path_find_dir_in($in, $basespec)) {
 	if (defined $cycle->{$realpath}) {
 	  next if $is_default;
 	  $self->error("Template config error! base has cycle!: %s\n"
