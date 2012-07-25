@@ -209,7 +209,7 @@ sub build_yatt {
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
-	      , tmpl_cache => $self->{tmpl_cache} //= {}
+	      #, tmpl_cache => $self->{tmpl_cache} //= {}
 	      , $self->configparams_for(fields_hash($app_ns)));
 
   if (my @unk = $app_ns->YATT::Lite::Object::cf_unknowns(%opts)) {

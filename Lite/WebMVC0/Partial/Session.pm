@@ -112,7 +112,8 @@ sub session_resume {
     or $self->error("Can't load session for sid='%s': %s"
 		    , $sid, CGI::Session->errstr);
 
-  if ($sess->is_expired) {
+  if ($sess->is_expired or not $sess->id) {
+    delete $prop->{session}; # To allow calling session_start.
     return undef; # XXX: Should we notify?
   }
 
