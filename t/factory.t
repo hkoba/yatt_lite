@@ -301,3 +301,52 @@ END
     ok($yatt->find_part($key), "$THEME inst part $key is visible");
   }
 }
+
+++$i;
+{
+  my $THEME = "[vfscache]";
+  # vfscache ありの時に、subdir -> topdir の順でアクセスしたらエラーになった件。
+  # test だけでも足しておこう...
+
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+  my $ytmpl   = "$approot/ytmpl";
+
+  MY->mkfile("$docroot/subapp/.htyattconfig.xhf" => <<'END'
+base[
+- ..
+- @ytmpl
+]
+END
+	     , "$docroot/subapp/foo.yatt" => <<'END'
+foo<yatt:common/>
+END
+
+	     , "$docroot/.htyattconfig.xhf" => <<'END'
+base[
+- @ytmpl
+]
+END
+	     , "$docroot/bar.yatt" => <<'END'
+bar<yatt:common/>
+END
+	     , "$ytmpl/common.ytmpl" => "shared"
+	    );
+
+
+  my $F = Factory->new(app_ns => $CLS
+		       , app_root => $approot
+		       , doc_root => $docroot
+		       , app_base => '@ytmpl'
+		      );
+
+  my $subapp = $F->get_yatt('/subapp/');
+  is $subapp->render(foo => []), "fooshared\n", "$THEME subapp/foo";
+
+  my $top = $F->get_yatt('/');
+  is $top->render(bar => []), "barshared\n", "$THEME bar";
+  # No such widget <yatt:common> at file /tmp/pFTOXbIAaa/app6/docs/bar.yatt line 1,
+
+  # あと、Subroutine filename redefined になるケースがあるが、同じ現象か別か不明。
+}
