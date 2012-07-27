@@ -17,6 +17,7 @@ use Encode;
   sub Item () {'YATT::Lite::Test::XHFTest::Item'}
   package YATT::Lite::Test::XHFTest::Item;
   use parent qw(YATT::Lite::Object);
+  use YATT::Lite::Util qw(lexpand);
   use YATT::Lite::MFields qw/cf_global
 		cf_parser
 
@@ -36,6 +37,8 @@ use Encode;
 		cf_OUT
 		cf_ERROR
 
+		cf_REQUIRE
+
 		cf_TAG
 	      /;
 
@@ -50,6 +53,11 @@ use Encode;
       0;
     }
   }
+  sub test_require {
+    my ($self, $reqlist) = @_;
+    grep {not eval qq{require $_}} lexpand($reqlist);
+  }
+
 }
 
 require YATT::Lite::XHF;

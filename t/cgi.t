@@ -19,7 +19,16 @@ BEGIN {
 use lib $libdir;
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
+BEGIN {
+  foreach my $req (qw(HTTP::Status HTTP::Headers)) {
+    unless (eval qq{require $req}) {
+      plan skip_all => "$req is not installed."; exit;
+    }
+  }
+}
+plan 'no_plan';
+
 use YATT::Lite::Test::TestUtil;
 use List::Util qw(sum);
 

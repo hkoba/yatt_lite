@@ -34,6 +34,16 @@ use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(ostream);
 use YATT::Lite::Test::XHFTest2; # To import Item class.
 use base qw(YATT::Lite::Test::XHFTest2); # XXX: Redundant, but required.
+
+BEGIN {
+  foreach my $req (qw(Plack)) {
+    unless (eval qq{require $req}) {
+      plan skip_all => "$req is not installed."; exit;
+    }
+  }
+}
+
+
 use YATT::t::t_preload; # To make Devel::Cover happy.
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]

@@ -217,6 +217,7 @@ OUT:
  
 
 TITLE: datetime
+REQUIRE: DateTime
 IN:
  <!yatt:args>
  <yatt:my dt:value="&yatt:datetime(new,year,1964,month,10,day,10);"/>

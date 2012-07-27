@@ -303,7 +303,7 @@ sub set_header {
 sub append_header {
   my PROP $prop = prop(my $glob = shift);
   my ($key, @values) = @_;
-  push @{$prop->{headers}}{$key}, @values;
+  push @{$prop->{headers}{$key}}, @values;
 }
 
 # For PSGI only.

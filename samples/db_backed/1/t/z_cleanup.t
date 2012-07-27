@@ -31,6 +31,14 @@ use lib @libdir;
 use utf8;
 use Test::More;
 
+BEGIN {
+  foreach my $req (qw(DBI)) {
+    unless (eval qq{require $req}) {
+      plan skip_all => "$req is not installed."; exit;
+    }
+  }
+}
+
 my $dbfn = "$app_root/data/.htdata.db";
 
 unless (-r $dbfn and -s $dbfn) {

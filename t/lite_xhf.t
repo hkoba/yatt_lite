@@ -86,6 +86,10 @@ foreach my MY $sect (@section) {
 	skip "by SKIP: $title", $skip
 	  if not $test->{cf_PERL_MINVER} or $] < $test->{cf_PERL_MINVER};
       }
+      if ($test->{cf_REQUIRE}
+	  and my @missing = $test->test_require($test->{cf_REQUIRE})) {
+	skip "Module @missing is not installed", $test->ntests;
+      }
       breakpoint() if $test->{cf_BREAK};
       if ($test->{cf_OUT}) {
 	my $error;

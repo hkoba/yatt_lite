@@ -32,6 +32,14 @@ use lib @libdir;
 use utf8;
 use Test::More;
 
+BEGIN {
+  foreach my $req (qw(DBI)) {
+    unless (eval qq{require $req}) {
+      plan skip_all => "$req is not installed."; exit;
+    }
+  }
+}
+
 my $passfile = "$app_root/.htdbpass";
 unless (-r $passfile) {
   plan skip_all => ".htdbpass is not configured";

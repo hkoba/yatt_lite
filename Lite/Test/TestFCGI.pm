@@ -26,6 +26,10 @@ my $Test = Test::Builder->new;
       return 'FCGI.pm is not installed';
     }
 
+    unless (eval {require HTTP::Response}) {
+      return 'HTTP::Response is not installed';
+    }
+
     if (ref $self and not -x $self->{cf_fcgiscript}) {
       return "Can't find cgi-bin/runyatt.cgi"
     }
@@ -323,7 +327,6 @@ my $Test = Test::Builder->new;
   }
 
   use File::Basename;
-  use HTTP::Response;
   use IPC::Open2;
 
   sub request {

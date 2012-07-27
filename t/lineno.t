@@ -203,7 +203,7 @@ END
 
   my $pkg = $yatt->find_product(perl => $tmpl);
  TODO: {
-    local our $TODO = "Perl bug?" unless $[ >= 5.012;
+    local our $TODO = "Perl bug?" unless $] >= 5.012;
     run_list($THEME, \@list, $pkg, render_ => 'myx', 'myY');
   }
 }

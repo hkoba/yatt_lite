@@ -34,7 +34,9 @@ unless (defined $lib_yatt) {
 use File::Find;
 
 my %prereq
-  = ('YATT::Lite::DBSchema::DBIC' => ['DBIx::Class::Schema']);
+  = ('YATT::Lite::WebMVC0::DBSchema::DBIC' => [qw/DBIx::Class::Schema/]
+     , 'YATT::Lite::Test::TestFCGI' => [qw/HTTP::Response/]
+    );
 
 my %ignore; map ++$ignore{$_}, ();
 

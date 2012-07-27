@@ -19,8 +19,10 @@ BEGIN {
 use lib $libdir;
 #----------------------------------------
 
-use Test::More qw(no_plan);
-use YATT::Lite::Util qw(appname rootname);
+use Test::More;
+plan 'no_plan';
+
+use YATT::Lite::Util qw(appname rootname catch);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 require_ok('YATT::Lite');
@@ -28,42 +30,75 @@ require_ok('YATT::Lite::Connection');
 
 my $i = 1;
 {
-  my $yatt = new YATT::Lite(app_ns => myapp($i)
-			    , vfs => [data => {foo => 'bar'}]
-			    , die_in_error => 1
-			    , debug_cgen => $ENV{DEBUG});
-
   {
-    my $con = YATT::Lite::Connection->create;
+    my $T = "[noheader]";
+    my $con = YATT::Lite::Connection->create(undef, noheader => 1);
     print {$con} "foo", "bar";
     print {$con} "baz";
     $con->flush;
 
-    is $con->buffer, "foobarbaz", "Connection output";
+    is $con->buffer, "foobarbaz", "$T Connection output";
 
     $con->set_header('Content-type', 'text/html');
     $con->set_header('X-Test', 'test');
 
     is_deeply {$con->list_header}
       , {'Content-type' => 'text/html', 'X-Test', 'test'}
-	, "con->list_header";
+	, "$T con->list_header";
 
-    is $con->cget('encoding'), undef, "cget => undef";
+    is $con->cget('encoding'), undef, "$T cget => undef";
     $con->configure(encoding => 'utf-8');
-    is $con->cget('encoding'), 'utf-8', "cget => utf-8";
+    is $con->cget('encoding'), 'utf-8', "$T cget => utf-8";
 
     eval {
       $con->error("Trivial error '%s'", 'MyError');
     };
 
-    like $@, qr{^Trivial error 'MyError'}, '$con->error';
+    like $@, qr{^Trivial error 'MyError'}, $T . ' $con->error';
 
     eval {
       $con->raise(alert => "Trivial alert '%s'", 'MyAlert');
     };
 
-    like $@, qr{^Trivial alert 'MyAlert'}, '$con->raise(alert)';
+    like $@, qr{^Trivial alert 'MyAlert'}, $T . ' $con->raise(alert)';
   }
+
+  SKIP:
+  {
+    my $T = '[with header]';
+    skip "HTTP::Headers is not installed", 1
+      if catch {require HTTP::Headers};
+    my $con = YATT::Lite::Connection->create(undef);
+    print {$con} "foo", "bar";
+    print {$con} "baz";
+    $con->flush;
+
+    is $con->buffer, "foobarbaz", "$T Connection output";
+
+    $con->set_header('Content-type', 'text/html');
+    $con->set_header('X-Test', 'test');
+
+    is_deeply {$con->list_header}
+      , {'Content-type' => 'text/html', 'X-Test', 'test'}
+	, "$T con->list_header";
+
+    is $con->cget('encoding'), undef, "$T cget => undef";
+    $con->configure(encoding => 'utf-8');
+    is $con->cget('encoding'), 'utf-8', "$T cget => utf-8";
+
+    eval {
+      $con->error("Trivial error '%s'", 'MyError');
+    };
+
+    like $@, qr{^Trivial error 'MyError'}, $T . ' $con->error';
+
+    eval {
+      $con->raise(alert => "Trivial alert '%s'", 'MyAlert');
+    };
+
+    like $@, qr{^Trivial alert 'MyAlert'}, $T . ' $con->raise(alert)';
+  }
+
 
   # ファイルに書けるか
   # header 周りの finalize はどうか。
@@ -91,7 +126,8 @@ $i++;
   my $backend = MyBackend1->new
     (name => 'Test', models => {foo => 'bar', bar => 3});;
   {
-    my $con = YATT::Lite::Connection->create(undef, backend => $backend);
+    my $con = YATT::Lite::Connection->create(undef, backend => $backend
+					     , noheader => 1);
     is $con->backend(cget => 'name'), 'Test'
       , 'con->backend(method,@args)';
     is $con->model('foo'), 'bar'
@@ -112,7 +148,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
      , debug_cgen => $ENV{DEBUG});
 
   {
-    my $con = $mux->make_connection;
+    my $con = $mux->make_connection(undef, noheader => 1);
     print {$con} "foo", "bar";
     print {$con} "baz";
     $con->flush;
@@ -135,7 +171,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 		 HTTP_REFERER    http://example.com/
 		 psgi.url_scheme http
 	       );
-    my $con = $mux->make_connection(undef, env => \%env);
+    my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5000'
       , "[$THEME] mkhost()";
@@ -164,7 +200,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 		 SERVER_PROTOCOL HTTP/1.1
 		 psgi.url_scheme http
 	       );
-    my $con = $mux->make_connection(undef, env => \%env);
+    my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5050', "[$THEME] mkhost()";
 

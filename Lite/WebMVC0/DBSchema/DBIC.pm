@@ -84,7 +84,7 @@ sub build_dbic {
     }
   };
 
-  $DBIC //= caller . '::DBIC';
+  $DBIC //= caller() . '::DBIC';
   {
     my $sym = globref($DBIC, undef);
     unless (*{$sym}{CODE}) {
