@@ -17,7 +17,7 @@ use YATT::Lite::Constants;
   #========================================
   package YATT::Lite::CGen::Perl; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::CGen);
-  use YATT::Lite::Util qw(lexpand numLines globref);
+  use YATT::Lite::Util qw(lexpand numLines globref terse_dump);
   use Carp;
   #========================================
   sub list_inheritance {
@@ -605,7 +605,7 @@ use YATT::Lite::Constants;
     my @result = map {
       my ($type, @rest) = @$_;
       my $sub = $self->can("as_expr_$type")
-	or die $self->generror("unknown entity item $type");
+	or die $self->generror("unknown entity item %s", terse_dump($type));
       $sub->($self, \$escape_now, @rest);
     } @_;
     return '' unless @result;
