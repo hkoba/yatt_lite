@@ -88,6 +88,23 @@ IN:
 ERROR: Misplaced yatt:widget in: \([^\)]+\), at file \S+ line 4
 
 
+TITLE: comment in widget call
+IN:
+ (<yatt:foo
+ -- comment1 --
+ ----- comment2 -----
+ --
+   comment3
+ --
+ baz="x"/>)
+ 
+ <!yatt:widget foo baz>
+ <h2>&yatt:baz;</h2>
+OUT:
+ (<h2>x</h2>
+ )
+
+
 TITLE: widget -> args ordering.
 IN:
  <!yatt:widget hello x y>

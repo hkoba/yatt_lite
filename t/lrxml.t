@@ -353,7 +353,7 @@ END
   $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
 <yatt:foo
 
---  foo --
+--  foo ---
 
 />
 <?perl===undef?>
@@ -365,9 +365,9 @@ END
 
   {
     is_deeply $w->{tree}
-, [[TYPE_ELEMENT, 0, 25, 1, [qw(yatt foo)], undef, undef, undef, undef, 26]
+, [[TYPE_ELEMENT, 0, 26, 1, [qw(yatt foo)], undef, undef, undef, undef, 27]
 , '
-', [TYPE_PI, 26, 42, 6, ['perl'], '===undef']
+', [TYPE_PI, 27, 43, 6, ['perl'], '===undef']
 , '
 '
 ], "newline and comment in call."
