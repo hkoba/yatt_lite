@@ -50,7 +50,7 @@ OUT:
  ABfooC
 
 
-TITLE: &yatt:join();
+TITLE: &yatt:join(); and &yatt:lexpand();
 IN:
  <!yatt:args x=list>
  &yatt:join(-,:lexpand(:x));
@@ -65,6 +65,22 @@ PARAM[
 OUT:
  A-B-C
 
+
+TITLE: :lexpand(:var:path())
+IN:
+ <!yatt:args x=value>
+ (&yatt:join(-,:lexpand(:x{foo}));)
+PARAM[
+{
+foo[
+- x
+- y
+- z
+]
+}
+]
+OUT:
+ (x-y-z)
 
 TITLE: &yatt:format(fmt,values);
 IN:

@@ -146,6 +146,14 @@ my @test; sub add {push @test, [@_]} sub break {push @test, undef}
 	, [text => '']
        ]];
 
+  add q{:mkhash(:lexpand(:CON:param(:name)));}
+    , [[call => mkhash =>
+	[call => lexpand =>
+	 [[var => 'CON']
+	  , [invoke => param => [var => 'name']]]
+	]
+       ]];
+
   #----------------------------------------
 
   add q{:where({user:hkoba,status:[assigned,:status,pending]});}

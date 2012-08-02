@@ -593,6 +593,8 @@ use YATT::Lite::Constants;
     # 受け手が有るかどうかで式の生成方式も変わる?なら token リスト削りが良いか。
     $self->gen_entpath($self->{needs_escaping}, @pipe);
   }
+
+  # XXX: lxnest を caller が呼ぶ必要が有る...が、それって良いことなのか...
   sub gen_entpath {
     (my MY $self, my ($escape_now)) = splice @_, 0, 2;
     return '' unless @_;
@@ -604,9 +606,11 @@ use YATT::Lite::Constants;
     # XXX: path の先頭と以後は分けないと！ as_head, as_rest?
     my @result = map {
       my ($type, @rest) = @$_;
-      my $sub = $self->can("as_expr_$type")
-	or die $self->generror("unknown entity item %s", terse_dump($type));
-      $sub->($self, \$escape_now, @rest);
+      unless (my $sub = $self->can("as_expr_$type")) {
+	die $self->generror("unknown entity item %s", terse_dump($type));
+      } else {
+	$sub->($self, \$escape_now, @rest);
+      }
     } @_;
     return '' unless @result;
     my $result = @result > 1 ? join("->", @result) : $result[0];
@@ -951,7 +955,7 @@ sub entmacro_value_selected {
 
 sub entmacro_lexpand {
   (my MY $self, my $node) = @_;
-  q|@{|.$self->gen_entpath(undef, entx($node)).q|}|;
+  q|@{|.$self->gen_entpath(undef, map {lxnest($_)} entx($node)).q|}|;
 }
 
 sub entmacro_render {

@@ -594,3 +594,56 @@ PARAM[
 OUT:
  <div class="bar baz"></div>
 # In case of missing value
+
+
+TITLE: nested array subscript
+IN:
+ <!yatt:args ls=list>
+ (&yatt:ls[-1][:ls[0]];)
+PARAM[
+[
+- 2
+- 
+[
+- foo
+- bar
+- baz
+]
+]
+]
+OUT:
+ (baz)
+
+
+PARAM[
+[
+- 0
+- 
+[
+- foo
+- bar
+- baz
+]
+]
+]
+OUT:
+ (foo)
+
+
+TITLE: nested hash subscript
+IN:
+ <!yatt:args dict=value ix=list>
+ (&yatt:dict{:ix[0][0]};)
+PARAM[
+{
+foo: bar
+baz: bang
+}
+[
+[
+- foo
+]
+]
+]
+OUT:
+ (bar)
