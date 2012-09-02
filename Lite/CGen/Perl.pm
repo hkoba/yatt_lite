@@ -942,6 +942,9 @@ sub entmacro_ifeq {
 sub entmacro_value_checked {
   (my MY $self, my $node) = @_;
   my (@list) = $self->gen_entlist(undef, entx($node));
+  unless (@list == 2) {
+    die $self->generror("Invalid number of args: value_checked(VALUE, HASH)");
+  }
   sprintf q|YATT::Lite::Util::value_checked(%s)|
     , join ", ", map {ref $_ ? $$_ : $_} @list;
 }
@@ -949,6 +952,9 @@ sub entmacro_value_checked {
 sub entmacro_value_selected {
   (my MY $self, my $node) = @_;
   my (@list) = $self->gen_entlist(undef, entx($node));
+  unless (@list == 2) {
+    die $self->generror("Invalid number of args: value_selected(VALUE, HASH)");
+  }
   sprintf q|YATT::Lite::Util::value_selected(%s)|
     , join ", ", map {ref $_ ? $$_ : $_} @list;
 }

@@ -111,7 +111,7 @@ sub error_handler {
     if (my $con = $self->CON) {
       $con->as_error;
     } elsif ($SYS) {
-      $SYS->make_connection(\*STDOUT);
+      $SYS->make_connection(\*STDOUT, yatt => $self, noheader => 1);
     } else {
       \*STDERR;
     }
