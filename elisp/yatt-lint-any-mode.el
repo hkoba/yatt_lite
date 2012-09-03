@@ -230,6 +230,18 @@ Currently only RHEL is supported."
 ;;========================================
 ;; *.yatt
 ;;========================================
+(defvar yatt-lint-any-re-known-errors
+  "^\\(?:error \\)?\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
+  "Regexp to parse 'known' errors from YATT::Lite")
+
+(defvar yatt-lint-any-re-unknown-errors
+  " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
+  "Regexp to parse 'unknown' errors from YATT::Lite")
+
+(defvar yatt-lint-any-re-indirect-errors
+  "^\\([^\n]+\\)\n  loaded from \\(file '\\([^']+\\)'\\|(unknown file)\\)?"
+  "Regexp to parse 'loaded from...' errors from YATT::Lite")
+
 (defun yatt-lint-any-handle-yatt (buffer)
   (plist-bind (rc err)
       (yatt-lint-any-shell-command (yatt-lint-cmdfile "scripts/yatt.lint") " "
@@ -239,14 +251,14 @@ Currently only RHEL is supported."
 	;; う～ん、setq がダサくないか? かといって、any-matchのインデントが深くなるのも嫌だし...
 	(cond ((setq match
 		     (yatt-lint-any-match
-		      "\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
+		      yatt-lint-any-re-known-errors
 		      err 'file 1 'line 2))
 	       (setq diag (substring err (plist-get match 'end)
 				     (plist-get (yatt-lint-any-match
 						 "\\s-+\\'" err) 'pos))))
 	      ((setq match
 		     (yatt-lint-any-match
-		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
+		      yatt-lint-any-re-unknown-errors
 		      err 'file 1 'line 2))
 	       (setq diag (substring err 0 (plist-get match 'pos)))))
 	(append `(rc ,rc err ,(or diag err)) match)))))
@@ -274,12 +286,12 @@ Currently only RHEL is supported."
       (let (match diag)
 	(cond ((setq match
 		     (yatt-lint-any-match
-		      "^\\([^\n]+\\)\n  loaded from \\(file '\\([^']+\\)'\\|(unknown file)\\)?"
+		      yatt-lint-any-re-indirect-errors
 		      err 'diag 1 'file 3))
 	       (setq diag (plist-get match 'diag)))
 	      ((setq match
 		     (yatt-lint-any-match
-		      " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
+		      yatt-lint-any-re-unknown-errors
 		      err 'file 1 'line 2))
 	       (setq diag (substring err 0 (plist-get match 'pos))))
 	      )
@@ -326,23 +338,24 @@ Currently only RHEL is supported."
 	(append `(pos ,pos end ,end) res)))))
 
 '(let ((err
-       "Global symbol \"$unknown_var\" requires explicit package name at samples/basic/1/perlerr.yatt line 2.\n"))
-  (yatt-lint-any-match
-   "^\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
-   err 'file 1 'line 2)
-  (yatt-lint-any-match
-   " at \\([^ ]*\\) line \\([0-9]+\\)\\.\n"
-   err 'file 1 'line 2))
+	"Global symbol \"$unknown_var\" requires explicit package name at samples/basic/1/perlerr.yatt line 2.\n"))
+   (yatt-lint-any-match
+    yatt-lint-any-re-unknown-errors
+    err 'file 1 'line 2))
 
 '(let ((err
-       "syntax error at ./index.yatt line 37, at EOF"))
-  (yatt-lint-any-match
-   " at \\([^ ]*\\) line \\([0-9]+\\)[.,]"
-   err 'file 1 'line 2))
+	"syntax error at ./index.yatt line 37, at EOF"))
+   (yatt-lint-any-match
+    yatt-lint-any-re-unknown-errors
+    err 'file 1 'line 2))
 
-'(let ((err "error [[file] /home/hkoba/html/foo.yatt [line] 2]\n No such variable 'bar'")) 
-  (yatt-lint-any-match
-   "\\[\\[file\\] \\([^]]*\\) \\[line\\] \\([^]]*\\)\\]\n"
-   err 'file 1 'line 2))
+'(let ((err
+	"error [[file] /home/hkoba/test.yatt [line] 49]
+ argerror: value_checked(VALUE, HASH)"))
+   (yatt-lint-any-match
+    yatt-lint-any-re-known-errors
+    err 'file 1 'line 2)
+   )
+
 
 (provide 'yatt-lint-any-mode)
