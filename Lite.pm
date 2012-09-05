@@ -6,6 +6,8 @@ use Carp qw(carp croak confess);
 our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
 #use mro 'c3';
 
+use Scalar::Util qw/weaken/;
+
 #
 # YATT Internalへの Facade. YATT の初期化パラメータの保持者でもある。
 #
@@ -13,6 +15,7 @@ use parent qw/YATT::Lite::Object File::Spec/;
 use YATT::Lite::MFields qw/YATT
 	      cf_dir
 	      cf_vfs cf_base
+	      cf_factory
 	      cf_output_encoding
 	      cf_tmpl_encoding
 	      cf_app_ns entns
@@ -52,6 +55,19 @@ sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
   $self->$method(@_);
+}
+
+sub after_new {
+  (my MY $self) = @_;
+  $self->SUPER::after_new;
+  weaken($self->{cf_factory});
+}
+
+# XXX: kludge!
+sub create_neighbor {
+  (my MY $self, my ($dir)) = @_;
+  my MY $yatt = $self->{cf_factory}->load_yatt($dir);
+  $yatt->get_trans->root;
 }
 
 #========================================
@@ -274,7 +290,7 @@ sub ensure_entns {
     return $entns;
   }
 
-  # mro::set_mro($entns, 'c3');
+  # mro::set_mro($entns, 'c3'); # XXX: Should change to c3, but...
 
   # $app_ns が %FIELDS 定義を持たない時(ex YLObjectでもPartialでもない)に限り、
   # YATT::Lite への継承を設定する

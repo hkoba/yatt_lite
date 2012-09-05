@@ -51,10 +51,17 @@ our $yatt_loading;
 sub loading { $yatt_loading }
 
 sub find_load_factory_script {
-  my ($pack, $dir) = @_;
+  my ($pack, $dir, @opts) = @_;
   my ($found) = $pack->find_factory_script($dir)
     or return;
-  $pack->load_factory_script($found);
+  my $self = $pack->load_factory_script($found);
+
+  # To avoid use of error.ytmpl from support scripts.
+  $self->configure(error_handler => sub {
+		     my ($type, $err) = @_;
+		     die $err;
+		   }, @opts);
+  $self;
 }
 
 {
@@ -209,7 +216,13 @@ sub build_yatt {
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
-	      #, tmpl_cache => $self->{tmpl_cache} //= {}
+	      , factory => $self
+
+	      # XXX: Design flaw! Use of tmpl_cache will cause problem.
+	      # because VFS->create for base do not respect Factory->get_yatt.
+	      # To solve this, I should redesign all Factory/VFS related stuffs.
+	      # , tmpl_cache => $self->{tmpl_cache} //= {}
+
 	      , $self->configparams_for(fields_hash($app_ns)));
 
   if (my @unk = $app_ns->YATT::Lite::Object::cf_unknowns(%opts)) {
@@ -281,7 +294,9 @@ sub configparams_for {
    $self->cf_delegate_known(0, $hash
 			      , qw(output_encoding header_charset debug_cgen
 				   at_done app_root
-				   namespace only_parse error_handler))
+				   namespace only_parse))
+   , (exists $hash->{cf_error_handler}
+      ? (error_handler => \ $self->{cf_error_handler}) : ())
    , die_in_error => ! YATT::Lite::Util::is_debugging());
 }
 

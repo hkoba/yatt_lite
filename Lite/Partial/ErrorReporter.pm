@@ -40,9 +40,12 @@ sub raise {
   # shift/splice しないのは、引数を stack trace に残したいから
   my $depth = (delete($opts->{depth}) // 0);
   my $err = $self->make_error(2 + $depth, $opts, @_); # 2==raise+make_error
-  if (ref $self and my $sub = $self->{cf_error_handler}) {
+  if (ref $self and my $sub = deref($self->{cf_error_handler})) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
+    unless (ref $sub eq 'CODE') {
+      die "error_handler is not a CODE ref: $sub";
+    }
     $sub->($type, $err);
   } elsif ($sub = $self->can('error_handler')) {
     $sub->($self, $type, $err);
@@ -65,5 +68,13 @@ sub DONE {
   }
 }
 
+sub deref {
+  return undef unless defined $_[0];
+  if (ref $_[0] eq 'REF' or ref $_[0] eq 'SCALAR') {
+    ${$_[0]};
+  } else {
+    $_[0];
+  }
+}
 
 1;

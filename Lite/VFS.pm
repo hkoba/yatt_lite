@@ -132,7 +132,8 @@ use Carp;
   }
   sub YATT::Lite::VFS::Folder::lookup_base {
     (my Folder $item, my VFS $vfs, my $name) = splice @_, 0, 3;
-    foreach my $super ($item->list_base) {
+    my @super = $item->list_base;
+    foreach my $super (@super) {
       my $ans = $super->lookup($vfs, $name, @_) or next;
       return $ans;
     }
@@ -143,14 +144,17 @@ use Carp;
   }
   sub YATT::Lite::VFS::File::list_base {
     my vfs_file $file = shift;
-    # $dir/$file.yatt inherits...
-    grep(defined $_
-	 , $file->YATT::Lite::VFS::Folder::list_base
-	 # $dir and its base
-	 , map((defined $_ ? ($_, $_->list_base) : ())
-	       , $file->{cf_parent})
-	 # and then, $dir/$file.ytmpl
-	 , $file->{cf_overlay});
+
+    # $dir/$file.yatt inherits its own base decl,
+    my @super = $file->YATT::Lite::VFS::Folder::list_base;
+
+    # $dir ($dir's bases will be called in $dir->lookup),
+    push @super, $file->{cf_parent} if $file->{cf_parent};
+
+    # and then directory named $dir/$file.ytmpl (or "$dir/$file")
+    push @super, $file->{cf_overlay} if $file->{cf_overlay};
+
+    @super;
   }
   sub YATT::Lite::VFS::File::list_items {
     die "NIMPL";
@@ -177,15 +181,20 @@ use Carp;
     return unless defined $in->{cf_path};
     my $vfsname = "$in->{cf_path}/$partName";
     my @opt = (name => $partName, parent => $in);
-    if (my $fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_public})) {
-      $vfs->create(file => $fn, @opt, public => 1);
-    } elsif ($fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_private})) {
-      # dir の場合、 new_tmplpkg では？
-      my $kind = -d $fn ? 'dir' : 'file';
-      $vfs->create($kind => $fn, @opt);
-    } else {
-      undef;
-    }
+    my ($kind, $path, @other) = do {
+      if (my $fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_public})) {
+	(file => $fn, public => 1);
+      } elsif ($fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_private})) {
+	# dir の場合、 new_tmplpkg では？
+	my $kind = -d $fn ? 'dir' : 'file';
+	($kind => $fn);
+      } elsif (-d $vfsname) {
+	return $vfs->{cf_facade}->create_neighbor($vfsname);
+      } else {
+	return undef;
+      }
+    };
+    $vfs->create($kind, $path, @opt, @other);
   }
   sub find_ext {
     (my VFS $vfs, my ($vfsname, $spec)) = @_;
@@ -245,6 +254,8 @@ use Carp;
 	(data => $data, name => $lastName, parent => $folder);
   }
   #========================================
+  sub root {(my VFS $vfs) = @_; $vfs->{root}}
+
   # special hook for root creation.
   sub root_create {
     (my VFS $vfs, my ($kind, $primary, %rest)) = @_;
@@ -273,11 +284,12 @@ use Carp;
       $vfs->{cf_mark}{refaddr($folder)}++;
     }
     if (my Folder $parent = $folder->{cf_parent}) {
-      # XXX: そうか、 package 名を作るだけじゃなくて、親子関係を設定しないと。
-      # XXX: private なら、 new_tmplpkg では？
       if (defined $parent->{cf_entns}) {
 	$folder->{cf_entns} = join '::'
 	  , $parent->{cf_entns}, $folder->{cf_name};
+	# XXX: base 指定だけで済むべきだが、Factory を呼んでないので出来ないorz...
+	YATT::Lite::MFields->add_isa_to
+	    ($folder->{cf_entns}, $parent->{cf_entns});
 	$vfs->{pkg2folder}{$folder->{cf_entns}} = $folder;
       }
     }
@@ -315,10 +327,24 @@ use Carp;
     (my vfs_file $file, my VFS $vfs) = @_;
     return if $file->{cf_overlay};
     return unless $file->{cf_path};
-    my $dir = join '.', rootname($file->{cf_path}), $vfs->{cf_ext_private};
-    return unless -d $dir;
-    $file->{cf_overlay} = $vfs->create
-      (dir => $dir, parent => $file->{cf_parent});
+    my $rootname = rootname($file->{cf_path});
+    my @found = grep {-d $$_[-1]} ([1, $rootname]
+				   , [0, "$rootname.$vfs->{cf_ext_private}"]);
+    if (@found > 1) {
+      $vfs->error(q|Don't use %1$s and %1$s.%2$s at once|
+		  , $rootname, $vfs->{cf_ext_private});
+    } elsif (not @found) {
+      return;
+    }
+    $file->{cf_overlay} = do {
+      my ($public, $path) = @{$found[0]};
+      if ($public) {
+	$vfs->{cf_facade}->create_neighbor($path);
+      } else {
+	$vfs->create
+	  (dir => $path, parent => $file->{cf_parent});
+      }
+    };
   }
   #----------------------------------------
   sub YATT::Lite::VFS::File::declare_base {

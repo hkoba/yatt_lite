@@ -17,7 +17,7 @@ BEGIN {
 use lib $libdir;
 #----------------------------------------
 
-use mro 'c3';
+use mro 'c3'; # XXX: Not fully compatible.
 use parent qw/YATT::Lite::Object/;
 use YATT::Lite::MFields qw/dispatcher
 			   cf_linear/;

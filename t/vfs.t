@@ -31,22 +31,34 @@ sub VFS () {'YATT::Lite::VFS'}
 require_ok(VFS);
 
 {
-  package DummyFacade;
+  package DummyFacade; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::Object);
+  use fields qw/cf_opts/;
   sub error {
     shift; die @_;
   }
+  sub create_neighbor {
+    (my MY $self, my $dir) = @_;
+    YATT::Lite::VFS->new([dir => $dir], facade => $self, @{$self->{cf_opts}})
+	->root;
+  }
 }
 
-my @CF = (ext_private => 'tmpl', ext_public => 'yatt'
-	 , facade => DummyFacade->new);
+# Use .tmpl instead of .ytmpl
+my @CF_main = (ext_private => 'tmpl', ext_public => 'yatt');
+my @CF = (@CF_main, facade => DummyFacade->new(opts => \@CF_main));
+
+my ($i, $theme);
+
+#========================================
+
+$theme = "(mem) plain";
+
+# * data => HASH
+# * base => [[data => HASH] ...]
+#========================================
 
 {
-  #
-  # * data => HASH
-  # * base => [[data => HASH] ...]
-  #
-  my $theme = "(mem) plain";
   my $vfs = VFS->new
     ([data => {foo => 'mytext'}, base => [[data => {'bar' => 'BARRR'}]]]
      , no_auto_create => 1, @CF);
@@ -54,12 +66,14 @@ my @CF = (ext_private => 'tmpl', ext_public => 'yatt'
   is $vfs->find_part('bar'), 'BARRR', "$theme - bar";
 }
 
+#========================================
+# * VFS->create($kind => $spec)
+# * data => {name => VFS}
+
+$theme = "(mem) from nested Dir";
+#----------------------------------------
+
 {
-  #
-  # * VFS->create($kind => $spec)
-  # * data => {name => VFS}
-  #
-  my $theme = "(mem) from nested Dir";
   my $vfs = VFS->new
     ([data => {foo => VFS->create(data => {'bar' => 'BARRR'})}
       , base => [[data => {foo => VFS->create(data => {'baz' => 'ZZZ'})}]]]
@@ -68,23 +82,28 @@ my @CF = (ext_private => 'tmpl', ext_public => 'yatt'
   is $vfs->find_part('foo', 'baz'), 'ZZZ', "$theme - foo baz";
 }
 
-my $i;
+#========================================
+# * [dir => $dir]
+# * multipart (file foo contains widget bar)
+
+$i = 1; $theme = "[t$i] from dir";
+#----------------------------------------
+
 my $BASE = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);
 END {
   chdir('/');
 }
 
-$i = 1;
 {
   my $dir = TestFiles->new("$BASE/t$i", quiet => $quiet);
-  $dir->add('foo.yatt', <<END);
+  $dir->add('foo.yatt', <<'END');
 AAA
 BBB
 ! widget bar
 barrrr
 END
 
-  $dir->add('base.yatt', <<END);
+  $dir->add('base.yatt', <<'END');
 ! widget qux
 Q
 ! widget quux
@@ -93,12 +112,6 @@ END
 
 }
 {
-  #
-  # * [dir => $dir]
-  # * multipart (file foo contains widget bar)
-  #
-
-  my $theme = "[t$i] from dir";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd], @CF);
   is $root->find_part('foo', ''), "AAA\nBBB\n", "$theme - foo ''";
@@ -108,13 +121,15 @@ END
       , "$theme - list_items";
 }
 
-{
-  #
-  # * [dir => $dir, base => [[file => $file]]
-  #   directory can inherit parts from a file
-  #
+#========================================
+# * [dir => $dir, base => [[file => $file]]
+#   directory can inherit parts from a file
 
-  my $theme = "[t$i] base file";
+$theme = "[t$i] base file";
+#----------------------------------------
+
+{
+
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd
 			     , base => [[file => "$cwd/base.yatt"]]]
@@ -123,10 +138,16 @@ END
   is $root->find_part('quux'), "QQ\n", "$theme - quux";
 }
 
-$i = 2;
+#========================================
+# * base declaration in file foo.yatt inherits base.yatt
+
+$i = 2; $theme = "[t$i] ! base";
+#----------------------------------------
+
 {
   my $dir = TestFiles->new("$BASE/t$i", quiet => $quiet);
-  $dir->add('foo.yatt', <<END);
+
+  $dir->add('foo.yatt', <<'END');
 ! base file=base.yatt
 AAA
 BBB
@@ -134,7 +155,9 @@ BBB
 barrrr
 END
 
-  $dir->add('base.yatt', <<END);
+
+  #
+  $dir->add('base.yatt', <<'END');
 ! widget baz
 CCC
 DDD
@@ -144,10 +167,10 @@ EEE
 FFF
 END
 
+  #
 }
 
 {
-  my $theme = "[t$i] ! base";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd], @CF);
   is $root->find_part('foo', ''), "AAA\nBBB\n", "$theme - foo";
@@ -160,7 +183,12 @@ sub D {
   join " ", Data::Dumper->new([@_])->Terse(1)->Indent(0)->Dump;
 }
 
-$i = 3;
+
+#========================================
+# !base dir=base.tmpl
+$i = 3; $theme = "[t$i] base dir (in template)";
+#----------------------------------------
+
 {
   my $dir = TestFiles->new("$BASE/t$i", quiet => $quiet);
   $dir->add('foo.yatt', <<END);
@@ -184,7 +212,6 @@ END
 }
 
 {
-  my $theme = "[t$i] base dir (in template)";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd], @CF); my @x;
   is $root->find_part(@x = ('foo', '')), "AAA\n", "$theme - ".D(@x);
@@ -192,15 +219,24 @@ END
   is $root->find_part(@x = ('foo', 'baz', '')), "CCC\n", "$theme - ".D(@x);
 }
 
+#========================================
+# base in VFS->new([dir => $dir, base => [[dir => base.tmpl]]])
+# keeps $i.
+
+$theme = "[t$i] base dir (in VFS new)";
+#----------------------------------------
+
 {
-  my $theme = "[t$i] base dir (in VFS new)";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]"; my @x;
   my $root = VFS->new([dir => $cwd, base => [[dir => "$cwd/base.tmpl"]]], @CF);
   is $root->find_part(@x = ('bar', '')), "BBB\n", "$theme - ".D(@x);
   is $root->find_part(@x = ('baz', '')), "CCC\n", "$theme - ".D(@x);
 }
 
-$i++;
+#========================================
+$i++; $theme = "[t$i] base dir (in VFS new and !base)";
+#----------------------------------------
+
 {
   my $dir = TestFiles->new("$BASE/t$i", quiet => $quiet);
   $dir->mkdir('doc');
@@ -224,20 +260,22 @@ DDD
 END
 }
 {
-  my $theme = "[t$i] base dir (in VFS new and !base)";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]"; my @x;
   my $root = VFS->new([dir => "$cwd/doc"
-			     , base => [[dir => "$cwd/qux.tmpl"]]], @CF);
+		       , base => [[dir => "$cwd/qux.tmpl"]]], @CF);
   is $root->find_part(@x = ('foo', '')), "AAA\n", "$theme - ".D(@x);
   is $root->find_part(@x = ('foo', 'baz', '')), "CCC\n", "$theme - ".D(@x);
   is $root->find_part(@x = ('bar', 'baz', '')), "DDD\n", "$theme - ".D(@x);
   is $root->find_part(@x = ('bar', 'quuuuux')), "EEE\n", "$theme - ".D(@x);
 }
 
-$i++;
+#========================================
+$i++; $theme = "[t$i] coexisting foo.yatt and foo/";
+#----------------------------------------
+
 {
   my $dir = TestFiles->new("$BASE/t$i", quiet => $quiet);
-  $dir->add('foo.yatt', <<END);
+  $dir->add('foo.yatt', <<'END');
 ! base file=base.tmpl
 AAA
 BBB
@@ -245,32 +283,33 @@ BBB
 CCC
 END
 
-  $dir->add((my $foo = $dir->mkdir('foo.tmpl')) . "/bar.yatt", <<END);
+  $dir->add((my $foo = $dir->mkdir('foo')) . "/bar.yatt", <<'END');
 DDD
 END
 
-  $dir->add("$foo/baz.yatt", <<END);
+  $dir->add("$foo/baz.yatt", <<'END');
 EEE
 END
 
-  $dir->add('qux.yatt', <<END);
+  $dir->add('qux.yatt', <<'END');
 FFF
 END
 
-  $dir->add("$foo/qux.yatt", <<END);
+  $dir->add("$foo/qux.yatt", <<'END');
 GGG
 END
 
-  $dir->add('base.tmpl', <<END);
+  $dir->add('base.tmpl', <<'END');
 ! widget hoehoe
 HHH
 ! widget moemoe
 III
 END
 
+
 }
+
 {
-  my $theme = "[t$i] coexisting foo.yatt and foo.tmpl";
   ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
   my $root = VFS->new([dir => $cwd], @CF);
   my $foo = $root->find_part('foo');
@@ -278,4 +317,29 @@ END
   is $root->find_part_from($foo, 'baz'), "EEE\n", "$theme baz (dir is merged)";
   is $root->find_part_from($foo, 'qux'), "FFF\n", "$theme qux (cwd wins)";
   is $root->find_part_from($foo, 'hoehoe'), "HHH\n", "$theme base is merged";
+}
+
+#========================================
+$i++; $theme = "[t$i] widget in subdir file";
+#----------------------------------------
+
+{
+  my $dir = TestFiles->new("$BASE/t$i", quiet => $quiet);
+  $dir->add('foo.yatt', 'AAA');
+
+  $dir->add((my $bar = $dir->mkdir('bar')) . "/baz.yatt", <<'END');
+! widget qux
+PPP
+! widget quux
+QQQ
+END
+}
+
+{
+  ok chdir(my $cwd = "$BASE/t". $i), "chdir [t$i]";
+  my $root = VFS->new([dir => $cwd], @CF);
+  my $foo = $root->find_part('foo');
+
+  is $root->find_part_from($foo, 'bar', 'baz', 'qux'), "PPP\n"
+    , "$theme bar:baz:qux can be refered from foo";
 }
