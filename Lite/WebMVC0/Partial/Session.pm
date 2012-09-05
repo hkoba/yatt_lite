@@ -9,6 +9,8 @@ use YATT::Lite::Partial
 		   app_path_ensure_existing/]
    , fields => [qw/cf_session_driver
 		   cf_session_config
+		   cf_session_debug
+		   cf_session_path
 		   cf_csrftok_name
 		  /]
    , -Entity, -CON
@@ -96,26 +98,44 @@ sub session_regenerate_id {
 }
 
 # This will be called back from $CON->get_session.
+# usually called from before_dirhandler
 sub session_resume {
   (my MY $self, my ($con)) = @_;
+  $con->logbacktrace("session_resume") if $self->{cf_session_debug};
+
   my ConnProp $prop = $con->prop;
 
   if (exists $prop->{session}) {
+    $con->logdump("session_resume: session is already loaded")
+      if $self->{cf_session_debug};
     return $prop->{session};
   }
   $prop->{session} = undef;
 
-  my $sid = $self->session_sid($con)
-    or return undef;
+  my $sid = $self->session_sid($con) or do {
+    $con->logdump("session_resume: sid is empty")
+       if $self->{cf_session_debug};
+    return undef;
+  };
 
   my $sess = $self->session_create_by(load => $con, $sid)
     or $self->error("Can't load session for sid='%s': %s"
 		    , $sid, CGI::Session->errstr);
 
-  if ($sess->is_expired or not $sess->id) {
+ CHK: {
+    if ($sess->is_expired) {
+      $con->logdump("session_resume: session is expired:", $sid)
+	if $self->{cf_session_debug};
+    } elsif (not $sess->id) {
+      $con->logdump("session_resume: session->id is empty:", $sid)
+	if $self->{cf_session_debug};
+    } else {
+      last CHK;
+    }
+    # not ok.
     delete $prop->{session}; # To allow calling session_start.
     return undef; # XXX: Should we notify?
-  }
+  };
 
   $prop->{session} = $sess;
 }
@@ -123,6 +143,15 @@ sub session_resume {
 # This will be called back from $CON->start_session.
 sub session_start {
   (my MY $self, my ($con, @with_init)) = @_;
+
+  my $opts = shift @with_init if @with_init and ref $with_init[0] eq 'HASH';
+  my $path = delete $opts->{path} || $self->session_path($con);
+  if (keys %$opts) {
+    $self->error("Invalid option for session_start: %s"
+		 , join ", ", keys %$opts);
+  }
+
+  $con->logbacktrace("session_start") if $self->{cf_session_debug};
   my ConnProp $prop = $con->prop;
 
   if (defined $prop->{session}) {
@@ -135,7 +164,7 @@ sub session_start {
 
   $con->set_cookie($self->session_sid_name
 		   , $sess->id
-		   , -path => $con->location);
+		   , -path => $path);
   $sess->clear;
   $self->session_init($con, $sess, @with_init) if @with_init;
 
@@ -195,12 +224,19 @@ sub session_driver {
 sub session_delete {
   my MY $self = shift;
   my ConnProp $prop = (my $con = shift)->prop;
+  my $opts = shift;
+  my $path = delete $opts->{path} || $self->session_path($con);
+  if (keys %$opts) {
+    $self->error("Invalid option for session_delete: %s"
+		 , join ", ", keys %$opts);
+  }
+
   if (my $sess = delete $prop->{session}) {
     $sess->delete;
     $sess->flush;
   }
   my $name = $self->session_sid_name;
-  my @rm = ($name, '', -expires => '-10y', -path => $con->location);
+  my @rm = ($name, '', -expires => '-10y', -path => $path);
   $con->set_cookie(@rm);
 }
 
@@ -224,6 +260,11 @@ sub configure_use_session {
       //= ref $value ? +{lexpand($value)} : +{$self->default_session_config};
     $self->{cf_session_driver} //= [$self->default_session_driver];
   }
+}
+
+sub session_path {
+  (my MY $self, my ($con)) = @_;
+  $self->{cf_session_path} || $con->location;
 }
 
 sub session_sid_name {
