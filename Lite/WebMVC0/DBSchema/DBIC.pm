@@ -8,6 +8,7 @@ use fields qw(DBIC cf_DBIC);
 
 use YATT::Lite::Util::AsBase qw/_import_as_base/;
 
+use Scalar::Util qw/weaken/;
 require DBIx::Class::Core;
 
 sub DBIC_SCHEMA {'YATT::Lite::WebMVC0::DBSchema::DBIC::DBIC_SCHEMA'}
@@ -21,14 +22,30 @@ use YATT::Lite::Util qw(globref lexpand terse_dump);
 
 sub dbic {
   (my MY $schema) = @_;
-  $schema->{DBIC}
-    //= $schema->{cf_DBIC}->connect(sub {$schema->make_connection});
+  $schema->{DBIC} //= do {
+      if ($schema->{cf_debug}) {
+	print STDERR "INFO: DBSchema($schema) DBIC->connect"
+	  , ", class = $schema->{cf_DBIC}\n";
+      }
+      weaken($schema); # !! This is very important to avoid memleak!
+      $schema->{cf_DBIC}->connect(sub {$schema->make_connection});
+    };
 }
 
 sub connect {
   my MY $schema = ref $_[0] ? shift->clone : shift->new;
   $schema->{DBIC} = $schema->{cf_DBIC}->connect(@_);
+  if ($schema->{cf_debug}) {
+    print STDERR "INFO: DBSchema($schema)::connect"
+      ,", class = $schema->{cf_DBIC}\n";
+  }
   $schema;
+}
+
+sub disconnect {
+  (my MY $schema, my ($msg)) = @_;
+  $schema->reset;
+  $schema->SUPER::disconnect($msg);
 }
 
 sub reset {
@@ -98,6 +115,8 @@ sub build_dbic {
     unless (*{$sym}{CODE}) {
       *$sym = sub {
 	my $dbic = shift;
+	print STDERR "DEBUG: DBIC->YATT_DBSchema is called\n"
+	  if $schema->{cf_debug};
 	# Class method として呼んだときは, schema に set しない。
 	$schema->{DBIC} ||= $dbic
 	  if defined $dbic and ref $dbic; # XXX: weaken??

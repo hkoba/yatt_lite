@@ -16,6 +16,8 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_is_psgi
 			   cf_debug_cgi
 			   cf_debug_psgi
+			   cf_debug_connection
+			   cf_debug_backend
 			   cf_psgi_static
 			   cf_index_name
 			   cf_backend
@@ -436,6 +438,9 @@ sub make_connection {
       (undef, parent_fh => $fh);
     }
   };
+
+  push @opts, debug => $self->{cf_debug_connection}
+    if $self->{cf_debug_connection};
 
   if (my $back = $self->{cf_backend}) {
     push @opts, (backend => try_invoke($back, 'clone') // $back);

@@ -10,6 +10,9 @@ use fields
   (# Incoming request. Should be filled by Dispatcher(Factory)
    qw/cf_env cookies_in/
 
+   # To debug liveness/leakage.
+   , qw/cf_debug/
+
    # Outgoing response. Should be written by YATT and *.yatt
    , qw/cf_parent_fh cf_buffer
 	headers header_is_sent
@@ -24,6 +27,9 @@ use fields
 
    # Session store
    , qw/session stash debug_stash/
+
+   # For logging, compatible to psgix.logger (I hope. Not yet used.)
+   , qw/cf_logger/
 
    # Invocation context
    , qw/cf_system cf_yatt cf_backend cf_dbh/
@@ -169,28 +175,63 @@ sub raise {
   }
 }
 
-sub logdump {
+sub error_fh {
   my PROP $prop = prop(my $glob = shift);
-  my Env $env = $prop->{cf_env}
-    or return;
-  my $fh = $env->{'psgi.errors'}
-    or return;
-  print $fh terse_dump(@_), "\n"; # XXX: timestamp? precise?
+  if (my Env $env = $prop->{cf_env}) {
+    $env->{'psgi.errors'}
+  } elsif (fileno(STDERR)) {
+    \*STDERR;
+  } else {
+    undef;
+  }
+}
+
+# level-less but serializing, simple logging.
+sub logdump {
+  shift->logemit(terse_dump(@_));
 }
 
 sub logbacktrace {
+  shift->logemit(terse_dump(@_), Carp::longmess());
+}
+
+sub logemit {
+  my $glob = shift;
+  my $fh = $glob->error_fh || return;
+  print $fh '[', $glob->iso8601_datetime(), " #$$] ", @_, "\n";
+}
+
+# XXX: precise?
+sub iso8601_datetime {
+  my ($glob, $time) = @_;
+  my ($S, $M, $H, $d, $m, $y) = localtime($time // time);
+  $y += 1900; $m++;
+  sprintf '%04d-%02d-%02dT%02d:%02d:%02d', ($y, $m, $d, $H, $M, $S);
+}
+
+# Alternative, for more rich logging.
+sub logger {
   my PROP $prop = prop(my $glob = shift);
-  my Env $env = $prop->{cf_env}
-    or return;
-  my $fh = $env->{'psgi.errors'}
-    or return;
-  print $fh terse_dump(@_), Carp::longmess(), "\n";
+  $prop->{cf_logger};
 }
 
 #========================================
 
 DESTROY {
-  shift->flush_headers;
+  my PROP $prop = prop(my $glob = shift);
+  $glob->flush_headers;
+  if (my $backend = delete $prop->{cf_backend}) {
+    if ($prop->{cf_debug} and my $errfh = $glob->error_fh) {
+      print $errfh "DEBUG: Connection->backend is detached($backend)\n";
+    }
+    # DBSchema->DESTROY should be called automatically. <- Have tests for this!
+    #$backend->disconnect("Explicitly from Connection->DESTROY");
+  }
+  if ($prop->{cf_debug} and my $errfh = $glob->error_fh) {
+    print $errfh "DEBUG: Connection->DESTROY (glob=$glob, prop=$prop)\n";
+  }
+  delete $prop->{$_} for keys %$prop;
+  #undef *$glob;
 }
 
 sub flush_headers {

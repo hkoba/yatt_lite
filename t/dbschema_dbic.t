@@ -35,6 +35,8 @@ plan qw(no_plan);
 my $DBNAME = shift || ':memory:';
 
 {
+  # DBIC direct access.
+
   my $CLASS = 'MyDB1';
   package MyDB1;
   use YATT::Lite::WebMVC0::DBSchema::DBIC
@@ -137,6 +139,36 @@ my $DBNAME = shift || ':memory:';
     is $enc_auth->('Quxx'), $aid+1, "enc_auth(new Quxx) == $aid+1";
     is $enc_auth->('Qux'), $aid, "enc_auth(known Qux) == $aid";
   }
+}
+
+{
+  # Wrapper API.
+
+  my $CLASS = 'MyDB1'; # Same class
+
+  my $deleted = 0;
+  {
+    ok(my $schema = $CLASS->YATT_DBSchema
+       ->clone(connection_spec => [sqlite => $DBNAME]
+	       , on_destroy => sub { $deleted = 1; })
+       , "DBIC->YATT_DBSchema");
+
+    is ref($schema), 'YATT::Lite::WebMVC0::DBSchema::DBIC'
+    , "ref YATT_DBSchema";
+
+    is ref($schema->dbic), $CLASS, "ref dbic";
+
+    $schema->resultset('Author')
+      ->create({name => 'Foo author'
+		, books => [{name => 'Bar'}, {name => 'Baz'}]});
+
+    is_deeply [sort map {$_->name}
+	       $schema->resultset('Author')->find({Name => 'Foo author'})
+	       ->search_related('books')]
+      , [qw/Bar Baz/], "DBIC wrapper works";
+    }
+
+  ok $deleted, "DBSchema is deleted";
 }
 
 {
@@ -251,7 +283,7 @@ my $DBNAME = shift || ':memory:';
 	  ]
        ]
 
-     , [timeline => {view => <<SQL}
+     , [timeline => {view => <<SQL }
 select tn as num, 'ticket' as type, at, title from ticket
 union all
 select cn as num, 'chng' as type, at, comment as title from chng

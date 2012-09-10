@@ -16,7 +16,8 @@ use YATT::Lite::Partial
    , -Entity, -CON
   );
 
-use YATT::Lite::Util qw/lexpand escape nonempty symtab/;
+use YATT::Lite::Util qw/lexpand escape nonempty symtab
+			num_is_ge/;
 
 use YATT::Lite::Types [Config => fields => [qw/name expire/]];
 
@@ -101,7 +102,8 @@ sub session_regenerate_id {
 # usually called from before_dirhandler
 sub session_resume {
   (my MY $self, my ($con)) = @_;
-  $con->logbacktrace("session_resume") if $self->{cf_session_debug};
+  $con->logbacktrace("session_resume")
+    if num_is_ge($self->{cf_session_debug}, 2);
 
   my ConnProp $prop = $con->prop;
 
@@ -127,7 +129,8 @@ sub session_resume {
       $con->logdump("session_resume: session is expired:", $sid)
 	if $self->{cf_session_debug};
     } elsif (not $sess->id) {
-      $con->logdump("session_resume: session->id is empty:", $sid)
+      $con->logdump("session_resume: session->id is empty:"
+		    , claimed_sid => $sid, sessobj => $sess)
 	if $self->{cf_session_debug};
     } else {
       last CHK;
@@ -136,6 +139,9 @@ sub session_resume {
     delete $prop->{session}; # To allow calling session_start.
     return undef; # XXX: Should we notify?
   };
+
+  $con->logdump("session_resume: OK: id=", $sid)
+    if $self->{cf_session_debug};
 
   $prop->{session} = $sess;
 }
@@ -151,7 +157,9 @@ sub session_start {
 		 , join ", ", keys %$opts);
   }
 
-  $con->logbacktrace("session_start") if $self->{cf_session_debug};
+  $con->logbacktrace("session_start")
+    if num_is_ge($self->{cf_session_debug}, 2);
+
   my ConnProp $prop = $con->prop;
 
   if (defined $prop->{session}) {
@@ -192,8 +200,6 @@ sub session_init {
   my ConnProp $prop = (my $con = shift)->prop;
   my ($sess, @with_init) = @_;
 
-  # $con->logbacktrace("session_init", \@with_init);
-
   foreach my $spec (@with_init) {
     unless (defined $spec) {
       $self->error("Undefined session initializer");
@@ -231,9 +237,18 @@ sub session_delete {
 		 , join ", ", keys %$opts);
   }
 
+  $con->logbacktrace("session_delete")
+    if num_is_ge($self->{cf_session_debug}, 2);
+
   if (my $sess = delete $prop->{session}) {
+    my $sid = $sess->id;
     $sess->delete;
     $sess->flush;
+    $con->logdump("session_delete: OK: id=", $sid)
+      if $self->{cf_session_debug};
+  } else {
+    $con->logdump("session_delete: NOP")
+      if $self->{cf_session_debug};
   }
   my $name = $self->session_sid_name;
   my @rm = ($name, '', -expires => '-10y', -path => $path);

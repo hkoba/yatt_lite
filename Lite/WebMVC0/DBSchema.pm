@@ -4,10 +4,10 @@ use warnings FATAL => qw(all);
 use Carp;
 use File::Basename;
 
-use base qw(YATT::Lite::Object
+use base qw/YATT::Lite::Object
 	    YATT::Lite::Util::CmdLine
-	  );
-use fields (qw(table_list table_dict dbtype cf_DBH
+	  /;
+use fields (qw/table_list table_dict dbtype cf_DBH
 	       cf_user
 	       cf_auth
 	       cf_connection_spec
@@ -23,13 +23,17 @@ use fields (qw(table_list table_dict dbtype cf_DBH
 	       cf_after_dbinit
 	       cf_group_writable
 
+	       cf_is_clone
+	       cf_debug
+	       cf_on_destroy
+
 	       role_dict
-	     ));
+	     /);
 
 use YATT::Lite::Types
-  ([Item => fields => [qw(not_configured
-			  cf_name)]
-    , [Table => fields => [qw(pk chk_unique
+  ([Item => fields => [qw/not_configured
+			  cf_name/]
+    , [Table => fields => [qw/pk chk_unique
 			      chk_index chk_check
 			      col_list col_dict
 			      relation_list relation_dict
@@ -37,8 +41,8 @@ use YATT::Lite::Types
 			      initializer
 			      cf_view cf_virtual
 			      cf_trigger_after_delete
-			    )]]
-    , [Column => fields => [qw(cf_type
+			    /]]
+    , [Column => fields => [qw/cf_type
 			       cf_hidden
 			       cf_unique
 			       cf_indexed
@@ -51,7 +55,7 @@ use YATT::Lite::Types
 			       cf_usage
 			       cf_label
 			       cf_max_length
-			     )]]]
+			     /]]]
 );
 
 use YATT::Lite::Util qw/coalesce globref ckeval terse_dump lexpand
@@ -59,11 +63,25 @@ use YATT::Lite::Util qw/coalesce globref ckeval terse_dump lexpand
 		       /;
 
 #========================================
-sub DESTROY {
-  my MY $schema = shift;
-  # print "in destroy.(DBSchema) $schema\n";
+DESTROY {
+  my MY $self = shift;
+  if (my $sub = $self->{cf_on_destroy}) {
+    $sub->($self);
+  }
+  $self->disconnect("from DBSchema->DESTROY");
+}
+sub disconnect {
+  (my MY $schema, my $msg) = @_;
+  $msg ||= "";
   if (my $dbh = delete $schema->{cf_DBH}) {
+    # XXX: is_clone
     $dbh->commit unless $dbh->{AutoCommit};
+    $dbh->disconnect;
+    print STDERR "DEBUG: DBSchema->disconnect $msg $schema, had dbh $dbh\n"
+      if $schema->{cf_debug};
+  } else {
+    print STDERR "DEBUG: DBSchema->disconnect $msg $schema, without dbh\n"
+      if $schema->{cf_debug};
   }
 }
 
@@ -89,14 +107,17 @@ sub clone {
     $new->{$k} = ref $v ? shallow_copy($v, 1) : $v;
   }
   $new->reset;
+  $new->{cf_is_clone} = 1;
   $new->configure(@_) if @_;
-  # print "cloned dbschema, now=", terse_dump(sort keys %$new), "\n";
+  print STDERR "DEBUG: dbschema clone, now=$new\n" if $new->{cf_debug};
   $new;
 }
 
 sub reset {
   (my MY $self) = @_;
-  delete $self->{cf_DBH} unless $self->{cf_connect_atstart};
+  if (my $dbh = delete $self->{cf_DBH}) {
+    $dbh->disconnect if $self->{cf_is_clone};
+  }
 }
 
 sub is_known_role {
@@ -209,7 +230,9 @@ sub make_connection {
   } else {
     croak "Unknown connection spec obj: $spec";
   }
-  # print STDERR "dbh for $schema=$schema->{cf_DBH}\n";
+  print STDERR "DEBUG: dbh for $schema=$schema->{cf_DBH}"
+    , ($schema->{cf_debug} >= 2 ? Carp::longmess() : ()), "\n\n"
+      if $schema->{cf_debug};
   $schema->{cf_DBH};
 }
 

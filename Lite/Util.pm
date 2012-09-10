@@ -35,6 +35,7 @@ require Scalar::Util;
 
 				  shallow_copy
 				  incr_opt
+				  num_is_ge
 				/);
   }
   use Carp;
@@ -572,6 +573,11 @@ sub incr_opt {
   };
   $hash->{$key}++;
   $hash;
+}
+
+sub num_is_ge {
+  defined $_[0] and not ref $_[0] and $_[0] ne ''
+    and $_[0] =~ /^\d+$/ and $& >= $_[1];
 }
 
 1;
