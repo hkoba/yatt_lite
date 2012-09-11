@@ -2,10 +2,11 @@ package YATT::Lite::Test::TestUtil;
 use strict;
 use warnings FATAL => qw(all);
 
-use Exporter qw(import);
+use Exporter qw/import/;
 
-our @EXPORT_OK = qw(eq_or_diff);
-our @EXPORT = @EXPORT_OK;
+our @EXPORT = qw/eq_or_diff/;
+our @EXPORT_OK = (@EXPORT
+		  , qw/capture_stderr/);
 
 require Test::More;
 
@@ -13,6 +14,17 @@ if (eval {require Test::Differences}) {
   *eq_or_diff = *Test::Differences::eq_or_diff;
 } else {
   *eq_or_diff = *Test::More::is;
+}
+
+sub capture_stderr (&) {
+  my ($sub) = @_;
+  my $buffer = "";
+  {
+    open my $fh, '>', \$buffer;
+    local *STDERR = *$fh;
+    $sub->();
+  }
+  $buffer;
 }
 
 1;

@@ -188,17 +188,22 @@ sub error_fh {
 
 # level-less but serializing, simple logging.
 sub logdump {
-  shift->logemit(terse_dump(@_));
+  my $self = shift;
+  $self->logemit($_[0], terse_dump(@_[1..$#_]));
 }
 
 sub logbacktrace {
-  shift->logemit(terse_dump(@_), Carp::longmess());
+  my $self = shift;
+  $self->logemit($_[0], terse_dump(@_[1..$#_]), Carp::longmess());
 }
 
 sub logemit {
   my $glob = shift;
   my $fh = $glob->error_fh || return;
-  print $fh '[', $glob->iso8601_datetime(), " #$$] ", @_, "\n";
+  my $type = defined $_[0] && !ref $_[0] && $_[0] =~ /^[\w\.\-]+$/
+    ? uc(shift) : "DEBUG";
+  my $msg = join(" ", map {(my $cp = $_) =~ s/\n/\n /g; $cp} @_);
+  print $fh "$type: [", $glob->iso8601_datetime(), " #$$] $msg\n";
 }
 
 # XXX: precise?

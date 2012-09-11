@@ -102,20 +102,20 @@ sub session_regenerate_id {
 # usually called from before_dirhandler
 sub session_resume {
   (my MY $self, my ($con)) = @_;
-  $con->logbacktrace("session_resume")
+  $con->logbacktrace("session.resume")
     if num_is_ge($self->{cf_session_debug}, 2);
 
   my ConnProp $prop = $con->prop;
 
   if (exists $prop->{session}) {
-    $con->logdump("session_resume: session is already loaded")
+    $con->logdump("session.resume" => "session is already loaded")
       if $self->{cf_session_debug};
     return $prop->{session};
   }
   $prop->{session} = undef;
 
   my $sid = $self->session_sid($con) or do {
-    $con->logdump("session_resume: sid is empty")
+    $con->logdump("session.resume" => "sid is empty")
        if $self->{cf_session_debug};
     return undef;
   };
@@ -126,10 +126,10 @@ sub session_resume {
 
  CHK: {
     if ($sess->is_expired) {
-      $con->logdump("session_resume: session is expired:", $sid)
+      $con->logdump("session.resume" => expired => $sid)
 	if $self->{cf_session_debug};
     } elsif (not $sess->id) {
-      $con->logdump("session_resume: session->id is empty:"
+      $con->logdump("session.resume" => "id is empty"
 		    , claimed_sid => $sid, sessobj => $sess)
 	if $self->{cf_session_debug};
     } else {
@@ -140,7 +140,7 @@ sub session_resume {
     return undef; # XXX: Should we notify?
   };
 
-  $con->logdump("session_resume: OK: id=", $sid)
+  $con->logdump("session.resume" => OK => sid => $sid)
     if $self->{cf_session_debug};
 
   $prop->{session} = $sess;
@@ -157,7 +157,7 @@ sub session_start {
 		 , join ", ", keys %$opts);
   }
 
-  $con->logbacktrace("session_start")
+  $con->logbacktrace("session.start")
     if num_is_ge($self->{cf_session_debug}, 2);
 
   my ConnProp $prop = $con->prop;
@@ -237,17 +237,17 @@ sub session_delete {
 		 , join ", ", keys %$opts);
   }
 
-  $con->logbacktrace("session_delete")
+  $con->logbacktrace("session.delete")
     if num_is_ge($self->{cf_session_debug}, 2);
 
   if (my $sess = delete $prop->{session}) {
     my $sid = $sess->id;
     $sess->delete;
     $sess->flush;
-    $con->logdump("session_delete: OK: id=", $sid)
+    $con->logdump("session.delete" => OK => sid => $sid)
       if $self->{cf_session_debug};
   } else {
-    $con->logdump("session_delete: NOP")
+    $con->logdump("session.delete" => 'NOP')
       if $self->{cf_session_debug};
   }
   my $name = $self->session_sid_name;
