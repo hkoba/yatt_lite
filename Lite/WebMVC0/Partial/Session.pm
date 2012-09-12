@@ -279,7 +279,7 @@ sub configure_use_session {
 
 sub session_path {
   (my MY $self, my ($con)) = @_;
-  $self->{cf_session_path} || $con->location;
+  $self->{cf_session_path} || $con->site_location;
 }
 
 sub session_sid_name {

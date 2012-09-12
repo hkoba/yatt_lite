@@ -7,6 +7,8 @@ use base qw(YATT::Lite::Connection);
 use fields qw/cf_cgi
 	      cf_is_psgi cf_hmv
 
+	      cf_site_loc
+
 	      cf_dir cf_file cf_subpath
 	      cf_root cf_location
 
@@ -101,6 +103,14 @@ sub convert_array_param_cgi {
   $cgi;
 }
 
+# Location(path part of url) of overall SiteApp.
+sub site_location {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_site_loc} // '/';
+}
+*site_loc = *site_location; *site_loc = *site_location;
+
+# Location of DirApp
 sub location {
   my PROP $prop = (my $glob = shift)->prop;
   (my $loc = ($prop->{cf_location} // '')) =~ s,/*$,/,;

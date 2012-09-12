@@ -14,6 +14,7 @@ use File::Path ();
 use YATT::Lite::MFields qw/cf_doc_root
 			   cf_allow_missing_dir
 			   cf_app_base
+			   cf_site_loc
 
 			   tmpldirs
 
@@ -144,6 +145,8 @@ sub _after_after_new {
     trim_slash($self->{cf_doc_root});
   }
   # XXX: $self->{cf_tmpldirs}
+
+  ensure_slash($self->{cf_site_loc});
 
   $self->{tmpldirs} = [];
   if (my $dir = $self->{cf_doc_root}) {
@@ -309,6 +312,14 @@ sub error {
 sub trim_slash {
   $_[0] =~ s,/*$,,;
   $_[0];
+}
+
+sub ensure_slash {
+  unless (defined $_[0] and $_[0] ne '') {
+    $_[0] = '/';
+  } else {
+    $_[0] =~ s{^/?(.*?)/?$}{/$1/}; # Both of start/end must be '/'.
+  }
 }
 
 #========================================

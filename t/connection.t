@@ -144,6 +144,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
   my $mux = YATT::Lite::WebMVC0::SiteApp->new
     (doc_root => rootname($0) . ".d"
      , app_ns => myapp($i)
+     , site_loc => '/myblog'  # trailing / should be supplemented.
      , die_in_error => 1
      , debug_cgen => $ENV{DEBUG});
 
@@ -156,6 +157,9 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     is $con->buffer, "foobarbaz", "Connection output";
 
     is $con->request_path, "", "empty request path";
+
+    is $con->site_location, '/myblog/', "con->site_location";
+    is $con->site_loc, '/myblog/', "in short: con->site_loc";
   }
 
   my $THEME;
