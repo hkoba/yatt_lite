@@ -19,9 +19,15 @@ use lib $libdir;
 use YATT::Lite qw/*SYS/;
 use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;
-use YATT::Lite::Util qw(default rootname);
+use YATT::Lite::Util qw(default rootname catch);
 use YATT::Lite::Error;
 use YATT::Lite::CGen::Perl; # Just for debugging aid.
+
+use YATT::Lite::Util::CmdLine qw/parse_opts/;
+use YATT::Lite::Types
+  ([Opts => -fields => [qw/cf_tap cf_all/]]);
+
+my Opts $opts = Opts->new(MY->parse_opts(\@ARGV));
 
 # XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
@@ -42,28 +48,55 @@ $SYS = my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
 };
 
 my $nerror = 0;
+
+my $i = 1;
+print "$i..".@ARGV, "\n" if $opts->{cf_tap};
+
 foreach my $fn (@ARGV) {
   my $dir = dirname($fn);
   my $dirhandler = $dispatcher->get_dirhandler($dir);
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
-  $dirhandler->configure
-    (error_handler => sub {
-       (my $type, my YATT::Lite::Error $err) = splice @_, 0, 2;
-       my @lineinfo = ("[file] ".default($err->{cf_tmpl_file}, '-')
-		       , "[line] ".default($err->{cf_tmpl_line}, '-'));
-       my $msg = $type . " [@lineinfo]\n "
-	 .sprintf($err->{cf_format}, @{$err->{cf_args}});
-       $msg .= "\n" unless $msg =~ m{\n\Z};
-       print STDERR $msg;
-       exit 1;
-     });
+
+  my $error_handler = do {
+    if ($opts->{cf_tap}) {
+      sub {
+	print "not ok $i - $fn\n";
+	my $msg = format_error(@_);
+	$msg =~ s/^/\# /mg;
+	print $msg;
+	exit 1 unless $opts->{cf_all};
+      };
+    } else {
+      sub {
+	print STDERR format_error(@_);
+	exit 1 unless $opts->{cf_all};;
+      };
+    }
+  };
+
+  $dirhandler->configure(error_handler => $error_handler);
+
   my $trans = $dirhandler->open_trans;
   my $tmpl = $trans->find_file(basename($fn)) or do {
     warn "No such file: $fn\n";
     $nerror++;
     next;
   };
-  my $pkg = $trans->find_product(perl => $tmpl);
+  unless (catch {my $pkg = $trans->find_product(perl => $tmpl)}) {
+    print "ok $i - $fn\n" if $opts->{cf_tap};
+  }
+} continue {
+  $i++;
 }
 
 exit 1 if $nerror;
+
+sub format_error {
+  (my $type, my YATT::Lite::Error $err) = splice @_, 0, 2;
+  my @lineinfo = ("[file] ".default($err->{cf_tmpl_file}, '-')
+		  , "[line] ".default($err->{cf_tmpl_line}, '-'));
+  my $msg = $type . " [@lineinfo]\n "
+    .sprintf($err->{cf_format}, @{$err->{cf_args}});
+  $msg .= "\n" unless $msg =~ m{\n\Z};
+  $msg;
+};

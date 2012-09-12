@@ -24,15 +24,16 @@
 (defvar yatt-lint-any-registry
   ;; User may extend this.
   '(("\\.\\(yatt\\|ytmpl\\)\\'"
-     after yatt-lint-any-handle-yatt)
+     handler yatt-lint-any-handle-yatt)
     ("\\.ydo\\'"
-     after yatt-lint-any-handle-perl-action)
+     handler yatt-lint-any-handle-perl-action)
     ("\\.htyattrc\\.pl\\'"
-     after yatt-lint-any-handle-yattrc)
+     handler yatt-lint-any-handle-yattrc)
     ("\\.pm\\'"
-     after yatt-lint-any-handle-perl-module)
+     handler yatt-lint-any-handle-perl-module)
     ("\\.\\(pl\\|t\\)\\'"
-     after yatt-lint-any-handle-perl-script)
+     handler      yatt-lint-any-handle-perl-script
+     major-mode (perl-mode cperl-mode))
     )
   "Auto lint filename mapping for yatt and related files.")
 
@@ -192,11 +193,15 @@ Currently only RHEL is supported."
   (let* ((buf (current-buffer))
 	 (spec (yatt-lint-any-lookup
 		(file-name-nondirectory (buffer-file-name buf))))
-	 (handler (or (and spec (plist-get spec 'after))
-		      (and (member major-mode '(perl-mode cperl-mode))
-			   yatt-lint-any-perl-mode))))
-    (when handler
-      (yatt-lint-any-run handler buf))))
+	 handler filter)
+    (cond (spec
+	   (when (setq handler (plist-get spec 'handler))
+	     (when (or (not (setq filter (plist-get spec 'major-mode)))
+		       (member major-mode filter))
+	       (yatt-lint-any-run handler buf))))
+	  ((and yatt-lint-any-perl-mode
+		(member major-mode '(perl-mode cperl-mode)))
+	   (yatt-lint-any-run yatt-lint-any-perl-mode buf)))))
 
 (defun yatt-lint-any-lookup (bufname &optional registry)
   (setq registry (or registry yatt-lint-any-registry))
@@ -277,7 +282,8 @@ Currently only RHEL is supported."
    (yatt-lint-cmdfile "scripts/yatt.lintpm") buffer))
 
 (defun yatt-lint-any-handle-perl-script (buffer)
-  (yatt-lint-any-perl-error-by "perl -wc " buffer))
+  (if (member major-mode '(perl-mode cperl-mode))
+      (yatt-lint-any-perl-error-by "perl -wc " buffer)))
 
 (defun yatt-lint-any-perl-error-by (command buffer)
   (plist-bind (rc err)
