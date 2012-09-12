@@ -114,6 +114,11 @@ $i++;
   MY->mkfile("$tmpl/virt/code.ydo", 'code in virt');
   MY->mkfile("$tmpl/virtcode.ydo", 'virtcode');
 
+  MY->mkfile("$tmpl/filevsdir.yatt", "file vs dir, this is the file");
+  MY->mkfile("$tmpl/filevsdir/index.yatt", "file vs dir, this is dir index");
+  MY->mkfile("$tmpl/filevsdir/real.yatt", "file vs dir, real in dir");
+
+
   my @tmpls = map {"$realdir/$_"} qw(html runyatt.ytmpl);
   my $test = sub {
     my ($loc, $want, @rest) = @_;
@@ -181,4 +186,16 @@ $i++;
   $test->("/virt/test.yatt/foo/bar"
 	  , $res = [$tmpl, '/virt/', 'test.yatt', '/foo/bar']);
   $test->("/virt/test/foo/bar", $res);
+
+  $test->('/filevsdir',  [$tmpl, '/', 'filevsdir.yatt', '']);
+  $test->('/filevsdir/', [$tmpl, '/filevsdir/', 'index.yatt', '']);
+  $test->('/filevsdir/real/foo', [$tmpl, '/filevsdir/', 'real.yatt', '/foo']);
+ TODO: {
+    local our $TODO = "Util::lookup_path file vs dir subpath priority";
+    # Which is better?
+    $test->('/filevsdir/virt/bar'
+	    , [$tmpl, '/', 'filevsdir.yatt', '/virt/bar']);
+    $test->('/filevsdir/virt/bar'
+	    , [$tmpl, '/filevsdir/', 'index.yatt', '/virt/bar']);
+  }
 }

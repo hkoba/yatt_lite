@@ -223,7 +223,8 @@ require Scalar::Util;
 	if (defined $ext) {
 	  # If extension is specified and it is readable, use it.
 	  return ($dir, "$loc/", "$cur$ext", $pi) if -r "$base$ext";
-	} elsif (-d $base) {
+	} elsif ($pi =~ m{^/} and -d $base) {
+	  # path_info has '/' and directory exists.
 	  next; # candidate
 	} elsif (-r (my $fn = "$base$want_ext")) {
 	  return ($dir, "$loc/", "$cur$want_ext", $pi);
