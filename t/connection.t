@@ -25,6 +25,8 @@ plan 'no_plan';
 use YATT::Lite::Util qw(appname rootname catch);
 sub myapp {join _ => MyTest => appname($0), @_}
 
+use YATT::Lite::PSGIEnv;
+
 require_ok('YATT::Lite');
 require_ok('YATT::Lite::Connection');
 
@@ -165,7 +167,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
   my $THEME;
   {
     $THEME = '/foo';
-    my %env = qw(REQUEST_METHOD  GET
+    my %env = qw{REQUEST_METHOD  GET
 		 PATH_INFO       /foo
 		 REQUEST_URI     /foo
 		 HTTP_HOST       0.0.0.0:5000
@@ -174,7 +176,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 		 SERVER_PROTOCOL HTTP/1.1
 		 HTTP_REFERER    http://example.com/
 		 psgi.url_scheme http
-	       );
+	       };
     my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5000'
@@ -195,7 +197,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 
   {
     $THEME = '/';
-    my %env = qw(REQUEST_METHOD  GET
+    my %env = qw{REQUEST_METHOD  GET
 		 PATH_INFO       /
 		 REQUEST_URI     /
 		 HTTP_HOST       0.0.0.0:5050
@@ -203,7 +205,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 		 SERVER_PORT     5000
 		 SERVER_PROTOCOL HTTP/1.1
 		 psgi.url_scheme http
-	       );
+	       };
     my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5050', "[$THEME] mkhost()";
@@ -219,4 +221,30 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
       , "[$THEME] mkurl(,,local => 1)";
   }
 
+  {
+    my $mkcon = sub {
+      my Env $env;
+      ($env->{HTTP_ACCEPT_LANGUAGE}) = @_;
+      $mux->make_connection(undef, env => $env, noheader => 1);
+    };
+
+    my $con = $mkcon->(my $al = 'ja,en-US;q=0.8,en;q=0.6');
+    is_deeply [$con->accept_language(detail => 1)]
+      , [[ja => 1], ['en-US' => 0.8], [en => 0.6]]
+	, "accept_language(detail) $al";
+
+    is_deeply [$con->accept_language(long => 1)]
+      , [qw/ja en_US en/]
+	, "accept_language(long) $al";
+
+    is_deeply [$con->accept_language]
+      , [qw/ja en/]
+	, "accept_language() $al";
+
+    is scalar $con->accept_language
+      , 'ja'
+	, "scalar accept_language() $al";
+  }
+
 }
+

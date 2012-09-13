@@ -363,6 +363,7 @@ sub accept_language {
   my (%opts) = @_;
   my $filter = delete $opts{filter};
   my $detail = delete $opts{detail};
+  my $long   = delete $opts{long};
   if (keys %opts) {
     die $glob->error("Unknown option for accept_language: %s"
 		     , join ", ", keys %opts);
@@ -395,10 +396,20 @@ sub accept_language {
     };
     @langlist = $filtsub->(@langlist);
   }
+
   if ($detail) {
     @langlist
   } else {
-    wantarray ? (map {$$_[0]} @langlist) : $langlist[0][0];
+    if ($long) {
+      # en-US => en_US
+      $$_[0] =~ s/-/_/g for @langlist;
+    } else {
+      # en-US => en
+      $$_[0] =~ s/-.*// for @langlist;
+    }
+    my %dup;
+    wantarray ? (map {$dup{$$_[0]}++ ? () : $$_[0]} @langlist)
+      : $langlist[0][0];
   }
 }
 
