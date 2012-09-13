@@ -43,6 +43,10 @@
   (unless (yatt-mode-called-from-p 'mmm-mode-on)
     ;;
     (setq mmm-classes yatt-mode-default-mmm-classes)
+    (when (and (member 'html-js mmm-classes)
+	       (require 'js)
+	       (fboundp 'js--update-quick-match-re))
+      (js--update-quick-match-re))
     (setq mmm-submode-decoration-level 2)
     (make-variable-buffer-local 'process-environment)
     (yatt-lint-any-mode 1)
