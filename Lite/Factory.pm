@@ -14,7 +14,7 @@ use File::Path ();
 use YATT::Lite::MFields qw/cf_doc_root
 			   cf_allow_missing_dir
 			   cf_app_base
-			   cf_site_loc
+			   cf_site_prefix
 
 			   tmpldirs
 
@@ -41,7 +41,7 @@ use YATT::Lite::XHF;
 use YATT::Lite::Partial::ErrorReporter;
 use YATT::Lite::Partial::AppPath;
 
-use YATT::Lite qw/*SYS *YATT *CON/;
+use YATT::Lite qw/Entity *SYS *YATT *CON/;
 
 #========================================
 #
@@ -146,7 +146,7 @@ sub _after_after_new {
   }
   # XXX: $self->{cf_tmpldirs}
 
-  ensure_slash($self->{cf_site_loc});
+  $self->{cf_site_prefix} //= "";
 
   $self->{tmpldirs} = [];
   if (my $dir = $self->{cf_doc_root}) {
@@ -386,5 +386,14 @@ sub invoke_dirhandler {
   (my MY $self, my ($dh, $con, $method, @args)) = @_;
   $dh->with_system($self, $method, @args);
 }
+
+#========================================
+{
+  Entity site_prefix => sub {
+    my MY $self = $SYS;
+    $self->{cf_site_prefix};
+  };
+}
+
 
 1;

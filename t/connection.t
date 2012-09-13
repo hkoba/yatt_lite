@@ -144,7 +144,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
   my $mux = YATT::Lite::WebMVC0::SiteApp->new
     (doc_root => rootname($0) . ".d"
      , app_ns => myapp($i)
-     , site_loc => '/myblog'  # trailing / should be supplemented.
+     , site_prefix => '/myblog'
      , die_in_error => 1
      , debug_cgen => $ENV{DEBUG});
 

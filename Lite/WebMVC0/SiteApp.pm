@@ -439,7 +439,7 @@ sub make_connection {
     }
   };
 
-  push @opts, site_loc => $self->{cf_site_loc} // '/';
+  push @opts, site_prefix => $self->{cf_site_prefix};
 
   push @opts, debug => $self->{cf_debug_connection}
     if $self->{cf_debug_connection};
