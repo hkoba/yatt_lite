@@ -109,6 +109,12 @@ sub site_location {
   $prop->{cf_site_loc} // '/';
 }
 *site_loc = *site_location; *site_loc = *site_location;
+sub site_prefix {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $site_loc = $glob->site_location;
+  $site_loc =~ s{/+$}{};
+  $site_loc;
+}
 
 # Location of DirApp
 sub location {

@@ -164,17 +164,17 @@ sub get_yatt {
   if (my $yatt = $self->{loc2yatt}{$loc}) {
     return $yatt;
   }
-  my $realdir = lookup_dir(trim_slash($loc), $self->{tmpldirs});
+  my ($realdir, $basedir) = lookup_dir(trim_slash($loc), $self->{tmpldirs});
   unless ($realdir) {
     $self->error("Can't find template directory for location '%s'", $loc);
   }
-  $self->{loc2yatt}{$loc} = $self->load_yatt($realdir);
+  $self->{loc2yatt}{$loc} = $self->load_yatt($realdir, $basedir);
 }
 
 # phys-path => yatt
 
 sub load_yatt {
-  (my MY $self, my ($path, $cycle)) = @_;
+  (my MY $self, my ($path, $basedir, $cycle)) = @_;
   $path = $self->rel2abs($path, $self->{cf_app_root});
   if (my $yatt = $self->{path2yatt}{$path}) {
     return $yatt;
@@ -186,17 +186,19 @@ sub load_yatt {
   }
   if (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
-      $self->build_yatt($path, $cycle
+      $self->build_yatt($path, $basedir, $cycle
 			, $self->read_file_xhf($cf, binary => $self->{cf_binary_config}));
     };
   } else {
-    $self->build_yatt($path, $cycle);
+    $self->build_yatt($path, $basedir, $cycle);
   }
 }
 
 sub build_yatt {
-  (my MY $self, my ($path, $cycle, %opts)) = @_;
+  (my MY $self, my ($path, $basedir, $cycle, %opts)) = @_;
   trim_slash($path);
+
+  my $app_name = $self->app_name_for($path, $basedir);
 
   #
   # base package と base vfs object の決定
@@ -219,6 +221,7 @@ sub build_yatt {
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
+	      , app_name => $app_name
 	      , factory => $self
 
 	      # XXX: Design flaw! Use of tmpl_cache will cause problem.
@@ -256,7 +259,7 @@ sub _list_base_spec_in {
 					  keys %$cycle)
 			     , $realpath));
 	}
-	$yatt = $self->load_yatt($realpath, $cycle);
+	$yatt = $self->load_yatt($realpath, undef, $cycle);
 	$pkg = ref $yatt;
       } else {
 	$self->error("Invalid base spec: %s", $basespec);
@@ -307,6 +310,36 @@ sub configparams_for {
 sub error {
   (my MY $self, my ($fmt, @args)) = @_;
   croak sprintf $fmt, @args;
+}
+
+#========================================
+
+sub app_name_for {
+  (my MY $self, my ($path, $basedir)) = @_;
+  ensure_slash($path);
+  if ($basedir) {
+    ensure_slash($basedir = $self->rel2abs($basedir));
+    $self->_extract_app_name($path, $basedir)
+      // $self->error("Can't extract app_name path=%s, base=%s"
+		      , $path, $basedir);
+  } else {
+    foreach my $tmpldir (lexpand($self->{tmpldirs})) {
+      ensure_slash(my $cp = $tmpldir);
+      if (defined(my $app_name = $self->_extract_app_name($path, $cp))) {
+	# Can be empty string.
+	return $app_name;
+      }
+    }
+    return '';
+  }
+}
+
+sub _extract_app_name {
+  (my MY $self, my ($path, $basedir)) = @_;
+  my ($bs, $name) = unpack('A'.length($basedir).'A*', $path);
+  return undef unless $bs eq $basedir;
+  $name =~ s{/+$}{};
+  $name;
 }
 
 sub trim_slash {

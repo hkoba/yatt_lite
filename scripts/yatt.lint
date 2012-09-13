@@ -50,7 +50,10 @@ $SYS = my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
 my $nerror = 0;
 
 my $i = 1;
-print "$i..".@ARGV, "\n" if $opts->{cf_tap};
+if ($opts->{cf_tap}) {
+  $opts->{cf_all} //= 1;
+  print "$i..".@ARGV, "\n";
+}
 
 foreach my $fn (@ARGV) {
   my $dir = dirname($fn);

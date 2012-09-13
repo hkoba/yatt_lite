@@ -343,10 +343,28 @@ END
 
   my $subapp = $F->get_yatt('/subapp/');
   is $subapp->render(foo => []), "fooshared\n", "$THEME subapp/foo";
+  is $subapp->app_name, "subapp", "app_name of /subapp/";
 
   my $top = $F->get_yatt('/');
   is $top->render(bar => []), "barshared\n", "$THEME bar";
   # No such widget <yatt:common> at file /tmp/pFTOXbIAaa/app6/docs/bar.yatt line 1,
 
   # あと、Subroutine filename redefined になるケースがあるが、同じ現象か別か不明。
+}
+
+#----------------------------------------
+# misc
+#----------------------------------------
+{
+  use YATT::Lite::Util qw/terse_dump/;
+  my $test = sub {
+    my ($input, $expect, $title) = @_;
+    is Factory->_extract_app_name(@$input), $expect
+      , ($title // ""). terse_dump($input, $expect);
+  };
+
+  my $T = "app_name: ";
+  $test->(["/foo/bar/baz/", "/foo/bar/"], "baz", $T);
+  $test->(["/foo/bar/", "/foo/bar/"], "", $T);
+  $test->(["/foo/bar/", "/unk/"], undef, $T);
 }

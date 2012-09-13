@@ -203,7 +203,7 @@ require Scalar::Util;
     foreach my $dir (@$dirlist) {
       my $real = "$dir$loc";
       next unless -d $real;
-      return $real;
+      return wantarray ? ($real, $dir) : $real;
     }
   }
 

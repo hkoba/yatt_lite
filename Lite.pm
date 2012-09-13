@@ -19,6 +19,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_output_encoding
 	      cf_tmpl_encoding
 	      cf_app_ns entns
+	      cf_app_name
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
 	      cf_special_entities cf_no_lineinfo cf_check_lineno
 	      cf_rc_script
@@ -30,6 +31,8 @@ use YATT::Lite::MFields qw/YATT
 
 	      cf_default_lang
 	    /;
+
+MY->cf_mkaccessors(qw/app_name/);
 
 # Entities を多重継承する理由は import も継承したいから。
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?

@@ -106,9 +106,9 @@ sub configure {
 }
 
 sub cf_list {
-  my MY $self = shift;
+  my $obj_or_class = shift;
   my $pat = shift || qr{^cf_(.*)};
-  my $fields = YATT::Lite::Util::fields_hash($self);
+  my $fields = YATT::Lite::Util::fields_hash($obj_or_class);
   sort map {($_ =~ $pat) ? $1 : ()} keys %$fields;
 }
 
@@ -206,4 +206,17 @@ sub define {
   *{YATT::Lite::Util::globref($class, $name)} = $sub;
 }
 
+sub cf_mkaccessors {
+  my ($class, @names) = @_;
+  my $fields = YATT::Lite::Util::fields_hash($class);
+  foreach my $name (@names) {
+    my $cf = "cf_$name";
+    unless ($fields->{$cf}) {
+      croak "No such config: $name";
+    }
+    *{YATT::Lite::Util::globref($class, $name)} = sub {
+      shift->{$cf};
+    };
+  }
+}
 1;
