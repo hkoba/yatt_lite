@@ -128,10 +128,10 @@ sub error_handler {
 }
 
 Entity dir_config => sub {
-  my ($this, $name) = @_;
+  my ($this, $name, $default) = @_;
   my MY $self = $this->YATT;
   return $self->{cf_dir_config} unless defined $name;
-  $self->{cf_dir_config}{$name};
+  $self->{cf_dir_config}{$name} // $default;
 };
 
 use YATT::Lite::Breakpoint;

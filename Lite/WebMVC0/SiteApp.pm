@@ -21,6 +21,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_psgi_static
 			   cf_index_name
 			   cf_backend
+			   cf_site_config
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -29,6 +30,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			default ckrequire
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
+use YATT::Lite qw/Entity *SYS *CON/;
 use YATT::Lite::WebMVC0::DirApp ();
 sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}
@@ -470,6 +472,17 @@ sub header_charset {
   (my MY $self) = @_;
   $self->{cf_header_charset} || $self->{cf_output_encoding};
 }
+
+#========================================
+
+Entity site_config => sub {
+  my ($this, $name, $default) = @_;
+  my MY $self = $SYS;
+  return $self->{cf_site_config} unless defined $name;
+  $self->{cf_site_config}{$name} // $default;
+};
+
+#========================================
 
 YATT::Lite::Breakpoint::break_load_dispatcher();
 
