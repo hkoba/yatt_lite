@@ -385,6 +385,21 @@ sub set_charset {
 
 #========================================
 
+sub stash {
+  my PROP $prop = prop(my $glob = shift);
+  unless (@_) {
+    $prop->{stash} //= {}
+  } elsif (@_ == 1) {
+    $prop->{stash}{$_[0]}
+  } else {
+    my $name = shift;
+    $prop->{stash}{$name} = shift;
+    $glob;
+  }
+}
+
+#========================================
+
 sub gettext {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_yatt}->lang_gettext($prop->{cf_lang}, @_);

@@ -42,10 +42,12 @@ sub app_path_ensure_existing {
 }
 
 sub app_path {
-  (my MY $self, my $fn) = @_;
+  (my MY $self, my ($fn, $nocheck)) = @_;
   my $path = $self->{cf_app_root};
   $path =~ s|/*$|/$fn|;
-  $self->error("Can't find app_path: %s", $path) unless -e $path;
+  if (not $nocheck and not -e $path) {
+    $self->error("Can't find app_path: %s", $path);
+  }
   $path;
 }
 
