@@ -22,6 +22,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_index_name
 			   cf_backend
 			   cf_site_config
+			   cf_logfile
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -442,6 +443,14 @@ sub make_connection {
   };
 
   push @opts, site_prefix => $self->{cf_site_prefix};
+
+  if (my $fn = $self->{cf_logfile}) {
+    &YATT::Lite::Breakpoint::breakpoint();
+    my $dir = $self->app_path_ensure_existing(dirname($fn));
+    my $real = "$dir/" . basename($fn);
+    open my $fh, '>>', $real or die "Can't open logfile: fn=$real: $!";
+    push @opts, logfh => $fh;
+  }
 
   push @opts, debug => $self->{cf_debug_connection}
     if $self->{cf_debug_connection};

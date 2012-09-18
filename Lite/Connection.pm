@@ -31,6 +31,9 @@ use fields
    # For logging, compatible to psgix.logger (I hope. Not yet used.)
    , qw/cf_logger/
 
+   # For poorman's logging logdump() series.
+   , qw/cf_logfh/
+
    # Invocation context
    , qw/cf_system cf_yatt cf_backend cf_dbh/
 
@@ -186,7 +189,7 @@ sub error_fh {
   }
 }
 
-# level-less but serializing, simple logging.
+# Simple level-less but tagged and serialized logging.
 sub logdump {
   my $self = shift;
   $self->logemit($_[0], terse_dump(@_[1..$#_]));
@@ -198,12 +201,19 @@ sub logbacktrace {
 }
 
 sub logemit {
-  my $glob = shift;
-  my $fh = $glob->error_fh || return;
-  my $type = defined $_[0] && !ref $_[0] && $_[0] =~ /^[\w\.\-]+$/
-    ? uc(shift) : "DEBUG";
+  my PROP $prop = prop(my $glob = shift);
+  my $fh = $prop->{cf_logfh} || $glob->error_fh;
+  my $logger = $prop->{cf_logger};
+  return unless $fh || $logger;
   my $msg = join(" ", map {(my $cp = $_) =~ s/\n/\n /g; $cp} @_);
-  print $fh "$type: [", $glob->iso8601_datetime(), " #$$] $msg\n";
+  my $tag = defined $_[0] && !ref $_[0] && $_[0] =~ /^[\w\.\-]+$/
+    ? shift : "debug";
+  if ($fh) {
+    print $fh uc($tag).": [", $glob->iso8601_datetime(), " #$$] $msg\n";
+  } else {
+    my ($level, $type) = $tag =~ /^(\w+)(?:\.([\w\-\.]+))?$/;
+    $logger->({level => $level || 'debug', message => $msg});
+  }
 }
 
 # XXX: precise?
