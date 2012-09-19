@@ -412,3 +412,37 @@ select uid from auth
 END
     , [[2]], "After deleting uid=1, auth rec is deleted too.";
 }
+
+{
+  my $schema = $CLASS->new
+    ([purchase => undef
+      , compid => 'text'
+      , prodid => 'text'
+      , [primary_key => qw/compid prodid/]]);
+
+  eq_or_diff join("", map {chomp;"$_;\n"} $schema->sql_create)
+    , <<END, "multicolumn primary key";
+CREATE TABLE purchase
+(compid text
+, prodid text
+, PRIMARY KEY(compid, prodid));
+END
+
+  $schema->create(sqlite => $DBNAME);
+
+  my $dbh = $schema->dbh;
+  {
+    my $ins = $dbh->prepare(<<END);
+insert or ignore into purchase(compid, prodid) values(?,?)
+END
+    $ins->execute('foo', 'bar');
+    $ins->execute('foo', 'bar');
+    $ins->execute('baz', 'qux');
+    $ins->execute('baz', 'qux');
+  }
+
+  is_deeply [sort {$$a[0] cmp $$b[0]}
+	     @{$dbh->selectall_arrayref('select * from purchase')}]
+    , [[qw/baz qux/], [qw/foo bar/]]
+      , "multicol primary key insertion";
+}

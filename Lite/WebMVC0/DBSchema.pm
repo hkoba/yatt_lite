@@ -702,10 +702,24 @@ sub sql_create_table {
   my $dbtype = $opts->{dbtype} || $schema->default_dbtype;
   my $sub = $schema->can($dbtype.'_sql_create_column')
     || $schema->can('sql_create_column');
+
+  my $pk_ok;
   foreach my Column $col (@{$tab->{col_list}}) {
+    $pk_ok = 1 if $col->{cf_primary_key};
     push @cols, $sub->($schema, $tab, $col, $opts);
     push @indices, $col if $col->{cf_indexed};
   }
+
+  # Multi column primary key(...)
+  # XXX: conflict clause
+  if (not $pk_ok and $tab->{pk}) {
+    push @cols, "PRIMARY KEY(".join(", ", map {
+      my Column $col = $_;
+      $col->{cf_name}
+    } @{$tab->{pk}}).")";
+  }
+
+  # Other unique(...)
   foreach my $constraint (lexpand($tab->{chk_unique})) {
     push @cols, sprintf q{unique(%s)}, join(", ", @$constraint);
   }
@@ -749,6 +763,7 @@ sub map_coltype {
 
 sub sql_create_column {
   (my MY $schema, my Table $tab, my Column $col, my $opts) = @_;
+  # XXX: primary key ASC/DESC
   join(" ", $col->{cf_name}
        , $schema->map_coltype($col->{cf_type})
        , ($col->{cf_primary_key} ? "primary key" : ())
