@@ -22,7 +22,7 @@ use lib $libdir;
 use Test::More;
 plan 'no_plan';
 
-use YATT::Lite::Util qw(appname rootname catch);
+use YATT::Lite::Util qw(appname rootname catch ostream);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 use YATT::Lite::PSGIEnv;
@@ -101,6 +101,32 @@ my $i = 1;
     like $@, qr{^Trivial alert 'MyAlert'}, $T . ' $con->raise(alert)';
   }
 
+  {
+    my $T = '[logdump]';
+    my $call = sub {
+      my ($method, @args) = @_;
+      my $con = YATT::Lite::Connection->create
+	(undef, logfh => ostream(my $buffer = ""));
+      $con->$method(@args);
+      $buffer;
+    };
+
+    like $call->(logdump => 'auth.login' => 'foo', [], undef, {baz => 'bang'})
+      , qr/^AUTH\.LOGIN: \[.*?\] 'foo', \[\], undef, \{'baz' => 'bang'\}/
+	, "$T basic";
+
+    like $call->(logdump => '/foo/bar')
+      , qr|^DEBUG: \[.*?\] /foo/bar|
+	, "$T (nontagword) => DEBUG";
+
+    like $call->(logdump => [foo => 'bar'])
+      , qr|^DEBUG: \[.*?\] \['foo','bar'\]|
+	, "$T (struct) => DEBUG";
+
+    like $call->(logdump => undef, 'bar')
+      , qr/^UNDEF: \[.*?\] 'bar'/
+	, "$T undef => UNDEF";
+  }
 
   # ファイルに書けるか
   # header 周りの finalize はどうか。

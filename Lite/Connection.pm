@@ -205,9 +205,20 @@ sub logemit {
   my $fh = $prop->{cf_logfh} || $glob->error_fh;
   my $logger = $prop->{cf_logger};
   return unless $fh || $logger;
+  my $tag = do {
+    unless (defined $_[0]) {
+      shift;
+      'undef'
+    } elsif (ref $_[0]) {
+      unshift @_, terse_dump(shift @_);
+      'debug';
+    } elsif ($_[0] =~ /^[\w\.\-]+$/) {
+      shift;
+    } else {
+      'debug';
+    }
+  };
   my $msg = join(" ", map {(my $cp = $_) =~ s/\n/\n /g; $cp} @_);
-  my $tag = defined $_[0] && !ref $_[0] && $_[0] =~ /^[\w\.\-]+$/
-    ? shift : "debug";
   if ($fh) {
     print $fh uc($tag).": [", $glob->iso8601_datetime(), " #$$] $msg\n";
   } else {
