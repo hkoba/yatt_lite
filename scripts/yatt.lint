@@ -57,7 +57,7 @@ if ($opts->{cf_tap}) {
 
 foreach my $fn (@ARGV) {
   my $dir = dirname($fn);
-  my $dirhandler = $dispatcher->get_dirhandler($dir);
+  my $dirhandler = $dispatcher->get_dirhandler($dispatcher->rel2abs($dir));
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
 
   my $error_handler = do {
@@ -85,8 +85,15 @@ foreach my $fn (@ARGV) {
     $nerror++;
     next;
   };
-  unless (catch {my $pkg = $trans->find_product(perl => $tmpl)}) {
+  unless (my $err = catch {my $pkg = $trans->find_product(perl => $tmpl)}) {
     print "ok $i - $fn\n" if $opts->{cf_tap};
+  } else {
+    if ($opts->{cf_tap}) {
+      warn "# $err\n";
+    } else {
+      print $err;
+    }
+    $nerror++;
   }
 } continue {
   $i++;

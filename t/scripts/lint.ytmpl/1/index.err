@@ -1,0 +1,2 @@
+Global symbol "$foo" requires explicit package name [[at .*?/index.yatt line]] 3.
+Global symbol "$bar" requires explicit package name [[at .*?/index.yatt line]] 3.

@@ -30,7 +30,7 @@ unless (-x $script) {
   plan skip_all => "Can't find yatt.$func: $script";
 }
 
-my $tstdir = "$FindBin::Bin/ytmpl";
+my $tstdir = "$FindBin::Bin/$func.ytmpl";
 
 my @tests;
 foreach my $fn (dict_sort glob("$tstdir/[1-9]*/index.yatt")) {
@@ -63,9 +63,50 @@ sub test_html {
   }
 }
 
+# use IPC::Open3; use Symbol qw/gensym/;
+
+sub test_err {
+  my ($src, $res, $title) = @_;
+  my $args = '';
+  if (-r (my $fn = "$src.in")) {
+    $args .= " " . read_file($fn);
+  }
+  my $out = qx($^X -I$libdir $script $src$args 2>&1);
+  if (defined $out and $?) {
+    eq_or_diff_subst($out, read_file($res), $title // $src);
+  } else {
+    fail $src;
+  }
+}
+
 sub read_file {
   my $fn = shift;
   open my $fh, '<', $fn or die "Can't open '$fn': $!";
   local $/;
   <$fh>;
+}
+
+sub eq_or_diff_subst {
+  my ($got, $expect_pat, $title) = @_;
+  my (@patlist, %dup_pat);
+  my $fill = "___";
+  $expect_pat =~ s{\[\[(.*?)\]\]}{
+    do {
+      unless ($dup_pat{$1}++) {
+	push @patlist, $1;
+      }
+      $fill;
+    }
+  }eg;
+
+  unless (defined $got) {
+    fail $title;
+    diag "got undef";
+    return;
+  }
+
+  my $subst = join "|", @patlist;
+  $got =~ s/$subst/$fill/g;
+
+  eq_or_diff($got, $expect_pat, $title);
 }
