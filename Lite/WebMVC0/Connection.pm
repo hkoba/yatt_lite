@@ -64,6 +64,11 @@ sub param {
   }
 }
 
+sub queryobj {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_hmv} || $prop->{cf_cgi};
+}
+
 #========================================
 
 sub configure_cgi {
@@ -194,7 +199,26 @@ sub mkquery {
   $sep //= '&';
 
   my @enc_param;
-  if (ref $param eq 'HASH') {
+  my ($fkeys, $fgetall);
+  if (not defined $param or not ref $param) {
+    return wantarray ? () : '';
+    # nop
+  }
+
+  if (UNIVERSAL::isa($param, ref $self)) {
+    # $CON->mkquery($CON) == $CON->mkquery($CON->queryobj)
+    $param = $param->queryobj;
+  }
+
+  if ($fkeys = UNIVERSAL::can($param, 'keys')
+      and $fgetall = UNIVERSAL::can($param, 'get_all')
+      or ($fkeys = $fgetall = UNIVERSAL::can($param, 'param'))) {
+    foreach my $key (YATT::Lite::Util::unique($fkeys->($param))) {
+      my $enc = $self->url_encode($key);
+      push @enc_param, "$enc=".$self->url_encode($_)
+	for $fgetall->($param, $key);
+    }
+  } elsif (ref $param eq 'HASH') {
     push @enc_param, $self->url_encode($_).'='.$self->url_encode($param->{$_})
       for sort keys %$param;
   } elsif (ref $param eq 'ARRAY') {

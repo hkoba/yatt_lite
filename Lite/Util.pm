@@ -18,6 +18,7 @@ require Scalar::Util;
     our @EXPORT_OK = (@EXPORT, qw/cached_in split_path rootname dict_order
 				  lookup_path lookup_dir
 				  appname extname
+				  unique
 				  captured is_debugging callerinfo
 				  dofile_in compile_file_in
 				  url_encode url_decode
@@ -405,9 +406,9 @@ sub url_decode {
 sub url_encode {
   my ( $self, $encode ) = @_;
   return () unless defined $encode;
-  # XXX: Forward slash is allowed, for cleaner url. This may break...
+  # XXX: Forward slash (and ':') is allowed, for cleaner url. This may break...
   $encode
-    =~ s{([^A-Za-z0-9\-_.!~*'() /])}{ uc sprintf "%%%02x",ord $1 }eg;
+    =~ s{([^A-Za-z0-9\-_.!~*'() /:])}{ uc sprintf "%%%02x",ord $1 }eg;
   $encode =~ tr/ /+/;
   return $encode;
 }
@@ -579,6 +580,12 @@ sub incr_opt {
 sub num_is_ge {
   defined $_[0] and not ref $_[0] and $_[0] ne ''
     and $_[0] =~ /^\d+$/ and $& >= $_[1];
+}
+
+# Order preserving unique.
+sub unique (@) {
+  my %dup;
+  map {$dup{$_}++ ? () : $_} @_;
 }
 
 1;

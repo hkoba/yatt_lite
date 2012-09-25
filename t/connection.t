@@ -190,19 +190,49 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     is $con->site_loc, '/myblog/', "in short: con->site_loc";
   }
 
+  my %base_env = qw{REQUEST_METHOD  GET
+		    SERVER_NAME     0
+		    SERVER_PORT     5000
+		    SERVER_PROTOCOL HTTP/1.1
+		    HTTP_REFERER    http://example.com/
+		    psgi.url_scheme http
+		 };
+
+  {
+    require Hash::MultiValue;
+    my $mkcon = sub {
+      my ($key, $class, $spec) = splice @_, 0, 3;
+      $mux->make_connection(undef, noheader => 1, $key => $class->new(@$spec)
+			    , @_)
+    };
+
+    is do {
+      my $con = $mkcon->(hmv => 'Hash::MultiValue'
+			 , [foo => 'a', foo => 'b', bar => 'baz']);
+      $con->mkquery($con);
+    }, "?foo=a&foo=b&bar=baz"
+      , "mkcon";
+
+    is do {
+      my $con = $mkcon->(hmv => 'Hash::MultiValue'
+			 , [foo => 'a', foo => 'b', bar => 'baz']
+			 , env => +{%base_env
+				    , qw{PATH_INFO       /foo
+					 REQUEST_URI     /foo}
+				   }
+			);
+      $con->mkurl(undef, $con, local => 1);
+    }, "/foo?foo=a&foo=b&bar=baz"
+      , "mkurl(undef, CON) => same parameter";
+  }
+
   my $THEME;
   {
     $THEME = '/foo';
-    my %env = qw{REQUEST_METHOD  GET
-		 PATH_INFO       /foo
-		 REQUEST_URI     /foo
-		 HTTP_HOST       0.0.0.0:5000
-		 SERVER_NAME     0
-		 SERVER_PORT     5000
-		 SERVER_PROTOCOL HTTP/1.1
-		 HTTP_REFERER    http://example.com/
-		 psgi.url_scheme http
-	       };
+    my %env = (%base_env
+	       , qw{HTTP_HOST       0.0.0.0:5000
+		    PATH_INFO       /foo
+		    REQUEST_URI     /foo});
     my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5000'
@@ -223,20 +253,15 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 
   {
     $THEME = '/';
-    my %env = qw{REQUEST_METHOD  GET
-		 PATH_INFO       /
-		 REQUEST_URI     /
-		 HTTP_HOST       0.0.0.0:5050
-		 SERVER_NAME     0
-		 SERVER_PORT     5000
-		 SERVER_PROTOCOL HTTP/1.1
-		 psgi.url_scheme http
-	       };
+    my %env = (%base_env
+	       , qw{HTTP_HOST       0.0.0.0:5050
+		    PATH_INFO       /
+		    REQUEST_URI     /});
     my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5050', "[$THEME] mkhost()";
 
-    '/foo' =~ m{/(\w+)}; # Fill $1.
+    '/foo' =~ m{/(\w+)}; # To test accidental-reference to $1, Fill $1.
     is $con->mkurl, 'http://0.0.0.0:5050/', "[$THEME] mkurl()";
 
     is $con->mkurl('bar'), 'http://0.0.0.0:5050/bar'

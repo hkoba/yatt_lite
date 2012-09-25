@@ -23,7 +23,7 @@ use Test::More qw(no_plan);
 
 {
   BEGIN {
-    use_ok('YATT::Lite::Util', qw/incr_opt/);
+    use_ok('YATT::Lite::Util', qw/incr_opt unique/);
   }
 
   my $list = [qw/foo bar/];
@@ -37,4 +37,7 @@ use Test::More qw(no_plan);
   $list = [{depth => 1}, qw/foo bar/];
   is_deeply [incr_opt(depth => $list), $list]
     , [{depth => 2}, $list], "depth is incremented";
+
+  is_deeply [unique qw/foo bar foo/], [qw/foo bar/]
+    , "(order preserving) unique";
 }

@@ -8,7 +8,7 @@ use Carp;
 
 require YATT::Lite::MFields;
 
-use YATT::Lite::Util;
+use YATT::Lite::Util qw/globref terse_dump url_encode/;
 
 sub default_export { qw(*YATT) }
 
@@ -133,6 +133,37 @@ sub entity_format {
 sub entity_HTML {
   my $this = shift;
   \ join "", grep {defined $_} @_;
+}
+
+sub entity_url_encode {
+  my $this = shift;
+  join "", map {url_encode($this, $_)} @_;
+}
+
+sub entity_alternative {
+  my ($this, $value, $list) = @_;
+  my @alt = grep {$value ne $_} @$list;
+  $alt[0]
+}
+
+# XXX: auto url_encode
+sub entity_append_params {
+  my ($this, $url) = splice @_, 0, 2;
+  return $url unless @_;
+  $url .= "?" unless $url =~ m{\?};
+  $url .= join "&", map {
+    unless (ref $_) {
+      url_encode($this, $_)
+    } elsif (ref $_ eq 'SCALAR') {
+      # Assume already encoded.
+      $$_;
+    } elsif (ref $_ eq 'ARRAY') {
+      my ($k, @v) = @$_;
+      url_encode($this, $k) ."=".join("", map {url_encode($this, $_)} @v);
+    } else {
+      die "Unknown datatype for append_params";
+    }
+  } @_;
 }
 
 sub entity_dump {

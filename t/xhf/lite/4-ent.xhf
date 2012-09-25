@@ -244,3 +244,55 @@ OUT:
  1964
  10
  10
+
+TITLE: url_encode
+IN:
+ <!yatt:args url>
+ &yatt:url_encode(:url);
+PARAM[
+- http://0:5000/foo?x=y&z=w;p=q
+]
+OUT:
+ http://0:5000/foo%3Fx%3Dy%26z%3Dw%3Bp%3Dq
+
+
+TITLE: alternative
+IN:
+ ja->&yatt:alternative(ja,[en,ja]);
+ en->&yatt:alternative(en,[en,ja]);
+ x->&yatt:alternative(x,[en,ja]);
+OUT:
+ ja->en
+ en->ja
+ x->en
+
+TITLE: append_params
+IN:
+ <!yatt:args url list=list>
+ &yatt:append_params(:url,:lexpand(:list));
+PARAM[
+- http://0:5000/foo
+[
+[
+- nx
+- http://0:5000
+- /bar?a=b
+]
+]
+]
+OUT:
+ http://0:5000/foo?nx=http://0:5000/bar%3Fa%3Db
+
+
+PARAM[
+- http://0:5000/bar?x=y
+[
+[
+aaa: bbb
+]
+[
+ccc: ddd
+]
+]
+OUT:
+ http://0:5000/bar?x=y&aaa=bbb&ccc=ddd
