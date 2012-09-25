@@ -266,6 +266,7 @@ OUT:
  en->ja
  x->en
 
+
 TITLE: append_params
 IN:
  <!yatt:args url list=list>
@@ -275,15 +276,15 @@ PARAM[
 [
 [
 - nx
-- http://0:5000
 - /bar?a=b
 ]
 ]
 ]
 OUT:
- http://0:5000/foo?nx=http://0:5000/bar%3Fa%3Db
+ http://0:5000/foo?nx=%2Fbar%3Fa%3Db
 
 
+TITLE: append_params(more params)
 PARAM[
 - http://0:5000/bar?x=y
 [
@@ -293,6 +294,23 @@ aaa: bbb
 [
 ccc: ddd
 ]
+[
+aaa: fff
+]
+]
 ]
 OUT:
- http://0:5000/bar?x=y&aaa=bbb&ccc=ddd
+ http://0:5000/bar?x=y&amp;aaa=bbb&amp;ccc=ddd&amp;aaa=fff
+
+
+TITLE: append_params(replace same param)
+PARAM[
+- http://0:5000/baz?x=X
+[
+[
+x: Y
+]
+]
+]
+OUT:
+ http://0:5000/baz?x=Y

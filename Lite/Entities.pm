@@ -150,20 +150,18 @@ sub entity_alternative {
 sub entity_append_params {
   my ($this, $url) = splice @_, 0, 2;
   return $url unless @_;
-  $url .= "?" unless $url =~ m{\?};
-  $url .= join "&", map {
-    unless (ref $_) {
-      url_encode($this, $_)
-    } elsif (ref $_ eq 'SCALAR') {
-      # Assume already encoded.
-      $$_;
-    } elsif (ref $_ eq 'ARRAY') {
-      my ($k, @v) = @$_;
-      url_encode($this, $k) ."=".join("", map {url_encode($this, $_)} @v);
-    } else {
-      die "Unknown datatype for append_params";
-    }
-  } @_;
+  require URI;
+  require Hash::MultiValue;
+  my $uri = URI->new($url);
+  my $hmv = Hash::MultiValue->new($uri->query_form);
+  my %multi;
+  foreach my $item (@_) {
+    my ($key, @strs) = @$item;
+    $hmv->remove($key) unless $multi{$key}++;
+    $hmv->add($key, join("", @strs));
+  }
+  $uri->query_form($hmv->flatten);
+  $uri->as_string;
 }
 
 sub entity_dump {
