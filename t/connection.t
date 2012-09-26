@@ -237,6 +237,8 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 
     is $con->mkhost, '0.0.0.0:5000'
       , "[$THEME] mkhost()";
+    is $con->mkprefix, 'http://0.0.0.0:5000'
+      , "[$THEME] mkprefix()";
     is $con->mkurl, 'http://0.0.0.0:5000/foo'
       , "[$THEME] mkurl()";
     is $con->mkurl('bar'), 'http://0.0.0.0:5000/bar'
@@ -260,6 +262,8 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
 
     is $con->mkhost, '0.0.0.0:5050', "[$THEME] mkhost()";
+
+    is $con->mkprefix('/'), 'http://0.0.0.0:5050/', "[$THEME] mkprefix(/)";
 
     '/foo' =~ m{/(\w+)}; # To test accidental-reference to $1, Fill $1.
     is $con->mkurl, 'http://0.0.0.0:5050/', "[$THEME] mkurl()";

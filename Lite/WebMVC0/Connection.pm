@@ -147,8 +147,6 @@ sub mkurl {
   my $opts = shift if @_ && ref $_[0] eq 'HASH';
   my ($file, $param, %opts) = @_;
 
-  my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
-  my $host = $glob->mkhost($scheme);
   my $req  = $glob->request_path;
   my ($orig, $dir) = ('');
   if (($dir = $req) =~ s{([^/]+)$}{}) {
@@ -167,12 +165,18 @@ sub mkurl {
 
   # XXX: /../ truncation
   # XXX: If sep is '&', scalar ref quoting is required.
+  # XXX: connection should have default separator.
   my $url = '';
-  if (not $opts{local}) {
-    $url .= $scheme . '://' . $host;
-  }
+  $url .= $glob->mkprefix unless $opts{local};
   $url .= $path . $glob->mkquery($param, $opts{separator});
   $url;
+}
+
+sub mkprefix {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
+  my $host = $glob->mkhost($scheme);
+  $scheme . '://' . $host . join("", @_);
 }
 
 sub mkhost {
