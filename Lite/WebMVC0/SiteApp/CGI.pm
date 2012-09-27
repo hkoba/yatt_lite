@@ -196,7 +196,7 @@ sub dump_pairs {
 sub show_error {
   (my MY $self, my ($fh, $error, $cgi)) = @_;
   # XXX: Is text/plain secure?
-  print $fh "Content-type: text/plain\n\n$@";
+  print $fh "Content-type: text/plain\n\n$error";
 }
 
 &YATT::Lite::Breakpoint::break_load_dispatcher_cgi;

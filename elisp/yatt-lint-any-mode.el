@@ -283,6 +283,7 @@ Currently only RHEL is supported."
 
 (defun yatt-lint-any-handle-perl-script (buffer)
   (if (member major-mode '(perl-mode cperl-mode))
+      ;; XXX: Should add -T if shbang has -T
       (yatt-lint-any-perl-error-by "perl -wc " buffer)))
 
 (defun yatt-lint-any-perl-error-by (command buffer)

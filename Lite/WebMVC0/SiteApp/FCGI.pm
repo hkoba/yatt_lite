@@ -13,6 +13,8 @@ package YATT::Lite::WebMVC0::SiteApp;
 #
 # FastCGI support, based on PSGI mode.
 #
+# Many parts are stolen from Plack::Handler::FCGI.
+#
 ########################################
 
 # runas_fcgi() is basically designed for Apache's dynamic fastcgi.
@@ -28,52 +30,90 @@ sub _runas_fcgi {
   local $self->{cf_is_psgi} = 1;
 
   # In suexec fcgi, $0 will not be absolute path.
-  my $progname = $0 if $0 =~ m{^/};
+  my $progname = do {
+    if (-r (my $fn = delete $opts{progname} || $0)) {
+      $self->rel2abs($fn);
+    } else {
+      croak "progname is empty!";
+    }
+  };
+  if (not defined $self->{cf_app_root}
+      and (my $dn = $progname) =~ s{/html/cgi-bin/[^/]+$}{}) {
+    $self->{cf_app_root} = $dn;
+    $self->{cf_doc_root} //= "$dn/html";
+    push @{$self->{tmpldirs}}, $self->{cf_doc_root}
+      unless $self->{tmpldirs} and @{$self->{tmpldirs}};
+    #print STDERR "Now:", terse_dump($self->{cf_app_root}, $self->{cf_doc_root}
+    #				    , $self->{tmpldirs}), "\n";
+  }
+
+  $self->prepare_app;
+
+  my $dir = dirname($progname);
+  my $age = -M $progname;
 
   my ($stdin, $stdout, $stderr) = ref $fhset eq 'ARRAY' ? @$fhset
-    : (\*STDIN, $fhset, $opts{isolate_stderr} ? \*STDERR : $fhset);
+    : (\*STDIN, $fhset, delete $opts{isolate_stderr} ? \*STDERR : $fhset);
 
   require FCGI;
-  my $sock = 0;
+  my $sock = do {
+    if (my $sockfile = delete $opts{listen}) {
+      FCGI::OpenSocket($sockfile, 100)
+	  or die "Can't open FCGI socket '$sockfile': $!";
+    } else {
+      0;
+    }
+  };
+
   my %env;
   my $request = FCGI::Request
     ($stdin, $stdout, $stderr
      , \%env, $sock, $opts{nointr} ? 0 :&FCGI::FAIL_ACCEPT_ON_INTR);
 
-  my ($dir, $age);
+  if (keys %opts) {
+    croak "Unknown options: ".join(", ", sort keys %opts);
+  }
+
   local $self->{cf_at_done} = sub {die \"DONE"};
   while ($request->Accept >= 0) {
     my Env $env = $self->psgi_fcgi_newenv(\%env, $stdin, $stderr);
-    $self->init_by_env($env);
-    unless (defined $progname) {
-      $progname = $env->{SCRIPT_FILENAME}
-	or die "\n\nSCRIPT_FILENAME is empty!\n";
-    }
-    unless (defined $dir) {
-      $dir = dirname($progname);
-      $age = -M $progname;
-    }
 
     if (-e "$dir/.htdebug_env") {
       $self->printenv($stdout, $env);
       next;
     }
 
-    # 出力の基本動作は streaming.
-    my $con;
-    my $error = catch {
-      my @params = $self->make_cgi($env, $args, \%opts);
-      $con = $self->make_connection($stdout, @params);
-      $self->cgi_dirhandler($con, @params);
-    };
+    my $res;
+    if (my $err = catch { $res = $self->call($env) }) {
+      # XXX: Should I do error specific things?
+      $res = $err;
+    }
 
-    $self->cgi_process_error($error, $con, $stdout, $env);
+    unless (defined $res) {
+      die "Empty response";
+    }
+    elsif (ref $res eq 'ARRAY') {
+      $self->fcgi_handle_response($res);
+    }
+    elsif (ref $res eq 'CODE') {
+      $res->(sub {
+	       $self->fcgi_handle_response($_[0]);
+	     });
+    }
+    elsif (not ref $res or UNIVERSAL::can($res, 'message')) {
+      print $stderr $res if $$stderr ne $stdout;
+      $self->cgi_process_error($res, undef, $stdout, $env);
+    }
+    else {
+      die "Bad response $res";
+    }
 
+    $request->Finish;
+
+    # Exit if bootscript is modified.
     last if -e $progname and -M $progname < $age;
   }
 }
-
-# Extracted and modified from Plack::Handler::FCGI.
 
 sub psgi_fcgi_newenv {
   (my MY $self, my Env $init_env, my ($stdin, $stderr)) = @_;
@@ -93,6 +133,38 @@ sub psgi_fcgi_newenv {
   # delete $env->{HTTP_CONTENT_TYPE};
   # delete $env->{HTTP_CONTENT_LENGTH};
   $env;
+}
+
+sub fcgi_handle_response {
+    my ($self, $res) = @_;
+
+    require HTTP::Status;
+
+    *STDOUT->autoflush(1);
+    binmode STDOUT;
+
+    my $hdrs;
+    my $message = HTTP::Status::status_message($res->[0]);
+    $hdrs = "Status: $res->[0] $message\015\012";
+
+    my $headers = $res->[1];
+    while (my ($k, $v) = splice @$headers, 0, 2) {
+        $hdrs .= "$k: $v\015\012";
+    }
+    $hdrs .= "\015\012";
+
+    print STDOUT $hdrs;
+
+    my $cb = sub { print STDOUT $_[0] };
+    my $body = $res->[2];
+    if (defined $body) {
+        Plack::Util::foreach($body, $cb);
+    }
+    else {
+        return Plack::Util::inline_object
+            write => $cb,
+            close => sub { };
+    }
 }
 
 &YATT::Lite::Breakpoint::break_load_dispatcher_fcgi;

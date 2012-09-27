@@ -39,7 +39,7 @@ my $dispatcher = YATT::Lite::WebMVC0::SiteApp->new
   (app_ns => 'MyApp'
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
-   , app_base => '@runyatt.ytmpl'
+   # , app_base => '@runyatt.ytmpl'
    , debug_cgen => $ENV{DEBUG}
    , debug_cgi  => $ENV{DEBUG_CGI}
    # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
@@ -51,5 +51,6 @@ if (caller) {
   # For do 'runyatt.cgi'.
   return $dispatcher;
 } else {
-  $dispatcher->runas($get_extname->($0), \*STDOUT, \%ENV, \@ARGV);
+  $dispatcher->runas($get_extname->($0), \*STDOUT, \%ENV, \@ARGV
+		     , progname => __FILE__);
 }

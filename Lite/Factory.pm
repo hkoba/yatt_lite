@@ -164,6 +164,8 @@ sub get_yatt {
   if (my $yatt = $self->{loc2yatt}{$loc}) {
     return $yatt;
   }
+#  print STDERR Carp::longmess("get_yatt for $loc"
+#			      , YATT::Lite::Util::terse_dump($self->{tmpldirs}));
   my ($realdir, $basedir) = lookup_dir(trim_slash($loc), $self->{tmpldirs});
   unless ($realdir) {
     $self->error("Can't find template directory for location '%s'", $loc);
