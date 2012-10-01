@@ -53,7 +53,8 @@ sub _runas_fcgi {
   my $age = -M $progname;
 
   my ($stdin, $stdout, $stderr) = ref $fhset eq 'ARRAY' ? @$fhset
-    : (\*STDIN, $fhset, delete $opts{isolate_stderr} ? \*STDERR : $fhset);
+    : (\*STDIN, $fhset
+       , ((delete $opts{isolate_stderr}) // 1) ? \*STDERR : $fhset);
 
   require FCGI;
   my $sock = do {

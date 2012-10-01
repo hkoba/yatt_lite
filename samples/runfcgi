@@ -27,7 +27,7 @@ if (-e "$0.debug" || $ENV{DEBUG_YATT_PSGI}) {
   MY->find_load_factory_script
     ->runas_fcgi(\*STDOUT
 		 , \%ENV, \@ARGV
-		 , isolate_stderr => $ENV{DEBUG_FCGI}
+		 , isolate_stderr => 1
 		 , listen => $sockfile
 		 , progname => MY->rel2abs(__FILE__));
 }
