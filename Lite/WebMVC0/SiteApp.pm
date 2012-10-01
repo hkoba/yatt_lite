@@ -156,7 +156,8 @@ sub call {
 	    , [map {"$_\t$env->{$_}\n"} sort keys %$env]];
   }
 
-  if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})) {
+  if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})
+      // $self->has_forbidden_path($env->{PATH_TRANSLATED})) {
     return $self->psgi_error(403, "Forbidden $deny");
   }
 
@@ -345,6 +346,9 @@ sub split_path_info {
 sub has_forbidden_path {
   (my MY $self, my $path) = @_;
   given ($path) {
+    when (undef) {
+      return undef;
+    }
     when (m{\.lib(?:/|$)}) {
       return ".lib: $path";
     }
