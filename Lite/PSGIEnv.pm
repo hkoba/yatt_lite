@@ -1,6 +1,7 @@
 package YATT::Lite::PSGIEnv; sub Env () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+use Carp;
 
 my @PSGI_FIELDS;
 BEGIN {
@@ -58,9 +59,37 @@ sub import {
 
   my $callpack = caller;
   my $envpack = $callpack . "::Env";
-  *{globref($callpack, 'Env')} = sub () { $envpack };
-  *{globref($envpack, 'ISA')} = [$myPack];
-  *{globref($envpack, 'FIELDS')} = {map {$_ => 1} @PSGI_FIELDS, @more_fields};
+  {
+    my $sym = globref($callpack, 'Env');
+    if (my $val = *{$sym}{CODE}) {
+      my $old = $val->();
+      croak "Conflicting definition of Env" unless $old eq $envpack;
+    } else {
+      *{$sym} = sub () { $envpack };
+    }
+  }
+  {
+    my $sym = globref($envpack, 'ISA');
+    my $val;
+    if ($val = *{$sym}{ARRAY} and @$val) {
+      croak "Conflicting definition of ISA: @$val" unless grep {$_ eq $myPack} @$val;
+    } else {
+      *$sym = [$myPack];
+    }
+  }
+  {
+    my $sym = globref($envpack, 'FIELDS');
+    my $fields = +{map {$_ => 1} @PSGI_FIELDS, @more_fields};
+    if (my $val = *{$sym}{HASH}) {
+      foreach my $f (keys %$fields) {
+	unless ($val->{$f} == $fields->{$f}) {
+	  croak "Conflicting definition of field $f";
+	}
+      }
+    } else {
+      *$sym = $fields;
+    }
+  }
 }
 
 sub psgi_fields {
