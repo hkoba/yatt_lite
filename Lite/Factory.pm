@@ -34,8 +34,10 @@ use YATT::Lite::MFields qw/cf_doc_root
 
 
 use YATT::Lite::Util::AsBase;
-use YATT::Lite::Util qw(lexpand globref untaint_any ckrequire dofile_in
-			lookup_dir fields_hash);
+use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
+			lookup_dir fields_hash
+			secure_text_plain
+		       /;
 use YATT::Lite::XHF;
 
 use YATT::Lite::Partial::ErrorReporter;

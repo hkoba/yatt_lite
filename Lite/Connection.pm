@@ -367,6 +367,14 @@ sub set_header {
   $glob;
 }
 
+sub set_header_list {
+  my PROP $prop = prop(my $glob = shift);
+  while (my ($k, $v) = splice @_, 0, 2) {
+      $prop->{headers}{$k} = $v;
+  }
+  $glob;
+}
+
 sub append_header {
   my PROP $prop = prop(my $glob = shift);
   my ($key, @values) = @_;

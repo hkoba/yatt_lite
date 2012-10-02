@@ -37,6 +37,7 @@ require Scalar::Util;
 				  shallow_copy
 				  incr_opt
 				  num_is_ge
+				  secure_text_plain
 				/);
   }
   use Carp;
@@ -586,6 +587,13 @@ sub num_is_ge {
 sub unique (@) {
   my %dup;
   map {$dup{$_}++ ? () : $_} @_;
+}
+
+sub secure_text_plain {
+  shift;
+  ("Content-type" => "text/plain; charset=utf-8"
+   , "X-Content-Type-Options" => "nosniff"  # To protect IE8~ from XSS.
+   );
 }
 
 1;

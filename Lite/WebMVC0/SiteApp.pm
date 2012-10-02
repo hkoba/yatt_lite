@@ -152,7 +152,7 @@ sub call {
 
   if (defined $self->{cf_app_root} and -e "$self->{cf_app_root}/.htdebug_env") {
     return [200
-	    , ["Content-type", "text/plain"]
+	    , [$self->secure_text_plain]
 	    , [map {"$_\t$env->{$_}\n"} sort keys %$env]];
   }
 
@@ -299,8 +299,14 @@ sub psgi_handle_static {
 
 sub psgi_error {
   (my MY $self, my ($status, $msg, @rest)) = @_;
-  return [$status, ["Content-type", "text/plain", @rest], [$msg]];
+  return [$status, [$self->secure_text_plain, @rest], [$msg]];
 }
+
+# XXX: Do we need to care about following headers too?:
+# * X-Content-Security-Policy
+# * X-Request-With
+# * X-Frame-Options
+# * Strict-Transport-Security
 
 sub is_done {
   defined $_[0] and ref $_[0] eq 'SCALAR' and not ref ${$_[0]}

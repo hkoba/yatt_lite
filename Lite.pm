@@ -48,7 +48,8 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			set_inc ostream try_invoke list_isa symtab
 			look_for_globref
 			subname ckeval
-		      /;
+			secure_text_plain
+		       /;
 
 sub Facade () {__PACKAGE__}
 sub default_trans {'YATT::Lite::Core'}
@@ -438,7 +439,7 @@ foreach
 sub dump {
   my MY $self = shift;
   # XXX: charset...
-  die [200, ["Content-type", "text/plain; charset=utf-8"]
+  die [200, [$self->secure_text_plain]
        , [map {terse_dump($_)."\n"} @_]];
 }
 

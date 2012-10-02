@@ -158,7 +158,9 @@ sub cgi_process_error {
 
   } elsif (defined $con and UNIVERSAL::isa($error, $self->Error)) {
     # Known error. Header (may be) already printed.
-    $con->set_content_type('text/plain');
+    (undef, my $ct, my @rest) = $self->secure_text_plain;
+    $con->set_content_type($ct);
+    $con->set_header_list(@rest) if @rest;
     $con->flush_headers;
     print $fh $error->message;
 
@@ -187,16 +189,22 @@ sub printenv {
 
 sub dump_pairs {
   (my MY $self, my ($fh)) = splice @_, 0, 2;
-  print $fh "\n\n";
+  $self->show_error($fh);
   while (my ($name, $value) = splice @_, 0, 2) {
     print $fh $name, "\t", terse_dump($value), "\n";
   }
 }
 
 sub show_error {
-  (my MY $self, my ($fh, $error, $cgi)) = @_;
-  # XXX: Is text/plain secure?
-  print $fh "Content-type: text/plain\n\n$error";
+  (my MY $self, my ($fh, $error, $env)) = @_;
+  if (my @kv = $self->secure_text_plain) {
+    while (my ($k, $v) = splice @kv, 0, 2) {
+      print $fh "$k: $v\n";
+    }
+  } else {
+    print $fh "\n";
+  }
+  print $fh "\n". ($error // "");
 }
 
 &YATT::Lite::Breakpoint::break_load_dispatcher_cgi;
