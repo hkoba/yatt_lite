@@ -36,6 +36,11 @@ BEGIN {
 	  HTTP_ACCEPT_LANGUAGE
 	  HTTP_ACCEPT_ENCODING
 
+	  REMOTE_ADDR
+	  HTTP_X_REAL_IP
+	  HTTP_X_CLIENT_IP
+	  HTTP_X_FORWARDED_FOR
+
 	  psgi.version
 	  psgi.url_scheme
 	  psgi.input

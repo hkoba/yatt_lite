@@ -11,14 +11,14 @@ package YATT::Lite::WebMVC0::SiteApp;
 
 ########################################
 #
-# FastCGI support, based on PSGI mode.
+# FastCGI support with auto_exit, based on PSGI mode.
 #
 # Many parts are stolen from Plack::Handler::FCGI.
 #
 ########################################
 
-# runas_fcgi() is basically designed for Apache's dynamic fastcgi.
-# If you want psgi.multiprocess, use psgi mode directly.
+# runas_fcgi() is designed for single process app.
+# If you want psgi.multiprocess, use Plack's own FCGI instead.
 
 sub _runas_fcgi {
   (my MY $self, my $fhset, my Env $init_env, my ($args, %opts)) = @_;
@@ -103,7 +103,11 @@ sub _runas_fcgi {
     }
     elsif (not ref $res or UNIVERSAL::can($res, 'message')) {
       print $stderr $res if $$stderr ne $stdout;
-      $self->cgi_process_error($res, undef, $stdout, $env);
+      if ($self->is_debug_allowed($env)) {
+	$self->cgi_process_error($res, undef, $stdout, $env);
+      } else {
+	$self->cgi_process_error("Application error", undef, $stdout, $env);
+      }
     }
     else {
       die "Bad response $res";

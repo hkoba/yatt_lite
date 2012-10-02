@@ -14,6 +14,7 @@ use 5.010;
 use parent qw(YATT::Lite::Factory);
 use YATT::Lite::MFields qw/cf_noheader
 			   cf_is_psgi
+			   allow_debug_from
 			   cf_debug_cgi
 			   cf_debug_psgi
 			   cf_debug_connection
@@ -410,6 +411,31 @@ sub document_dir {
   } else {
     $self->{cf_doc_root} // '';
   }
+}
+
+#========================================
+sub is_debug_allowed {
+  (my MY $self, my Env $env) = @_;
+  return unless $self->{allow_debug_from};
+  return unless defined(my $ip = $self->guess_client_ip($env));
+  $ip =~ $self->{allow_debug_from};
+}
+
+sub guess_client_ip {
+  (my MY $self, my Env $env) = @_;
+  $env->{HTTP_X_REAL_IP} // $env->{HTTP_X_CLIENT_IP} // do {
+    if (defined(my $forward = $env->{HTTP_X_FORWARDED_FOR})) {
+      [split /(?:\s*,\s*|\s+)/, $forward]->[0];
+    } else {
+      $env->{REMOTE_ADDR}
+    }
+  }
+}
+
+sub configure_allow_debug_from {
+  (my MY $self, my $data) = @_;
+  my $pat = join "|", map { quotemeta($_) } lexpand($data);
+  $self->{allow_debug_from} = qr{^(?:$pat)};
 }
 
 #========================================
