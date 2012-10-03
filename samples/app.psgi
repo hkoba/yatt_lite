@@ -19,6 +19,9 @@ BEGIN {
   } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {
     push @libdir, $found;
   }
+  if (-d (my $dn = "$app_root/extlib")) {
+    push @libdir, $dn;
+  }
 }
 use lib @libdir;
 
