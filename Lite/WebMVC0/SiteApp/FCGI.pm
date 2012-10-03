@@ -59,6 +59,11 @@ sub _runas_fcgi {
   require FCGI;
   my $sock = do {
     if (my $sockfile = delete $opts{listen}) {
+      unless (-e (my $d = dirname($sockfile))) {
+	require File::Path;
+	File::Path::make_path($d)
+	    or die "Can't mkdir $d: $!";
+      }
       FCGI::OpenSocket($sockfile, 100)
 	  or die "Can't open FCGI socket '$sockfile': $!";
     } else {
