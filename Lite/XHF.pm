@@ -28,7 +28,7 @@ our $cc_tabsp = qr{[\ \t]};
 
 our %OPN = ('[' => \&organize_array, '{' => \&organize_hash
 	    , '=' => \&organize_expr);
-our %CLO = (']' => 1, '}' => 1);
+our %CLO = (']' => '[', '}' => '{');
 our %NAME_LESS = (%CLO, '-' => 1);
 our %ALLOW_EMPTY_NAME = (':' => 1);
 
@@ -68,11 +68,16 @@ sub configure_string {
   $self;
 }
 
-# XXX: Should be renamed to read_all?
+# XXX: Is this should renamed to read_all?
 sub read {
   my MY $self = shift;
-  my ($keys, $values) = $self->cf_bindings(@_);
-  local @{$self}{@$keys} = @$values; # XXX: configure_ZZZ hook is not applied.
+  $self->cf_let(\@_, sub {
+		    $self->organize($self->tokenize);
+		});
+}
+
+sub tokenize {
+  (my MY $self) = @_;
   local $/ = "";
   my $fh = $$self{cf_FH};
   my @tokens;
@@ -83,13 +88,13 @@ sub read {
 	($self->{cf_filename} // $self->{cf_string}
 	 , $para);
       $para = encode(utf8 => $para) if $self->{cf_binary};
-      @tokens = $self->tokenize($para);
+      @tokens = $self->tokenize_1($para);
     } until (not $self->{cf_skip_comment} or @tokens);
   }
-  $self->organize(@tokens);
+  @tokens;
 }
 
-sub tokenize {
+sub tokenize_1 {
   my MY $reader = shift;
   $_[0] =~ s{\n+$}{\n}s;
   my ($ncomments, @result);
@@ -145,6 +150,9 @@ sub organize {
   my @result;
   while (@_) {
     my $desc = shift;
+    unless (defined $desc->[_NAME]) {
+      croak "Invalid XHF: Field close '$desc->[_SIGIL]' without open!";
+    }
     push @result, $desc->[_NAME] if $desc->[_NAME] ne ''
       or $ALLOW_EMPTY_NAME{$desc->[_SIGIL]};
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
@@ -169,18 +177,26 @@ sub organize_array {
   push @result, $first->[_VALUE] if defined $first and $first->[_VALUE] ne '';
   while (@$tokens) {
     my $desc = shift @$tokens;
-    last unless defined $desc->[_NAME];
-    if ($desc->[_NAME] ne '') {
+    # NAME
+    unless (defined $desc->[_NAME]) {
+      if ($desc->[_SIGIL] ne ']') {
+	croak "Invalid XHF: paren mismatch. '[' is closed by '$desc->[_SIGIL]'";
+      }
+      return \@result;
+    }
+    elsif ($desc->[_NAME] ne '') {
       push @result, $desc->[_NAME];
     }
+    # VALUE
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
       # sigil がある時、value があったらどうするかは、子供次第。
       push @result, $sub->($reader, $tokens, $desc);
-    } else {
+    }
+    else {
       push @result, $desc->[_VALUE];
     }
   }
-  \@result;
+  croak "Invalid XHF: Missing close ']'";
 }
 
 # '{' block.
@@ -191,8 +207,14 @@ sub organize_hash {
   my %result;
   while (@$tokens) {
     my $desc = shift @$tokens;
-    last unless defined $desc->[_NAME];
-    if ($desc->[_SIGIL] eq '-') {
+    # NAME
+    unless (defined $desc->[_NAME]) {
+      if ($desc->[_SIGIL] ne '}') {
+	croak "Invalid XHF: paren mismatch. '{' is closed by '$desc->[_SIGIL]'";
+      }
+      return \%result;
+    }
+    elsif ($desc->[_SIGIL] eq '-') {
       # Should treat two lines as one key value pair.
       unless (@$tokens) {
 	croak "Invalid XHF hash:"
@@ -218,7 +240,7 @@ sub organize_hash {
       $reader->add_value($result{$desc->[_NAME]}, $desc->[_VALUE]);
     }
   }
-  \%result;
+  croak "Invalid XHF: Missing close '}'";
 }
 
 # '=' value

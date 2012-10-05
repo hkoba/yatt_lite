@@ -32,6 +32,16 @@ sub test_parser ($$;$) {
     , join " ", grep {defined} $theme
       , Data::Dumper->new([$struct])->Terse(1)->Indent(0)->Dump;
 }
+sub test_error {
+  my ($input, $wanterr, $theme) = @_;
+  my $err = do {
+    local $@;
+    eval { $CLASS->new(string => $input)->read };
+    $@;
+  };
+  like $err, $wanterr, $theme;
+}
+
 sub read_times {
   my ($num, $input, @opts) = @_;
   my $parser = parser($input, @opts);
@@ -122,6 +132,24 @@ END
     , [{foo => 1, bar => 2}];
 
   test_parser [parser(<<END)->read]
+YATT_CONFIG[
+special_entities[
+- HTML
+]
+]
+END
+    , [YATT_CONFIG => [special_entities => ['HTML']]];
+
+  test_parser [parser(<<END)->read]
+stash{
+user{
+login: foo
+}
+}
+END
+    , [stash => {user => {login => 'foo'}}];
+
+  test_parser [parser(<<END)->read]
 {
 foo: 1
 bar: 2
@@ -192,5 +220,44 @@ baz:
  3
 END
     , [foo => 1, bar => 2, baz => "3\n"];
+
+
+  test_error <<END, qr/Missing close '\]'/, "missing close ]";
+foo[
+- x
+- y
+END
+
+  test_error <<END, qr/Missing close '\}'/, "missing close }";
+foo{
+- x
+- y
+END
+
+  test_error <<END, qr/paren mismatch. '\[' is closed by '\}'/, "Mismatching [} ";
+foo[
+- x
+- y
+}
+END
+
+  test_error <<END, qr/paren mismatch. '\{' is closed by '\]'/, "Mismatching {]";
+foo{
+- x
+- y
+]
+END
+
+  test_error <<END, qr/Field close '\]' without open!/, "close without open";
+- x
+- y
+]
+END
+
+  test_error <<END, qr/Field close '\}' without open!/, "close without open";
+- x
+- y
+}
+END
 
 }
