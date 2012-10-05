@@ -26,7 +26,7 @@ EOF
 fi
 
 function cmd_setup {
-    $yl_scripts/setup.zsh -q $1
+    $yl_scripts/setup-min.zsh -q $1/html
 }
 
 function cmd_cleanup {

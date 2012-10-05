@@ -293,6 +293,13 @@ sub flush {
   }
 }
 
+sub rewind {
+  my PROP $prop = (my $glob = shift)->prop;
+  seek *$glob, 0, 0;
+  ${$prop->{cf_buffer}} = '';
+  $glob;
+}
+
 #========================================
 # Cookie support, based on CGI::Cookie (works under PSGI mode too)
 

@@ -157,6 +157,9 @@ sub cgi_process_error {
     $self->cgi_response($fh, $env, @{$error});
 
   } elsif (defined $con and UNIVERSAL::isa($error, $self->Error)) {
+    # To erase premature output.
+    $con->rewind;
+
     # Known error. Header (may be) already printed.
     (undef, my $ct, my @rest) = $self->secure_text_plain;
     $con->set_content_type($ct);

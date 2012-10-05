@@ -32,23 +32,23 @@ fi
 
 # XXX: How about runyatt.psgi?
 files=(
-    cgi-bin/runyatt.*(@N)
-    cgi-bin/runyatt.(cgi|fcgi|psgi)(N)
-    cgi-bin/runyatt.lib/YATT(@N)
-    cgi-bin/runyatt.lib/.htaccess(N)
-    cgi-bin/.htaccess(N)
-    .htaccess(N)
+    html/cgi-bin/runyatt.*(@N)
+    html/cgi-bin/runyatt.(cgi|fcgi|psgi)(N)
+    html/cgi-bin/runyatt.lib/YATT(@N)
+    html/cgi-bin/runyatt.lib/.htaccess(N)
+    html/cgi-bin/.htaccess(N)
+    html/.htaccess(N)
 )
 
 myapp=(
-    cgi-bin/runyatt.lib/*.pm(.N)
+    html/cgi-bin/runyatt.lib/*.pm(.N)
 )
 
 (($#o_yn)) || {
     print Deleting following files:
     print -c "  $PWD"/$^files
     if ! (($#myapp)); then
-	print -c "  $PWD"/cgi-bin
+	print -c "  $PWD"/html/cgi-bin
     fi
 }
 
@@ -57,7 +57,7 @@ confirm "Are you sure to $bg[red]delete$bg[default] these?"
 rm -f $o_verbose $files
 
 if ! (($#myapp)); then
-    rm -rf $o_verbose cgi-bin
+    rm -rf $o_verbose html/cgi-bin
 fi
 
 print Now cleaned-up: $PWD

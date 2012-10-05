@@ -37,9 +37,9 @@ sub _runas_fcgi {
       croak "progname is empty!";
     }
   };
-  if (not defined $self->{cf_app_root}
-      and (my $dn = $progname) =~ s{/html/cgi-bin/[^/]+$}{}) {
-    $self->{cf_app_root} = $dn;
+
+  if ((my $dn = $progname) =~ s{/html/cgi-bin/[^/]+$}{}) {
+    $self->{cf_app_root} //= $dn;
     $self->{cf_doc_root} //= "$dn/html";
     push @{$self->{tmpldirs}}, $self->{cf_doc_root}
       unless $self->{tmpldirs} and @{$self->{tmpldirs}};
