@@ -393,6 +393,11 @@ BEGIN {
 # Locale gettext support.
 #========================================
 
+sub use_encoded_config {
+  (my MY $self) = @_;
+  $self->{cf_tmpl_encoding}
+}
+
 use YATT::Lite::Partial::Gettext;
 
 # Extract (and cache, for later merging) l10n msgs from filelist.

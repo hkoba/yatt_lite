@@ -647,3 +647,11 @@ baz: bang
 ]
 OUT:
  (bar)
+
+
+TITLE: bar and backslash
+IN:
+ <!yatt:args x="?qux">
+ |foo|bar\|baz\&yatt:x;
+OUT:
+ |foo|bar\|baz\qux

@@ -1,0 +1,326 @@
+<!yatt:config ignore_trailing_newlines>
+<!yatt:args mod mobile="value/0" sh_style>
+
+<yatt:if "not &yatt:mod;">
+  <yatt:front mobile/>
+
+<:yatt:else if="not &yatt:search_pod(:mod);"/>
+  <yatt:envelope mobile>
+    Not found: &yatt:mod;
+  </yatt:envelope>
+
+<:yatt:else if="&yatt:mobile;"/>
+  <yatt:mobile mod sh_style/>
+
+<:yatt:else/>
+  <yatt:podview mod sh_style/>
+
+</yatt:if>
+
+<!yatt:widget front mobile="value/0">
+<yatt:envelope mobile>
+
+<div class="container-fluid">
+<header class="navbar">
+  <div class="navbar-inner">
+    <h2>&yatt:dir_config(appname);</h2>
+  </div>
+</header>
+
+<div class="row-fluid frontform">
+  <div class="span8 offset2">
+  <h3>&yatt[[;Let's search Perl document.&yatt]];</h3>
+  <form class="fullwidth">
+    <input type="text" id="mod" name="mod" size="30" placeholder="Module name or pod name...">
+  </form>
+
+  <yatt:my files:list="&yatt:docpath_files(pod);"/>
+  <yatt:if "&yatt:lexpand(:files);">
+    <h3>&yatt[[;...or you can see local pods listed below:&yatt]];</h3>
+    <dl>
+      <yatt:foreach my:value=pod_info list=files>
+	<dt><a href="?mod=&yatt:pod_info[0];">&yatt:pod_info[0];</a></dt>
+	<dd>&yatt:pod_info[-1];</dd>
+      </yatt:foreach>
+    </dl>
+  </yatt:if>
+  </div>
+</div>
+</div>
+
+</yatt:envelope>
+
+
+<!yatt:widget mobile mod sh_style>
+<yatt:envelope mobile sh_style title=mod>
+
+<yatt:my found:value="&yatt:search_pod(:mod);"/>
+
+<div data-role="page">
+  <div data-role="header">
+    <h2>&yatt:mod;</h2>
+  </div>
+
+  <ul data-role="listview" id="__toc__">
+    <yatt:toc sectlist="&yatt:podsection(:found);"/>
+  </ul>
+</div>
+
+<section id="content">
+
+<yatt:foreach my=sect list="&yatt:podsection(:found);">
+<section data-role="page" id="&yatt:sect[1][2];">
+<yatt:my level:value="shift @$sect" head:value="shift @$sect"/>
+<yatt:podsection level head list=sect/>
+</section>
+</yatt:foreach>
+</section>
+
+</yatt:envelope>
+
+
+<!yatt:widget podview mod sh_style>
+<yatt:envelope sh_style title=mod>
+
+<yatt:my found:value="&yatt:search_pod(:mod);"/>
+
+<header class="container-fluid">
+  <div class="navbar">
+    <div class="navbar-inner">
+      <a class="brand" href="&yatt:CON:mkurl();">&yatt:dir_config(appname);</a>
+      <a class="brand" href="#">- &yatt:mod;</a>
+    </div>
+  </div>
+</header>
+
+<section class="container-fluid">
+<div class="row-fluid">
+<nav class="span4">
+  <div class="sidebar">
+    <div class="navbar">
+      <div class="navbar-inner">
+	<form class="navbar-form">
+	  <a href="#" onclick="history.back(); return false;">&#9664;</a>
+	  | <a href="&yatt:CON:mkurl();">&#8682;</a>
+	  <input type="text" name="mod" placeholder="Other module?" value="&yatt:mod;">
+	</form>
+      </div>
+    </div>
+  </div>
+
+  <div id="__toc__">
+    <ul class="toc">
+      <yatt:toc sectlist="&yatt:podsection(:found);"/>
+    </ul>
+  </div>
+</nav>
+
+<div class="span8">
+<yatt:foreach my=sect list="&yatt:podsection(:found);">
+<section id="&yatt:sect[1][2];">
+<yatt:my level:value="shift @$sect" head:value="shift @$sect"/>
+<yatt:podsection level head list=sect/>
+</section>
+</yatt:foreach>
+</div>
+
+</div>
+</section>
+</yatt:envelope>
+
+<!yatt:widget toc sectlist=list>
+<yatt:foreach my:list=tok list=sectlist>
+  <yatt:if "&yatt:tok[0]; =~ /^\d/">
+  <yatt:toc_sect sect=tok/>
+  </yatt:if>
+</yatt:foreach>
+
+<!yatt:widget xref_anchor atts=value>
+&yatt:breakpoint();
+<yatt:foreach my=xref list="map {defined $_ ? @$_ : ()} &yatt:atts{X};">
+<a name="&yatt:list2id(:xref,0);"></a>
+</yatt:foreach>
+
+<!yatt:widget toc_sect sect=list>
+<yatt:my level:value="shift @$sect" head:value="shift @$sect"
+	 atts:value="$$head[1]"/>
+<?perl splice @$head, 0, 2; ?>
+<li><a href="#&yatt:list2id(:head,0);"><yatt:inline list=head/></a>
+<yatt:if "grep {ref $_ && $$_[0] =~ /^\d/} @{&yatt:sect;}">
+<ul><yatt:toc sectlist=sect/></ul>
+</yatt:if>
+</li>
+
+<!yatt:widget podsection level="value" head="value" list="list">
+<yatt:my hlv:value="&yatt:level; +1" atts:value="$$head[1]"/>
+<?perl splice @$head, 0, 2;  ?>
+<yatt:if "&yatt:level; == 1">
+<div data-role="header">
+<yatt:xref_anchor atts/>
+<h&yatt:hlv; id="&yatt:list2id(:head,0);"><yatt:inline list=head/></h&yatt:hlv;>
+</div>
+<div data-role="content">
+<:yatt:else/>
+<yatt:xref_anchor atts/>
+<h&yatt:hlv; id="&yatt:list2id(:head,0);"><yatt:inline list=head/></h&yatt:hlv;>
+</yatt:if>
+
+<yatt:foreach my=tok list>
+<yatt:if "&yatt:tok[0]; =~ /^\d/">
+<yatt:my lv:value="shift @$tok" headnode:value="shift @$tok"/>
+<yatt:podsection level=lv head=headnode list=tok />
+<:yatt:else/>
+<yatt:paragraph tok/>
+</yatt:if>
+</yatt:foreach>
+<yatt:if "&yatt:level; == 1"></div></yatt:if>
+
+<!yatt:widget paragraph tok=list>
+<yatt:my type:value="'para_' . $this->entity_bar2underscore(shift @$tok)"
+	 atts:value="shift @$tok"/>
+&yatt:render(:type,:atts,:tok);
+
+<!yatt:widget para_Para atts=value list=list>
+<p>
+<yatt:xref_anchor atts/>
+<yatt:inline list/>
+</p>
+
+<!yatt:widget para_Verbatim atts=value list=list>
+<!--#yatt Note: this pre will get class=sh_sourceCode too.-->
+<pre class="sh_&yatt:default(:stash(code),perl);">
+&yatt:trim_leading_ws(:list[0]);
+</pre>
+
+
+
+<!yatt:widget para_head1 atts=value list=list>
+<h2><yatt:inline list/></h2>
+
+<!yatt:widget para_head2 atts=value list=list>
+<h3><yatt:inline list/></h3>
+
+<!yatt:widget para_head3 atts=value list=list>
+<h4><yatt:inline list/></h4>
+
+<!yatt:widget para_head4 atts=value list=list>
+<h5><yatt:inline list/></h5>
+
+<!yatt:widget para_over_text atts=value list=list>
+<dl>
+<yatt:foreach my:list=tok list>
+<yatt:if "&yatt:tok[0]; eq 'Para'">
+<yatt:my type:value="'para_' . $this->entity_bar2underscore(shift @$tok)"
+	 attsx:value="shift @$tok"/>
+<dd><yatt:inline list=tok/></dd>
+<:yatt:else/>
+<yatt:paragraph tok/>
+</yatt:if>
+</yatt:foreach>
+</dl>
+
+<!yatt:widget para_item_text atts=value list=list>
+<dt><yatt:xref_anchor atts/><a name="&yatt:list2id(:list,0);"></a><yatt:inline list/></dt>
+
+
+<!yatt:widget para_over_bullet atts=value list=list>
+<ul>
+<yatt:foreach my:list=tok list>
+<yatt:paragraph tok/>
+</yatt:foreach>
+</ul>
+
+<!yatt:widget para_item_bullet atts=value list=list>
+<li><yatt:inline list/></li>
+
+<!yatt:widget para_over_number atts=value list=list>
+<ol>
+<yatt:foreach my:list=tok list>
+<yatt:paragraph tok/>
+</yatt:foreach>
+</ol>
+
+<!yatt:widget para_item_number atts=value list=list>
+<li><yatt:inline list/></li>
+
+<!yatt:widget para_for atts=value list=list>
+&yatt:dispatch_one(for_,1,[:atts{target},:atts,:lexpand(:list)]);
+
+<!yatt:widget for_html atts=value data=list
+	      -- raw html --
+	      >
+<?yatt=== &yatt:data[-1][-1];?>
+
+<!yatt:widget for_css atts=value data=list
+	      -- raw css --
+	      >
+<style>
+&yatt:data[-1][-1];
+</style>
+
+<!yatt:widget for_syntax atts=value data=list
+	      -- To store current syntax into stash(code) --
+	      >
+<?yatt &yatt:stash(code,:data[-1][-1]);?>
+<!--(atts=&yatt:atts;; data=&yatt:data;)-->
+
+<!yatt:widget inline list=list>
+&yatt:dispatch_all(inl_,1,:lexpand(:list));
+
+<!yatt:widget inline1 list=value>
+&yatt:dispatch_one(inl_,1,:list);
+
+<!yatt:widget inl_I atts=value rest=list>
+<i><yatt:inline list=rest/></i>
+<!yatt:widget inl_B atts=value rest=list>
+<b><yatt:inline list=rest/></b>
+<!yatt:widget inl_C atts=value rest=list>
+<code>&yatt:dispatch_all(inl_,1,:lexpand(:rest));</code>
+<!yatt:widget inl_L atts=value rest=list>
+<a href="&yatt:podlink(mod,:atts);"><!--&yatt:atts;--><yatt:inline list=rest/></a>
+<!yatt:widget inl_E atts=value rest=list>
+<?perl die "really?"?>
+<!yatt:widget inl_F atts=value rest=list>
+<i class="fn"><yatt:inline list=rest/></i>
+<!yatt:widget inl_S atts=value rest=list>
+<code class="nbsp">&yatt:dispatch_all(inl_,1,:lexpand(:rest));</code>
+<!yatt:widget inl_X atts=value rest=list>
+<!--<yatt:inline list=rest/>-->
+<!yatt:widget inl_Z atts=value rest=list>
+Z(<yatt:inline list=rest/>)
+
+
+<!yatt:widget envelope
+	      title="html?" style="html?" mobile="value/0"
+	      sh_style
+	      body=[code title="html?"] body_class="?class"
+	      footer="html?">
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title><yatt:longtitle title/></title>
+  <link rel="stylesheet" href="&yatt:site_prefix();/vendor/bootstrap/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="&yatt:site_prefix();/vendor/bootstrap/css/bootstrap-responsive.min.css"/>
+  <link rel="stylesheet" href="&yatt:site_prefix();/sh_default.css"/>
+  <link rel="stylesheet" href="&yatt:site_prefix();/main.css"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <yatt:body title/>
+  <script type="text/javascript" src="&yatt:site_prefix();/vendor/jquery/jquery.min.js"></script>
+  <script type="text/javascript" src="&yatt:site_prefix();/vendor/shjs/sh_main.js"></script>
+  <script>
+    jQuery(function ($) {
+      sh_highlightDocument('&yatt:site_prefix();/vendor/shjs/lang/', '.js')
+    });
+  </script>
+</body>
+</html>
+
+<!yatt:widget longtitle title="html?">
+<yatt:if "&yatt:title;">
+&yatt:title; - &yatt:dir_config(appname);
+<:yatt:else/>
+&yatt:dir_config(appname);
+</yatt:if>

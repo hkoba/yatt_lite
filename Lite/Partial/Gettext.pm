@@ -2,7 +2,8 @@ package YATT::Lite::Partial::Gettext; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw/all/;
 use YATT::Lite::Partial
-  (fields => [qw/locale_cache/], requires => [qw/error/]);
+  (fields => [qw/locale_cache/]
+   , requires => [qw/error use_encoded_config/]);
 
 use YATT::Lite::Util qw/ckeval/;
 
@@ -70,7 +71,14 @@ sub lang_load_msgcat {
   my $entry = [];
   $entry->[_E_DICT] = my $hash = {};
   $entry->[_E_LIST] = my $res = Locale::PO->load_file_asarray($fn);
+
+  my $use_encoding = $self->use_encoded_config;
+
   foreach my $loc (@$res) {
+    if ($use_encoding) {
+      $loc->msgid(Encode::decode("utf-8", $loc->dequote($loc->msgid)));
+      $loc->msgstr(Encode::decode("utf-8", $loc->dequote($loc->msgstr)));
+    }
     my $id = $loc->dequote($loc->msgid);
     $hash->{$id} = $loc;
   }

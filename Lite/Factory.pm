@@ -302,7 +302,9 @@ sub configparams_for {
   # (@base ? (base => \@base) : ())
   (
    $self->cf_delegate_known(0, $hash
-			      , qw(output_encoding header_charset debug_cgen
+			      , qw(output_encoding header_charset
+				   tmpl_encoding
+				   debug_cgen
 				   at_done app_root
 				   namespace only_parse))
    , (exists $hash->{cf_error_handler}

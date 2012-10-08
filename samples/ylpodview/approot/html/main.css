@@ -1,0 +1,40 @@
+/* -*- coding: utf-8 -*- */
+
+.navbar {
+    margin-bottom: 12px;
+}
+
+#__toc__ {
+    margin-left: 0px;
+    list-style-type: none;
+    background: white;
+    text-align: left;
+    padding: 10px;
+    font-size: 80%;
+    border-radius: 6px 6px 6px 6px;
+    -moz-border-radius: 4px 4px 0px 0px;
+    -moz-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    -webkit-border-radius: 4px 4px 0px 0px;
+    -webkit-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 980px) {
+    #__toc__, div.sidebar {
+	position: fixed;
+	max-width: 295px;
+    }
+
+    #__toc__ {
+	top: 110px;
+	height: 80%;
+	overflow: auto;
+    }
+}
+
+div.sidebar input {
+    max-width: 95%;
+}
+
+div.sidebar  .navbar-inner {
+    padding: 0px;
+}
