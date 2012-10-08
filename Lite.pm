@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use 5.010;
 use Carp qw(carp croak confess);
-our $VERSION = '0.0.3_4'; # ShipIt do not understand qv().
+our $VERSION = '0.0_4'; # ShipIt do not understand qv().
 #use mro 'c3';
 
 use Scalar::Util qw/weaken/;
