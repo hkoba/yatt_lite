@@ -218,7 +218,8 @@ Currently only RHEL is supported."
     (unless (eq rc 0)
       (beep))
     (when (and file
-	       (not (equal (expand-file-name file) (buffer-file-name buffer)))
+	       (not (equal (expand-file-name file)
+			   (yatt-lint-tramp-localname buffer)))
 	       (not (equal file "-")))
 	(message "opening error file: %s" file)
 	(find-file-other-window file))
@@ -250,7 +251,7 @@ Currently only RHEL is supported."
 (defun yatt-lint-any-handle-yatt (buffer)
   (plist-bind (rc err)
       (yatt-lint-any-shell-command (yatt-lint-cmdfile "scripts/yatt.lint") " "
-				   (buffer-file-name buffer))
+				   (yatt-lint-tramp-localname buffer))
     (when rc
       (let (match diag)
 	;; う～ん、setq がダサくないか? かといって、any-matchのインデントが深くなるのも嫌だし...
@@ -288,7 +289,8 @@ Currently only RHEL is supported."
 
 (defun yatt-lint-any-perl-error-by (command buffer)
   (plist-bind (rc err)
-      (yatt-lint-any-shell-command command " " (buffer-file-name buffer))
+      (yatt-lint-any-shell-command command " "
+				   (yatt-lint-tramp-localname buffer))
     (when rc
       (let (match diag)
 	(cond ((setq match
@@ -320,7 +322,9 @@ Currently only RHEL is supported."
 	rc err)
     (save-window-excursion
       (unwind-protect
-	  (setq rc (shell-command (apply #'concat cmd args) tmpbuf))
+	  (setq rc (yatt-lint-tramp-command-in
+		    (current-buffer)
+		    (apply #'concat cmd args) tmpbuf))
 	(setq err (with-current-buffer tmpbuf
 		    ;; To remove last \n
 		    (goto-char (point-max))
@@ -330,6 +334,27 @@ Currently only RHEL is supported."
 	;; (message "error=(((%s)))" err)
 	(kill-buffer tmpbuf)))
     `(rc ,rc err ,err)))
+
+(defun yatt-lint-tramp-command-in (curbuf command outbuf &rest errorbuf)
+  (if (yatt-lint-is-tramp (buffer-file-name curbuf))
+      (tramp-handle-shell-command command outbuf)
+    (shell-command command outbuf errorbuf)))
+
+(defun yatt-lint-tramp-localname (fn-or-buf)
+  (let ((fn (cond ((stringp fn-or-buf)
+		   fn-or-buf)
+		  ((bufferp fn-or-buf)
+		   (buffer-file-name fn-or-buf))
+		  (t
+		   (error "Invalid argument %s" fn-or-buf)))))
+    (if (yatt-lint-is-tramp fn)
+	(let ((vec (tramp-dissect-file-name fn)))
+	  (tramp-file-name-localname vec))
+      fn)))
+
+(defun yatt-lint-is-tramp (fn)
+  (and (fboundp 'tramp-tramp-file-p)
+       (tramp-tramp-file-p fn)))
 
 (defun yatt-lint-any-match (pattern str &rest key-offset)
   "match PATTERN to STR and extract match-portions specified by KEY-OFFSET."
