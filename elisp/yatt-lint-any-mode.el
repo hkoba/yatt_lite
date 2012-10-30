@@ -121,15 +121,18 @@ To disable, set to nil.")
 		  "lib/YATT/")
 		 )))))
 
+
 (defun yatt-lint-any-find-upward (file &optional startdir)
   "Search FILE from STARTDIR and its parent, upto /."
-  (let ((dir (or startdir (file-name-directory
-			   (buffer-file-name (current-buffer)))))
-	fn)
+  (let* ((full (or startdir (file-name-directory
+			     (buffer-file-name (current-buffer)))))
+	 (prefix (yatt-lint-tramp-prefix full))
+	 (dir    (yatt-lint-tramp-localname full))
+	 fn)
     (while (and
 	    dir
 	    (not (equal dir "/"))
-	    (not (file-exists-p (setq fn (concat dir file)))))
+	    (not (file-exists-p (setq fn (concat prefix dir file)))))
       (setq dir (file-name-directory (directory-file-name dir))))
     (if (file-exists-p fn)
 	fn)))
@@ -335,12 +338,13 @@ Currently only RHEL is supported."
 	(kill-buffer tmpbuf)))
     `(rc ,rc err ,err)))
 
-(defun yatt-lint-tramp-command-in (curbuf command outbuf &rest errorbuf)
+(defun yatt-lint-tramp-command-in (curbuf command &optional outbuf errorbuf)
   (if (yatt-lint-is-tramp (buffer-file-name curbuf))
-      (tramp-handle-shell-command command outbuf)
+      (tramp-handle-shell-command command outbuf errorbuf)
     (shell-command command outbuf errorbuf)))
 
 (defun yatt-lint-tramp-localname (fn-or-buf)
+  ;;; XXX: How about accepting dissected-vec as argument?
   (let ((fn (cond ((stringp fn-or-buf)
 		   fn-or-buf)
 		  ((bufferp fn-or-buf)
@@ -351,6 +355,24 @@ Currently only RHEL is supported."
 	(let ((vec (tramp-dissect-file-name fn)))
 	  (tramp-file-name-localname vec))
       fn)))
+
+(defun yatt-lint-tramp-prefix (fn-or-buf)
+  ;;; XXX: duplicate logic! fn-or-buf
+  (let ((fn (cond ((stringp fn-or-buf)
+		   fn-or-buf)
+		  ((bufferp fn-or-buf)
+		   (buffer-file-name fn-or-buf))
+		  (t
+		   (error "Invalid argument %s" fn-or-buf)))))
+    (if (yatt-lint-is-tramp fn)
+	(let ((vec (tramp-dissect-file-name fn)))
+	  (tramp-make-tramp-file-name
+	   (tramp-file-name-method vec)
+	   (tramp-file-name-user vec)
+	   (tramp-file-name-host vec)
+	   ""))
+      "")))
+
 
 (defun yatt-lint-is-tramp (fn)
   (and (fboundp 'tramp-tramp-file-p)
