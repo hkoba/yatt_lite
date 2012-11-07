@@ -52,12 +52,18 @@
   foreach my $path (@ARGV ? @ARGV : $site->cget('doc_root')) {
     if (-d $path) {
       my $yatt = $site->load_yatt($path);
+      $yatt->configure(debug_cgen => $ENV{DEBUG});
       my $saveas = $yatt->fn_msgfile($cmd->{cf_lang});
       if ($cmd->{cf_merge} || $cmd->{cf_write}) {
 	$yatt->get_lang_msg($cmd->{cf_lang});
       }
-      my @msglist = $yatt->lang_extract_lcmsg($cmd->{cf_lang}
-					      , [$yatt->list_items]);
+      # XXX: Work around for ns confliction bug.
+      my @items = public_only($yatt, $yatt->list_items);
+      unless ($cmd->{cf_quiet}) {
+	print STDERR join("\n  ", "parsing:", @items), "\n";
+      }
+
+      my @msglist = $yatt->lang_extract_lcmsg($cmd->{cf_lang}, \@items);
       unless (-r $saveas) {
 	unshift @msglist, $cmd->default_header;
       }
@@ -99,3 +105,10 @@ sub default_header {
 }
 
 # 2011-12-07 18:16+0900
+
+sub public_only {
+  my ($yatt) = shift;
+  grep {
+    $yatt->find_part($_)->cget('public')
+  } @_;
+}
