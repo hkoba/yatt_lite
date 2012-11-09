@@ -29,12 +29,16 @@ BEGIN {
     s{/html/cgi-bin/.*}{} ? $_ : ();
   } $untaint_any->(File::Spec->rel2abs(__FILE__));
   $rootname = $get_rootname->($untaint_any->(realpath(__FILE__)));
+  if (-d "$app_root/lib/YATT") {
+    push @libdir, "$app_root/lib";
+  }
   if (defined $rootname and -d $rootname) {
     push @libdir, "$rootname.lib";
   } elsif (my ($found) = $FindBin::Bin =~ m{^(.*?)/YATT/}) {
     push @libdir, $found;
-  } else {
-    warn "Can't find libdir";
+  } 
+  unless (@libdir) {
+    warn "Can't find libdir".(defined $app_root ? ", app_root=$app_root" : "");
   }
   if (-d (my $dn = "$app_root/extlib")) {
     push @libdir, $dn;
