@@ -21,18 +21,38 @@ use YATT::Lite::PSGIEnv;
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
-  foreach my $name (qw(url_param request_method)) {
+  foreach my $name (qw(url_param)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
       $prop->{cf_cgi}->$name;
     };
   }
 
-  foreach my $item ([referer => 'HTTP_REFERER']) {
+  foreach my $item ([referer => 'HTTP_REFERER']
+		    , map([lc($_) => uc($_)]
+			  , qw/REMOTE_ADDR
+			       REQUEST_METHOD
+			       SCRIPT_NAME
+			       PATH_INFO
+			       QUERY_STRING
+			       SERVER_NAME
+			       SERVER_PORT
+			       SERVER_PROTOCOL
+			       CONTENT_LENGTH
+			       CONTENT_TYPE
+			      /)
+		   ) {
     my ($method, $env) = @$item;
     *{globref(PROP, $method)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
-      $prop->{cf_env}->{$env};
+      my ($default) = @_;
+      if ($prop->{cf_env}) {
+	$prop->{cf_env}->{$env} // $default;
+      } elsif ($prop->{cf_cgi} and my $sub = $prop->{cf_cgi}->can($method)) {
+	$sub->($prop->{cf_cgi}) // $default;
+      } else {
+	$default;
+      }
     };
   }
 
