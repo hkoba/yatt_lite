@@ -24,7 +24,7 @@ use YATT::Lite::CGen::Perl; # Just for debugging aid.
 # XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
 
-local $SYS = my $dispatcher = YATT::Lite::Factory->find_load_factory_script
+local $SYS = my $dispatcher = YATT::Lite::Factory->load_factory_offline
   || do {
   require YATT::Lite::WebMVC0::SiteApp;
   YATT::Lite::WebMVC0::SiteApp->new

@@ -35,7 +35,7 @@ MY->parse_params(\@ARGV, \ my %common);
 
 my $direct_mode = delete $opts{direct};
 
-$SYS = my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+$SYS = my $dispatcher = YATT::Lite::Factory->load_factory_offline || do {
   require YATT::Lite::WebMVC0::SiteApp;
   YATT::Lite::WebMVC0::SiteApp->new
       (app_ns => 'MyApp'

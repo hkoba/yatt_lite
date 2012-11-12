@@ -27,7 +27,7 @@ use YATT::Lite::Util qw(rootname);
 
 # library の追加は？ <= .htyattrc で？違うよね?
 
-my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+my $dispatcher = YATT::Lite::Factory->load_factory_offline || do {
   require YATT::Lite::WebMVC0::SiteApp;
   YATT::Lite::WebMVC0::SiteApp->new
       (app_ns => 'MyApp'

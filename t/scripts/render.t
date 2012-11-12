@@ -30,6 +30,9 @@ unless (-x $script) {
   plan skip_all => "Can't find yatt.$func: $script";
 }
 
+$ENV{LANG} = "C"; # To avoid Wide char in $!
+chdir($FindBin::Bin) or die "Can't chdir: $!"; # To avoid reading outer app.psgi.
+
 my $tstdir = "$FindBin::Bin/$func.ytmpl";
 
 my @tests;

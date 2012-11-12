@@ -29,7 +29,7 @@ use YATT::Lite::Util::CmdLine qw/run/;
 use YATT::Lite::Factory;
 
 {
-  my $disp = YATT::Lite::Factory->find_load_factory_script
+  my $disp = YATT::Lite::Factory->load_factory_offline
     or die "Can't find YATT app script!\n";
 
   my MY $cmd = MY->new;

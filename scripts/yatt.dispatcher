@@ -30,7 +30,7 @@ my %opts = parse_opts(undef, \@ARGV);
 
 my $if_can = delete $opts{if_can};
 
-my $dispatcher = YATT::Lite::Factory->find_load_factory_script
+my $dispatcher = YATT::Lite::Factory->load_factory_offline
   or die "Can't find YATT app script!\n";
 
 # to_app is already done.

@@ -113,7 +113,7 @@ sub mode_internal {
 
   # do で runyatt.cgi を load し、 $dispatcher を取り出す！
   (my $cgi = $libdir) =~ s/\.\w+$/.cgi/;
-  my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+  my $dispatcher = YATT::Lite::Factory->load_factory_offline || do {
     require YATT::Lite::WebMVC0::SiteApp;
     YATT::Lite::WebMVC0::SiteApp->new
 	(app_ns => 'MyApp'

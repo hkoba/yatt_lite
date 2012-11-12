@@ -30,7 +30,7 @@ GetOptions("if_can" => \ my $if_can
 	  , "d=s" => \ my $o_dir)
   or exit 1;
 
-my $dispatcher = YATT::Lite::Factory->find_load_factory_script || do {
+my $dispatcher = YATT::Lite::Factory->load_factory_offline || do {
     require YATT::Lite::WebMVC0::SiteApp;
     YATT::Lite::WebMVC0::SiteApp->new
 	(app_ns => 'MyApp'

@@ -30,6 +30,7 @@ use YATT::Lite::MFields qw/cf_doc_root
 			   cf_debug_cgen
 
 			   cf_only_parse cf_namespace
+			   cf_offline
 			  /;
 
 
@@ -54,17 +55,27 @@ our $yatt_loading;
 sub loading { $yatt_loading }
 
 sub find_load_factory_script {
-  my ($pack, $dir, @opts) = @_;
-  my ($found) = $pack->find_factory_script($dir)
+  my ($pack, %opts) = @_;
+  my ($found) = $pack->find_factory_script(delete $opts{dir})
     or return;
   my $self = $pack->load_factory_script($found);
-
-  # To avoid use of error.ytmpl from support scripts.
-  $self->configure(error_handler => sub {
-		     my ($type, $err) = @_;
-		     die $err;
-		   }, @opts);
+  $self->configure(%opts);
   $self;
+}
+
+sub load_factory_offline {
+  shift->find_load_factory_script(offline => 1, @_);
+}
+
+sub configure_offline {
+  (my MY $self, my $value) = @_;
+  $self->{cf_offline} = $value;
+  if ($self->{cf_offline}) {
+    $self->configure(error_handler => sub {
+		       my ($type, $err) = @_;
+		       die $err;
+		     })
+  }
 }
 
 {

@@ -44,7 +44,7 @@
 					 , m => 'merge'
 					}));
 
-  my $site = YATT::Lite::Factory->find_load_factory_script($cmd->{cf_dir})
+  my $site = YATT::Lite::Factory->load_factory_offline($cmd->{cf_dir})
     or die "Can't find YATT app script!\n";
 
   $cmd->{site} = $site;
