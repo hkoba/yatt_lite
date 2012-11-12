@@ -34,7 +34,8 @@ use List::Util qw(sum);
 
 #========================================
 use YATT::Lite::Breakpoint;
-use YATT::Lite::WebMVC0::SiteApp;
+use YATT::Lite::WebMVC0::SiteApp ();
+use YATT::Lite::WebMVC0::SiteApp::CGI ();
 use YATT::Lite::Util qw(lexpand appname);
 require YATT::Lite::Test::TestFiles;
 
@@ -55,7 +56,19 @@ $i = 1;
   my $theme = "[t$i] from dir";
   ok chdir("$BASE/$docs"), "chdir [t$i]";
 
-  my $mux = YATT::Lite::WebMVC0::SiteApp->new
+  {
+    sub Base () {'MyTest_cgi'}
+    package
+      MyTest_cgi;
+    use YATT::Lite::WebMVC0::SiteApp -as_base;
+    sub before_dirhandler {
+      (my MY $self, my ($dh, $con, $file)) = @_;
+      unless (defined $con->cget('yatt')) {
+	die "CON->yatt is empty!\n";
+      }
+    }
+  }
+  my $mux = Base->new
     (app_ns => myapp($i), output_encoding => 'shiftjis'
      , app_root => $BASE
      , doc_root => "$BASE/$docs");

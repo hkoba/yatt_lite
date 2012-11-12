@@ -295,7 +295,7 @@ sub redirect {
       shift;
     }
   };
-  if ($prop->{header_is_sent}++) {
+  if ($prop->{header_was_sent}++) {
     die "Can't redirect multiple times!";
   }
 

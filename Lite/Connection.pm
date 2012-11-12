@@ -15,7 +15,7 @@ use fields
 
    # Outgoing response. Should be written by YATT and *.yatt
    , qw/cf_parent_fh cf_buffer
-	headers header_is_sent
+	headers header_was_sent
 	cf_status cf_content_type cf_charset cf_encoding
 	cookies_out/
 
@@ -260,10 +260,19 @@ DESTROY {
   #undef *$glob;
 }
 
+sub header_was_sent {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{header_was_sent} = 1;
+  my $parent = $prop->{cf_parent_fh};
+  if ($parent and my $sub = $parent->can('header_was_sent')) {
+    $sub->($parent);
+  }
+}
+
 sub flush_headers {
   my PROP $prop = (my $glob = shift)->prop;
 
-  return if $prop->{header_is_sent}++;
+  return if $prop->{header_was_sent}++;
 
   $glob->finalize_headers;
 

@@ -64,6 +64,8 @@ sub cgi_dirhandler {
     or die "Unknown directory: $params{dir}";
   # XXX: cache のキーは相対パスか、絶対パスか?
 
+  $con->configure(yatt => $dh);
+
   $self->run_dirhandler($dh, $con, $params{file});
 
   wantarray ? ($dh, $con) : $con;
@@ -169,6 +171,7 @@ sub cgi_process_error {
 
   } else {
     # Unknown error.
+    $con->header_was_sent if $con;
     $self->show_error($fh, $error, $env);
   }
 }
