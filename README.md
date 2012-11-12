@@ -3,7 +3,7 @@ YATT::Lite version 0.0.4
 
 YATT is Yet Another Template Toolkit, aimed at Web Designers, rather than
 well-trained programmers. To achieve this goal, YATT provides more
-readable syntax for HTML/XML savvy designers, ``lint'' for static syntax
+readable syntax for HTML/XML savvy designers, ``lint`` for static syntax
 checking and many safer default behaviors, ie. automatic output escaping
 based on argument type declaration and config file naming convention
 which helps access protection.
@@ -11,9 +11,9 @@ which helps access protection.
 YATT::Lite is template-syntax-compatible, lightweight, full rewrite of
 YATT with superior functionalities.
 
-In YATT, basic building block is called ``widget''. Template text is
-treated as a sequence of ``widget definition'', each of which is leaded by
-``widget declaration: <!yatt:widget>'', like multipart email.
+In YATT, basic building block is called ``widget``. Template text is
+treated as a sequence of ``widget definition``, each of which is leaded by
+``widget declaration: <!yatt:widget>``, like multipart email.
 
 A widget is translated into a perl subroutine (on memory, currently).  A
 template text is translated into a perl package (class). The translation
@@ -25,7 +25,7 @@ option and filepath. If template is loaded from filesystem, it is cached
 and reloaded if modified.
 
 Although widget is basically 'named', head of each template text can be a
-``unnamed (default) widget'', so that designers can treat a template file
+``unnamed (default) widget``, so that designers can treat a template file
 itself as a widget. This means plain HTML files *just works* as template set.
 
 In future, mainline YATT will incorporate YATT::Lite interface. It
