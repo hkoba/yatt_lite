@@ -5,14 +5,14 @@ use Carp;
 
 use base qw(YATT::Lite::Object);
 use fields qw(cf_FH cf_filename cf_string cf_tokens
-	      cf_nocr
+	      fh_configured
+	      cf_encoding cf_crlf
+	      cf_nocr cf_subst
 	      cf_skip_comment cf_bytes);
 
 use Exporter qw(import);
 our @EXPORT = qw(read_file_xhf);
 our @EXPORT_OK = (@EXPORT, qw(parse_xhf $cc_name));
-
-use Encode qw(encode);
 
 =head1 NAME
 
@@ -48,26 +48,17 @@ sub configure_filename {
   (my MY $self, my ($fn)) = @_;
   open $self->{cf_FH}, '<', $fn
     or croak "Can't open file '$fn': $!";
+  $self->{fh_configured} = 0;
   $self->{cf_filename} = $fn;
   $self;
 }
 
+# To accept in-stream encoding spec.
+# (See YATT::Lite::Test::XHFTest::load and t/lite_xhf.t)
 sub configure_encoding {
-  (my MY $self, my $enc) = @_;
-  unless ($self->{cf_FH}) {
-    croak "Can't set encoding for empty FH!";
-  }
-  binmode $self->{cf_FH}, ":encoding($enc)";
-  $self;
-}
-
-sub configure_crlf {
-  (my MY $self, my $enc) = @_;
-  unless ($self->{cf_FH}) {
-    croak "Can't set encoding for empty FH!";
-  }
-  binmode $self->{cf_FH}, ":crlf";
-  $self;
+  (my MY $self, my $value) = @_;
+  $self->{fh_configured} = 0;
+  $self->{cf_encoding} = $value;
 }
 
 sub configure_binary {
@@ -97,6 +88,16 @@ sub tokenize {
   (my MY $self) = @_;
   local $/ = "";
   my $fh = $$self{cf_FH};
+  unless ($self->{fh_configured}++) {
+    if (not $self->{cf_bytes} and not $self->{cf_string}
+	and $self->{cf_encoding}) {
+      binmode $fh, ":encoding($self->{cf_encoding})";
+    }
+    if ($self->{cf_crlf}) {
+      binmode $fh, ":crlf";
+    }
+  }
+
   my @tokens;
  LOOP: {
     do {
@@ -104,7 +105,6 @@ sub tokenize {
       $para = untaint_unless_tainted
 	($self->{cf_filename} // $self->{cf_string}
 	 , $para);
-      $para = encode(utf8 => $para) if $self->{cf_bytes};
       @tokens = $self->tokenize_1($para);
     } until (not $self->{cf_skip_comment} or @tokens);
   }
@@ -115,6 +115,10 @@ sub tokenize_1 {
   my MY $reader = shift;
   $_[0] =~ s{\n+$}{\n}s;
   $_[0] =~ s{\r+}{}g if $reader->{cf_nocr};
+  if (my $sub = $reader->{cf_subst}) {
+    local $_ = $_[0];
+    $sub->($_);
+  }
   my ($pos, $ncomments, @tokens, @result);
   foreach my $token (@tokens = split /(?<=\n)(?=[^\ \t])/, $_[0]) {
     $pos++;
