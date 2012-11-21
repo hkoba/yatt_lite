@@ -5,7 +5,8 @@ use Carp;
 
 use base qw(YATT::Lite::Object);
 use fields qw(cf_FH cf_filename cf_string cf_tokens
-	      cf_skip_comment cf_binary);
+	      cf_nocr
+	      cf_skip_comment cf_bytes);
 
 use Exporter qw(import);
 our @EXPORT = qw(read_file_xhf);
@@ -60,6 +61,22 @@ sub configure_encoding {
   $self;
 }
 
+sub configure_crlf {
+  (my MY $self, my $enc) = @_;
+  unless ($self->{cf_FH}) {
+    croak "Can't set encoding for empty FH!";
+  }
+  binmode $self->{cf_FH}, ":crlf";
+  $self;
+}
+
+sub configure_binary {
+  (my MY $self, my $value) = @_;
+  warnings::warnif(deprecated =>
+		   "XHF option 'binary' is deprecated, use 'bytes' instead");
+  $self->{cf_bytes} = $value;
+}
+
 sub configure_string {
   my MY $self = shift;
   ($self->{cf_string}) = @_;
@@ -87,7 +104,7 @@ sub tokenize {
       $para = untaint_unless_tainted
 	($self->{cf_filename} // $self->{cf_string}
 	 , $para);
-      $para = encode(utf8 => $para) if $self->{cf_binary};
+      $para = encode(utf8 => $para) if $self->{cf_bytes};
       @tokens = $self->tokenize_1($para);
     } until (not $self->{cf_skip_comment} or @tokens);
   }
@@ -97,15 +114,17 @@ sub tokenize {
 sub tokenize_1 {
   my MY $reader = shift;
   $_[0] =~ s{\n+$}{\n}s;
-  my ($ncomments, @result);
-  foreach my $token (split /(?<=\n)(?=[^\ \t])/, $_[0]) {
+  $_[0] =~ s{\r+}{}g if $reader->{cf_nocr};
+  my ($pos, $ncomments, @tokens, @result);
+  foreach my $token (@tokens = split /(?<=\n)(?=[^\ \t])/, $_[0]) {
+    $pos++;
     if ($token =~ s{^(?:\#[^\n]*(?:\n|$))+}{}) {
       $ncomments++;
       next if $token eq '';
     }
 
     unless ($token =~ s{^($cc_name*(?:\[\])?) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
-      croak "Invalid XHF token: $token in $_[0]"
+      croak "Invalid XHF token '$token': line " . token_lineno(\@tokens, $pos);
     }
     my ($name, $sigil, $tabsp, $eol) = ($1, $2, $3, $4);
 
@@ -143,6 +162,13 @@ sub tokenize_1 {
   return if $ncomments && !@result;
 
   wantarray ? @result : \@result;
+}
+
+sub token_lineno {
+  my ($tokens, $pos) = @_;
+  my $lineno = 1;
+  $lineno += tr|\n|| for @$tokens[0 .. $pos];
+  $lineno;
 }
 
 sub organize {

@@ -202,7 +202,7 @@ sub load_yatt {
   if (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
     _with_loading_file {$self} $cf, sub {
       $self->build_yatt($path, $basedir, $cycle
-			, $self->read_file_xhf($cf, binary => $self->{cf_binary_config}));
+			, $self->read_file_xhf($cf, bytes => $self->{cf_binary_config}));
     };
   } else {
     $self->build_yatt($path, $basedir, $cycle);
