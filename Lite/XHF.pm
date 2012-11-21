@@ -116,7 +116,8 @@ sub tokenize_1 {
   $_[0] =~ s{\n+$}{\n}s;
   $_[0] =~ s{\r+}{}g if $reader->{cf_nocr};
   if (my $sub = $reader->{cf_subst}) {
-    local $_ = $_[0];
+    local $_;
+    *_ =  \ $_[0];
     $sub->($_);
   }
   my ($pos, $ncomments, @tokens, @result);
