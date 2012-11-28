@@ -108,8 +108,10 @@ sub eq_or_diff_subst {
     return;
   }
 
-  my $subst = join "|", @patlist;
-  $got =~ s/$subst/$fill/g;
+  if (@patlist) {
+    my $subst = join "|", @patlist;
+    $got =~ s/$subst/$fill/g;
+  }
 
   eq_or_diff($got, $expect_pat, $title);
 }

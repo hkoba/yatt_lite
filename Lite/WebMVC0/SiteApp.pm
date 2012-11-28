@@ -481,7 +481,6 @@ sub make_connection {
   push @opts, site_prefix => $self->{cf_site_prefix};
 
   if (my $fn = $self->{cf_logfile}) {
-    &YATT::Lite::Breakpoint::breakpoint();
     my $dir = $self->app_path_ensure_existing(dirname($fn));
     my $real = "$dir/" . basename($fn);
     open my $fh, '>>', $real or die "Can't open logfile: fn=$real: $!";

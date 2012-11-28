@@ -22,7 +22,8 @@ use CGI;
 use YATT::Lite::Factory;
 use YATT::Lite::Entities qw(*YATT *CON *SYS);
 use YATT::Lite::Util::CmdLine qw(parse_opts parse_params);
-use YATT::Lite::Util qw(rootname get_locale_encoding);
+use YATT::Lite::Util qw(rootname get_locale_encoding
+			catch try_invoke);
 use YATT::Lite::CGen::Perl; # Just for debugging aid.
 use YATT::Lite::Breakpoint;
 
@@ -77,6 +78,7 @@ my @command;
 
 # [2] Execute all.
 
+my $nerror;
 foreach my $cmd (@command) {
   my ($dirhandler, $file, $sub, $this, @args) = @$cmd;
   local $YATT = $dirhandler;
@@ -85,8 +87,24 @@ foreach my $cmd (@command) {
   local $CON = $dispatcher->make_connection
     (\*STDOUT, cgi => CGI->new({}), file => $file, noheader => 1
      , system => $SYS, yatt => $YATT);
-  $sub->($this, $CON, @args);
+  my $err = catch {
+    $sub->($this, $CON, @args);
+  };
+
+  try_invoke($CON, 'flush_headers');
+
+  if (not $err or YATT::Lite::WebMVC0::SiteApp::is_done($err)) {
+  } elsif (ref $err eq 'ARRAY') {
+    my ($status, $header, $body) = @$err;
+    if ($status == 200) {
+      print $body
+    } else {
+      print STDERR join(" ", $status, @$body), "\n";
+      $nerror++;
+    }
+  } else {
+    die $err;
+  }
 }
 
-exit;
-# exit 1 if $nerror;
+exit 1 if $nerror;
