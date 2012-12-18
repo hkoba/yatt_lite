@@ -4,18 +4,20 @@ use strict;
 use warnings FATAL => qw/all/;
 use Carp;
 
-use mro 'c3';
+use mro 'c3'; # XXX: Is this ok?
 
 use YATT::Lite::Partial
   (requires => [qw/error/]
    , fields => [qw/cf_lang_list
 		   cf_default_lang
+		   cf_debug_lang
 		  /]
    , -Entity, -CON, -SYS
   );
 
 Entity default_lang => sub {
-  $SYS->cget('default_lang') || 'en'
+  my MY $self = $SYS;
+  $self->{cf_default_lang} // 'en';
 };
 
 Entity current_lang => sub {
@@ -25,11 +27,17 @@ Entity current_lang => sub {
 
 sub before_dirhandler {
   (my MY $self, my ($dh, $con, $file)) = @_;
+  $self->load_current_lang($con);
+  &maybe::next::method;
+}
 
-  $con->logdump("lang.init");
+sub load_current_lang {
+  (my MY $self, my ($con, $user)) = @_;
 
-  my $user;
-  if (my $sub = $self->can("load_current_user")) {
+  $con->logdump("lang.init") if $self->{cf_debug_lang};
+
+  if (not $user
+      and my $sub = $self->can("load_current_user")) {
     $user = $sub->($self, $con);
   }
 
@@ -42,7 +50,8 @@ sub before_dirhandler {
   my ($ck_lang) = map {$_ ? $_->value : ()} $con->cookies_in->{$lang_key};
 
   unless ($lang) {
-    if ($user and my $ul = $user->pref_lang) {
+    my $sub;
+    if ($user and $sub = $user->can('pref_lang') and my $ul = $sub->($user)) {
       $lang = $ul;
       # XXX: Should delete lang cookie.
     } elsif ($ck_lang) {
