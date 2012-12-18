@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use mro 'c3';
 use File::Spec;
 use File::Basename ();
 use Cwd ();
@@ -30,6 +31,8 @@ use Cwd ();
   # To have siteapp-wide entity, we extend it.
   use YATT::Lite::WebMVC0::SiteApp -as_base;
   use YATT::Lite qw/Entity *CON/;
+
+  use YATT::Lite::WebMVC0::Partial::LangSwitch;
 
   my $dispatcher = MY->new
     (app_ns => 'MyApp'
@@ -76,44 +79,4 @@ use Cwd ();
   }
 
   return $dispatcher->to_app;
-}
-
-BEGIN {
-  Entity default_lang => sub {'en'};
-
-  Entity current_lang => sub {
-    my ($this) = @_;
-    $CON->cget('lang');
-  };
-}
-
-sub before_dirhandler {
-  (my MY $self, my ($dh, $con, $file)) = @_;
-  $self->set_lang($con);
-}
-
-sub set_lang {
-  (my MY $self, my ($con, $user)) = @_;
-  my $lang_key = '--lang';
-  my $lang = $con->param($lang_key);
-  my ($ck_lang) = map {$_ ? $_->value : ()} $con->cookies_in->{$lang_key};
-
-  unless ($lang) {
-    if ($user and my $ul = $user->pref_lang) {
-      $lang = $ul;
-      # XXX: Should delete lang cookie.
-    } elsif ($ck_lang) {
-      $lang = $ck_lang;
-    }
-  } elsif (not $ck_lang or $ck_lang ne $lang) {
-    $con->set_cookie($lang_key, $lang, -path => $con->site_location);
-  }
-
-  my $yatt = $con->cget('yatt');
-  $lang ||= +$con->accept_language(filter => [qw/en ja/])
-    || $yatt->default_lang;
-  $con->configure(lang => $lang);
-  $yatt->get_lang_msg($lang);
-  $lang;
-
 }

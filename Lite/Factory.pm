@@ -396,8 +396,8 @@ sub run_dirhandler {
   $self->after_dirhandler($dh, $con, $file);
 }
 
-sub before_dirhandler {}
-sub after_dirhandler {}
+sub before_dirhandler { &maybe::next::method; }
+sub after_dirhandler  { &maybe::next::method; }
 
 sub invoke_dirhandler {
   (my MY $self, my ($dh, $con, $method, @args)) = @_;

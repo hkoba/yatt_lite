@@ -1,0 +1,65 @@
+package YATT::Lite::WebMVC0::Partial::LangSwitch;
+sub MY () {__PACKAGE__}
+use strict;
+use warnings FATAL => qw/all/;
+use Carp;
+
+use mro 'c3';
+
+use YATT::Lite::Partial
+  (requires => [qw/error/]
+   , fields => [qw/cf_lang_list
+		   cf_default_lang
+		  /]
+   , -Entity, -CON, -SYS
+  );
+
+Entity default_lang => sub {
+  $SYS->cget('default_lang') || 'en'
+};
+
+Entity current_lang => sub {
+  my ($this) = @_;
+  $CON->cget('lang');
+};
+
+sub before_dirhandler {
+  (my MY $self, my ($dh, $con, $file)) = @_;
+
+  $con->logdump("lang.init");
+
+  my $user;
+  if (my $sub = $self->can("load_current_user")) {
+    $user = $sub->($self, $con);
+  }
+
+  my $lang_key = '--lang';
+  my $lang = $con->param($lang_key);
+  if ($lang) {
+    $self->error("Invalid lang code!") unless $lang =~ /^\w{2}$/;
+  }
+
+  my ($ck_lang) = map {$_ ? $_->value : ()} $con->cookies_in->{$lang_key};
+
+  unless ($lang) {
+    if ($user and my $ul = $user->pref_lang) {
+      $lang = $ul;
+      # XXX: Should delete lang cookie.
+    } elsif ($ck_lang) {
+      $lang = $ck_lang;
+    }
+  } elsif (not $ck_lang or $ck_lang ne $lang) {
+    $con->set_cookie($lang_key, $lang, -path => $con->site_location);
+  }
+
+  my $yatt = $con->cget('yatt');
+  $lang ||= +$con->accept_language(filter =>
+				   $self->{cf_lang_list} // [qw/en ja/])
+    || $yatt->default_lang;
+  $con->configure(lang => $lang);
+  $yatt->get_lang_msg($lang);
+
+  &maybe::next::method;
+}
+
+1;

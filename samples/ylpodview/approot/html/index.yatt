@@ -23,7 +23,10 @@
 <div class="container-fluid">
 <header class="navbar">
   <div class="navbar-inner">
-    <h2>&yatt:dir_config(appname);</h2>
+    <a class="brand" href="./">&yatt:dir_config(appname);</a>
+    <ul class="nav nav-pils pull-right">
+      <li style="font-size: small;"><yatt:langswitcher/> </li>
+    </ul>
   </div>
 </header>
 

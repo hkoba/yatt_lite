@@ -94,6 +94,11 @@ sub declare_CON {
   *{globref($meta->{cf_package}, 'CON')} = YATT::Lite::Entities->symbol_CON;
 }
 
+sub declare_SYS {
+  (my Meta $meta) = @_;
+  require YATT::Lite::Entities;
+  *{globref($meta->{cf_package}, 'SYS')} = YATT::Lite::Entities->symbol_SYS;
+}
 
 sub export_partial_class_to {
   (my Meta $partial, my $fullclass) = @_;
