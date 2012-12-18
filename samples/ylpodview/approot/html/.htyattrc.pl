@@ -28,7 +28,7 @@ Entity search_pod => sub {
 
 Entity suffix_list => sub {
   my ($this) = @_;
-  my $lang = $this->entity_want_lang;
+  my $lang = $this->entity_current_lang;
   if ($lang eq $this->entity_default_lang) {
     return ('')
   } else {
@@ -202,13 +202,13 @@ Entity docpath_files => sub {
 
   # &YATT::Lite::Breakpoint::breakpoint();
   $ext =~ s/^\.*/./;
-  my $want_lang = $this->entity_want_lang;
+  my $current_lang = $this->entity_current_lang;
 
   my %gathered;
   foreach my $info (map { pod_info($_) } glob("$dir/*$ext")) {
     my ($name, $lang, $title) = @$info;
     $gathered{$name} //= [$name, [], ""];
-    if ($lang eq $want_lang) {
+    if ($lang eq $current_lang) {
       $gathered{$name}[2] = $title;
     } else {
       push @{$gathered{$name}[1]}, $lang;

@@ -46,11 +46,11 @@ use Cwd ();
   {
     my @docpath;
     while (@ARGV and -d $ARGV[0]) {
-      push @docpath, $dispatcher->rel2abs(shift @ARGV);
+      push @docpath, shift @ARGV;
     }
 
     unless (@docpath) {
-      push @docpath, $dispatcher->rel2abs(Cwd::cwd());
+      push @docpath, grep {-d} qw|./pod ./pods ./docs ./doc|, ".";
     }
 
     push @docpath, map {
@@ -63,7 +63,9 @@ use Cwd ();
 
     my $dirapp = $dispatcher->get_yatt('/');
 
-    $dirapp->configure(docpath => \@docpath);
+    $dirapp->configure(docpath => [map {
+      $dispatcher->rel2abs($_)
+    } @docpath]);
   }
 
   unless (caller) {
@@ -79,17 +81,9 @@ use Cwd ();
 BEGIN {
   Entity default_lang => sub {'en'};
 
-  Entity want_lang => sub {
+  Entity current_lang => sub {
     my ($this) = @_;
-    my $lang = $CON->param('--lang') || do {
-      my MY $yatt = $this->YATT;
-      my $avail = $yatt->cget('lang_available') || [qw/en ja/];
-      $CON->accept_language(filter => $avail);
-    };
-    unless ($lang =~ /^\w{2}$/) { # XXX: How about country suffix? (like en_GB)
-      $CON->error("Invalid langugae: %s", $lang);
-    }
-    $lang;
+    $CON->cget('lang');
   };
 }
 
@@ -99,10 +93,27 @@ sub before_dirhandler {
 }
 
 sub set_lang {
-  (my MY $self, my $con) = @_;
+  (my MY $self, my ($con, $user)) = @_;
+  my $lang_key = '--lang';
+  my $lang = $con->param($lang_key);
+  my ($ck_lang) = map {$_ ? $_->value : ()} $con->cookies_in->{$lang_key};
+
+  unless ($lang) {
+    if ($user and my $ul = $user->pref_lang) {
+      $lang = $ul;
+      # XXX: Should delete lang cookie.
+    } elsif ($ck_lang) {
+      $lang = $ck_lang;
+    }
+  } elsif (not $ck_lang or $ck_lang ne $lang) {
+    $con->set_cookie($lang_key, $lang, -path => $con->site_location);
+  }
+
   my $yatt = $con->cget('yatt');
-  my $lang = $self->EntNS->entity_want_lang
-    || $self->EntNS->entity_default_lang;
+  $lang ||= +$con->accept_language(filter => [qw/en ja/])
+    || $yatt->default_lang;
   $con->configure(lang => $lang);
   $yatt->get_lang_msg($lang);
+  $lang;
+
 }

@@ -89,6 +89,10 @@
     <div class="navbar-inner">
       <a class="brand" href="&yatt:CON:mkurl();">&yatt:dir_config(appname);</a>
       <a class="brand" href="#">- &yatt:mod;</a>
+
+      <ul class="nav nav-pils pull-right">
+	<li style="font-size: small;"><yatt:langswitcher/> </li>
+      </ul>
     </div>
   </div>
 </header>
@@ -324,3 +328,19 @@ Z(<yatt:inline list=rest/>)
 <:yatt:else/>
 &yatt:dir_config(appname);
 </yatt:if>
+
+<!yatt:widget langswitcher>
+<yatt:my clang:value="&yatt:current_lang();"
+	 nx:value="&yatt:CON:mkurl(,:CON,local,1);"
+	 nxesc:value="&yatt:url_encode(:nx);"
+	 altlang:value="&yatt:alternative(:clang,[en,ja]);"/>
+
+<a href="&yatt:append_params(:nx,[--lang,:altlang]);">
+&#10157; &yatt:render([langname,:altlang]);
+</a>
+
+<!yatt:widget langname_ja>
+Japanese
+
+<!yatt:widget langname_en>
+English
