@@ -327,7 +327,7 @@ Currently only RHEL is supported."
       (unwind-protect
 	  (setq rc (yatt-lint-tramp-command-in
 		    (current-buffer)
-		    (apply #'concat cmd args) tmpbuf))
+		    cmd args tmpbuf))
 	(setq err (with-current-buffer tmpbuf
 		    ;; To remove last \n
 		    (goto-char (point-max))
@@ -338,10 +338,13 @@ Currently only RHEL is supported."
 	(kill-buffer tmpbuf)))
     `(rc ,rc err ,err)))
 
-(defun yatt-lint-tramp-command-in (curbuf command &optional outbuf errorbuf)
-  (if (yatt-lint-is-tramp (buffer-file-name curbuf))
-      (tramp-handle-shell-command command outbuf errorbuf)
-    (shell-command command outbuf errorbuf)))
+(defun yatt-lint-tramp-command-in (curbuf cmd args &optional outbuf errorbuf)
+  (let ((command (apply #'concat (yatt-lint-tramp-localname cmd)
+			args)))
+    (if (yatt-lint-is-tramp (buffer-file-name curbuf))
+	(tramp-handle-shell-command
+	 command outbuf errorbuf)
+      (shell-command command outbuf errorbuf))))
 
 (defun yatt-lint-tramp-localname (fn-or-buf)
   ;;; XXX: How about accepting dissected-vec as argument?
