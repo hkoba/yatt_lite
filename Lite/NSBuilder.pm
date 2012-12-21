@@ -30,7 +30,6 @@ use YATT::Lite::Util qw(lexpand);
   }
 
   sub default_subns {'INST'}
-  sub default_app_ns {'MyApp'}
   sub default_default_app {'YATT::Lite'}
 
   sub init_default_app {
@@ -43,7 +42,8 @@ use YATT::Lite::Util qw(lexpand);
   sub init_app_ns {
     (my MY $self) = @_;
     # This usually set 'MyApp'
-    $self->{app_ns} = my $app_ns = $self->{cf_app_ns} // $self->default_app_ns;
+    $self->{app_ns} = my $app_ns = $self->{cf_app_ns}
+      // $self->{default_app}->default_app_ns;
     try_require($app_ns);
 
     my $site_entns = $self->{default_app}->ensure_entns

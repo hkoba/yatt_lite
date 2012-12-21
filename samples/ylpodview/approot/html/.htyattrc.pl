@@ -11,7 +11,7 @@ Entity search_pod => sub {
   my MY $yatt = $this->YATT;
   my $debug = -r "$yatt->{cf_dir}/.htdebug";
   my @dir = lexpand($yatt->{cf_docpath});
-  my @suf = (map("$_.pod", $this->entity_suffix_list), ".pm");
+  my @suf = (map("$_.pod", $this->entity_suffix_list), ".pm", "");
   my @found;
   foreach my $dir (@dir) {
     foreach my $suf (@suf) {
@@ -44,7 +44,7 @@ Entity podtree => sub {
 
   require Pod::Simple::SimpleTree;
   my $parser = Pod::Simple::SimpleTree->new;
-  $parser->accept_targets(qw(html css syntax));
+  $parser->accept_targets(qw(html css code));
   my $tree = $parser->parse_file($fn)->root;
   &YATT::Lite::Breakpoint::breakpoint();
   postprocess($tree);
@@ -53,18 +53,19 @@ Entity podtree => sub {
 
 sub postprocess {
   my ($list) = @_;
-  # &YATT::Lite::Breakpoint::breakpoint() if ref $list ne 'ARRAY';
   my $hash = $list->[1];
-  # &YATT::Lite::Breakpoint::breakpoint() if ref $hash ne 'HASH';
   for (my $i = $#$list; $i >= 2; $i--) {
+    # <<<Backward<<<
     ref $list->[$i] and $list->[$i][0] eq 'X'
       or next;
     my ($xref) = splice @$list, $i;
     push @{$hash->{X}}, $xref->[-1];
   }
   foreach my $item (@{$list}[2..$#$list]) {
+    # >>>Forward>>>
     next unless ref $item;
     postprocess($item);
+    $item->[0] =~ s/-/_/g;
   }
 }
 
@@ -204,17 +205,35 @@ Entity docpath_files => sub {
   $ext =~ s/^\.*/./;
   my $current_lang = $this->entity_current_lang;
 
-  my %gathered;
-  foreach my $info (map { pod_info($_) } glob("$dir/*$ext")) {
-    my ($name, $lang, $title) = @$info;
-    $gathered{$name} //= [$name, [], ""];
-    if ($lang eq $current_lang) {
-      $gathered{$name}[2] = $title;
-    } else {
-      push @{$gathered{$name}[1]}, $lang;
+  if (-r (my $fn = "$dir/index.lst")) {
+      open my $fh, '<', $fn or die "Can't open $fn: $!";
+      chomp(my @lines = <$fh>);
+      my @info;
+      foreach my $name (@lines) {
+	my $rec = [$name, [], ""];
+	foreach my $info (map {pod_info($_)} glob("$dir/$name*$ext")) {
+	  my ($name, $lang, $title) = @$info;
+	  push @{$rec->[1]}, $lang;
+	  if ($lang eq $current_lang) {
+	    $rec->[2] = $title;
+	  }
+	}
+	push @info, $rec if @{$rec->[1]};
+      }
+      @info;
+  } else {
+    my %gathered;
+    foreach my $info (map { pod_info($_) } glob("$dir/*$ext")) {
+      my ($name, $lang, $title) = @$info;
+      $gathered{$name} //= [$name, [], ""];
+      if ($lang eq $current_lang) {
+	$gathered{$name}[2] = $title;
+      } else {
+	push @{$gathered{$name}[1]}, $lang;
+      }
     }
+    sort {$$a[0] cmp $$b[0]} values %gathered;
   }
-  sort {$$a[0] cmp $$b[0]} values %gathered;
 };
 
 sub modname2fileprefix {

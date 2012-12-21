@@ -38,3 +38,38 @@ div.sidebar input {
 div.sidebar  .navbar-inner {
     padding: 0px;
 }
+
+code.pod {
+    color: #0628CB;
+    font-weight: bold;
+    font-style: normal;
+}
+
+i.pod.fn {
+    background-color: #F7F7F9;
+    border: 1px solid #E1E1E8;
+}
+
+dt { margin-bottom: .3em; }
+dd+dt {
+    margin-top: 1.8em;
+}
+
+h2 {
+    background-color: #eee;
+    border-radius: 6px;
+}
+
+h3 {
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    margin-top: 2em;
+}
+
+h4 {
+    margin-top: 2em;
+}
+
+h2 code.pod, h3 code.pod, h4 code.pod {
+    font-size: 105%;
+}

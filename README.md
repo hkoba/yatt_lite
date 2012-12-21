@@ -11,31 +11,6 @@ which helps access protection.
 YATT::Lite is template-syntax-compatible, lightweight, full rewrite of
 YATT with superior functionalities.
 
-In YATT, basic building block is called ``widget``. Template text is
-treated as a sequence of ``widget definition``, each of which is leaded by
-``widget declaration: <!yatt:widget>``, like multipart email.
-
-A widget is translated into a perl subroutine (on memory, currently).  A
-template text is translated into a perl package (class). The translation
-is per-template basis and occurs on demand of widget. Template can be
-given to YATT::Lite as a data(string/hash), filename or directory name.
-
-Package name of template is automatically generated with respect to
-option and filepath. If template is loaded from filesystem, it is cached
-and reloaded if modified.
-
-Although widget is basically 'named', head of each template text can be a
-``unnamed (default) widget``, so that designers can treat a template file
-itself as a widget. This means plain HTML files *just works* as template set.
-
-In future, mainline YATT will incorporate YATT::Lite interface. It
-means, today, if you want to adapt next generation YATT before its
-release, write your script using YATT::Lite.
-
-This is (still) alpha release. Although template syntax and facade(YATT::Lite)
-API became stable (I want), internal modules are *open* for discussion.
-
-
 INSTALLATION
 --------------------
 
@@ -53,14 +28,14 @@ The easiest way to use this distribution in your project is:
     git submodule init
     git submodule update
 
-Then you can use sample app.psgi to start yatt-enabled webapp, like this:
+To create a yatt-enabled webapp, just copy sample app.psgi and run plackup:
 
     cp lib/YATT/samples/app.psgi .
     mkdir html
     plackup
 
-Now you are ready to write your first index.yatt.
-Open your favorite editor and create html/index.yatt like this:
+Now you are ready to write your first yatt app.
+Open your favorite editor and create F<html/index.yatt> like this:
 
 ```html
 <!yatt:args x y>
@@ -75,6 +50,19 @@ Then try to access:
      http://0:5000/?x=foo
      http://0:5000/?x=foo&y=bar
 
+
+DOCUMENTS
+----------
+
+Basic documents are placed under YATT/Lite/docs. You can read them via:
+https://github.com/hkoba/yatt_lite/blob/post-0.0.3/Lite/docs/readme.pod
+
+Also, you can run ylpodview (document viewer) locally like:
+
+    cd lib/YATT
+    plackup samples/ylpodview/approot/app.psgi
+
+and try to access http://0:5000/
 
 NON-STANDARD DIRECTORY STRUCTURE
 --------------------

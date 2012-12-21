@@ -7,6 +7,7 @@ use mro 'c3';
 use File::Spec;
 use File::Basename ();
 use Cwd ();
+use Config '%Config';
 {
   my ($app_root, @libdir);
   BEGIN {
@@ -53,7 +54,14 @@ use Cwd ();
     }
 
     unless (@docpath) {
-      push @docpath, grep {-d} qw|./pod ./pods ./docs ./doc|, ".";
+      push @docpath, grep {-d} qw|./pod ./pods ./docs ./doc|;
+      unless (@docpath) {
+	push @docpath, map {
+	  my $d = "$_/YATT/Lite/docs";
+	  -d $d ? $d : ()
+	} @libdir;
+      }
+      push @docpath, ".";
     }
 
     push @docpath, map {
@@ -63,6 +71,8 @@ use Cwd ();
 	$_
       }
     } grep {-d} @INC;
+
+    push @docpath, grep(-d, split($Config{path_sep}, $ENV{'PATH'}));
 
     my $dirapp = $dispatcher->get_yatt('/');
 

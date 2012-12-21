@@ -53,6 +53,14 @@
 
 </yatt:envelope>
 
+<!yatt:page dump mod>
+<yatt:my found:value="&yatt:search_pod(:mod);"/>
+<yatt:if "&yatt:found;">
+&yatt:dump(:podsection(:found));
+<:yatt:else/>
+(Not found)
+</yatt:if>
+
 
 <!yatt:widget mobile mod sh_style>
 <yatt:envelope mobile sh_style title=mod>
@@ -116,7 +124,7 @@
   </div>
 
   <div id="__toc__">
-    <ul class="toc">
+    <ul class="toc nav nav-tabs nav-stacked">
       <yatt:toc sectlist="&yatt:podsection(:found);"/>
     </ul>
   </div>
@@ -183,17 +191,17 @@
 <yatt:if "&yatt:level; == 1"></div></yatt:if>
 
 <!yatt:widget paragraph tok=list>
-<yatt:my type:value="'para_' . $this->entity_bar2underscore(shift @$tok)"
+<yatt:my type:value="'ren_' . $this->entity_bar2underscore(shift @$tok)"
 	 atts:value="shift @$tok"/>
 &yatt:render(:type,:atts,:tok);
 
-<!yatt:widget para_Para atts=value list=list>
+<!yatt:widget ren_Para atts=value list=list>
 <p>
 <yatt:xref_anchor atts/>
 <yatt:inline list/>
 </p>
 
-<!yatt:widget para_Verbatim atts=value list=list>
+<!yatt:widget ren_Verbatim atts=value list=list>
 <!--#yatt Note: this pre will get class=sh_sourceCode too.-->
 <pre class="sh_&yatt:default(:stash(code),perl);">
 &yatt:trim_leading_ws(:list[0]);
@@ -201,56 +209,60 @@
 
 
 
-<!yatt:widget para_head1 atts=value list=list>
+<!yatt:widget ren_head1 atts=value list=list>
 <h2><yatt:inline list/></h2>
 
-<!yatt:widget para_head2 atts=value list=list>
+<!yatt:widget ren_head2 atts=value list=list>
 <h3><yatt:inline list/></h3>
 
-<!yatt:widget para_head3 atts=value list=list>
+<!yatt:widget ren_head3 atts=value list=list>
 <h4><yatt:inline list/></h4>
 
-<!yatt:widget para_head4 atts=value list=list>
+<!yatt:widget ren_head4 atts=value list=list>
 <h5><yatt:inline list/></h5>
 
-<!yatt:widget para_over_text atts=value list=list>
+<!yatt:widget ren_over_text atts=value list=list>
 <dl>
 <yatt:foreach my:list=tok list>
-<yatt:if "&yatt:tok[0]; eq 'Para'">
-<yatt:my type:value="'para_' . $this->entity_bar2underscore(shift @$tok)"
+<yatt:if "&yatt:tok[0]; eq 'item_text'">
+<yatt:my type:value="'ren_' . $this->entity_bar2underscore(shift @$tok)"
 	 attsx:value="shift @$tok"/>
-<dd><yatt:inline list=tok/></dd>
+<dt>
+  <yatt:inline list=tok/>
+</dt>
 <:yatt:else/>
-<yatt:paragraph tok/>
+<dd>
+  <yatt:paragraph tok/>
+</dd>
 </yatt:if>
 </yatt:foreach>
 </dl>
 
-<!yatt:widget para_item_text atts=value list=list>
-<dt><yatt:xref_anchor atts/><a name="&yatt:list2id(:list,0);"></a><yatt:inline list/></dt>
+<!yatt:widget ren_item_text atts=value list=list>
+<yatt:xref_anchor atts/><a name="&yatt:list2id(:list,0);"></a><yatt:inline list/>
 
 
-<!yatt:widget para_over_bullet atts=value list=list>
+<!yatt:widget ren_over_bullet atts=value list=list>
 <ul>
 <yatt:foreach my:list=tok list>
 <yatt:paragraph tok/>
 </yatt:foreach>
 </ul>
 
-<!yatt:widget para_item_bullet atts=value list=list>
+<!yatt:widget ren_item_bullet atts=value list=list>
 <li><yatt:inline list/></li>
 
-<!yatt:widget para_over_number atts=value list=list>
+<!yatt:widget ren_over_number atts=value list=list>
 <ol>
 <yatt:foreach my:list=tok list>
 <yatt:paragraph tok/>
 </yatt:foreach>
 </ol>
 
-<!yatt:widget para_item_number atts=value list=list>
+<!yatt:widget ren_item_number atts=value list=list>
 <li><yatt:inline list/></li>
 
-<!yatt:widget para_for atts=value list=list>
+<!yatt:widget ren_for atts=value list=list>
 &yatt:dispatch_one(for_,1,[:atts{target},:atts,:lexpand(:list)]);
 
 <!yatt:widget for_html atts=value data=list
@@ -265,35 +277,35 @@
 &yatt:data[-1][-1];
 </style>
 
-<!yatt:widget for_syntax atts=value data=list
+<!yatt:widget for_code atts=value data=list
 	      -- To store current syntax into stash(code) --
 	      >
 <?yatt &yatt:stash(code,:data[-1][-1]);?>
-<!--(atts=&yatt:atts;; data=&yatt:data;)-->
+<!--(for_code:atts=&yatt:atts;; data=&yatt:data;)-->
 
 <!yatt:widget inline list=list>
-&yatt:dispatch_all(inl_,1,:lexpand(:list));
+&yatt:dispatch_all(ren_,1,:lexpand(:list));
 
 <!yatt:widget inline1 list=value>
-&yatt:dispatch_one(inl_,1,:list);
+&yatt:dispatch_one(ren_,1,:list);
 
-<!yatt:widget inl_I atts=value rest=list>
-<i><yatt:inline list=rest/></i>
-<!yatt:widget inl_B atts=value rest=list>
-<b><yatt:inline list=rest/></b>
-<!yatt:widget inl_C atts=value rest=list>
-<code>&yatt:dispatch_all(inl_,1,:lexpand(:rest));</code>
-<!yatt:widget inl_L atts=value rest=list>
-<a href="&yatt:podlink(mod,:atts);"><!--&yatt:atts;--><yatt:inline list=rest/></a>
-<!yatt:widget inl_E atts=value rest=list>
+<!yatt:widget ren_I atts=value rest=list>
+<i class="pod"><yatt:inline list=rest/></i>
+<!yatt:widget ren_B atts=value rest=list>
+<b class="pod"><yatt:inline list=rest/></b>
+<!yatt:widget ren_C atts=value rest=list>
+<code class="pod">&yatt:dispatch_all(ren_,1,:lexpand(:rest));</code>
+<!yatt:widget ren_L atts=value rest=list>
+<a class="pod" href="&yatt:podlink(mod,:atts);"><!--&yatt:atts;--><yatt:inline list=rest/></a>
+<!yatt:widget ren_E atts=value rest=list>
 <?perl die "really?"?>
-<!yatt:widget inl_F atts=value rest=list>
-<i class="fn"><yatt:inline list=rest/></i>
-<!yatt:widget inl_S atts=value rest=list>
-<code class="nbsp">&yatt:dispatch_all(inl_,1,:lexpand(:rest));</code>
-<!yatt:widget inl_X atts=value rest=list>
+<!yatt:widget ren_F atts=value rest=list>
+<i class="pod fn"><yatt:inline list=rest/></i>
+<!yatt:widget ren_S atts=value rest=list>
+<code class="pod nbsp">&yatt:dispatch_all(ren_,1,:lexpand(:rest));</code>
+<!yatt:widget ren_X atts=value rest=list>
 <!--<yatt:inline list=rest/>-->
-<!yatt:widget inl_Z atts=value rest=list>
+<!yatt:widget ren_Z atts=value rest=list>
 Z(<yatt:inline list=rest/>)
 
 

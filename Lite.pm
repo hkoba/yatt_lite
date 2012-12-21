@@ -52,8 +52,8 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 		       /;
 
 sub Facade () {__PACKAGE__}
+sub default_app_ns {'MyApp'}
 sub default_trans {'YATT::Lite::Core'}
-
 sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
 
 sub with_system {
@@ -271,6 +271,7 @@ sub build_trans {
 
 sub _before_after_new {
   (my MY $self) = @_;
+  $self->{cf_app_ns} //= $self->default_app_ns;
   $self->{entns} = $self->ensure_entns($self->{cf_app_ns});
 }
 

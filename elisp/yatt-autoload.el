@@ -31,4 +31,4 @@
 	  'yatt-lint-any-mode-unless-blacklisted)
 
 ;;
-(autoload 'plist-bind "yatt/utils" "plist alternative of multivalue-bind" t)
+(autoload 'plist-bind "yatt-utils" "plist alternative of multivalue-bind" t)

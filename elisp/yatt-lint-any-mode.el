@@ -8,7 +8,7 @@
 
 (require 'cl)
 
-(require 'plist-bind "yatt/utils")
+(require 'plist-bind "yatt-utils")
 
 (defconst yatt-lint-any-YATT-dir
   ;; eval-current-buffer で nil に戻されないように
