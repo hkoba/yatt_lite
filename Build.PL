@@ -14,14 +14,13 @@ my $builder = MyBuilder->new
  , requires =>
  {'perl'       => '5.10.1' # for named capture and //
   , 'List::Util' => 0
+  , 'Plack' => 0
  }
 
  , recommends =>
- {'Plack' => 0
-  , 'DBD::SQLite' => 0
+ {'DBD::SQLite' => 0
   , 'DBIx::Class' => 0
   , 'CGI::Session' => 0
-  , 'Pod::Perldoc' => 0
   , 'Pod::Simple::SimpleTree' => 0
   , 'HTTP::Headers' => 0
  }
