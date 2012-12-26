@@ -16,7 +16,7 @@ Entity search_pod => sub {
   foreach my $dir (@dir) {
     foreach my $suf (@suf) {
       my $fn = "$dir/$modfn$suf";
-      my $found = -r $fn;
+      my $found = -f $fn;
       $CON->logdump(debug => ($found ? "found" : "not found"), $fn) if $debug;
       next unless $found;
       return $fn unless wantarray;
@@ -45,6 +45,7 @@ Entity podtree => sub {
   require Pod::Simple::SimpleTree;
   my $parser = Pod::Simple::SimpleTree->new;
   $parser->accept_targets(qw(html css code));
+  #XXX: open my $fh, "<:encoding(utf-8)", $fn or die "Can't open $fn: $!";
   my $tree = $parser->parse_file($fn)->root;
   &YATT::Lite::Breakpoint::breakpoint();
   postprocess($tree);

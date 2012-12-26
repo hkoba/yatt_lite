@@ -56,6 +56,7 @@
 <!yatt:page dump mod>
 <yatt:my found:value="&yatt:search_pod(:mod);"/>
 <yatt:if "&yatt:found;">
+DUMP(found=&yatt:found;)
 &yatt:dump(:podsection(:found));
 <:yatt:else/>
 (Not found)
@@ -124,7 +125,7 @@
   </div>
 
   <div id="__toc__">
-    <ul class="toc nav nav-tabs nav-stacked">
+    <ul class="toc">
       <yatt:toc sectlist="&yatt:podsection(:found);"/>
     </ul>
   </div>
@@ -172,7 +173,7 @@
 <yatt:if "&yatt:level; == 1">
 <div data-role="header">
 <yatt:xref_anchor atts/>
-<h&yatt:hlv; id="&yatt:list2id(:head,0);"><yatt:inline list=head/></h&yatt:hlv;>
+<h&yatt:hlv; class="head&yatt:level;" id="&yatt:list2id(:head,0);"><yatt:inline list=head/></h&yatt:hlv;>
 </div>
 <div data-role="content">
 <:yatt:else/>
@@ -210,28 +211,28 @@
 
 
 <!yatt:widget ren_head1 atts=value list=list>
-<h2><yatt:inline list/></h2>
+<h2 class="head1"><yatt:inline list/></h2>
 
 <!yatt:widget ren_head2 atts=value list=list>
-<h3><yatt:inline list/></h3>
+<h3 class="head2"><yatt:inline list/></h3>
 
 <!yatt:widget ren_head3 atts=value list=list>
-<h4><yatt:inline list/></h4>
+<h4 class="head3"><yatt:inline list/></h4>
 
 <!yatt:widget ren_head4 atts=value list=list>
-<h5><yatt:inline list/></h5>
+<h5 class="head4"><yatt:inline list/></h5>
 
 <!yatt:widget ren_over_text atts=value list=list>
-<dl>
+<dl class="item">
 <yatt:foreach my:list=tok list>
 <yatt:if "&yatt:tok[0]; eq 'item_text'">
 <yatt:my type:value="'ren_' . $this->entity_bar2underscore(shift @$tok)"
 	 attsx:value="shift @$tok"/>
-<dt>
+<dt class="item">
   <yatt:inline list=tok/>
 </dt>
 <:yatt:else/>
-<dd>
+<dd class="item">
   <yatt:paragraph tok/>
 </dd>
 </yatt:if>
@@ -243,7 +244,7 @@
 
 
 <!yatt:widget ren_over_bullet atts=value list=list>
-<ul>
+<ul class="item">
 <yatt:foreach my:list=tok list>
 <yatt:paragraph tok/>
 </yatt:foreach>
@@ -253,7 +254,7 @@
 <li><yatt:inline list/></li>
 
 <!yatt:widget ren_over_number atts=value list=list>
-<ol>
+<ol class="item">
 <yatt:foreach my:list=tok list>
 <yatt:paragraph tok/>
 </yatt:foreach>

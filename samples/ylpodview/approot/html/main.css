@@ -18,6 +18,11 @@
     -webkit-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
+#__toc__ > ul {
+    list-style-type: none;
+    margin-left: 0px;
+}
+
 @media (min-width: 980px) {
     #__toc__, div.sidebar {
 	position: fixed;
@@ -50,26 +55,33 @@ i.pod.fn {
     border: 1px solid #E1E1E8;
 }
 
-dt { margin-bottom: .3em; }
-dd+dt {
+dl.item, ul.item, ol.item {border-left: solid 3px #ccc;}
+dl.item { margin: .3em; padding: .5em; }
+ul.item, ol.item { margin: 0px; padding: 1em; }
+.item li {
+    list-style-position: inside;
+}
+
+dt.item { margin-bottom: .3em; border-bottom: solid 1px green; }
+dd.item+dt.item {
     margin-top: 1.8em;
 }
 
-h2 {
+h2.head1 {
     background-color: #eee;
     border-radius: 6px;
 }
 
-h3 {
+h3.head2 {
     border-top: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
     margin-top: 2em;
 }
 
-h4 {
+h4.head3 {
     margin-top: 2em;
 }
 
-h2 code.pod, h3 code.pod, h4 code.pod {
+h2.head1 code.pod, h3.head2 code.pod, h4.head3 code.pod {
     font-size: 105%;
 }
