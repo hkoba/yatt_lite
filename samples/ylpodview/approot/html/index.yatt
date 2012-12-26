@@ -154,7 +154,8 @@ DUMP(found=&yatt:found;)
 <!yatt:widget xref_anchor atts=value>
 &yatt:breakpoint();
 <yatt:foreach my=xref list="map {defined $_ ? @$_ : ()} &yatt:atts{X};">
-<a name="&yatt:list2id(:xref,0);"></a>
+<yatt:my id="&yatt:list2id(:xref,0);"/>
+<a name="&yatt:id;" id="&yatt:id;"></a>
 </yatt:foreach>
 
 <!yatt:widget toc_sect sect=list>
@@ -178,7 +179,7 @@ DUMP(found=&yatt:found;)
 <div data-role="content">
 <:yatt:else/>
 <yatt:xref_anchor atts/>
-<h&yatt:hlv; id="&yatt:list2id(:head,0);"><yatt:inline list=head/></h&yatt:hlv;>
+<h&yatt:hlv; class="head&yatt:level;" id="&yatt:list2id(:head,0);"><yatt:inline list=head/></h&yatt:hlv;>
 </yatt:if>
 
 <yatt:foreach my=tok list>
