@@ -1,0 +1,69 @@
+# -*- coding: utf-8 -*-
+
+=encoding utf-8
+
+=head1 NAME
+
+yatt_lite README -- Introduction to YATT::Lite
+
+=for code yatt
+
+=head1 DESCRIPTION
+
+B<YATT> is Yet Another Template Toolkit, aimed at Web Designers, rather than
+well-trained programmers. To achieve this goal,
+YATT has following characteristics:
+
+=over 4
+
+=item * More readable syntax for HTML/XML savvy designers.
+
+=item * Various supports to build up reusable templates(widgets).
+
+=item * Static syntax checking via C<lint>.
+
+=item * Typed variable for automatic html escaping to avoid XSS.
+
+=item * Extended entity syntax to embed complex things cleanly.
+
+=back
+
+L<YATT::Lite> は YATT と構文の上位互換性をほぼ保ちつつ高速化し、
+あわせて拡張性も向上させた、全面改訂版です。
+将来的に YATT::Lite が十分に安定した段階で、これを次の YATT とする予定です。
+
+以下、一連のマニュアルで、一般名としての YATT::Lite を yatt_lite、
+又は単に yatt と表記します。
+
+=head1 Next Steps
+
+=over 4
+
+=item 練習環境を作るには
+
+実際に yatt を動かしながら勉強した方が身につき易いので、誰かに頼むか自力で
+L<yl_psgi_setup> を読んで、
+yatt を動かせる環境を setup することをお勧めします。
+
+=item デザイナーの場合
+
+yatt の書き方を勉強するには L<yl_designers_intro> から始めてください。
+
+=item プログラマーの場合
+
+=over 4
+
+=item * YATT::Lite を Web Framework として使う場合や、他の Web Framework から
+PSGI 経由で使う場合は L<yl_webprogramming_intro> をお読み下さい。
+
+
+=item * YATT::Lite の Core を perl からモジュールとして活用するための基礎は
+L<yl_programmers_intro> をお読み下さい。
+
+=back
+
+=item Web サーバー管理者の場合
+
+yatt_lite のインストール方法に関しては L<setup_apache> を参照してください。
+
+=back

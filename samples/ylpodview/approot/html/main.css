@@ -44,6 +44,13 @@ div.sidebar  .navbar-inner {
     padding: 0px;
 }
 
+div.center {
+    text-align: center;
+}
+section.frontform {
+    text-align: left;
+}
+
 code.pod {
     color: #0628CB;
     font-weight: bold;
@@ -84,4 +91,11 @@ h4.head3 {
 
 h2.head1 code.pod, h3.head2 code.pod, h4.head3 code.pod {
     font-size: 105%;
+}
+
+@media (max-width: 800px) {
+    pre.pod {
+	overflow-x: scroll;
+	white-space: pre;
+    }
 }

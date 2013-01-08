@@ -1,0 +1,379 @@
+# -*- coding: utf-8 -*-
+
+=encoding utf-8
+
+=head1 NAME
+
+yatt tutorial for perl programmer's -- perl プログラマー向け yatt チュートリアル(日本語版)
+
+=head1 DESCRIPTION
+
+yatt は汎用のテンプレートエンジンである L</YATT::Lite> と、
+それを用いた Webアプリケーションフレームワークのサンプル実装である
+L</WebMVC0> から構成されています。
+
+=for html
+<img src="yatt_lite.svg"/>
+
+
+=head1 YATT::Lite -- Generic Template Engine
+X<YATT::Lite>
+
+yatt はテンプレートを perl の関数の集まりへと変換し、
+その中の必要な関数を呼び出します。例えば次のような yatt テンプレート:
+
+=for code yatt
+
+  <!yatt:args x y>
+  <h2>&yatt:x;</h2>
+  <yatt:hello where=y />
+
+  <!yatt:widget hello where>
+  Hello &yatt:where;!
+
+
+が、以下のプログラムの変数 C<$template_1> に入っていた場合:
+
+
+=for code perl
+
+  use YATT::Lite;
+  my $yatt = new YATT::Lite(vfs => [data => $template_1]);
+  print $yatt->render('', {x => "foo", y => "bar"});
+  # 又は
+  $yl->render_into(\*STDOUT, "" => {x => "foo", y => "bar"});
+
+C<< $yatt->render >>が呼ばれた時、yatt は以下のような perl package を
+動的に生成し、
+C<< MyApp::EntNS->render_(...) >> を呼び出します。
+
+  package MyApp::EntNS;
+  sub render_ {
+    my ($this, $CON, $x, $y, $body) = @_;
+    print $CON (q|<h2>|, YATT::Lite::Util::escape($x), q|</h2>|, "\n");
+    $this->render_hello($CON, (undef, $y)[1, 0]); print $CON ("\n");}
+  
+  sub render_hello {
+    my ($this, $CON, $where, $body) = @_;
+    print $CON (q|Hello |, YATT::Lite::Util::escape($where), q|!|, "\n");}
+
+=for author cgen
+perl  -MYATT::Lite -Mstrict -wle '
+  my $template_1 = do {local $/; <>};
+  my $yl = new YATT::Lite(vfs => [data => $template_1], debug_cgen => 1);
+  $yl->render_into(\*STDOUT, "" => {x => "foo", y => "bar"})'
+
+なおテンプレートとしてファイルを指定した場合、
+ファイルが変更されるまでスクリプトはキャッシュされます。
+
+=head2 template
+
+yatt のテンプレートは、 C<< <!yatt: ... > >> で始まる
+L<yatt 宣言|YATT::Lite::docs::yatt_manual/YATT Declaration>
+と、定義本体をフラットに(入れ子せずに)並べたものです。
+
+=for code yatt
+
+   <!yatt:args x y>
+     ...definition...
+   
+   <!yatt:widget myfoo a>
+     ...definition of myfoo...
+   
+   <!yatt:widget mybar b>
+     ...definition of mybar...
+
+   <!yatt:page myadmin u>
+     ...definition of myadmin...
+
+
+=head2 widget
+
+yatt ではテンプレートの部品化の単位を B<widget> と呼びます。
+一つのテンプレートファイルには、複数の widget を定義することが出来ます。
+
+widget は必ずユニークな名前を持ち、名前によって識別・参照されます。
+テンプレートの先頭は暗黙のうちに、空文字列 C<""> を名前とする widget
+(B<default widget>) の始まりとして扱われます。 default widget に
+引数宣言を追加するには C<< <!yatt:args> >> を使います。
+
+
+=for code yatt
+
+  <!yatt:args x y>
+  <h2>&yatt:x;</h2>
+  <yatt:hello where=y />
+
+  <!yatt:widget hello where>
+  Hello &yatt:where;!
+
+この例では、一つのテンプレートに C<"">, C<hello> の2つの widget
+が定義されています。これらを perl から呼び出して文字列を作るには、
+L<render|YATT::Lite/render>
+メソッドを呼び出します。以下は C<""> で default widget を呼び出す例です：
+
+=for code perl
+
+  print $yatt->render('', {x => 'foo', y => 'bar'});
+
+=head3 public vs private
+
+上記の例をそのまま B<CGI> アプリに応用して、例えば
+
+  my $cmd = $cgi->param('cmd') || '';
+  print $yatt->render($cmd, {cgi => $cgi});
+
+のようにした場合、気になる問題が出てきます。それは、
+前節の hello widget のような、
+コード改善のために括り出された部品を、
+web からのリクエストで勝手に呼び出される可能性です。
+
+この問題を避けるため、 yatt では widget に public と private の
+区別を持たせ、 C<< YATT::Lite->render >> で呼び出せるものは public な widget
+のみとしました。 (private な widget を呼び出すとエラーになります)
+
+=over 4
+
+=item public
+
+拡張子が F<.yatt> であるテンプレートファイルの default widget と、
+C<< C<!yatt:page> >> で宣言された widget は public となり、
+render による呼び出しが許可されます。
+
+=item private
+
+それ以外の widget, つまり、 C<< <!yatt:widget> >> で宣言された widget と
+拡張子が F<.ytmpl> であるテンプレートファイルの default widget は
+private となり、 render では呼び出し禁止となります。
+
+=back
+
+
+=for code yatt
+
+=head3 $this, $CON
+X<$CON>
+
+yatt の widget には、宣言した引数以外に, 先頭に C<$this> と C<$CON> という
+２つの引数が渡されます。先の hello の例を再掲します：
+
+=for code perl
+
+  sub render_hello {
+    my ($this, $CON, $where, $body) = @_;
+    print $CON (q|Hello |, YATT::Lite::Util::escape($where), q|!|, "\n");}
+
+このうち、 C<$this> はテンプレート自身を表すクラス名です。
+残る C<$CON> は、perl の IO Handle 互換のオブジェクトです。
+概念的には以下のように呼び出されます
+
+    MyApp::EntNS->render_hello(\*STDOUT, "foo", undef);
+
+
+=head3 Why stream writer
+
+yatt で書かれたテンプレートは、ここまでで示したように、
+内部的には html を (戻り値で返す代わりに)
+stream へ書き込む関数へと変換されます。これは (Web は別としても)
+一般的にはテンプレートエンジンは巨大なデータを出力するために使われる可能性があり、
+全処理が完了するまで出力をメモリーに保持し続けなければならない設計は避けるべきだろう、
+という考えからです。また将来的に PSGI の streaming
+インターフェースに対応するためでもあります。
+
+もっとも、Web で使う場合には変換処理の途中でエラーやリダイレクトが発生する可能性があるため、
+基本的には出力は全てメモリーストリームに一旦貯めてから出力されます。
+そのためのクラス L</Connection> も用意されています。
+
+=head3 XXX: widget path
+
+render('foo:bar') や render('/foo/bar'), render('foo/bar.yatt')
+の話も書かないと...
+
+=head2 vfs
+X<vfsspec>
+
+テンプレートが一つのファイルで収まらない時もあるでしょう。
+特に、複数人数で開発を分担したい時には、テンプレートを別ファイルに
+分けたくなるでしょう。
+
+逆に実験段階ではテンプレート一個で済ませたいときや、
+プログラムのなかにテンプレートを直接含めたい時もあるでしょう。
+
+これらのケースに対応するため、 yatt はテンプレートの集まりを
+指定する方法を複数用意しています。
+
+B<YATT::Lite> にテンプレートの集まりを渡すには、 C<vfs> オプションを使います。
+
+vfs オプションには C<[vfstype, spec]> 形式の配列を渡します。 vfstype には
+
+data, file, dir の3つの形式が有ります。
+
+=over 4
+
+=item vfs => [data => STRING_or_HASH]
+X<data>
+
+外部ファイルに頼らずに、プログラムから直接テンプレートを渡したいときに使います。
+文字列か HASH のいずれかを渡して下さい。
+
+文字列を渡した場合、
+C<render($name)> 時の C<$name> はテンプレート内の
+L<page|YATT::Lite::docs::yatt_manual/page> 名として解釈されます。
+
+HASH を渡した場合、
+文字列を渡した場合、
+C<render($name)> 時の C<$name> は HASH の key として解釈されます。
+
+=item vfs => [file => FILENAME]
+X<file>
+
+spec を filename として解釈し、ファイルシステムからテンプレートを読み込みます。
+C<render($name)> 時の C<$name> はテンプレート内の
+L<page|YATT::Lite::docs::yatt_manual/page> 名として解釈されます。
+
+=item vfs => [dir => DIRNAME]
+X<dir>
+
+spec をディレクトリ名として解釈し、このディレクトリの F<*.yatt>, F<*.ytmpl> ファイルを
+テンプレートとして扱います。C<render($name)> 時の C<$name> はディレクトリ内の
+F<*.yatt> ファイル名として解釈されます。
+
+
+=back
+
+=for tobe written
+  =head2 $YATT, $SYS
+
+=head2 base
+
+別ディレクトリのテンプレートライブラリを使用できるようにするためのオプションが
+C<base> オプションです。正確には、base オプションには前節の
+L</vfsspec> の配列を渡します。
+
+  my $yatt = new YATT::Lite(vfs => [dir => "$app_root/html"]
+                            , base => [[dir => "$app_root/tmpl_lib1"]
+                                       , [dir => "$app_root/tmpl_lib2"]]);
+
+XXX: 多重継承、大丈夫だっけ?
+
+=head2 namespace
+
+yatt では、テンプレートの中で用いる名前空間をカスタマイズすることが出来ます。
+名前空間を指定するには C<namespace> オプションを使います。
+
+
+=for code perl
+
+  my $yatt = new YATT::Lite(..., namespace => ['japh', 'yapc']);
+
+こうすると、テンプレートの中で、指定した名前空間が使えるようになります。
+
+=for code yatt
+
+  <!japh:widget foo>
+    ...
+    <japh:foreach ...>
+    ...
+
+  <!yapc:widget bar>
+    ...
+    <yapc:foreach ...>
+    ...
+
+
+この機能の存在理由は、 B<「チーム固有のタグ」を一目で分かるようにする> ことと、
+B<テンプレートを生成するテンプレートを書きやすくする> ためです。
+
+
+=head1 XXX: YATT::Lite::Factory -- for multiplicity
+X<app_ns> X<EntNS> X<Factory>
+
+yatt は perl のスクリプトを生成するので、同一プロセス内で
+複数の yatt インスタンスを用いる時は, 生成先となるスクリプトの名前空間を
+予め分けておく必要が有ります。
+
+=for code perl
+
+  my $yatt1 = new YATT::Lite(vfs => [data => $template_1]);
+  my $yatt2 = new YATT::Lite(vfs => [data => $template_1]);
+  #
+  print $yatt1->render('', {x => "foo", y => "bar"});
+  print $yatt2->render('', {x => "baz", y => "qux"}); # redefinition error!
+
+この問題を避けるには、各インスタンスにそれぞれ異なる app_ns を渡す必要が有ります。
+
+XXX: 更に言うと...固有クラス、メソッドはやし .htyattrc.pl ...
+
+=head1 XXX: WebMVC0 -- Sample Web Framework
+X<WebMVC0>
+
+汎用品である L<YATT::Lite> をベースに、これを Web アプリ構築に
+特化させたものが L<WebMVC0|YATT::Lite::WebMVC0::SiteApp> です。
+
+WebMVC0 を用いた L<PSGI> アプリケーションの典型例を以下に挙げます：
+
+  # sub MY () {__PACKAGE__}; # 省略可能
+  use FindBin;
+  use YATT::Lite::WebMVC0::SiteApp -as_base;
+  {
+    my $site = MY->new(doc_root => "$FindBin::Bin/html");
+    return $site->to_app;
+  }
+
+
+これは C<$FindBin::Bin/html> を document_root とする PSGI アプリです。
+document_root 以下に置かれた F<*.yatt> ファイルは yatt テンプレートとして
+動的に変換され実行されます。
+
+
+XXX: * 拡張子抜きは .yatt へ自動 map
+
+XXX: ディレクトリ＝YATTアプリ
+
+XXX: Entity の定義と、それが具体的に何をするか
+
+XXX: die \@PSGI_TUPLE
+
+XXX: PATH_TRANSLATED, REDIRECT_STATUS
+
+XXX: allow_debug_from
+
+=head2 XXX: SiteApp -- PSGI bridge
+X<SiteApp>
+
+XXX: * Site の Entity
+
+XXX: site_config
+
+XXX: make_connection
+
+XXX: psgi_static
+
+=head2 XXX: DirApp -- Web-specific YATT::Lite
+X<DirApp>
+
+XXX: action
+
+XXX: handle, _handle_yatt, _handle_ydo
+
+XXX: error_handler
+
+XXX: dir_config
+
+=head2 XXX: C<.htyattrc.pl> -- kitchen sink class
+
+=head2 XXX: error, raise
+
+エラー画面のカスタマイズも Webアプリの重要な機能です。
+yatt もエラー発生時に呼び出されるテンプレートを定義することが可能です。
+通常は F<error.ytmpl> のように B<private> なテンプレートファイルにします。
+
+=head2 XXX: Connection -- Request + Response
+X<Connection>
+
+=head2 XXX: logging
+
+XXX: logging interface は、とりあえず付けただけ、状態です。御意見募集中です。
+
+=head2 XXX: DBSchema, DBSchema::DBIC
+

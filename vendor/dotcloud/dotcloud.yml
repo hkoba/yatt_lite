@@ -3,3 +3,4 @@ www:
   approot: approot
   requirements:
     - Plack
+    - Locale::PO

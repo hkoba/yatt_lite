@@ -1,0 +1,49 @@
+=encoding utf-8
+
+=head1 NAME
+
+YATT::Lite - Yet Another な Template Toolkit, 改訂版
+
+=head1 SYNOPSIS
+
+  # 最も単純な使い方:
+  use YATT::Lite;
+
+  my $tmpl = q{
+    <!yatt:args title who="?World">
+    <h2>&yatt:title;</h2>
+    Hello &yatt:who;!
+  
+    <!yatt:widget alter title who="?Space">
+    <div class="title">&yatt:title;</div>
+    <div class="body">
+    Hello &yatt:who;!
+    </div>
+  };
+
+  my $yatt = new YATT::Lite(vfs => [data => $tmpl], app_ns => "MyApp");
+
+  # $tmpl の先頭の widget (名前は "") を呼ぶ
+  print $yatt->render("", {title => "My First YATT"}), "\n";
+
+  # $tmpl の2つめの widget (名前は alter) を呼ぶ. 今度は直接 STDOUT に書き込ませる
+  $yatt->render_into(\*STDOUT, alter => ["My Second YATT"]);
+
+  # 複数のテンプレートを使いたい時
+  my $yatt2 = new YATT::Lite(vfs => [data => {foo => "..", bar => ".."}]
+                             , app_ns => "MyApp2");
+  print $yatt2->render(foo => [1,2]);
+  print $yatt2->render(bar => [3,4]);
+
+  # テンプレートをファイルやディレクトリから読み込みたい時
+  my $yatt3 = new YATT::Lite(vfs => [file => "my.yatt"], app_ns => "MyApp3");
+  my $yatt4 = new YATT::Lite(vfs => [dir  => "my.ytmpl"], app_ns => "MyApp4");
+
+=head1 DESCRIPTION
+
+yatt の特徴については L<readme|YATT::Lite::docs::readme> をご参照下さい。
+
+
+
+=head2 Multiplicity
+

@@ -3,10 +3,18 @@ use YATT::Lite::Util qw(lexpand);
 use YATT::Lite qw/*CON/;
 
 use fields qw/cf_docpath
-	      cf_lang_available/;
+	      cf_lang_available
+	      cf_mod_overlay
+	     /;
 
 Entity search_pod => sub {
   my ($this, $modname) = @_;
+
+  my MY $yatt = $this->YATT;
+  if (my $prefix = $yatt->{cf_mod_overlay}) {
+    $modname =~ s{^$prefix}{};
+  }
+
   my $modfn = modname2fileprefix($modname);
   my MY $yatt = $this->YATT;
   my $debug = -r "$yatt->{cf_dir}/.htdebug";

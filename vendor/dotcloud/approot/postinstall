@@ -5,9 +5,20 @@ approot=$(dirname $0)
 cd $approot || exit 1
 
 mod=lib/YATT
-
-# git config -f .gitmodules submodule.$mod.url | read url
-
 url=git://github.com/hkoba/yatt_lite.git
 
-git clone $url $mod
+# Keep clone under $HOME
+lib=$HOME/perl5/lib/perl5
+repo=$lib/YATT
+
+if [ -d $repo ]; then
+    (cd $repo && git pull)
+else
+    git clone $url $repo
+fi
+
+# Replace lib/YATT (empty) dir by symlink.
+
+[ -d $mod ] && rm -rfv $mod
+
+perl -Mlib=$lib -MYATT::Lite -le 'print "YL: ", YATT::Lite->VERSION'

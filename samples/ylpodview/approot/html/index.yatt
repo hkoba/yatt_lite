@@ -6,7 +6,8 @@
 
 <:yatt:else if="not &yatt:search_pod(:mod);"/>
   <yatt:envelope mobile>
-    Not found: &yatt:mod;
+    Not found: &yatt:mod;<br>
+    You may want to try <a href="http://search.cpan.org/perldoc?&yatt:mod;">search.cpan.org</a>
   </yatt:envelope>
 
 <:yatt:else if="&yatt:mobile;"/>
@@ -19,8 +20,15 @@
 
 <!yatt:widget front mobile="value/0">
 <yatt:envelope mobile>
+<:yatt:style>
+  .container-narrow {
+  /* stolen from: http://twitter.github.com/bootstrap/examples/marketing-narrow.html */
+    margin: 0 auto;
+    max-width: 700px;
+  }
+</:yatt:style>
 
-<div class="container-fluid">
+<div class="container-narrow">
 <header class="navbar">
   <div class="navbar-inner">
     <a class="brand" href="./">&yatt:dir_config(appname);</a>
@@ -30,8 +38,8 @@
   </div>
 </header>
 
-<div class="row-fluid frontform">
-  <div class="span8 offset2">
+<div class="center">
+<section class="frontform">
   <h3>&yatt[[;Let's search Perl document.&yatt]];</h3>
   <form class="fullwidth">
     <input type="text" id="mod" name="mod" size="30" placeholder="Module name or pod name...">
@@ -47,7 +55,7 @@
       </yatt:foreach>
     </dl>
   </yatt:if>
-  </div>
+</section>
 </div>
 </div>
 
@@ -205,7 +213,7 @@ DUMP(found=&yatt:found;)
 
 <!yatt:widget ren_Verbatim atts=value list=list>
 <!--#yatt Note: this pre will get class=sh_sourceCode too.-->
-<pre class="sh_&yatt:default(:stash(code),perl);">
+<pre class="pod sh_&yatt:default(:stash(code),perl);">
 &yatt:trim_leading_ws(:list[0]);
 </pre>
 
@@ -260,6 +268,13 @@ DUMP(found=&yatt:found;)
 <yatt:paragraph tok/>
 </yatt:foreach>
 </ol>
+
+<!yatt:widget ren_over_block atts=value list=list>
+<blockquote>
+<yatt:foreach my:list=tok list>
+<yatt:paragraph tok/>
+</yatt:foreach>
+</blockquote>
 
 <!yatt:widget ren_item_number atts=value list=list>
 <li><yatt:inline list/></li>
@@ -325,6 +340,7 @@ Z(<yatt:inline list=rest/>)
   <link rel="stylesheet" href="&yatt:site_prefix();/vendor/bootstrap/css/bootstrap-responsive.min.css"/>
   <link rel="stylesheet" href="&yatt:site_prefix();/sh_default.css"/>
   <link rel="stylesheet" href="&yatt:site_prefix();/main.css"/>
+  <style type="text/css">&yatt:style;</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>

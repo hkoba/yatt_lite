@@ -59,8 +59,8 @@ https://github.com/hkoba/yatt_lite/blob/post-0.0.3/Lite/docs/readme.pod
 
 Also, you can run ylpodview (document viewer) locally like:
 
-    cd lib/YATT
-    plackup samples/ylpodview/approot/app.psgi
+    cd lib
+    plackup YATT/samples/ylpodview/approot/app.psgi
 
 and try to access http://0:5000/
 

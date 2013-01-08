@@ -35,6 +35,36 @@ use Config '%Config';
 
   use YATT::Lite::WebMVC0::Partial::LangSwitch;
 
+  use YATT::Lite::PSGIEnv;
+
+  my @docpath;
+  {
+    while (@ARGV and -d $ARGV[0]) {
+      push @docpath, shift @ARGV;
+    }
+
+    unless (@docpath) {
+      push @docpath, grep {-d} map {"$app_root/$_"} qw|pod pods docs doc|;
+      unless (@docpath) {
+	push @docpath, map {
+	  my $d = "$_/YATT/Lite/docs";
+	  -d $d ? $d : ()
+	} @libdir;
+      }
+      push @docpath, MY->rel2abs(".");
+    }
+
+    push @docpath, map {
+      if (-d "$_/pod") {
+	("$_/pod", $_)
+      } else {
+	$_
+      }
+    } grep {-d} @INC;
+
+    push @docpath, grep(-d, split($Config{path_sep}, $ENV{'PATH'}));
+  }
+
   my $dispatcher = MY->new
     (app_ns => 'MyApp'
      , app_root => $app_root
@@ -48,32 +78,6 @@ use Config '%Config';
 
   # Use given argument as docpath (or use current directory instead).
   {
-    my @docpath;
-    while (@ARGV and -d $ARGV[0]) {
-      push @docpath, shift @ARGV;
-    }
-
-    unless (@docpath) {
-      push @docpath, grep {-d} qw|./pod ./pods ./docs ./doc|;
-      unless (@docpath) {
-	push @docpath, map {
-	  my $d = "$_/YATT/Lite/docs";
-	  -d $d ? $d : ()
-	} @libdir;
-      }
-      push @docpath, ".";
-    }
-
-    push @docpath, map {
-      if (-d "$_/pod") {
-	("$_/pod", $_)
-      } else {
-	$_
-      }
-    } grep {-d} @INC;
-
-    push @docpath, grep(-d, split($Config{path_sep}, $ENV{'PATH'}));
-
     my $dirapp = $dispatcher->get_yatt('/');
 
     $dirapp->configure(docpath => [map {
@@ -88,5 +92,16 @@ use Config '%Config';
     $runner->run;
   }
 
-  return $dispatcher->to_app;
+  return do {
+    if (@docpath) {
+      require Plack::App::File;
+      require Plack::App::Cascade;
+      my $union = Plack::App::Cascade->new;
+      $union->add($dispatcher->to_app);
+      $union->add(Plack::App::File->new(root => $docpath[0])->to_app);
+      $union->to_app;
+    } else {
+      $dispatcher->to_app;
+    }
+  };
 }
