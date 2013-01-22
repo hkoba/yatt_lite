@@ -68,6 +68,9 @@ sub load_current_lang {
   $con->configure(lang => $lang);
   $yatt->get_lang_msg($lang);
 
+  $con->set_header(Vary => "Accept-Language"); # XXX: Should be idempotent.
+  $con->set_header("Content-Language" => $lang);
+
   &maybe::next::method;
 }
 
