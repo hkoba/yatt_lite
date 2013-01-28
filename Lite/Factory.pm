@@ -81,16 +81,22 @@ sub configure_offline {
 {
   my %sub2app;
   sub to_app {
-    my ($self) = @_;
+    my ($self, $cascade, @fallback) = @_;
     $self->prepare_app;
     my $sub = sub { $self->call(@_) };
-    $sub2app{$sub} = $self;
-    weaken($sub2app{$sub});
-    $sub;
+    $sub2app{$sub} = $self; weaken($sub2app{$sub});
+    if ($cascade) {
+      $sub2app{$cascade} = $self; weaken($sub2app{$cascade});
+      $cascade->add($sub, @fallback);
+      $cascade->to_app;
+    } else {
+      $sub;
+    }
   }
   sub load_psgi_script {
     my ($pack, $fn) = @_;
     local $yatt_loading = 1;
+    local $0 = $fn;
     my $sub = $pack->sandbox_dofile($fn);
     $sub2app{$sub};
   }

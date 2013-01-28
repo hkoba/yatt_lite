@@ -123,7 +123,7 @@ sub find_apps {
 use YATT::Lite::PSGIEnv;
 
 sub to_app {
-  (my MY $self) = @_;
+  my MY $self = shift;
 #  XXX: Should check it.
 #  unless (defined $self->{cf_app_root}) {
 #    croak "app_root is undef!";
@@ -131,7 +131,7 @@ sub to_app {
   unless (defined $self->{cf_doc_root}) {
     croak "document_root is undef!";
   }
-  return $self->SUPER::to_app;
+  return $self->SUPER::to_app(@_);
 }
 
 sub prepare_app {
