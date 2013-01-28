@@ -315,18 +315,14 @@ sub rewind {
 sub cookies_in {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{cf_env};
-  if (exists $prop->{cookies_in}) {
-    $prop->{cookies_in};
-  } else {
-    $prop->{cookies_in} = do {
-      if (defined $env->{HTTP_COOKIE}) {
-	require CGI::Cookie;
-	CGI::Cookie->parse($env->{HTTP_COOKIE});
-      } else {
-	undef;
-      }
-    };
-  }
+  $prop->{cookies_in} ||= do {
+    if (defined $env->{HTTP_COOKIE}) {
+      require CGI::Cookie;
+      CGI::Cookie->parse($env->{HTTP_COOKIE});
+    } else {
+      +{};
+    }
+  };
 }
 
 sub set_cookie {
