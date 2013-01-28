@@ -85,23 +85,26 @@ use Config '%Config';
     } @docpath]);
   }
 
-  unless (caller) {
-    require Plack::Runner;
-    my $runner = Plack::Runner->new(app => $dispatcher->to_app);
-    $runner->parse_options(@ARGV);
-    $runner->run;
-  }
-
-  return do {
+  my $app = do {
     if (@docpath) {
+      # Note: To keep lint working,
+      # (it relies on YATT::Lite::Factory->load_factory_offline),
+      # we need to pass outer-most cascade app as argument of Factory->to_app.
+      # Rest arguments are also added to cascade after $dispatcher.
       require Plack::App::File;
       require Plack::App::Cascade;
       my $union = Plack::App::Cascade->new;
-      $union->add($dispatcher->to_app);
-      $union->add(Plack::App::File->new(root => $docpath[0])->to_app);
-      $union->to_app;
+      $dispatcher->to_app($union
+			  , Plack::App::File->new(root => $docpath[0])->to_app)
     } else {
       $dispatcher->to_app;
     }
   };
+
+  return $app if caller;
+
+  require Plack::Runner;
+  my $runner = Plack::Runner->new(app => $app);
+  $runner->parse_options(@ARGV);
+  $runner->run;
 }

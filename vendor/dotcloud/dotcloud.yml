@@ -4,3 +4,8 @@ www:
   requirements:
     - Plack
     - Locale::PO
+    - Moose
+    - Mouse
+    - Any::Moose
+    - DBIx::Class
+    - Class::Accessor

@@ -55,7 +55,8 @@ DOCUMENTS
 ----------
 
 Basic documents are placed under YATT/Lite/docs. You can read them via:
-https://github.com/hkoba/yatt_lite/blob/post-0.0.3/Lite/docs/readme.pod
+http://ylpodview-hkoba.dotcloud.com/
+(But for now, most pods are not yet finished and written only in Japanese.)
 
 Also, you can run ylpodview (document viewer) locally like:
 

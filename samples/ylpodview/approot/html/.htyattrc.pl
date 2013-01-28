@@ -16,7 +16,6 @@ Entity search_pod => sub {
   }
 
   my $modfn = modname2fileprefix($modname);
-  my MY $yatt = $this->YATT;
   my $debug = -r "$yatt->{cf_dir}/.htdebug";
   my @dir = lexpand($yatt->{cf_docpath});
   my @suf = (map("$_.pod", $this->entity_suffix_list), ".pm", "");

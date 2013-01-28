@@ -77,16 +77,21 @@ dd.item+dt.item {
 h2.head1 {
     background-color: #eee;
     border-radius: 6px;
+    margin-top: .5em;
+    font-size: 25px;
+    margin-left: -.3em;
+    padding-left: .2em;
 }
 
 h3.head2 {
     border-top: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
-    margin-top: 2em;
+    margin: 1em 0;
+    font-size: 20px;
 }
 
 h4.head3 {
-    margin-top: 2em;
+    margin-top: .35em;
 }
 
 h2.head1 code.pod, h3.head2 code.pod, h4.head3 code.pod {

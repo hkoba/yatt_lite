@@ -33,7 +33,8 @@ xhf を使ったのは依存を減らすためだけだったのだから。
 
 =item rename scripts/yatt.* to scripts/yatt-*
 
-ラッパースクリプト F<scripts/yatt> を作ってから...
+F<yatt.*> だと windows で困るから。 F<yatt-*.pl> とかに rename しようかと。
+でもその前にラッパースクリプト F<scripts/yatt> を完成させなきゃ。
 
 =item nginx.conf とか systemd.service とか
 
@@ -48,6 +49,17 @@ xhf を使ったのは依存を減らすためだけだったのだから。
 
 同じく。 L<Factory|YATT::Lite::docs::prog_tutorial/Factory> API
 の改良が必要になるはず。
+
+=item C<< DirApp->cmd_SUB >> に C<$CON> を渡すべき
+
+DirApp 毎の CLI 用ユーザ拡張コマンド C<sub cmd_COMMAND> の引数仕様を変更したい。
+現在は C<< $dirapp->cmd_COMMAND(@ARGV) >> だが、これだと例えば
+dbh も $dirapp の中にキャッシュすることになり、不便。
+やはり C<< $dirapp->cmd_COMMAND($CON, @ARGV) >> にして、
+作業用オブジェクトを外から渡せるようにしたい。
+
+もしくは、 C<with_connection()> のような API を整理して、
+C<*CON> 経由で渡すか。その方が、現在の実装との差は少ないが...
 
 =item AppPath API の全面改定
 
@@ -65,7 +77,8 @@ PSGI との用語の違いを名前で際立たせよう、という意図で付
 (App という用語が二つの粒度で使われる、と。サイト全体 vs その中の各ディレクトリ)
 
 SiteApp を WebMVC0.pm にする手もあった。しかしそれだと、 git submodule 化が出来ない。
-ただ、元々の役割は Dispatcher なので、そう呼んでも良かったかもしれない。
+
+元々の役割は Dispatcher なので、そう呼んでも良かったかもしれない。
 
 DirApp も、単に App と呼びたかった。でもそれでは PSGI App と誤解されうる。
 
