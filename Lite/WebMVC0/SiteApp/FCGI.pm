@@ -81,6 +81,7 @@ sub _runas_fcgi {
   }
 
   local $self->{cf_at_done} = sub {die \"DONE"};
+  local $SIG{PIPE} = 'IGNORE';
   while ($request->Accept >= 0) {
     my Env $env = $self->psgi_fcgi_newenv(\%env, $stdin, $stderr);
 
