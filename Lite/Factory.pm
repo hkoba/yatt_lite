@@ -98,7 +98,13 @@ sub configure_offline {
     local $yatt_loading = 1;
     local $0 = $fn;
     my $sub = $pack->sandbox_dofile($fn);
-    $sub2app{$sub};
+    if (ref $sub eq 'CODE') {
+      $sub2app{$sub};
+    } elsif ($sub->isa($pack)) {
+      $sub;
+    } else {
+      die "Unknown load result from: $fn";
+    }
   }
   sub prepare_app { return }
 
