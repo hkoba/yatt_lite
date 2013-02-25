@@ -43,6 +43,15 @@ sub captured {
   $buf;
 }
 
+sub err_like (@) {
+  my ($code, $re, $title) = @_;
+  local $@ = '';
+  eval {
+    $code->();
+  };
+  like $@, $re, $title;
+}
+
 {
   my $theme = "infra";
   is(YATT::Lite->EntNS, "YATT::Lite::EntNS", "[$theme] YL->EntNS");
@@ -96,6 +105,16 @@ END
 
     eq_or_diff captured($yatt->find_renderer('foo'), @param), $res
       , "$theme $SUB find_renderer foo";
+
+    err_like sub {
+      $yatt->find_part_handler([foo => 'qux']);
+    }, qr{^No such widget in file foo: qux}
+      , "Error diag for misspelled widget";
+
+    err_like sub {
+      $yatt->find_part_handler([foo => undef, 'hoe']);
+    }, qr{^No such action in file foo: hoe}
+      , "Error diag for misspelled action";
   }
 
   {

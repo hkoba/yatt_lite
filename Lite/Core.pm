@@ -243,11 +243,11 @@ sub create_file {
       $method = "render_$partName";
 
     } else {
-      (my $itemKey, $method) = do {
+      (my ($kind, $pureName, $itemKey), $method) = do {
 	if (defined $action) {
-	  ("do_$action") x 2;
+	  (action => $action => ("do_$action") x 2);
 	} else {
-	  ($subPage, "render_$subPage");
+	  (widget => $subPage, $subPage, "render_$subPage");
 	}
       };
 
@@ -257,7 +257,7 @@ sub create_file {
 	  or croak "No such template file: $partName";
       $part = $tmpl->{Item}{$itemKey}
 	or ($ignore_error and return)
-	  or croak "No such item in file $partName: $itemKey";
+	  or croak "No such $kind in file $partName: $pureName";
     }
 
 
