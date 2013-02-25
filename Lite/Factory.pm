@@ -51,8 +51,8 @@ use YATT::Lite qw/Entity *SYS *YATT *CON/;
 #
 #
 
-our $yatt_loading;
-sub loading { $yatt_loading }
+our $want_object;
+sub want_object { $want_object }
 
 sub find_load_factory_script {
   my ($pack, %opts) = @_;
@@ -95,7 +95,7 @@ sub configure_offline {
   }
   sub load_psgi_script {
     my ($pack, $fn) = @_;
-    local $yatt_loading = 1;
+    local $want_object = 1;
     local $0 = $fn;
     my $sub = $pack->sandbox_dofile($fn);
     if (ref $sub eq 'CODE') {
@@ -128,7 +128,7 @@ sub configure_offline {
 
 sub load_factory_script {
   my ($pack, $fn) = @_;
-  local $yatt_loading = 1;
+  local $want_object = 1;
   if ($fn =~ /\.psgi$/) {
     $pack->load_psgi_script($fn);
   } else {

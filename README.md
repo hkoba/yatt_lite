@@ -72,7 +72,7 @@ Unfortunately, YATT::Lite distribution doesn't conform
 normal CPAN style structure. This is experimental,
 but intentional. Because:
 
-1. Engine(modules) and support scripts should be directory bundled together.
+1. Engine(modules) and support scripts should be directly bundled together.
    To achieve this, scripts/* and elisp/* is placed in YATT/.
 
 2. Since YATT::Lite is still evolving, single (system-wide) installation

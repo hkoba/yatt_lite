@@ -38,7 +38,7 @@ sub parse_params {
   } else {
     $explicit++;
   }
-  for (; @$list and $list->[0] =~ /^([^=]+)=(.*)/; shift @$list) {
+  for (; @$list and $list->[0] =~ /^([^=]+)=(.*)/s; shift @$list) {
     $hash->{$1} = $2;
   }
   if (not $explicit and wantarray) {
@@ -81,7 +81,7 @@ sub process_result {
   if (not @res
       or @res == 1 and not $res[0]) {
     exit 1;
-  } elsif (@res == 1 and $res[0] eq 1) {
+  } elsif (@res == 1 and defined $res[0] and $res[0] eq 1) {
     # nop
   } else {
     require YATT::Lite::Util;
