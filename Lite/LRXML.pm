@@ -605,7 +605,7 @@ sub _tmpl_file_line {
 #========================================
 sub is_ident {
   local %+;
-  $_[0] =~ m{^(?:\w+|:)+$};
+  $_[0] =~ m{^[[:alpha:]_\:](?:\w+|:)*$}; # To exclude leading digit.
 }
 sub oneof {
   my $hash = shift;

@@ -435,6 +435,15 @@ OUT:
  <h2>foo</h2>
  
 
+TITLE: bareword argument (leading decimal should not be confused as varname)
+IN:
+ <yatt:foo y=3/>
+ <!yatt:widget foo y>
+ <h2>&yatt:y;</h2>
+OUT:
+ <h2>3</h2>
+ 
+
 TITLE: Unknown argument (k=v)
 IN:
  <yatt:foo y=3/>
