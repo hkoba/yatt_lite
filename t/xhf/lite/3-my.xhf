@@ -33,6 +33,17 @@ OUT:
    <h2>foo</h2>
  
 
+TITLE: my body html with widget invocation
+IN:
+ <yatt:my tmp>[<yatt:foo x="3" />]</yatt:my>
+ (&yatt:tmp;)
+ 
+ <!yatt:widget foo x>
+ <h2>&yatt:x;</h2>
+OUT:
+ ([<h2>3</h2>
+ ])
+
 TITLE: my body code
 IN:
  <yatt:my x=foo y:code>

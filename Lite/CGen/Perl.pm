@@ -283,6 +283,13 @@ use YATT::Lite::Constants;
       $self->gen_call($node, @{$node->[NODE_PATH]});
     }
   }
+  sub text_from_element {
+    (my MY $self, my $node) = @_;
+    &YATT::Lite::Breakpoint::breakpoint();
+    my $call_ref = $self->from_element($node);
+    sprintf q{YATT::Lite::Util::captured {my ($CON) = @_; %s}}, $$call_ref;
+  }
+
   sub gen_call {
     (my MY $self, my ($node, @path)) = @_;
     my $wname = join ":", @path;
