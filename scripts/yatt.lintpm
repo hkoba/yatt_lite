@@ -14,17 +14,31 @@ my @inc_opt = inc_opt($file, $modname);
 
 if ((system $^X, @inc_opt, -we => "require $modname") == 0) {
   print "Module $modname is OK";
+} else {
+  exit $? >> 8;
 }
 
+# Extract ModName from:
+#
+#   package ModName;
+#
+#   package ModName {
+#
 sub file_module {
   my ($fn) = @_;
   open my $fh, '<', $fn or die "Can't open $fn: $!";
   local $/;
   local $_ = <$fh>;
-  # XXX: 複数書いて有る場合、 basename が一致するものを
-  while (/^\s*package\s+([\w:]+);/smg) {
+
+  while (/(?:^|\n) [\ \t]*     (?# line beginning + space)
+	  package  [\n\ \t]+   (?# newline is allowed here)
+	  ([\w:]+)             (?# module name)
+	  \s* [;\{]            (?# statement or block)
+	 /xsg) {
     my ($modname) = $1;
-    if (rootname(basename($fn)) eq ((split /::/, $modname)[-1])) {
+
+    # Tail of $modname should be equal to it's rootname.
+    if (((split /::/, $modname)[-1]) eq rootname(basename($fn))) {
       return $modname;
     }
   }
