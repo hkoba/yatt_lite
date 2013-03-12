@@ -131,9 +131,29 @@ sub find_handler {
 # 直接呼ぶことは禁止。∵ $YATT, $CON を設定するのは handle の役目だから。
 sub _handle_yatt {
   (my MY $self, my ($con, $file)) = @_;
+
+  my ($part, $sub, $pkg, $args)
+    = $self->prepare_part_handler($con, $file);
+
+  $sub->($pkg, $con, @$args);
+
+  $con;
+}
+
+sub _handle_ytmpl {
+  (my MY $self, my ($con, $file)) = @_;
+  # XXX: http result code:
+  print $con "Forbidden filetype: $file";
+}
+
+#----------------------------------------
+
+sub prepare_part_handler {
+  (my MY $self, my ($con, $file)) = @_;
+
   my $trans = $self->open_trans;
 
-  my $mapped = $self->map_request($con, $file);
+  my $mapped = [$file, my ($type, $item) = $self->parse_request_sigil($con)];
   if (not $self->{cf_dont_debug_param}
       and -e ".htdebug_param") {
     $self->dump($mapped, [map {[$_ => $con->param($_)]} $con->param]);
@@ -145,21 +165,15 @@ sub _handle_yatt {
     # XXX: refresh する手もあるだろう。
     croak $self->error(q|Forbidden request %s|, terse_dump($mapped));
   }
-  # XXX: 未知引数エラーがあったら？
-  $sub->($pkg, $con, $self->{cf_dont_map_args} || $part->isa($trans->Action)
-	 ? ()
-	 : $part->reorder_cgi_params($con));
-  $con;
+
+  my @args; @args = $part->reorder_cgi_params($con)
+    unless $self->{cf_dont_map_args} || $part->isa($trans->Action);
+
+  ($part, $sub, $pkg, \@args);
 }
 
-sub _handle_ytmpl {
-  (my MY $self, my ($con, $file)) = @_;
-  # XXX: http result code:
-  print $con "Forbidden filetype: $file";
-}
-
-sub map_request {
-  (my MY $self, my ($con, $file)) = @_;
+sub parse_request_sigil {
+  (my MY $self, my ($con)) = @_;
   my ($subpage, $action);
   # XXX: url_param
   foreach my $name (grep {defined} $con->param()) {
@@ -194,11 +208,11 @@ sub map_request {
     $self->error("Can't use subpage and action at one time: %s vs %s"
 		 , $subpage, $action);
   } elsif (defined $subpage) {
-    [$file, $subpage];
+    (page => $subpage);
   } elsif (defined $action) {
-    [$file, undef, $action];
+    (action => $action);
   } else {
-    $file;
+    ();
   }
 }
 

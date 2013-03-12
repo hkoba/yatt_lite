@@ -1,3 +1,9 @@
+<!yatt:args "/{any:.*}">
 <yatt:hello id="content">
-World
+World&yatt:any;
+</yatt:hello>
+
+<!yatt:page other="/baz/:id">
+<yatt:hello id="other">
+ok?(&yatt:id;)
 </yatt:hello>

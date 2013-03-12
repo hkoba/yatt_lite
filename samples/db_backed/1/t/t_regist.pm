@@ -108,7 +108,7 @@ END
 END
 
   local $ENV{EMAIL_SENDER_TRANSPORT} = 'YATT_TEST';
-  $got = nocr($app->render(['/regist.yatt', undef, 'regist']
+  $got = nocr($app->render(['/regist.yatt', action => 'regist']
 			   , {qw(login     hkoba
 				 password  foo
 				 password2 foo
@@ -161,7 +161,7 @@ please dispose this mail.
 
     ok(1, $theme);
 
-    $got = nocr($app->render(['/regist.yatt', undef, 'confirm']
+    $got = nocr($app->render(['/regist.yatt', action => 'confirm']
 			     , {token => $token}));
 
     eq_or_diff($got, <<'END', "confirm token=$token");

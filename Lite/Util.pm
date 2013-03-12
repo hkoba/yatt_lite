@@ -38,6 +38,7 @@ require Scalar::Util;
 				  incr_opt
 				  num_is_ge
 				  secure_text_plain
+				  psgi_error
 				/);
   }
   use Carp;
@@ -210,9 +211,10 @@ require Scalar::Util;
   }
 
   sub lookup_path {
-    my ($path_info, $dirlist, $index_name, $want_ext) = @_;
+    my ($path_info, $dirlist, $index_name, $want_ext, $use_subpath) = @_;
     $index_name //= 'index';
     $want_ext //= '.yatt';
+    my $ixfn = $index_name . $want_ext;
     my @dirlist = grep {defined $_ and -d $_} @$dirlist;
     my $pi = $path_info;
     my ($loc, $cur, $ext) = ("", "");
@@ -230,6 +232,9 @@ require Scalar::Util;
 	  next; # candidate
 	} elsif (-r (my $fn = "$base$want_ext")) {
 	  return ($dir, "$loc/", "$cur$want_ext", $pi);
+	} elsif ($use_subpath
+		 and -r (my $alt = "$dir$loc/$ixfn")) {
+	  return ($dir, "$loc/", $ixfn, "/$cur$pi");
 	} else {
 	  # Neither dir nor $cur$want_ext exists, it should be ignored.
 	  undef $dir;
@@ -243,8 +248,8 @@ require Scalar::Util;
     return unless $pi =~ m{^/+$};
 
     foreach my $dir (@dirlist) {
-      next unless -r "$dir$loc/$index_name$want_ext";
-      return ($dir, "$loc/", "$index_name$want_ext", "");
+      next unless -r "$dir$loc/$ixfn";
+      return ($dir, "$loc/", "$ixfn", "");
     }
 
     return;
@@ -594,6 +599,11 @@ sub secure_text_plain {
   ("Content-type" => "text/plain; charset=utf-8"
    , "X-Content-Type-Options" => "nosniff"  # To protect IE8~ from XSS.
    );
+}
+
+sub psgi_error {
+  my ($self, $status, $msg, @rest) = @_;
+  return [$status, [$self->secure_text_plain, @rest], [$msg]];
 }
 
 1;

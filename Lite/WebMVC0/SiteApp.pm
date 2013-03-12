@@ -24,6 +24,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_backend
 			   cf_site_config
 			   cf_logfile
+			   cf_use_subpath
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -44,6 +45,11 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
   $self->{cf_index_name} //= $self->default_index_name;
+}
+
+sub _cf_delegates {
+  (shift->SUPER::_cf_delegates
+   , qw/use_subpath/);
 }
 
 #========================================
@@ -298,11 +304,6 @@ sub psgi_handle_static {
   $app->($env);
 }
 
-sub psgi_error {
-  (my MY $self, my ($status, $msg, @rest)) = @_;
-  return [$status, [$self->secure_text_plain, @rest], [$msg]];
-}
-
 # XXX: Do we need to care about following headers too?:
 # * X-Content-Security-Policy
 # * X-Request-With
@@ -334,7 +335,8 @@ sub split_path_info {
     # XXX: Is userdir ok? like /~$USER/dir?
     # XXX: should have cut_depth option.
     #
-    split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root});
+    split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root}
+	       , $self->{cf_use_subpath});
     # or die.
 
   } elsif (nonempty($env->{PATH_INFO})) {
@@ -343,7 +345,8 @@ sub split_path_info {
     #
     lookup_path($env->{PATH_INFO}
 		, $self->{tmpldirs}
-		, $self->{cf_index_name}, ".yatt");
+		, $self->{cf_index_name}, ".yatt"
+		, $self->{cf_use_subpath});
   } else {
     # or die
     return;

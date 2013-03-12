@@ -38,6 +38,7 @@ use YATT::Lite::Util::AsBase;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_dir fields_hash
 			secure_text_plain
+			psgi_error
 		       /;
 use YATT::Lite::XHF;
 
@@ -319,17 +320,23 @@ sub buildns {
   $newns;
 }
 
+sub _cf_delegates {
+  qw(output_encoding
+     header_charset
+     tmpl_encoding
+     debug_cgen
+     at_done
+     app_root
+     namespace
+     only_parse);
+}
+
 sub configparams_for {
   (my MY $self, my $hash) = @_;
   # my @base = map { [dir => $_] } lexpand($self->{cf_tmpldirs});
   # (@base ? (base => \@base) : ())
   (
-   $self->cf_delegate_known(0, $hash
-			      , qw(output_encoding header_charset
-				   tmpl_encoding
-				   debug_cgen
-				   at_done app_root
-				   namespace only_parse))
+   $self->cf_delegate_known(0, $hash, $self->_cf_delegates)
    , (exists $hash->{cf_error_handler}
       ? (error_handler => \ $self->{cf_error_handler}) : ())
    , die_in_error => ! YATT::Lite::Util::is_debugging());

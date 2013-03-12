@@ -5,16 +5,19 @@ use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
 use YATT::Lite::MFields qw/cf_header_charset
 			   cf_dir_config
+			   cf_use_subpath
 
 			   Action/;
 
 use YATT::Lite::WebMVC0::Connection;
 sub Connection () {'YATT::Lite::WebMVC0::Connection'}
+sub PROP () {Connection}
 
 use Carp;
 use YATT::Lite::Util qw/cached_in ckeval
 			dofile_in compile_file_in
 			try_invoke
+			psgi_error
 		      /;
 
 # sub handle_ydo, _do, _psgi...
@@ -34,6 +37,54 @@ sub handle {
     $con->set_charset($charset);
   }
   $self->SUPER::handle($type, $con, $file);
+}
+
+#
+# WebMVC0 specific url mapping.
+#
+sub prepare_part_handler {
+  (my MY $self, my ($con, $file)) = @_;
+
+  my $trans = $self->open_trans;
+
+  my PROP $prop = $con->prop;
+
+  my ($part, $sub, $pkg, @args);
+  if ($self->{cf_use_subpath} and my $subpath = $prop->{cf_subpath}) {
+    if (my @sigil = $self->parse_request_sigil($con)) {
+      croak $self->error(q|Bad request: subpath %s and sigil %s|
+			 , $subpath, terse_dump(\@sigil));
+    }
+    my $tmpl = $trans->find_file($file) or do {
+      croak $self->error("No such file: %s", $file);
+    };
+    ($part, my ($formal, $actual)) = $tmpl->match_subroutes($subpath) or do {
+      die $self->psgi_error(404, "No such subpath");
+    };
+    $pkg = $trans->find_product(perl => $tmpl) or do {
+      croak $self->error("Can't compile template file: %s", $file);
+    };
+    my $name = $part->cget('name');
+    $sub = $pkg->can("render_$name") or do {
+      croak $self->error("Can't find page %s for file: %s", $name, $file);
+    };
+    @args = $part->reorder_cgi_params($con, $actual)
+      unless $self->{cf_dont_map_args};
+
+  } else {
+    my ($type, $item) = $self->parse_request_sigil($con);
+    ($part, $sub, $pkg) = $trans->find_part_handler([$file, $type, $item]);
+
+    @args = $part->reorder_cgi_params($con)
+      unless $self->{cf_dont_map_args} || $part->isa($trans->Action);
+  }
+
+  unless ($part->public) {
+    # XXX: refresh する手もあるだろう。
+    croak $self->error(q|Forbidden request %s|, $file);
+  }
+
+  ($part, $sub, $pkg, \@args);
 }
 
 sub _handle_ydo {

@@ -32,6 +32,7 @@ use YATT::Lite::Breakpoint ();
 		       cf_implicit cf_suppressed
 		       cf_startln cf_bodyln cf_endln
 		       cf_startpos cf_bodypos cf_bodylen
+		       cf_subpattern
 		     )]
       , -constants => [[public => 0]]
       , [Widget => -fields => [qw(tree var_dict has_required_arg)]
@@ -44,6 +45,7 @@ use YATT::Lite::Breakpoint ();
 	, -fields => [qw(product parse_ok cf_mtime cf_utf8 cf_age
 			 cf_usage cf_constants
 			 cf_ignore_trailing_newlines
+			 cf_subroutes
 		       )]]
     );
 
@@ -226,10 +228,14 @@ sub create_file {
   sub find_part_handler {
     (my MY $self, my $nameSpec, my %opts) = @_;
     my $ignore_error = delete $opts{ignore_error};
-    my ($partName, $subPage, $action) = ref $nameSpec ? @$nameSpec : $nameSpec;
-    $subPage //= '';
+    my ($partName, $kind, $pureName, @rest)
+      = ref $nameSpec ? @$nameSpec : $nameSpec;
 
-    my $method;
+    $kind //= 'page';
+    $pureName //= '';
+
+    my ($itemKey, $method) = $self->can("_itemKey_$kind")->($self, $pureName);
+
     (my Template $tmpl, my Part $part);
 
     if (UNIVERSAL::isa($self->{root}, Template)) {
@@ -243,14 +249,6 @@ sub create_file {
       $method = "render_$partName";
 
     } else {
-      (my ($kind, $pureName, $itemKey), $method) = do {
-	if (defined $action) {
-	  (action => $action => ("do_$action") x 2);
-	} else {
-	  (widget => $subPage, $subPage, "render_$subPage");
-	}
-      };
-
       # General container case.
       $tmpl = $self->find_file($partName)
 	or ($ignore_error and return)
@@ -269,8 +267,11 @@ sub create_file {
       or ($ignore_error and return)
 	or croak "Can't extract $method from file: $partName";
 
-    ($part, $sub, $pkg);
+    ($part, $sub, $pkg, @rest);
   }
+
+  sub _itemKey_page { shift; ($_[0], "render_$_[0]") }
+  sub _itemKey_action { shift; ("do_$_[0]") x 2; }
 
   sub find_renderer {
     my MY $self = shift;
@@ -373,6 +374,7 @@ sub create_file {
     $tmpl->YATT::Lite::VFS::File::reset;
     undef $tmpl->{product};
     undef $tmpl->{parse_ok};
+    undef $tmpl->{cf_subroutes};
     # delpkg($tmpl->{cf_package}); # No way to avoid redef error.
   }
   sub YATT::Lite::Core::Template::refresh {
@@ -416,6 +418,12 @@ sub create_file {
       push @{$widget->{arg_order}}, 'body';
       $var;
     };
+  }
+
+  sub YATT::Lite::Core::Template::match_subroutes {
+    my Template $tmpl = shift;
+    return unless $tmpl->{cf_subroutes};
+    $tmpl->{cf_subroutes}->match($_[0]);
   }
 }
 

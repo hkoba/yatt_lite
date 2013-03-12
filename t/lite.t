@@ -107,12 +107,12 @@ END
       , "$theme $SUB find_renderer foo";
 
     err_like sub {
-      $yatt->find_part_handler([foo => 'qux']);
-    }, qr{^No such widget in file foo: qux}
+      $yatt->find_part_handler([foo => page => 'qux']);
+    }, qr{^No such page in file foo: qux}
       , "Error diag for misspelled widget";
 
     err_like sub {
-      $yatt->find_part_handler([foo => undef, 'hoe']);
+      $yatt->find_part_handler([foo => action => 'hoe']);
     }, qr{^No such action in file foo: hoe}
       , "Error diag for misspelled action";
   }

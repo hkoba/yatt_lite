@@ -59,14 +59,17 @@ sub is_or_like($$;$) {
 	  , app_ns => 'MyApp'
 	  , app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
-	  , header_charset => 'utf-8')
+	  , header_charset => 'utf-8'
+	  , use_subpath => 1
+	 )
       ->to_app;
 
   my $hello = sub {
-    my ($id, $body) = @_;
+    my ($id, $body, $rest) = @_;
+    $rest //= "";
     <<END;
 <div id="$id">
-  Hello $body!
+  Hello $body$rest!
 </div>
 
 END
@@ -82,13 +85,20 @@ END
     (["/", 200, $out_index, ["Content-Type", qq{text/html; charset="utf-8"}]]
      , ["/index", 200, $out_index]
      , ["/index.yatt", 200, $out_index]
-     , ["/index.yatt/foo/bar", 200, $out_index]
+     , ["/index.yatt/foo/bar", 200, $hello->(content => "Worldfoo/bar")]
+     , ["/index/foo/bar", 200, $hello->(content => "Worldfoo/bar")]
+     , ["/index/baz/1234", 200, $hello->(other => "ok?(1234)")]
+     , ["/baz/5678", 200, $hello->(other => "ok?(5678)")]
+     , ["/no_subpath/foobar", 404, qr{No such subpath}]
      , ["/test.lib/Foo.pm", 403, qr{Forbidden}]
      , ["/.htaccess", 403, qr{Forbidden}]
      , ["/hidden.ytmpl", 403, qr{Forbidden}]
      , ["/beta/world_line", 200, $out_beta]
      , ["/beta/world_line.yatt", 200, $out_beta]
-     , ["/beta/world_line.yatt/baz", 200, $out_beta]
+     , ["/beta/world_line.yatt/baz", 200, $hello->(beta => "bazworld line")]
+     , ["/beta/world_line/baz", 200, $hello->(beta => "bazworld line")]
+     , ["/beta/world_line.yatt/edit/1234", 200, $hello->(edit => "1234's world")]
+     , ["/beta/world_line/edit/1234", 200, $hello->(edit => "1234's world")]
     ) {
     my ($path, $code, $body, $header) = @$test;
     my $tuple = do {

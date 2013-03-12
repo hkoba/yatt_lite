@@ -23,6 +23,8 @@ use fields qw/re_decl
 	      cf_base cf_scheme cf_path cf_encoding cf_debug
 	      cf_all
 	      cf_special_entities
+	      subroutes
+	      rootroute
 	    /;
 
 use YATT::Lite::Core qw(Part Widget Page Action Data Template);
@@ -179,15 +181,33 @@ sub parse_decl {
       # yatt:widget, action
       my (@args) = $self->parse_attlist($str, 1); # To delay entity parsing.
       my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
-	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}, $ns, $kind
-		  , nonmatched($str));
+	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}
+			       , $ns, $kind
+			       , nonmatched($str));
       };
-      unless ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
-	die $self->synerror_at($self->{startln}, q{Invalid part name in %s:%s}, $ns, $kind);
+      my ($partName, $mapping, @opts);
+      if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
+	$partName = $nameAtt->[NODE_PATH];
+      } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
+	# $partName が foo=bar なら pattern として扱う
+	$mapping = $self->parse_location
+	  ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
+	    die $self->synerror_at($self->{startln}
+				   , q{Invalid location in %s:%s - "%s"}
+				   , $ns, $kind, $nameAtt->[NODE_BODY])
+	  };
+	$partName = $nameAtt->[NODE_PATH]
+	  // $self->location2name($nameAtt->[NODE_BODY]);
+      } else {
+	die $self->synerror_at($self->{startln}, q{Invalid part name in %s:%s}
+			       , $ns, $kind);
       }
-      my $partName = $nameAtt->[NODE_PATH];
-      # XXX: $partName が foo=bar とかだったら。
       $self->add_part($tmpl, $part = $self->build($ns, $kind, $partName));
+      if ($mapping) {
+	$mapping->configure(item => $part);
+	$self->{subroutes}->append($mapping);
+	$self->add_url_params($part, lexpand($mapping->cget('params')));
+      }
       $self->add_args($part, @args);
       $is_new++;
     } elsif (my $sub = $self->can("declare_$kind")) {
@@ -245,6 +265,18 @@ sub parse_decl {
   } continue { $prev = $part }
   if ($prev) {
     $prev->{cf_bodylen} = length($tmpl->{cf_string}) - $prev->{cf_bodypos};
+  }
+
+  $self->finalize_template($tmpl);
+}
+
+sub finalize_template {
+  (my MY $self, my Template $tmpl) = @_;
+  if ($self->{rootroute}) {
+    $self->subroutes->append($self->{rootroute});
+  }
+  if ($self->{subroutes}) {
+    $tmpl->{cf_subroutes} = $self->{subroutes};
   }
   $tmpl
 }
@@ -428,6 +460,20 @@ sub declare_args {
   $newpart->{cf_startpos} = $self->{startpos};
   $newpart->{cf_bodypos} = $self->{curpos} + 1;
   $self->add_part($tmpl, $newpart); # partlist と Item に足し直す
+
+  if (@_ and $_[0] and $_[0]->[NODE_TYPE] == TYPE_ATT_TEXT
+      and not defined $_[0]->[NODE_PATH]) {
+    my $patNode = shift;
+    my $mapping = $self->parse_location($patNode->[NODE_BODY], '', $newpart)
+      or do {
+	die $self->synerror_at($self->{startln}
+			       , q{Invalid location in %s:%s - "%s"}
+			       , $ns, 'args', $patNode->[NODE_BODY])
+      };
+    $self->{rootroute} = $mapping;
+    $self->add_url_params($newpart, lexpand($mapping->cget('params')));
+  }
+
   $self->add_args($newpart, @_);
   $newpart;
 }
@@ -446,6 +492,29 @@ sub declare_constants {
   undef;
 }
 
+#========================================
+
+sub location2name {
+  (my MY $self, my $location) = @_;
+  $location =~ s{([^A-Za-z0-9])}{'_'.sprintf("%02x", unpack("C", $1))}eg;
+  $location;
+}
+
+sub parse_location {
+  (my MY $self, my ($location, $name, $item)) = @_;
+  return unless $location =~ m{^/};
+  $self->subroutes->create([$name, $location], $item);
+}
+
+sub SubRoutes {
+  require YATT::Lite::WebMVC0::SubRoutes;
+  'YATT::Lite::WebMVC0::SubRoutes'
+}
+
+sub subroutes {
+  (my MY $self) = @_;
+  $self->{subroutes} //= $self->SubRoutes->new;
+}
 
 #========================================
 sub primary_ns {
@@ -488,6 +557,7 @@ sub add_lineinfo {
   (my MY $self, my $sink) = @_;
   # push @$sink, [TYPE_LINEINFO, $self->{endln}];
 }
+
 sub add_args {
   (my MY $self, my Part $part) = splice @_, 0, 2;
   foreach my $argSpec (@_) {
@@ -530,6 +600,19 @@ sub add_args {
   }
   $self;
 }
+
+sub add_url_params {
+  (my MY $self, my Part $part, my @params) = @_;
+  foreach my $param (@params) {
+    my ($argName, $type_or_pat) = @$param;
+    my $type = is_ident($type_or_pat) ? $type_or_pat : 'value'; # text?
+    my $var = $self->mkvar_at($self->{startln}, $type, $argName
+			      , nextArgNo($part));
+    push @{$part->{arg_order}}, $argName;
+    $part->{arg_dict}{$argName} = $var;
+  }
+}
+
 
 # code 型は仮想的な Widget を作る。
 sub add_arg_of_type_code {
@@ -604,6 +687,7 @@ sub _tmpl_file_line {
 }
 #========================================
 sub is_ident {
+  return undef unless defined $_[0];
   local %+;
   $_[0] =~ m{^[[:alpha:]_\:](?:\w+|:)*$}; # To exclude leading digit.
 }
