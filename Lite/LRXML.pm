@@ -32,6 +32,8 @@ use YATT::Lite::VarTypes;
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand);
 
+use YATT::Lite::RegexpNames;
+
 require Scalar::Util;
 require Encode;
 use Carp;
@@ -52,7 +54,7 @@ sub after_new {
   $self->SUPER::after_new;
   Scalar::Util::weaken($self->{cf_vfs}) if $self->{cf_vfs};
   $self->{cf_namespace} ||= [qw(yatt perl)];
-  my $nspat = $self->re_ns;
+  my $nspat = qr!@{[join "|", $self->namespace]}!;
   $self->{re_name} ||= $self->re_name;
   $self->{re_decl} ||= qr{<!(?:(?<declname>$nspat(?::\w++)+)
 			  |(?:--\#(?<comment>$nspat(?::\w++)*)))\b}xs;
@@ -506,14 +508,14 @@ sub parse_location {
   $self->subroutes->create([$name, $location], $item);
 }
 
-sub SubRoutes {
-  require YATT::Lite::WebMVC0::SubRoutes;
-  'YATT::Lite::WebMVC0::SubRoutes'
-}
-
 sub subroutes {
   (my MY $self) = @_;
   $self->{subroutes} //= $self->SubRoutes->new;
+}
+
+sub SubRoutes {
+  require YATT::Lite::WebMVC0::SubRoutes;
+  'YATT::Lite::WebMVC0::SubRoutes'
 }
 
 #========================================
@@ -655,17 +657,6 @@ sub nextArgNo {
   $part->{arg_order} ? scalar @{$part->{arg_order}} : 0;
 }
 
-#========================================
-# To allow overriding.
-sub re_ns {
-  my MY $self = shift;
-  my @ns = @_ ? @_ : $self->namespace;
-  my ($nspat) = map {qr{$_}} join "|", @ns;
-  $nspat;
-}
-sub re_name {
-  shift; qr{[\w\.]+};
-}
 #========================================
 sub synerror_at {
   (my MY $self, my $ln) = splice @_, 0, 2;

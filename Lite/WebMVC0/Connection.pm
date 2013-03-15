@@ -365,6 +365,8 @@ sub current_user {
 
 #========================================
 
+use YATT::Lite::RegexpNames; # For re_name, re_integer, ...
+
 sub param_type {
   my PROP $prop = (my $glob = shift)->prop;
   my $name = shift // croak "Undefined name!";
@@ -393,16 +395,6 @@ sub param_type {
 		     , $name, $type, $value);
   }
 }
-
-# XXX: These should be easily extendable from .htyattrc.pl
-
-sub re_integer { qr{^(?:0|[1-9]\d*)$}; }
-
-sub re_word { qr{^\w+$}; }
-
-sub re_nonempty { qr{\S.*}s }
-
-sub re_any { qr{^.*$}s }
 
 #========================================
 

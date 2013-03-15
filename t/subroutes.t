@@ -46,6 +46,10 @@ require_ok($CLASS);
   $results_params->('/authors/:id/edit'
 		    , ['id']);
 
+  $results_params->('/:controller(/:action(/:id))'
+		    , ['controller'], ['action'], ['id']);
+
+
   $results_params->('/articles/:article_id/comments'
 		    , ['article_id']);
   $results_params->('/articles/:article_id/comments/:id'
@@ -67,6 +71,9 @@ require_ok($CLASS);
   $results_params->('/blog/{year}-{month}'
 		    , ['year'], ['month']);
 
+  $results_params->('/{controller}(/{action}(/{id}))'
+		    , ['controller'], ['action'], ['id']);
+
 }
 
 {
@@ -79,15 +86,24 @@ require_ok($CLASS);
     };
   };
 
+
+  # ['location' => item]
+  # or
+  # [[name => 'location'] => item]
+
   my $t;
   $t = $builder->(['/' => 'ROOT']
-		  , [[article_list => '/articles']]
-		  , [[show_article => '/article/:id']]
-		  , [[article_comment => '/article/:article_id/comment/:id']]
-		  , [[blog_archive => '/blog/{year:[0-9]+}-{month:[0-9]{2}}']]
-		  , [[blog_other   => '/blog/{other}']]
+
+		  , [[article_list => '/articles'], ]
+		  , [[show_article => '/article/:id'], ]
+		  , [[article_comment => '/article/:article_id/comment/:id'], ]
+		  , [[blog_archive => '/blog/{year:digits}-{month:[0-9]{2}}'],]
+		  , [[blog_other   => '/blog/{other}'], ]
+
+		  , [[generic      => '/:controller(/:action(/:id))'], ]
 		 );
 
+  # Results should be: [name//item => [formal params] => [actual params]]
   $t->("/"
        , [ROOT => []
 	  => []]);
@@ -101,10 +117,20 @@ require_ok($CLASS);
 	  => [1234, 5678]]);
 
   $t->("/blog/2001-01"
-       , [blog_archive    => [['year'], ['month']]
+       , [blog_archive    => [[year => 'digits'], ['month']]
 	  => [2001, '01']]);
 
   $t->("/blog/foobar"
        , [blog_other      => [['other']]
 	  => ['foobar']]);
+
+  $t->("/foo"
+       , [generic => [['controller'], ['action'], ['id']]
+	  => ['foo', undef, undef]]);
+  $t->("/foo/bar"
+       , [generic => [['controller'], ['action'], ['id']]
+	  => ['foo', 'bar', undef]]);
+  $t->("/foo/bar/baz"
+       , [generic => [['controller'], ['action'], ['id']]
+	  => ['foo', 'bar', 'baz']]);
 }

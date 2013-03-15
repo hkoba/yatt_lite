@@ -7,6 +7,7 @@ use YATT::Lite::Types ([Route =>
 			-fields => [qw/pattern_re
 				       cf_name
 				       cf_pattern cf_item cf_params/]]);
+use YATT::Lite::RegexpNames;
 
 sub new {
   bless [], shift;
@@ -42,6 +43,8 @@ sub create {
   $r;
 }
 
+my %re_paren = qw!( (?: ) )?!;
+
 sub parse_pattern {
   my ($self, $pat) = @_;
 
@@ -51,13 +54,13 @@ sub parse_pattern {
   }
 
   my $last = 0;
-  while ($pat =~ m!\G(?: ([^:{}]+)               # other text
-		   |    (?<=/) \:(\w+(?:\:\w+)*) # :var:type
-		   | \{(\w+                      # {var:...}
+  while ($pat =~ m!\G(?: ([^:{}()]+)             # $1 other text
+		   |    (?<=/) \:(\w+(?:\:\w+)*) # $2 :var:type
+		   | \{(\w+                      # $3 {var:...}
 		       (?:
-			 : (?: (?:\w+(?:\:\w+)*) # :type
-			 | (?: [^{}]+            # regexp(other than {})
-			   | (\{                 # re-qualifier(nestable)
+			 : (?: (?:\w+(?:\:\w+)*) #    :type
+			 | (?: [^{}]+            #    regexp(other than {})
+			   | (\{                 # $4 re-qualifier(nestable)
 			       (?: (?> [^{}]+)
 			       | (?-1)
 			       )*
@@ -67,6 +70,7 @@ sub parse_pattern {
 		       )?
 		     )
 		     \}
+		   | ([()])                      # $5 (optional)
 		   )
 		  !xg) {
     if (not @pat) {
@@ -76,16 +80,22 @@ sub parse_pattern {
       push @pat, quotemeta($1);
     } elsif (my $var_type = $2 // $3) {
       my ($name, $type_or_pat) = split /:/, $var_type, 2;
-      my @type;
+      my $var = [$name];
       push @pat, do {
-	if (not $type_or_pat
-	    or ($type_or_pat =~ /^\w+$/ and do {push @type, $&})) {
+	unless ($type_or_pat) {
 	  q!([^/]+)!
+	} elsif (my ($type) = $type_or_pat =~ /^(\w+)$/) {
+	  my $sub = $self->can("re_$type")
+	    or croak "Unknown pattern type: $type";
+	  push @$var, $type;
+	  '('.$sub->($self, 1).')'; # partial pattern
 	} else {
 	  "($type_or_pat)";
 	}
       };
-      push @params, [$name, @type];
+      push @params, $var;
+    } elsif ($5) {
+      push @pat, $re_paren{$5};
     } else {
       last;
     }
