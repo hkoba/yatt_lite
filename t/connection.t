@@ -22,7 +22,7 @@ use lib $libdir;
 use Test::More;
 plan 'no_plan';
 
-use YATT::Lite::Util qw(appname rootname catch ostream);
+use YATT::Lite::Util qw(appname rootname catch ostream terse_dump);
 sub myapp {join _ => MyTest => appname($0), @_}
 
 use YATT::Lite::PSGIEnv;
@@ -301,5 +301,39 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 	, "scalar accept_language() $al";
   }
 
+
+  {
+    my $t = sub {
+      my ($spec, $expect) = @_;
+      my ($wantarray, $args) = ref $spec eq 'HASH'
+	? (0, [%$spec]) : (1, $spec);
+      my $con = $mux->make_connection(undef, @$args);
+      my ($in, $out) = map {terse_dump($_)} ($args, $expect);
+      if ($wantarray) {
+	is_deeply [$con->mapped_path(@$args)], $expect
+	  , "mapped_path($in) (array) => $out";
+      } else {
+	is_deeply scalar($con->mapped_path(@$args)), $expect
+	  , "mapped_path($in) (scalar) => $out";
+
+      }
+    };
+
+    $t->([], ["/"]);
+    $t->(+{}, "/");
+
+    $t->([location => "/", file => "foo.yatt", subpath => "/bar"]
+	 , ["/foo.yatt", "/bar"]);
+    $t->({location => "/", file => "foo.yatt", subpath => "/bar"}
+	 , "/foo.yatt/bar");
+
+    # If is_index is on, file should be ignored.
+    $t->([location => "/foo", file => "index.yatt", subpath => "/bar"
+	 , is_index => 1]
+	 , ["/foo", "/bar"]);
+    $t->({location => "/foo", file => "index.yatt", subpath => "/bar"
+	 , is_index => 1}
+	 , "/foo/bar");
+  }
 }
 

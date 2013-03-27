@@ -178,7 +178,8 @@ require Scalar::Util;
 
     $dir .= "/" if $dir !~ m{/$};
     my $subpath = substr($path, $pos);
-    if (not defined $file) {
+    my $is_index = not defined $file;
+    if ($is_index) {
       if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.yatt") {
 	$subpath = substr($subpath, 1+length $1);
 	$file = "$1.yatt";
@@ -197,7 +198,9 @@ require Scalar::Util;
     ($startDir
      , $loc
      , $file // ''
-     , $subpath);
+     , $subpath
+     , $is_index
+    );
   }
 
   sub lookup_dir {
@@ -234,7 +237,7 @@ require Scalar::Util;
 	  return ($dir, "$loc/", "$cur$want_ext", $pi);
 	} elsif ($use_subpath
 		 and -r (my $alt = "$dir$loc/$ixfn")) {
-	  return ($dir, "$loc/", $ixfn, "/$cur$pi");
+	  return ($dir, "$loc/", $ixfn, "/$cur$pi", 1);
 	} else {
 	  # Neither dir nor $cur$want_ext exists, it should be ignored.
 	  undef $dir;
@@ -249,7 +252,7 @@ require Scalar::Util;
 
     foreach my $dir (@dirlist) {
       next unless -r "$dir$loc/$ixfn";
-      return ($dir, "$loc/", "$ixfn", "");
+      return ($dir, "$loc/", "$ixfn", "", 1);
     }
 
     return;

@@ -11,6 +11,7 @@ use fields qw/cf_cgi
 
 	      cf_dir cf_file cf_subpath
 	      cf_root cf_location
+	      cf_is_index
 
 	      current_user
 	    /;
@@ -164,10 +165,19 @@ sub _invoke_or {
 # fragment
 sub mkurl {
   my PROP $prop = (my $glob = shift)->prop;
-  my $opts = shift if @_ && ref $_[0] eq 'HASH';
   my ($file, $param, %opts) = @_;
 
-  my $req  = $glob->request_path;
+  my ($req, $subloc) = do {
+    if ($opts{mapped_path}) {
+      $glob->mapped_path;
+    } else {
+      $glob->request_path;
+    }
+  };
+  if ($opts{use_subloc} and defined $subloc) {
+    $req .= "/$subloc";
+  }
+
   my ($orig, $dir) = ('');
   if (($dir = $req) =~ s{([^/]+)$}{}) {
     $orig = $1;
@@ -257,6 +267,21 @@ sub mkquery {
   } else {
     wantarray ? @enc_param : '?'.join($sep, @enc_param);
   }
+}
+
+sub mapped_path {
+  my PROP $prop = (my $glob = shift)->prop;
+  my @path = do {
+    my $loc = $prop->{cf_location} // "/";
+    $loc .= $prop->{cf_file} if defined $prop->{cf_file}
+      and not $prop->{cf_is_index};
+    ($loc);
+  };
+  if (defined (my $sp = $prop->{cf_subpath})) {
+    $sp =~ s!^/*!/!;
+    push @path, $sp;
+  }
+  wantarray ? @path : join "", @path;
 }
 
 sub request_path {

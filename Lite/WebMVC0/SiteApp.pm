@@ -169,7 +169,8 @@ sub call {
   }
 
   # XXX: user_dir?
-  my ($tmpldir, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
+  my ($tmpldir, $loc, $file, $trailer, $is_index)
+    = my @pi = $self->split_path_info($env);
 
   if ($self->{cf_debug_psgi}) {
     # XXX: should be configurable.
@@ -216,6 +217,7 @@ sub call {
   my $req = Plack::Request->new($env);
 
   my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]
+				       , $is_index ? (is_index => 1) : ()
 				       , is_psgi => 1, cgi => $req);
 
   my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
