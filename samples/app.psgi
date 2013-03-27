@@ -34,6 +34,7 @@ my $dispatcher = YATT::Lite::WebMVC0::SiteApp->new
    , (-d "$app_root/ytmpl" ? (app_base => '@ytmpl') : ())
    , namespace => ['yatt', 'perl', 'js']
    , header_charset => 'utf-8'
+   , use_subpath => 1
    , debug_cgen => $ENV{DEBUG_CGEN}
    # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
    # , tmpl_encoding => 'utf-8'
