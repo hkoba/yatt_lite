@@ -200,6 +200,11 @@ sub entity_datetime {
   DateTime->$method(@args);
 }
 
+sub entity_redirect {
+  my ($this) = shift;
+  $CON->redirect(@_);
+}
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 
