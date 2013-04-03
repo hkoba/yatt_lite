@@ -178,8 +178,7 @@ require Scalar::Util;
 
     $dir .= "/" if $dir !~ m{/$};
     my $subpath = substr($path, $pos);
-    my $is_index = not defined $file;
-    if ($is_index) {
+    if (not defined $file) {
       if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.yatt") {
 	$subpath = substr($subpath, 1+length $1);
 	$file = "$1.yatt";
@@ -199,7 +198,7 @@ require Scalar::Util;
      , $loc
      , $file // ''
      , $subpath
-     , $is_index
+     , (not defined $file)
     );
   }
 

@@ -334,6 +334,14 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     $t->({location => "/foo", file => "index.yatt", subpath => "/bar"
 	 , is_index => 1}
 	 , "/foo/bar");
+
+    $t->([location => "/", file => "index.yatt", subpath => "/bar"
+	 , is_index => 1]
+	 , ["/", "/bar"]);
+    $t->({location => "/", file => "index.yatt", subpath => "/bar"
+	 , is_index => 1}
+	 , "/bar");
+
   }
 }
 

@@ -167,29 +167,29 @@ sub mkurl {
   my PROP $prop = (my $glob = shift)->prop;
   my ($file, $param, %opts) = @_;
 
-  my ($req, $subloc) = do {
+  my $req = do {
     if ($opts{mapped_path}) {
       $glob->mapped_path;
     } else {
       $glob->request_path;
     }
   };
-  if ($opts{use_subloc} and defined $subloc) {
-    $req .= "/$subloc";
-  }
 
-  my ($orig, $dir) = ('');
-  if (($dir = $req) =~ s{([^/]+)$}{}) {
-    $orig = $1;
-  }
-
-  my $path = $dir . do {
-    if (not defined $file or $file eq '') {
-      $orig;
-    } elsif ($file eq '.') {
-      ''
+  my $path = do {
+    if (defined $file and $file =~ m!^/!) {
+      $prop->{cf_site_prefix}.$file;
     } else {
-      $file;
+      my ($orig, $dir) = ('');
+      if (($dir = $req) =~ s{([^/]+)$}{}) {
+	$orig = $1;
+      }
+      if (not defined $file or $file eq '') {
+	$dir . $orig;
+      } elsif ($file eq '.') {
+	$dir
+      } else {
+	$dir . $file;
+      }
     }
   };
 
@@ -281,7 +281,13 @@ sub mapped_path {
     $sp =~ s!^/*!/!;
     push @path, $sp;
   }
-  wantarray ? @path : join "", @path;
+  if (wantarray) {
+    @path;
+  } else {
+    my $res = join "", @path;
+    $res =~ s!^/+!/!;
+    $res;
+  }
 }
 
 sub request_path {

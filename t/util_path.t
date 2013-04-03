@@ -60,37 +60,37 @@ my $i = 1;
 
   my $res;
   $test->(html => "/auth.yatt"
-	  , $res = [$docroot, "/", "auth.yatt", ""]);
+	  , $res = [$docroot, "/", "auth.yatt", "", '']);
   $test->(html => "/auth", $res);
 
   $test->(html => "/auth.yatt/foo"
-	  , $res = [$docroot, "/", "auth.yatt", "/foo"]);
+	  , $res = [$docroot, "/", "auth.yatt", "/foo", '']);
   $test->(html => "/auth/foo", $res);
 
   $test->(html => "/auth.yatt/foo/bar"
-	  , $res = [$docroot, "/", "auth.yatt", "/foo/bar"]);
+	  , $res = [$docroot, "/", "auth.yatt", "/foo/bar", '']);
   $test->(html => "/auth/foo/bar", $res);
 
   $test->(ytmpl => "/foo.yatt"
-	  , $res = [$ytmpl, "/", "foo.yatt", ""]);
+	  , $res = [$ytmpl, "/", "foo.yatt", "", '']);
   $test->(ytmpl => "/foo", $res);
 
   $test->(html => "/d1/f1.yatt"
-	  , $res = [$docroot, "/d1/", "f1.yatt", ""]);
+	  , $res = [$docroot, "/d1/", "f1.yatt", "", '']);
   $test->(html => "/d1/f1", $res);
 
   $test->(ytmpl => "/d1/f2.yatt"
-	  , $res = [$ytmpl, "/d1/", "f2.yatt", ""]);
+	  , $res = [$ytmpl, "/d1/", "f2.yatt", "", '']);
   $test->(ytmpl => "/d1/f2", $res);
 
   $test->(html => "/code.ydo"
-	  , $res = [$docroot, '/', 'code.ydo', '']);
+	  , $res = [$docroot, '/', 'code.ydo', '', '']);
 
   $test->(html => "/img/bg.png"
-	  , [$docroot, "/img/", "bg.png", ""]);
+	  , [$docroot, "/img/", "bg.png", "", '']);
 
   $test->(html => "/img/missing.png"
-	  , [$docroot, "/img/", "missing.png", ""]);
+	  , [$docroot, "/img/", "missing.png", "", '']);
 }
 
 $i++;
@@ -130,7 +130,7 @@ $i++;
   $test->("/index.yatt"
 	  , $res = [$tmpl, '/', 'index.yatt', '']);
   $test->("/index", $res);
-  $test->("/", $res);
+  $test->("/", [$tmpl, '/', 'index.yatt', '', 1]);
 
   $test->("/index.yatt/foo/bar"
 	  , $res = [$tmpl, '/', 'index.yatt', '/foo/bar']);
@@ -147,7 +147,7 @@ $i++;
   $test->("/real/index.yatt"
 	  , $res = [$html, '/real/', 'index.yatt', '']);
   $test->("/real/index", $res);
-  $test->("/real/", $res);
+  $test->("/real/", [$html, '/real/', 'index.yatt', '', 1]);
 
   $test->("/real/index.yatt/foo/bar"
 	  , $res = [$html, '/real/', 'index.yatt', '/foo/bar']);
@@ -174,7 +174,7 @@ $i++;
   $test->("/virt/index.yatt"
 	  , $res = [$tmpl, '/virt/', 'index.yatt', '']);
   $test->("/virt/index", $res);
-  $test->("/virt/", $res);
+  $test->("/virt/", [$tmpl, '/virt/', 'index.yatt', '', 1]);
   $test->("/virt/index.yatt/foo/bar"
 	  , $res = [$tmpl, '/virt/', 'index.yatt', '/foo/bar']);
   $test->("/virt/index/foo/bar", $res);
@@ -188,7 +188,7 @@ $i++;
   $test->("/virt/test/foo/bar", $res);
 
   $test->('/filevsdir',  [$tmpl, '/', 'filevsdir.yatt', '']);
-  $test->('/filevsdir/', [$tmpl, '/filevsdir/', 'index.yatt', '']);
+  $test->('/filevsdir/', [$tmpl, '/filevsdir/', 'index.yatt', '', 1]);
   $test->('/filevsdir/real/foo', [$tmpl, '/filevsdir/', 'real.yatt', '/foo']);
  TODO: {
     local our $TODO = "Util::lookup_path file vs dir subpath priority";
