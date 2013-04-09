@@ -102,7 +102,6 @@ use Config '%Config';
     }
   };
 
-  &YATT::Lite::Breakpoint::breakpoint();
   unless (caller) {
     require Plack::Runner;
     my $runner = Plack::Runner->new(app => $app);
