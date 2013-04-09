@@ -14,13 +14,27 @@ use Test::More;
 use Test::WWW::Mechanize::PSGI;
 
 use FindBin;
-use lib "$FindBin::Bin/../lib";
+use File::Basename;
+use Cwd ();
+my @libdir;
+BEGIN {
+  my $mod = "YATT/Lite.pm";
+  if (-r ((my $dn = "$FindBin::Bin/../lib").$mod)) {
+    push @libdir, $dn
+  } elsif (Cwd::cwd() =~ m!^(.*?)/lib/YATT!) {
+    push @libdir, "$1/lib";
+  } else {
+    warn "Can't find YATT installation. cwd=".Cwd::cwd();
+  }
+}
+use lib @libdir;
 
 use YATT::Lite::Factory;
 
 plan 'no_plan';
 
 ok(my $SITE = YATT::Lite::Factory->find_load_factory_script
+   (dir => dirname($FindBin::Bin))
    , "app.psgi is loaded");
 
 $SITE->configure(debug_psgi => 0
