@@ -63,7 +63,7 @@ B<YATT::Lite> は yatt の最新版です。
 Pure Perl で実装されており、
 サンプルとして L<PSGI> ベースの Web フレームワーク
 (B<WebMVC0>)
-が添付されています(単体のテンプレートエンジンとして使うことも可能です)。
+が添付されています(YATT::Lite 単体でテンプレートエンジンとして使うことも可能です)。
 
 yatt はプログラマーよりも、非プログラマーである Web デザイナーの表現力をいかに強化し、
 かつ安全に Web 開発の主役を任せられるようにするか? というテーマで設計されています。
@@ -129,8 +129,10 @@ yatt の主な特徴を以下に挙げます。
 =over 4
 
 =item 他のテンプレートシステムと比べて、HTML/XML との親和性が高い。
+X<html-savvy>
 
-yatt で書かれたテンプレートは HTML/XML に非常に構文が似ているので、
+yatt で書かれたテンプレートは HTML/XML に
+L<非常に構文が似ている|/SYNOPSIS> ので、
 導入が容易です
 (一般的なエディタの HTML/XML モードでもほぼ問題なく読み書き出来ます)。
 
@@ -142,6 +144,7 @@ Web デザイナーチームの再学習のコストを最小化できるだろ�
 という読みもあります。
 
 =item 「タグを単位とした、テンプレートの部品化」を支援
+X<reusable-tag>
 
 HTML は冗長な記述言語なので、テンプレートエンジンにおいても
 L<DRY (Don't Repeat Yourself)|http://en.wikipedia.org/wiki/Don't_repeat_yourself>
@@ -168,6 +171,7 @@ L<DRY (Don't Repeat Yourself)|http://en.wikipedia.org/wiki/Don't_repeat_yourself
 プロジェクト規模に合わせて無理のない範囲で widget のライブラリー化を進めることが出来ます。
 
 =item 静的検査を重視、構文エラー検出のための C<lint> ツールを用意
+X<static-checking> X<lint>
 
 プログラムを書き慣れない素人にとって、変数名や部品の名前をスペルミスしないよう、
 注意を払い続けることは、決して容易ではありません。
@@ -177,6 +181,7 @@ L<DRY (Don't Repeat Yourself)|http://en.wikipedia.org/wiki/Don't_repeat_yourself
 (「静的に」とは、実行しなくても、スクリプトへの変換の段階で検査される、という意味です。)
 
 =item XSS への抜本対策としての、出力時エスケープと変数型宣言機能
+X<type-based-escaping> X<anti-xss>
 
 Web 用のアプリケーション開発では、
 ユーザが入力したデータを他のユーザのブラウザへと送る際に、
@@ -189,6 +194,7 @@ Web 用のアプリケーション開発では、
 escape 処理が自動的に生成されます。
 
 =item 複雑な処理をテンプレートの外に括り出すための、拡張(?) Entity reference 式
+X<entityexpr>
 
 複雑な処理をテンプレートに埋め込むときに
 C<< <?php?> >> のような processing instruction 構文を用いると、
@@ -202,19 +208,45 @@ object のメソッド呼び出しチェーン風に拡張し、
 用意しました。
 
 =item Web アプリ構築向けの、リクエストルーティング機能付き
+X<routing>
 
 Web アプリにはユーザの要求した url を view へマップするための、
 リクエストルーティング機能が必要です。これは、アプリの内部構造の変更に
-振り回されない、簡潔で安定した URI を提供するためです。
-ですが (プログラミング知識の無い) Web デザイナーが
-url マッピングを変更できないことのデメリットも無視できません。
-むしろ、同じことはテンプレートエンジンの抽象化機能でも実現可能なのでは
-ないでしょうか？
+振り回されない、
+L<簡潔で安定した URI|http://www.kanzaki.com/docs/Style/URI>
+を提供するためです。ですが、一般的な Webフレームワークでは、URL ルーティングの変更には
+プログラミングの知識が必要でした。
 
-サンプル Webフレームワーク
-L<WebMVC0|YATT::Lite::docs::prog_tutorial/WebMVC0> では、
-拡張子 F<.yatt> を隠しつつ、外部からのリクエストを
-直接テンプレートのディレクトリ・ファイル名へとマップする機能を用意しています。
+yatt の WebMVC0 では、テンプレートエンジン自身に
+L<URL ルーティング|YATT::Lite::docs::yatt_manual/subrouting>
+の機能を持たせました。
+
+例えば F<index.yatt> に以下のように書くだけで、
+
+   <!yatt:page mod="/mod/:mod" >
+
+URL
+L</mod/YATT::Lite::doc::readme|http://ylpodview-hkoba.dotcloud.com/mod/YATT::Lite::doc::readme>
+へのリクエストを、
+
+=over 4
+
+=item * テンプレートディレクトリの
+
+=item * F<index.yatt> ファイルの
+
+=item * C<< <yatt:mod> >> サブページへの、
+
+=item * モジュール名 C<YATT::Lite::doc::readme> を引数とした呼出へ
+
+=back
+
+マップすることが出来ます。(もちろん、拡張子 F<.yatt> は隠せます。)
+
+また、ディレクトリとテンプレートファイルを抽象化して統一的に扱うことが出来ることと、
+他のテンプレートの widget を簡単に呼び出せることにより、
+外部仕様を変えずに、大幅に内部のファイル構成を変更することが可能です。
+
 
 =item 多国語化の支援
 
@@ -264,18 +296,20 @@ B<git clone するだけ> でそのまま使えるディレクトリ構成にな
 
 =for code yatt
 
-    <!yatt:args x y>
-    <h2>Hello &yatt:x; world!</h2>
-    &yatt:y;
+    <!yatt:args "/:foo" bar>
+    <h2>Hello &yatt:foo; world!</h2>
+    &yatt:bar;
 
 
 =for code sh
 
-入力できたら、ブラウザで以下の URL をアクセスすれば、動きが確認出来るでしょう。
+変更が済んだら、ブラウザで以下の URL をアクセスしてみて下さい。
 
      http://0:5000/
-     http://0:5000/?x=foo
-     http://0:5000/?x=foo&y=bar
+     http://0:5000/?bar=y
+     http://0:5000/foo
+     http://0:5000/foo?bar=z
+     http://0:5000/index.yatt/foo?bar=baz
 
 
 =head3 Command Line util

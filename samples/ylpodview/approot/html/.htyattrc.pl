@@ -14,11 +14,15 @@ Entity search_pod => sub {
   if (my $prefix = $yatt->{cf_mod_overlay}) {
     $modname =~ s{^$prefix}{};
   }
+  $yatt->search_pod($modname, $this->entity_suffix_list);
+};
 
+sub search_pod {
+  my ($yatt, $modname, @lang_suf) = @_;
   my $modfn = modname2fileprefix($modname);
   my $debug = -r "$yatt->{cf_dir}/.htdebug";
   my @dir = lexpand($yatt->{cf_docpath});
-  my @suf = (map("$_.pod", $this->entity_suffix_list), ".pm", "");
+  my @suf = (map("$_.pod", @lang_suf ? @lang_suf : ("")), ".pm", "");
   my @found;
   foreach my $dir (@dir) {
     foreach my $suf (@suf) {
@@ -49,6 +53,11 @@ Entity podtree => sub {
     die "Can't read '$fn'";
   }
 
+  $this->YATT->podtree($fn);
+};
+
+sub podtree {
+  my ($yatt, $fn) = @_;
   require Pod::Simple::SimpleTree;
   my $parser = Pod::Simple::SimpleTree->new;
   $parser->accept_targets(qw(html css code));
@@ -58,6 +67,16 @@ Entity podtree => sub {
   postprocess($tree);
   wantarray ? @$tree : $tree;
 };
+
+sub cmd_podtree {
+  my ($yatt, $mod) = @_;
+  require YATT::Lite::Util;
+  my ($fn) = $yatt->search_pod($mod)
+    or die "Not found: $mod\n";
+  foreach my $item ($yatt->podtree($fn)) {
+    print YATT::Lite::Util::terse_dump($item), "\n";
+  }
+}
 
 sub postprocess {
   my ($list) = @_;
@@ -159,10 +178,13 @@ Entity podlink => sub {
     or return '#--undef--';
 
   if ($type eq 'pod') {
-    my $url = '';
-    if (my $mod = $atts->{to}) {
-      $url .= $CON->mkurl() . '?' . "$name=$mod";
-    }
+    my $url = do {
+      if (my $to = $atts->{to} || $CON->param('mod')) {
+	$CON->mkurl("/$name/$to", undef, mapped_path => 1, local => 1);
+      } else {
+	$CON->mkurl();
+      }
+    };
     if (my $sect = $atts->{section}) {
       $url .= '#'. section_enc($sect);
     }
@@ -218,12 +240,15 @@ Entity docpath_files => sub {
       chomp(my @lines = <$fh>);
       my @info;
       foreach my $name (@lines) {
-	my $rec = [$name, [], ""];
+	my $rec = [$name, []
+		   , $yatt->{cf_mod_overlay}
+		   ? "$yatt->{cf_mod_overlay}::$name" : $name
+		   , ""];
 	foreach my $info (map {pod_info($_)} glob("$dir/$name*$ext")) {
 	  my ($name, $lang, $title) = @$info;
 	  push @{$rec->[1]}, $lang;
 	  if ($lang eq $current_lang) {
-	    $rec->[2] = $title;
+	    $rec->[-1] = $title;
 	  }
 	}
 	push @info, $rec if @{$rec->[1]};

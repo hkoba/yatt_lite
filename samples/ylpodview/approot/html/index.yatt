@@ -10,11 +10,21 @@
     You may want to try <a href="http://search.cpan.org/perldoc?&yatt:mod;">search.cpan.org</a>
   </yatt:envelope>
 
-<:yatt:else if="&yatt:mobile;"/>
-  <yatt:mobile mod sh_style/>
+<:yatt:else />
+&yatt:redirect(:concat(:site_prefix(),/mod/,:mod));
+</yatt:if>
 
+<!yatt:page mod="/mod/:mod" mobile="value/0" sh_style>
+
+<yatt:if "not &yatt:search_pod(:mod);">
+  Not found: &yatt:mod;<br>
 <:yatt:else/>
-  <yatt:podview mod sh_style/>
+
+<yatt:if "&yatt:mobile;">
+  <yatt:mobile mod sh_style/>
+<:yatt:else/>
+<yatt:podview mod sh_style/>
+</yatt:if>
 
 </yatt:if>
 
@@ -31,7 +41,7 @@
 <div class="container-narrow">
 <header class="navbar">
   <div class="navbar-inner">
-    <a class="brand" href="./">&yatt:dir_config(appname);</a>
+    <a class="brand" href="&yatt:site_prefix();/">&yatt:dir_config(appname);</a>
     <ul class="nav nav-pils pull-right">
       <li style="font-size: small;"><yatt:langswitcher/> </li>
     </ul>
@@ -50,8 +60,14 @@
     <h3>&yatt[[;...or you can see local pods listed below:&yatt]];</h3>
     <dl>
       <yatt:foreach my:value=pod_info list=files>
-	<dt><a href="?mod=&yatt:pod_info[0];">&yatt:pod_info[0];</a></dt>
-	<dd>&yatt:pod_info[-1];</dd>
+	<dt><a href="&yatt:site_prefix();/mod/&yatt:pod_info[2];">&yatt:pod_info[0];</a></dt>
+	<dd>
+	  <yatt:if &yatt:pod_info[-1];>
+	    &yatt:pod_info[-1];
+	    <:yatt:else/>
+	    (Not available in current language)
+	  </yatt:if>
+	</dd>
       </yatt:foreach>
     </dl>
   </yatt:if>
@@ -103,11 +119,10 @@ DUMP(found=&yatt:found;)
 <yatt:envelope sh_style title=mod>
 
 <yatt:my found:value="&yatt:search_pod(:mod);"/>
-
 <header class="container-fluid">
   <div class="navbar">
     <div class="navbar-inner">
-      <a class="brand" href="&yatt:CON:mkurl();">&yatt:dir_config(appname);</a>
+      <a class="brand" href="&yatt:site_prefix();/">&yatt:dir_config(appname);</a>
       <a class="brand" href="#">- &yatt:mod;</a>
 
       <ul class="nav nav-pils pull-right">
@@ -125,7 +140,7 @@ DUMP(found=&yatt:found;)
       <div class="navbar-inner">
 	<form class="navbar-form">
 	  <a href="#" onclick="history.back(); return false;">&#9664;</a>
-	  | <a href="&yatt:CON:mkurl();">&#8682;</a>
+	  | <a href="&yatt:site_prefix();/">&#8682;</a>
 	  <input type="text" name="mod" placeholder="Other module?" value="&yatt:mod;">
 	</form>
       </div>
@@ -238,6 +253,7 @@ DUMP(found=&yatt:found;)
 <yatt:my type:value="'ren_' . $this->entity_bar2underscore(shift @$tok)"
 	 attsx:value="shift @$tok"/>
 <dt class="item">
+<yatt:xref_anchor atts=attsx/>
   <yatt:inline list=tok/>
 </dt>
 <:yatt:else/>
@@ -348,7 +364,7 @@ Z(<yatt:inline list=rest/>)
   <script type="text/javascript" src="&yatt:site_prefix();/vendor/jquery/jquery.min.js"></script>
   <script type="text/javascript" src="&yatt:site_prefix();/vendor/shjs/sh_main.js"></script>
   <script>
-    jQuery(function ($) {
+    jQuery(function () {
       sh_highlightDocument('&yatt:site_prefix();/vendor/shjs/lang/', '.js')
     });
   </script>
@@ -364,7 +380,7 @@ Z(<yatt:inline list=rest/>)
 
 <!yatt:widget langswitcher>
 <yatt:my clang:value="&yatt:current_lang();"
-	 nx:value="&yatt:CON:mkurl(,:CON,local,1);"
+	 nx:value="&yatt:CON:mkurl(,:CON,local,1,mapped_path,1);"
 	 nxesc:value="&yatt:url_encode(:nx);"
 	 altlang:value="&yatt:alternative(:clang,[en,ja]);"/>
 

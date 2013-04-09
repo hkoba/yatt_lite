@@ -74,6 +74,7 @@ use Config '%Config';
      , header_charset => 'utf-8'
      , tmpl_encoding => 'utf-8'
      , output_encoding => 'utf-8'
+     , use_subpath => 1
     );
 
   # Use given argument as docpath (or use current directory instead).
@@ -101,10 +102,15 @@ use Config '%Config';
     }
   };
 
-  return $app if caller;
-
-  require Plack::Runner;
-  my $runner = Plack::Runner->new(app => $app);
-  $runner->parse_options(@ARGV);
-  $runner->run;
+  &YATT::Lite::Breakpoint::breakpoint();
+  unless (caller) {
+    require Plack::Runner;
+    my $runner = Plack::Runner->new(app => $app);
+    $runner->parse_options(@ARGV);
+    $runner->run;
+  } elsif ($dispatcher->want_object) {
+    return $dispatcher;
+  } else {
+    return $app;
+  }
 }

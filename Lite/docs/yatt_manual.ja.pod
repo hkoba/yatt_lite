@@ -98,6 +98,9 @@ L<コメント|/Inline comment> を書くことが出来ます。
 
 引数には L</Argument Declaration> を用いて型やデフォルト値を指定することが出来ます。
 
+また、L<URL Pattern|/subrouting> を用いて,
+path_info の残りを引数に用いるよう指定することも出来ます。
+
 =head2 C<< <!yatt:widget> >>
 
 yatt では一つのテンプレートの中に複数の widget を定義することが出来ます。
@@ -116,7 +119,7 @@ yatt では一つのテンプレートの中に複数の widget を定義する�
 X<page>
 
 public な widget を定義します。一つのテンプレートファイルで
-複数の page を記述したい時に使います。
+複数の page を記述したい時に使います。 L<URL Pattern|/subrouting> も指定できます。
 
     <h2>以下をご記入ください</h2>
     <yatt:input_form />
@@ -164,6 +167,71 @@ action を呼び出すには request parameter の name に "!ページ名" を�
 
     <input type="hidden" name="!!" value="register">
     <input type="submit" value="登録する">
+
+=head1 Inline URL Router
+X<subrouting>
+
+yatt の args 又は page には、URL パターンを書く事が出来ます。
+
+   <!yatt:args "/:user">
+     ... &yatt:user; ...
+
+   <!yatt:page blog="/blog/:article_id">
+     ... &yatt:article_id; ...
+
+   <!yatt:page blog_comments="/blog/:article_id/:comment_id">
+     ... &yatt:article_id; ... &yatt:comment_id; ...
+
+   <!yatt:page "/admin/:action" x y z>
+     ...
+
+パターンは yatt 宣言の中の先頭(引数よりも前)に
+文字列形式 (C<'/...'> か C<"/...">) で書きます。
+
+パターンの前に C<識別子=> を加えて C<name="/..パターン.."> の形式で書いた場合、
+C<name> が widget の名前として用いられます。
+C<name=> を省略することも可能です。この場合、URLパターンから
+widget 名が自動生成されます。
+
+(パターンは必ず C<"/"> で始まる必要が有ります。(将来の拡張のため))
+
+(C<!yatt:args> は (既に名前が決まっているので) C<name=> は不要です。)
+
+
+実際のルーティングでは、最初に page のパターンが上から順に試され、
+最後に args のパターンが試されます。
+
+=over 4
+
+=item :name notation
+
+   <!yatt:page '/authors/:id'>
+   <!yatt:page '/authors/:id/edit'>
+   <!yatt:page '/articles/:article_id/comments/:id'>
+
+=item '{year}' notation
+
+   <!yatt:page "/{controller}/{action}/{id}">
+   <!yatt:page '/blog/{year}/{month}'>
+
+=item '{year:regexp}' notation
+
+   <!yatt:page '/blog/{year:[0-9]+}/{month:[0-9]{2}}'>
+
+=item '{year:named_pattern}' notation
+
+   <!yatt:page '/blog/{year:digits}-{month:digits}'>
+
+XXX: named_pattern の拡張方法を書かねば... 現状では変数の型名とは無関係です。
+
+=item (pattern) notation
+
+optional match を書きたいときに使います。
+
+   <!yatt:args "/:article(/:comment(/:action))">
+
+
+=back
 
 
 =head1 Argument Declaration
@@ -305,10 +373,10 @@ widget は同一ファイル内 → 同一ディレクトリ内 → 他に指定
 の順で検索され、最初に見つかったものが使われます。この検索はコンパイル時に行われ、
 見つからない場合はコンパイルエラーとなります。
 
+=head2 widget path
 
-
-別のファイルやディレクトリ内で定義された widget を呼び出す時も、同様にパス名を C<:> 
-でつなげて呼び出します。
+別のファイルやディレクトリ内で定義された widget を呼び出す事も可能です。
+この場合、パス名を C<:> でつなげて書きます。(拡張子 F<.yatt> は省いて下さい)
 
 例えばファイル F<foo/bar.yatt> の中に
 
@@ -321,8 +389,13 @@ widget は同一ファイル内 → 同一ディレクトリ内 → 他に指定
 
 と書きます。
 
+XXX: 同じ名前のファイルとディレクトリが有った場合
 
-=head2 XXX: path thru var
+=head2 XXX: positional arguments
+
+C<name=> を省略して引数を書く話
+
+=head2 XXX: path thru arguments
 
 引数の右辺に bareword を渡したときの挙動
 

@@ -11,9 +11,14 @@ whyfields -- or Modern use of fields.pm and %FIELDS.
 L<Modern Perl|http://modernperlbooks.com/books/modern_perl/>
 では、 perl で OOP 開発をする場合には L<Moose|Moose::Manual> を使うよう
 L<勧めて|http://modernperlbooks.com/books/modern_perl/chapter_07.html>
-います。
-ですが、yatt は懐かしの L<fields> を活用して書かれています。
+います。ですが、
+L<yatt_lite|YATT::Lite::docs::readme> は懐かしの L<fields> を活用して書かれています。
 ここでそのこだわりの理由を解説します。
+
+(なお、ここでは読み易さのために
+perl5.14 以後の C<package Name {...}> 構文を用います。古い perl で
+試す場合は C<{package Name; ...}> へと書き換えて下さい)
+
 
 =head1 fields.pm -- old story.
 
@@ -21,6 +26,7 @@ L<fields> は、 C<use strict> のスペルミス検査を
 オブジェクトメンバーへの参照/代入にも適用可能にするためのものです。
 
     use strict;
+    use 5.014; # For "package Name {block} syntax"
     package Cat {
        use fields qw/name birth_year/; # メンバー宣言
        sub new {
@@ -121,10 +127,12 @@ fields と型注記によるメンバー名検査はコンパイル時に行わ�
 実行時にその変数に何が入っているかは、実は無関係です。これはつまり、
 bless していない HASH にすらスペル検査を適用可能であることを意味します。
 以下は L<PSGI> の C<$env> を静的検査する例です。
+( C<YATT::Lite::PSGIEnv> の短縮版です)
 
    use strict;
    use 5.012;
-   package Env {
+   {
+      package Env;
       use fields qw/REQUEST_METHOD psgi.version/; # and so on...
    };
 
@@ -394,7 +402,15 @@ fields をコマンド行オプションに活用する手もあります。
 
 =head2 XXX: Write your own type builder.
 
+XXX: C<YATT::Lite::Types> の解説：
+モジュールの内部で使う、細かいレコード用のクラスのために
+一々 F<*.pm> を作るのは徒労感が激しい。データ構造を渡せば
+一群のクラスを生成して fields を定義してくれる、そんなモジュールを作っておけば便利。
+
 =head2 XXX: Direct use of C<%FIELDS>.
+
+XXX: C<YATT::Lite::MFields> の技法の解説
 
 =head2 XXX: B<Partial> instead of B<Role>.
 
+XXX: C<YATT::Lite::Partial> の技法の解説
