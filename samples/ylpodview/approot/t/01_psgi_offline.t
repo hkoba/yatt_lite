@@ -19,7 +19,7 @@ use Cwd ();
 my @libdir;
 BEGIN {
   my $mod = "YATT/Lite.pm";
-  if (-r ((my $dn = "$FindBin::Bin/../lib").$mod)) {
+  if (-r ((my $dn = "$FindBin::Bin/../lib/").$mod)) {
     push @libdir, $dn
   } elsif (Cwd::cwd() =~ m!^(.*?)/lib/YATT!) {
     push @libdir, "$1/lib";
