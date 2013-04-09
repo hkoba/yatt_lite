@@ -83,12 +83,14 @@
 
 ;; patch js-inline from mmm-samples.el
 ;; setf doesn't work for assoc, assoc*
-(setcdr (assoc 'js-inline mmm-classes-alist)
-	'(:submode javascript
-		   :face mmm-code-submode-face
-		   :delimiter-mode nil
-		   :front "\\'on\\w+=\""
-		   :back "\""))
+(let ((js (assoc 'js-inline mmm-classes-alist)))
+  (if js
+      (setcdr js
+	      '(:submode javascript
+			 :face mmm-code-submode-face
+			 :delimiter-mode nil
+			 :front "\\'on\\w+=\""
+			 :back "\""))))
 
 ;;========================================
 ;;
