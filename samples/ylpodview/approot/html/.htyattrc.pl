@@ -275,3 +275,8 @@ sub modname2fileprefix {
   $mod =~ s,^/+|/+$,,g;
   $mod;
 }
+
+Entity test => sub {
+  my ($this, $text) = @_;
+  $text;
+};

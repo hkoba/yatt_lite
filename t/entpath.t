@@ -232,6 +232,23 @@ my @test; sub add {push @test, [@_]} sub break {push @test, undef}
 
   #----------------------------------------
 
+  add qq{:query(select *
+from user
+where\tuid = ?,:uid);}
+    , [[call => 'query'
+	, [text => "select *\nfrom user\nwhere\tuid = ?"]
+	, [var => 'uid']]
+       ];
+
+  add q{:select(node,{uid,foobar,nid,{<,2}});}
+    , [[call => 'select'
+	, [text => 'node']
+	, [hash => [text => 'uid'], [text => 'foobar']
+	   , [text => 'nid'], [hash => [text => '<'], [text => '2']]]]
+       ];
+
+  #----------------------------------------
+
   add q{:foo(bar):baz():bang;}
     , [[call => foo => [text => 'bar']]
        , [invoke => 'baz']

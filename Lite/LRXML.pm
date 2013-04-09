@@ -95,7 +95,7 @@ sub after_new {
   $self->{re_eopen}  ||= qr{(?<open>  [\(\{\[])}xs;
   $self->{re_eclose} ||= qr{(?<close> [\)\}\]])}xs;
   $self->{re_evar}   ||= qr{: (?<var>\w+)}xs;
-  $self->{ch_etext}  ||= qr{(?: \w | [\$\-\+\*/%<>\.\@!=\|])}xs;
+  $self->{ch_etext}  ||= qr{(?: \w | [\\\ \t\r\n\?\$\-\+\*/%<>\.\@!=\|])}xs;
   $self;
 }
 #========================================

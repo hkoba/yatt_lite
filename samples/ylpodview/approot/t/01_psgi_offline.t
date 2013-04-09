@@ -75,6 +75,18 @@ $SITE->configure(debug_psgi => 0
   {
     ok(my $englink = $mech->find_link(text_regex => qr/English/)
        , "langswitch English");
-    
   }
+
+  {
+    $mech->get("/test");
+    $mech->title_is('Inline url pattern test:');
+    $mech->get("/test/foobar");
+    $mech->title_is('Inline url pattern test: foobar');
+    $mech->get("/test/foo/bar");
+    $mech->title_is('foo: bar');
+    $mech->get("/test/bar/baz");
+    $mech->title_is('bar: baz');
+  }
+
+
 }
