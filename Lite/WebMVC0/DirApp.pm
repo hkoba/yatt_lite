@@ -53,8 +53,10 @@ sub prepare_part_handler {
   my ($part, $sub, $pkg, @args);
   if ($self->{cf_use_subpath} and my $subpath = $prop->{cf_subpath}) {
     if (my @sigil = $self->parse_request_sigil($con)) {
-      croak $self->error(q|Bad request: subpath %s and sigil %s|
-			 , $subpath, terse_dump(\@sigil));
+      if ($sigil[0] ne 'action') {
+	croak $self->error(q|Bad request: subpath %s and sigil %s|
+			   , $subpath, terse_dump(\@sigil));
+      }
     }
     my $tmpl = $trans->find_file($file) or do {
       croak $self->error("No such file: %s", $file);
