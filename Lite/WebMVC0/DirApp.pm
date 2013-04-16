@@ -18,6 +18,7 @@ use YATT::Lite::Util qw/cached_in ckeval
 			dofile_in compile_file_in
 			try_invoke
 			psgi_error
+			terse_dump
 		      /;
 
 # sub handle_ydo, _do, _psgi...
