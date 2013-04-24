@@ -128,15 +128,22 @@ sub _parse_entterm {
     return;
   }
   my $term = do {
-    if (s{^ (?<text> $$self{ch_etext} (?:$$self{ch_etext} | :)*)  }{}xs) {
+    if (s{^(?: (?<text>  $$self{ch_etext} (?:$$self{ch_etext} | :)* )
+	  |    $$self{re_eparen}
+       )}{}xs) {
       my $text = '';
     TEXT: {
 	do {
 	  last TEXT if $+{close};
-	  $text .= $+{text} if defined $+{text};
+	  if (defined $+{text}) {
+	    $text .= $+{text};
+	  } elsif (defined $+{paren}) {
+	    $text .= $+{paren};
+	  }
 	  $text .= $+{open} . $self->_parse_group_string($close_ch{$+{open}})
 	    if $+{open};
 	} while (s{^ (?: (?<text> (?:$$self{ch_etext} | :)+)
+		   | $$self{re_eparen}
 		   | $$self{re_eopen}
 		   | (?= (?<close>[\)\]\};,])))}{}xs);
       }

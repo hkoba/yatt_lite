@@ -11,6 +11,7 @@ use fields qw/re_decl
 	      re_att
 	      re_name
 	      re_evar ch_etext
+	      re_eparen
 	      re_eopen re_eclose
 
 	      template
@@ -95,7 +96,8 @@ sub after_new {
   $self->{re_eopen}  ||= qr{(?<open>  [\(\{\[])}xs;
   $self->{re_eclose} ||= qr{(?<close> [\)\}\]])}xs;
   $self->{re_evar}   ||= qr{: (?<var>\w+)}xs;
-  $self->{ch_etext}  ||= qr{(?: \w | [\\\ \t\r\n\?\$\-\+\*/%<>\.\@!=\|])}xs;
+  $self->{ch_etext}  ||= qr{(?: [^\ \t\n,;:()\[\]{}])}xs;
+  $self->{re_eparen} ||= qr{(\( (?<paren> (?: (?> [^()]+) | (?-2) )*) \) )}xs;
   $self;
 }
 #========================================

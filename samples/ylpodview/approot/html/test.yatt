@@ -20,7 +20,7 @@
 <yatt:envelope>
   <title>bar: &yatt:nid;</title>
 <h2>This is bar</h2>
-xx: &yatt:test(select *
-from	node where nid = ?,:nid);<br>
+xx: &yatt:test((select *
+from	node where nid = ?,:nid));<br>
 yy: &yatt:test(node,{uid,foobar,nid,{<,2}});
 </yatt:envelope>

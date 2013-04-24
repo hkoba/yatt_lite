@@ -40,6 +40,7 @@ sub is_entpath (@) {
 }
 
 my @test; sub add {push @test, [@_]} sub break {push @test, undef}
+sub Todo {push @test, bless [@_], "TODO"}
 {
   add q{:foo;}
     , [[var => 'foo']];
@@ -232,19 +233,29 @@ my @test; sub add {push @test, [@_]} sub break {push @test, undef}
 
   #----------------------------------------
 
-  add qq{:query(select *
+  add qq{:query((select *\r
 from user
-where\tuid = ?,:uid);}
+where\tuid = ?),:uid);}
     , [[call => 'query'
-	, [text => "select *\nfrom user\nwhere\tuid = ?"]
+	, [text => "select *\r\nfrom user\nwhere\tuid = ?"]
 	, [var => 'uid']]
        ];
 
-  add q{:select(node,{uid,foobar,nid,{<,2}});}
+  add qq{:query((select * from [x] where a = 'foo' and b = "bar" and `baz` = 1));}
+    , [[call => 'query'
+	, [text => q|select * from [x] where a = 'foo' and b = "bar" and `baz` = 1|]]
+       ];
+
+  add q{:query((select x, y, z from t1, t2));}
+      , [[call => 'query'
+	  , [text => q|select x, y, z from t1, t2|]]
+	];
+
+  add q{:select(node,{uid,foobar,nid,{<=,2}});}
     , [[call => 'select'
 	, [text => 'node']
 	, [hash => [text => 'uid'], [text => 'foobar']
-	   , [text => 'nid'], [hash => [text => '<'], [text => '2']]]]
+	   , [text => 'nid'], [hash => [text => '<='], [text => '2']]]]
        ];
 
   #----------------------------------------
@@ -261,17 +272,17 @@ where\tuid = ?,:uid);}
 	, [text => 'hoe']
 	, [var  => 'moe']]];
 
-  add q{:foo(bar(,)baz(),bang);}
+  add q{:foo((bar(,)baz()),bang);}
     , [[call => 'foo'
 	, [text => 'bar(,)baz()']
 	, [text => 'bang']]];
 
 
-  add q{:foo(=$i*($j+$k),,=$x[8]{y}:z):hoe;}
+  add q{:foo((=$i*($j+$k)),,=$x[8]{y}{z}):hoe;}
     , [[call => 'foo'
 	, [expr => '$i*($j+$k)']
 	, [text => '']
-	, [expr => '$x[8]{y}:z']]
+	, [expr => '$x[8]{y}{z}']]
       , [prop => 'hoe']];
 
   add q{:foo(bar${q}baz);}
@@ -290,13 +301,13 @@ where\tuid = ?,:uid);}
 	, [text => 'yes']
 	, [text => 'no']]];
 
-  add q{:if(=($$list[0]+$$list[1])==11,yes,no);}
+  add q{:if((=($$list[0]+$$list[1])==11),yes,no);}
     , [[call => 'if'
 	, [expr => '($$list[0]+$$list[1])==11']
 	, [text => 'yes']
 	, [text => 'no']]];
 
-  add q{:if(=($x+$y)==$z,baz);}
+  add q{:if((=($x+$y)==$z),baz);}
     , [[call => 'if'
 	, [expr => '($x+$y)==$z']
 	, [text => 'baz']]];
@@ -330,6 +341,15 @@ ok($parser = $class->new, "new $class");
 foreach my $test (@test) {
   unless (defined $test) {
     YATT::breakpoint();
+  } elsif (ref $test eq 'TODO') {
+    TODO: {
+	(local $TODO, my ($in, $expect)) = @$test;
+	local $_ = $in;
+
+	is(eval {terse_dump($parser->_parse_entpath)} || $@
+	   , terse_dump(defined $expect ? @$expect : $expect)
+	   , $in);
+      }
   } else {
     is_entpath @$test;
   }
