@@ -12,13 +12,13 @@ sh_languages['yatt'] = [
     [
       /<![A-Za-z]+:[A-Za-z]+/g,
       'sh_preproc',
-      5,
+      3,
       1
     ],
     [
       /<!--/g,
       'sh_comment',
-      6
+      4
     ],
     [
       /<(?:\/)?(?::)?[A-Za-z](?:[A-Za-z0-9_:.-]*)(?:\/)?>/g,
@@ -28,11 +28,11 @@ sh_languages['yatt'] = [
     [
       /<(?:\/)?(?::)?[A-Za-z](?:[A-Za-z0-9_:.-]*)/g,
       'sh_keyword',
-      7,
+      5,
       1
     ],
     [
-      /&(?:[A-Za-z0-9]+):(?:[^;\s]+);/g,
+      /&(?:[A-Za-z0-9]+):(?:[^;\s]+|[\(,]\([^;]*\)[,\)]|\([^\(\);\s]*\))+;/g,
       'sh_function',
       -1
     ]
@@ -44,34 +44,14 @@ sh_languages['yatt'] = [
       -2
     ],
     [
-      /"/g,
-      'sh_string',
-      2
-    ],
-    [
-      /'/g,
-      'sh_string',
-      3
-    ],
-    [
-      /\//g,
-      'sh_string',
-      4
-    ],
-    [
-      /([^=" \t>]+)([ \t]*)(=)([ \t]*)([^="'>]+)/g,
-      ['sh_type', 'sh_normal', 'sh_symbol', 'sh_normal', 'sh_string'],
-      -1
-    ],
-    [
-      /([^=" \t>]+)([ \t]*)(=)/g,
+      /([^=" \t>]+)([ \t]*)(=?)/g,
       ['sh_type', 'sh_normal', 'sh_symbol'],
       -1
     ],
     [
-      /[A-Za-z0-9]+/g,
-      'sh_type',
-      -1
+      /"/g,
+      'sh_string',
+      2
     ]
   ],
   [
@@ -88,63 +68,19 @@ sh_languages['yatt'] = [
   ],
   [
     [
-      /\\(?:\\|')/g,
-      null,
-      -1
-    ],
-    [
-      /'/g,
-      'sh_string',
-      -2
-    ]
-  ],
-  [
-    [
-      /$/g,
-      null,
-      -2
-    ],
-    [
-      /\//g,
-      'sh_string',
-      -2
-    ]
-  ],
-  [
-    [
       />/g,
       'sh_preproc',
       -2
     ],
     [
-      /"/g,
-      'sh_string',
-      2
-    ],
-    [
-      /'/g,
-      'sh_string',
-      3
-    ],
-    [
-      /\//g,
-      'sh_string',
-      4
-    ],
-    [
-      /([^=" \t>]+)([ \t]*)(=)([ \t]*)([^="'>]+)/g,
-      ['sh_type', 'sh_normal', 'sh_symbol', 'sh_normal', 'sh_string'],
-      -1
-    ],
-    [
-      /([^=" \t>]+)([ \t]*)(=)/g,
+      /([^=" \t>]+)([ \t]*)(=?)/g,
       ['sh_type', 'sh_normal', 'sh_symbol'],
       -1
     ],
     [
-      /[A-Za-z0-9]+/g,
-      'sh_type',
-      -1
+      /"/g,
+      'sh_string',
+      2
     ]
   ],
   [
@@ -156,7 +92,7 @@ sh_languages['yatt'] = [
     [
       /<!--/g,
       'sh_comment',
-      6
+      4
     ]
   ],
   [
@@ -166,34 +102,14 @@ sh_languages['yatt'] = [
       -2
     ],
     [
-      /"/g,
-      'sh_string',
-      2
-    ],
-    [
-      /'/g,
-      'sh_string',
-      3
-    ],
-    [
-      /\//g,
-      'sh_string',
-      4
-    ],
-    [
-      /([^=" \t>]+)([ \t]*)(=)([ \t]*)([^="'>]+)/g,
-      ['sh_type', 'sh_normal', 'sh_symbol', 'sh_normal', 'sh_string'],
-      -1
-    ],
-    [
-      /([^=" \t>]+)([ \t]*)(=)/g,
+      /([^=" \t>]+)([ \t]*)(=?)/g,
       ['sh_type', 'sh_normal', 'sh_symbol'],
       -1
     ],
     [
-      /[A-Za-z0-9]+/g,
-      'sh_type',
-      -1
+      /"/g,
+      'sh_string',
+      2
     ]
   ]
 ];

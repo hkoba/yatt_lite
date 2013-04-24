@@ -15,4 +15,4 @@ state keyword delim '<(/)?(:)?[[:alpha:]]([[:word:]:.-]*)' '(/)?>' multiline beg
 	include "key_string.lang"
 end
 
-function = '&([[:alnum:]]+):([^;[:space:]]+);'
+function = '&([[:alnum:]]+):([^;[:space:]]+|[\(,]\([^;]*\)[,\)]|\([^\(\);[:space:]]*\))+;'
