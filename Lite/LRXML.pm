@@ -609,7 +609,7 @@ sub add_url_params {
   (my MY $self, my Part $part, my @params) = @_;
   foreach my $param (@params) {
     my ($argName, $type_or_pat) = @$param;
-    my $type = is_ident($type_or_pat) ? $type_or_pat : 'value'; # text?
+    my $type = 'value'; # XXX: type_or_pat
     my $var = $self->mkvar_at($self->{startln}, $type, $argName
 			      , nextArgNo($part));
     push @{$part->{arg_order}}, $argName;
