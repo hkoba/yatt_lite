@@ -171,7 +171,7 @@ sub resolve_in {
 }
 
 #========================================
-use 5.010;
+use 5.010; no if $] >= 5.018, warnings => "experimental";
 
 sub mechanized {
   (my Tests $tests, my $mech) = @_;

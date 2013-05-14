@@ -28,6 +28,7 @@ optspec=(
     'l+:=o_lib'
     -nosamples
     -samples
+    -noplenv
     -brew::
 )
 
@@ -44,6 +45,12 @@ elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     if ((! $+opts[--nosamples])) && [[ -d samples ]]; then
 	argv+=(samples/**/t/*.t(*N,@N))
     fi
+fi
+
+run_plenv=()
+if ((! $+opts[--noplenv])) && (($+commands[plenv])); then
+    run_plenv=(plenv exec)
+    unset PERL5LIB
 fi
 
 if (($+opts[--brew])); then
@@ -98,15 +105,15 @@ if [[ -n $HARNESS_PERL_SWITCHES ]]; then
     print -R HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
 fi
 if [[ -n $o_taint ]]; then
-    ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
+    $run_plenv ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
 else
-    ${PERL:-perl} =prove $o_lib $argv || true
+    $run_plenv ${PERL:-perl} =prove $o_lib $argv || true
 fi
 
 : ${docroot:=/var/www/html}
 if [[ -n $o_cover ]] && [[ -d $cover_db ]]; then
     # ``t/cover'' is modified to accpet charset option.
-    $bindir/cover -charset $charset $ignore $cover_db
+    $run_plenv $bindir/cover -charset $charset $ignore $cover_db
 
     if [[ $PWD == $docroot/* ]]; then
 

@@ -7,7 +7,7 @@ use utf8;
 use sigtrap die => qw(normal-signals);
 
 use Encode;
-use encoding qw(:_get_locale_encoding);
+require encoding;
 #use encoding qw(:locale), map {$_ => _get_locale_encoding()} qw(STDOUT STDERR);
 # binmode STDERR, sprintf ":encoding(%s)", _get_locale_encoding();
 
@@ -196,7 +196,7 @@ END
     if (not defined $email) {
       diag "Email was undef"
     } else {
-      diag "Email was: ". encode(_get_locale_encoding(), $email);
+      diag "Email was: ". encode(encoding::_get_locale_encoding(), $email);
     }
   }
 

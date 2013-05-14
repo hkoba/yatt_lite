@@ -3,7 +3,8 @@
 package YATT::Lite::LRXML; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
-use 5.010;
+use 5.010; no if $] >= 5.018, warnings => "experimental";
+
 use base qw(YATT::Lite::VarMaker);
 use fields qw/re_decl
 	      re_body

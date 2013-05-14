@@ -21,7 +21,19 @@ use lib $libdir;
 
 use Test::More;
 use List::Util qw(sum);
-use encoding qw(:locale);
+# use encoding qw(:locale);
+use utf8;
+# use open qw(:locale);
+BEGIN {
+  require encoding;
+  my $locale = encoding::_get_locale_encoding();
+  my $enc = encoding::find_encoding($locale);
+  ${^ENCODING} = $enc; # XXX: Why do I need to do this??
+  my $encName = $enc->name;
+  foreach my $fh (\*STDERR, \*STDOUT, \*STDIN) {
+    binmode $fh, ":raw :encoding($encName)";
+  }
+}
 
 use YATT::Lite::Test::TestUtil;
 #========================================

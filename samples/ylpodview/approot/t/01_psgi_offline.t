@@ -13,6 +13,12 @@ BEGIN {
 use Test::More;
 use Test::WWW::Mechanize::PSGI;
 
+foreach my $mod (qw/Locale::PO/) {
+  unless (eval "require $mod") {
+    plan skip_all => "module $mod is not installed";
+  }
+}
+
 use FindBin;
 use File::Basename;
 use Cwd ();
@@ -23,6 +29,8 @@ BEGIN {
     push @libdir, $dn
   } elsif (Cwd::cwd() =~ m!^(.*?)/lib/YATT!) {
     push @libdir, "$1/lib";
+  } elsif ($FindBin::Bin =~ m{^(.*?)/lib(?=/YATT/)}) {
+    push @libdir, $1;
   } else {
     warn "Can't find YATT installation. cwd=".Cwd::cwd();
   }

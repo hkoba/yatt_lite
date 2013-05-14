@@ -28,7 +28,7 @@ BEGIN {
 }
 use lib @libdir;
 #----------------------------------------
-use 5.010;
+use 5.010; no if $] >= 5.018, warnings => "experimental";
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(ostream);

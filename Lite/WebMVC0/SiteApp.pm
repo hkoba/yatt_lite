@@ -5,7 +5,7 @@ use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
-use 5.010;
+use 5.010; no if $] >= 5.018, warnings => "experimental";
 
 #========================================
 # Dispatcher 層: Request に応じた DirApp をロードし起動する
