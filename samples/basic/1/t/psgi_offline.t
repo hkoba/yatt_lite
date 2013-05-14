@@ -64,54 +64,59 @@ test_psgi $app, sub {
     my $dir = $tests->{cf_dir};
     my $sect_name = $tests->file_title($sect);
     foreach my Item $item (@{$sect->{items}}) {
-
-      if ($item->{cf_BREAK}) {
-	YATT::Lite::Breakpoint::breakpoint();
-      }
-
-      if (my $action = $item->{cf_ACTION}) {
-	my ($method, @args) = @$action;
-	my $sub = $tests->can("action_$method")
-	  or die "No such action: $method";
-	$sub->($tests, @args);
-	next;
-      }
-
-      $item->{cf_METHOD} //= 'GET';
-      my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
-
-      my $res = $tests->run_psgicb($cb, $item);
-
-      if ($item->{cf_ERROR}) {
-	(my $str = $res->content) =~ s/^Internal Server error\n//;
-	like $str, qr{$item->{cf_ERROR}}
-	  , "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
-	next;
-      } elsif ($res->code >= 300 && $res->code < 500) {
-	# fall through
-      } elsif ($res->code != 200) {
-	Test::More::fail $item->{cf_FILE};
-	Test::More::diag $res->content;
-	next;
-      }
-
-      if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
-	my @header = @{$item->{cf_HEADER}};
-	while (my ($f, $v) = splice @header, 0, 2) {
-	  my $name = "[$sect_name] $T POST $item->{cf_FILE} $f";
-	  my $got = $res->header($f);
-	  if (defined $got) {
-	    like $got, qr/$v/, $name;
-	  } else {
-	    fail $name; diag("Header '$f' was undef");
-	  }
+    SKIP: {
+	if ($item->{cf_PERL_MINVER} and $] < $item->{cf_PERL_MINVER}) {
+	  Test::More::skip "by perl-$] < PERL_MINVER($item->{cf_PERL_MINVER}) $sect_name", 1;
 	}
-      } elsif (ref $item->{cf_BODY}) {
-	like nocr($res->content), $tests->mkseqpat($item->{cf_BODY})
-	  , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
-      } else {
-	eq_or_diff trimlast(nocr($res->content)), $item->{cf_BODY}
-	  , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
+
+	if ($item->{cf_BREAK}) {
+	  YATT::Lite::Breakpoint::breakpoint();
+	}
+
+	if (my $action = $item->{cf_ACTION}) {
+	  my ($method, @args) = @$action;
+	  my $sub = $tests->can("action_$method")
+	    or die "No such action: $method";
+	  $sub->($tests, @args);
+	  next;
+	}
+
+	$item->{cf_METHOD} //= 'GET';
+	my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
+
+	my $res = $tests->run_psgicb($cb, $item);
+
+	if ($item->{cf_ERROR}) {
+	  (my $str = $res->content) =~ s/^Internal Server error\n//;
+	  like $str, qr{$item->{cf_ERROR}}
+	    , "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
+	  next;
+	} elsif ($res->code >= 300 && $res->code < 500) {
+	  # fall through
+	} elsif ($res->code != 200) {
+	  Test::More::fail $item->{cf_FILE};
+	  Test::More::diag $res->content;
+	  next;
+	}
+
+	if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
+	  my @header = @{$item->{cf_HEADER}};
+	  while (my ($f, $v) = splice @header, 0, 2) {
+	    my $name = "[$sect_name] $T POST $item->{cf_FILE} $f";
+	    my $got = $res->header($f);
+	    if (defined $got) {
+	      like $got, qr/$v/, $name;
+	    } else {
+	      fail $name; diag("Header '$f' was undef");
+	    }
+	  }
+	} elsif (ref $item->{cf_BODY}) {
+	  like nocr($res->content), $tests->mkseqpat($item->{cf_BODY})
+	    , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
+	} else {
+	  eq_or_diff trimlast(nocr($res->content)), $item->{cf_BODY}
+	    , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
+	}
       }
     }
   }

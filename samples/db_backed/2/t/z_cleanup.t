@@ -33,7 +33,7 @@ use utf8;
 use Test::More;
 
 BEGIN {
-  foreach my $req (qw(DBI)) {
+  foreach my $req (qw(DBI DBD::mysql)) {
     unless (eval qq{require $req}) {
       plan skip_all => "$req is not installed."; exit;
     }

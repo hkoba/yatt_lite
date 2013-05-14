@@ -93,10 +93,13 @@ foreach my MY $sect (@section) {
 			    // $test->{cf_ERROR} // "(undef)");
     $title .= " ($test->{num})" if $test->{num};
   SKIP: {
-      if ($test->{cf_SKIP}
+      if (($test->{cf_SKIP} or $test->{cf_PERL_MINVER})
 	  and my $skip = $test->ntests) {
-	skip "by SKIP: $title", $skip
-	  if not $test->{cf_PERL_MINVER} or $] < $test->{cf_PERL_MINVER};
+	if ($test->{cf_PERL_MINVER} and $] < $test->{cf_PERL_MINVER}) {
+	  skip "by perl-$] < PERL_MINVER($test->{cf_PERL_MINVER}) $title", $skip
+	} elsif ($test->{cf_SKIP}) {
+	  skip "by SKIP: $title", $skip;
+	}
       }
       if ($test->{cf_REQUIRE}
 	  and my @missing = $test->test_require($test->{cf_REQUIRE})) {

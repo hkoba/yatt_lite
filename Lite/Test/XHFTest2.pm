@@ -18,6 +18,7 @@ use YATT::Lite::Types
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
 			     cf_BREAK
 			     cf_SAME_RESULT
+			     cf_PERL_MINVER
 			     cf_PARAM cf_HEADER cf_BODY cf_ERROR)]]);
 
 our @EXPORT;

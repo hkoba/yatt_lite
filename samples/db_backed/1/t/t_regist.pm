@@ -14,7 +14,7 @@ require encoding;
 use YATT::Lite::WebMVC0::SiteApp;
 use YATT::Lite::Test::TestUtil;
 use Test::More;
-use YATT::Lite::Util qw(lexpand);
+use YATT::Lite::Util qw(lexpand read_file);
 
 sub do_test {
   my ($pack, $app_root, %opts) = @_;
@@ -140,7 +140,7 @@ END
 END
 
 
-  my $email = read_file($email_fn);
+  my $email = nocr(read_file($email_fn, ':encoding(utf8)'));
 
   my $theme = "email contents";
   if ($email =~ m{
@@ -204,15 +204,6 @@ END
 }
 
 sub skip_check {""}
-
-sub read_file {
-  my ($fn) = @_;
-  open my $fh, '<:encoding(utf8)', $fn or die "Can't open '$fn': $!";
-  local $/;
-  my $data = <$fh>;
-  $data =~ s/\r//g;
-  $data;
-}
 
 sub nocr {
   my ($res) = @_;

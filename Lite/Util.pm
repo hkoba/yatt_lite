@@ -24,6 +24,7 @@ require Scalar::Util;
 				  url_encode url_decode
 				  url_encode_kv encode_query
 				  ostream
+				  read_file
 				  named_attr
 				  mk_http_status
 				  get_locale_encoding
@@ -461,6 +462,13 @@ sub ostream {
   open my $fh, '>' . ($_[1] // ''), $fn
     or die "Can't create output memory stream: $!";
   $fh;
+}
+
+sub read_file {
+  my ($fn, $layer) = @_;
+  open my $fh, '<' . ($layer // ''), $fn or die "Can't open '$fn': $!";
+  local $/;
+  scalar <$fh>;
 }
 
 sub dispatch_all {

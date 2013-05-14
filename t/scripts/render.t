@@ -22,7 +22,7 @@ use lib $libdir;
 use Test::More;
 
 use YATT::Lite::Test::TestUtil;
-use YATT::Lite::Util qw(dict_sort rootname);
+use YATT::Lite::Util qw(dict_sort rootname read_file);
 my $func = rootname(basename($0));
 my $script = "$libdir/YATT/scripts/yatt.$func";
 
@@ -37,6 +37,13 @@ my $tstdir = "$FindBin::Bin/$func.ytmpl";
 
 my @tests;
 foreach my $fn (dict_sort glob("$tstdir/[1-9]*/index.yatt")) {
+  if (-r (my $minver_fn = dirname($fn) . "/perl_minver")) {
+    chomp(my $minver = read_file($minver_fn));
+    if ($] < $minver) {
+      # XXX: should push explicit skip
+      next;
+    }
+  }
   foreach my $ext (qw(html err)) {
     if (-r (my $res = rootname($fn) . ".$ext")) {
       my $title = substr($fn, length($tstdir)+1);
@@ -46,7 +53,11 @@ foreach my $fn (dict_sort glob("$tstdir/[1-9]*/index.yatt")) {
   }
 }
 
-plan tests => scalar @tests;
+if (@tests) {
+  plan tests => scalar @tests;
+} else {
+  plan skip_all => "Too old perl";
+}
 
 foreach my $test (@tests) {
   my ($how, @args) = @$test;
@@ -80,13 +91,6 @@ sub test_err {
   } else {
     fail $src;
   }
-}
-
-sub read_file {
-  my $fn = shift;
-  open my $fh, '<', $fn or die "Can't open '$fn': $!";
-  local $/;
-  <$fh>;
 }
 
 sub eq_or_diff_subst {

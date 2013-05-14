@@ -59,59 +59,64 @@ foreach my File $sect (@{$tests->{files}}) {
   my $dir = $tests->{cf_dir};
   my $sect_name = $tests->file_title($sect);
   foreach my Item $item (@{$sect->{items}}) {
+  SKIP: {
+      if ($item->{cf_PERL_MINVER} and $] < $item->{cf_PERL_MINVER}) {
+	Test::More::skip "by perl-$] < PERL_MINVER($item->{cf_PERL_MINVER}) $sect_name", 1;
+      }
 
-    if (my $action = $item->{cf_ACTION}) {
-      my ($method, @args) = @$action;
-      my $sub = $tests->can("action_$method")
-	or die "No such action: $method";
-      $sub->($tests, @args);
-      next;
-    }
+      if (my $action = $item->{cf_ACTION}) {
+	my ($method, @args) = @$action;
+	my $sub = $tests->can("action_$method")
+	  or die "No such action: $method";
+	$sub->($tests, @args);
+	next;
+      }
 
-    my %env = (DOCUMENT_ROOT => $dir
-	       , PATH_INFO => "/$item->{cf_FILE}"
-	       , PATH_TRANSLATED => "$dir/$item->{cf_FILE}"
-	      );
+      my %env = (DOCUMENT_ROOT => $dir
+		 , PATH_INFO => "/$item->{cf_FILE}"
+		 , PATH_TRANSLATED => "$dir/$item->{cf_FILE}"
+		);
 
-    $item->{cf_METHOD} //= 'GET';
-    my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
+      $item->{cf_METHOD} //= 'GET';
+      my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
 
-    my $con = ostream(my $buffer);
-    eval {$dispatcher->cf_let([noheader => 0]
-			      , runas => cgi => $con, \%env
-			      , [$item->{cf_PARAM}])};
+      my $con = ostream(my $buffer);
+      eval {$dispatcher->cf_let([noheader => 0]
+				, runas => cgi => $con, \%env
+				, [$item->{cf_PARAM}])};
 
-    my $header;
-    if ($item->{cf_ERROR}) {
-      like $@, qr{$item->{cf_ERROR}}
-	, "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
-      next;
-    } elsif (ref $@ eq 'SCALAR' and ${$@} eq 'DONE') {
-      # Request is completed.
-    } elsif (ref $@ eq 'ARRAY' and @{$@} == 3) {
-      # PSGI triple was raised.
-      $header = join("\n", @{$@->[1]});
-    } elsif ($@) {
-      Test::More::fail $item->{cf_FILE};
-      Test::More::diag $@;
-      next;
-    }
+      my $header;
+      if ($item->{cf_ERROR}) {
+	like $@, qr{$item->{cf_ERROR}}
+	  , "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
+	next;
+      } elsif (ref $@ eq 'SCALAR' and ${$@} eq 'DONE') {
+	# Request is completed.
+      } elsif (ref $@ eq 'ARRAY' and @{$@} == 3) {
+	# PSGI triple was raised.
+	$header = join("\n", @{$@->[1]});
+      } elsif ($@) {
+	Test::More::fail $item->{cf_FILE};
+	Test::More::diag $@;
+	next;
+      }
 
 
-    if ($buffer =~ s/\A((?:[^\n\r]+\r?\n)*\r?\n)//) {
-      $header = $1;
-    }
+      if ($buffer =~ s/\A((?:[^\n\r]+\r?\n)*\r?\n)//) {
+	$header = $1;
+      }
 
-    if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
-      $header //= trimlast(nocr($buffer));
-      like $header, $tests->mkpat($item->{cf_HEADER})
-	, "[$sect_name] $T POST $item->{cf_FILE}";
-    } elsif (ref $item->{cf_BODY}) {
-      like nocr($buffer), $tests->mkseqpat($item->{cf_BODY})
-	, "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
-    } else {
-      eq_or_diff trimlast(nocr($buffer)), $item->{cf_BODY}
-	, "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
+      if ($item->{cf_METHOD} eq 'POST' and $item->{cf_HEADER}) {
+	$header //= trimlast(nocr($buffer));
+	like $header, $tests->mkpat($item->{cf_HEADER})
+	  , "[$sect_name] $T POST $item->{cf_FILE}";
+      } elsif (ref $item->{cf_BODY}) {
+	like nocr($buffer), $tests->mkseqpat($item->{cf_BODY})
+	  , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
+      } else {
+	eq_or_diff trimlast(nocr($buffer)), $item->{cf_BODY}
+	  , "[$sect_name] $T $item->{cf_METHOD} $item->{cf_FILE}";
+      }
     }
   }
 }

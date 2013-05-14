@@ -5,7 +5,16 @@
 # Also, if you specify '-C' flag, Coverage will be gathered.
 
 set -e
-setopt extendedglob
+setopt extendedglob localoptions err_return
+
+autoload colors;
+[[ -t 1 ]] && colors
+#
+c_em[1]=$fg[blue]$bg[yellow]
+c_off=$fg[default]$bg[default]
+
+function warn { print 1>&2 -n -- $*; print 1>&2 $c_off }
+function die { warn $@; return 1 }
 
 # chdir to $DIST_ROOT
 bindir=$(cd $0:h; print $PWD)
@@ -25,6 +34,7 @@ cd $distdir
 optspec=(
     C=o_cover
     T=o_taint
+    y=o_yn
     'l+:=o_lib'
     -nosamples
     -samples
@@ -47,11 +57,85 @@ elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     fi
 fi
 
-run_plenv=()
-if ((! $+opts[--noplenv])) && (($+commands[plenv])); then
-    run_plenv=(plenv exec)
+#========================================
+# Auto dependency installation via plenv + cpanm + cpanfile
+#========================================
+plenv_exec=()
+
+function confirm {
+    local yn confirm_msg=$1 dying_msg=$2
+    if [[ -n $o_yn ]]; then
+	true
+    elif [[ -t 0 ]]; then
+	# (g::) is for \n expansion.
+	read -q "yn?${(g::)confirm_msg}$c_off (Y/n) " || die "\n$bg[red]Canceled."
+	print
+    else
+	die $dying_msg, exiting...
+    fi
+}
+
+function cpanfile_modules {
+    local cpanfile=$1 phases; shift
+    if ((ARGC)); then
+	phases=($argv)
+    else
+	phases=(runtime test)
+    fi
+    plenv exec perl -MModule::CPANfile -Mstrict -le '
+      my %ignored = map {$_=>1} qw/perl/;
+      my $req = Module::CPANfile->load(shift)->prereq_specs;
+      print join "\n", grep {not $ignored{$_}} map {
+         map {sort keys %$_} @{$req->{$_}}{qw/requires recommends/}
+      } @ARGV
+    ' $cpanfile $phases
+}
+
+function plenv_install_minimum {
+    if ! plenv which cpanm >&/dev/null; then
+	confirm "cpanm is not yet installed for plenv. $c_em[1]Install now?" \
+	    "Can't run cpanm"
+	plenv install-cpanm
+	plenv which cpanm || exit 1
+    fi
+    local m minmods
+    minmods=(
+	Module::CPANfile
+    )
+    for m in $minmods; do
+	plenv exec perl -M$m -e0 >&/dev/null || {
+	    confirm "$m is not yet installed for plenv. $c_em[1]Install now?"\
+               "Can't use $m"
+	    plenv exec cpanm $m
+	}
+    done
+}
+
+function plenv_install_missings {
+    local cpanfile=$1 missings
+    missings=()
+    local m
+    for m in $(cpanfile_modules $cpanfile); do
+	plenv exec perl -M$m -e0 >&/dev/null || missings+=($m)
+    done
+    if (($#missings)); then
+        confirm "Following modules are not yet installed for plenv:\n----\n${(F)missings}\n----\n$c_em[1]Install (with plenv exec cpanm) now? "\
+               "Can't use $m"
+
+	plenv exec cpanm $missings
+    fi
+}
+
+if ((! $+opts[--noplenv])) && (($+commands[plenv])) &&
+    [[ -t 0 ]] &&
+    plenv which perl | grep plenv >/dev/null; then
+    # If you run
+    plenv_exec=(plenv exec)
     unset PERL5LIB
+    plenv_install_minimum
+    plenv_install_missings $distdir/cpanfile; # cpanm --installdeps $distdir, with confirmation.
 fi
+#========================================
 
 if (($+opts[--brew])); then
     PERL=${opts[--brew][2,-1]:-~/perl5/perlbrew/bin/perl}
@@ -105,15 +189,15 @@ if [[ -n $HARNESS_PERL_SWITCHES ]]; then
     print -R HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
 fi
 if [[ -n $o_taint ]]; then
-    $run_plenv ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
+    $plenv_exec ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
 else
-    $run_plenv ${PERL:-perl} =prove $o_lib $argv || true
+    $plenv_exec ${PERL:-perl} =prove $o_lib $argv || true
 fi
 
 : ${docroot:=/var/www/html}
 if [[ -n $o_cover ]] && [[ -d $cover_db ]]; then
     # ``t/cover'' is modified to accpet charset option.
-    $run_plenv $bindir/cover -charset $charset $ignore $cover_db
+    $plenv_exec $bindir/cover -charset $charset $ignore $cover_db
 
     if [[ $PWD == $docroot/* ]]; then
 

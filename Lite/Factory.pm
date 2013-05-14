@@ -59,7 +59,8 @@ sub find_load_factory_script {
   my ($pack, %opts) = @_;
   my ($found) = $pack->find_factory_script(delete $opts{dir})
     or return;
-  my $self = $pack->load_factory_script($found);
+  my $self = $pack->load_factory_script($found)
+    or croak "Can't load YATT::Lite::Factory instance from $found";
   $self->configure(%opts);
   $self;
 }

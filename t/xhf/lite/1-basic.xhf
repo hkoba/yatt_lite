@@ -463,6 +463,7 @@ IN:
  <!yatt:args x=html>
  <?perl= $x ?>
 ERROR: Global symbol "\$x" requires explicit package name at \S+ line 2[\.,]
+PERL_MINVER: 5.012
 
 
 TITLE: valueless scalar arg -> 1
@@ -542,7 +543,6 @@ OUT:
  
 
 TITLE: empty :att arg
-BREAK: 1
 IN:
  <yatt:foo x="X" y="Y">
    <:yatt:arg></:yatt:arg>
