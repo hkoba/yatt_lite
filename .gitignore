@@ -1,7 +1,11 @@
-/.svn
 *.bak
 *.tar.gz
-/tmon.out
 .xslate_cache
+/.svn
+/Build
+/MYMETA.json
+/MYMETA.yml
+/_build
+/tmon.out
 blib
 tmp

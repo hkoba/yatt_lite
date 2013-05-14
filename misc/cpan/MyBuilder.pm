@@ -7,7 +7,27 @@ use File::Find;
 use File::Basename ();
 use File::Path;
 
-use base qw(Module::Build File::Spec);
+use parent qw(Module::Build File::Spec);
+use Module::CPANfile;
+
+sub lexpand {
+  return unless defined $_[0];
+  %{$_[0]};
+}
+
+sub my_cpanfile_specs {
+  my ($pack) = @_;
+  my $file = Module::CPANfile->load("cpanfile");
+  my $prereq = $file->prereq_specs;
+  my %args;
+  %{$args{requires}} = lexpand($prereq->{runtime}{requires});
+  foreach my $phase (qw/configure build/) {
+    %{$args{$phase . "_requires"}} = lexpand($prereq->{$phase}{requires});
+  }
+  %{$args{recommends}} = (map {lexpand($prereq->{$_}{recommends})}
+			  keys %$prereq);
+  %args
+}
 
 #
 # To include yatt_dist as_is
@@ -79,107 +99,10 @@ sub dist_version {
   $ver;
 }
 
-#========================================
-#
-# To include symlinks in distdir.
-#
-
-sub ACTION_distdir {
-  my $self = shift;
-  $self->SUPER::ACTION_distdir(@_);
-  $self->_do_in_dir
-    ($self->dist_dir,
-     sub {
-       $self->cmd_list_symlink_list
-	 (sub {
-	    $self->restore_links(File::Basename::dirname(shift))
-	  });
-     });
-}
-
-sub symlink_list {'.symlinks'}
-
-sub cmd_list_symlink_list {
-  (my $self, my $cb) = splice @_, 0, 2;
-  my $pat = quotemeta(symlink_list());
-  find({no_chdir => 1, wanted => sub {
-	  return $self->prune if m{/\.git$};
-	  return unless m{/$pat$};
-	  if ($cb) {
-	    $cb->($_);
-	  } else {
-	    $self->log_verbose(" $_");
-	  }
-	}}, @_ ? @_ : '.');
-}
-
-sub restore_links {
-  (my $self, my $dir) = @_;
-  my $savefile = "$dir/" . symlink_list();
-  $self->log_verbose("# restoring from $savefile\n");
-  open my $fh, '<', $savefile;
-  while (my $line = <$fh>) {
-    chomp($line);
-    next if $line =~ /^#/;
-    my ($linkto, $placed_fn) = split "\t", $line;
-    my $placed_path = "$dir/$placed_fn";
-    unless (-l $placed_path) {
-      symlink($linkto, $placed_path);
-      $self->log_verbose("[created] $linkto\t$placed_fn\n");
-    } elsif (my $was = readlink $placed_path) {
-      if ($was eq $linkto) {
-	$self->log_verbose("[kept] $linkto\t$placed_fn\n");
-      } else {
-	unlink $placed_path;
-	symlink($linkto, $placed_path);
-	$self->log_verbose("[updated] $linkto\t$placed_fn\n");
-      }
-    }
-  }
-}
-
-#----------------------------------------
-
-sub nonempty {
-  defined $_[0] and $_[0] ne '';
-}
-
 1;
 __END__
 
 # Please ignore below.
-
-sub ng_copy_if_modified {
-  my $self = shift;
-  my ($from, %args);
-  if (@_ >= 4 and @_ % 2 == 0
-      and nonempty($from = $args{from})
-      and -l $from) {
-    my $to_path = do {
-      if (nonempty(my $to = $args{to})) {
-	$to
-      } elsif (nonempty(my $to_dir = $args{to_dir})) {
-	$self->catfile($to_dir , $args{flatten}
-		       ? File::Basename::basename($from)
-		       : $from);
-      } else {
-	die "No 'to' or 'to_dir' is specified!";
-      }
-    };
-
-    return if -e $to_path;
-
-    File::Path::mkpath(File::Basename::dirname($to_path), 0, oct(777));
-
-    symlink(readlink($from), $to_path)
-      or die "Can't create symlink at $to_path: $!";
-
-  } else {
-    # Fallback
-    $self->SUPER::copy_if_modified(@_);
-  }
-}
-
 
 $build->add_build_element($elem);
 
