@@ -119,14 +119,23 @@ require Scalar::Util;
     my $__SCRIPT__ = join "", grep {
       defined $_ and Scalar::Util::tainted($_) ? croak "tainted! '$_'" : 1;
     } @_;
-    local $@;
     my @__RESULT__;
-    if (wantarray) {
-      @__RESULT__ = eval $__SCRIPT__;
+    if ($] < 5.014) {
+      if (wantarray) {
+	@__RESULT__ = eval $__SCRIPT__;
+      } else {
+	$__RESULT__[0] = eval $__SCRIPT__;
+      }
+      die $@ if $@;
     } else {
-      $__RESULT__[0] = eval $__SCRIPT__;
+      local $@;
+      if (wantarray) {
+	@__RESULT__ = eval $__SCRIPT__;
+      } else {
+	$__RESULT__[0] = eval $__SCRIPT__;
+      }
+      die $@ if $@;
     }
-    die $@ if $@;
     wantarray ? @__RESULT__ : $__RESULT__[0];
   }
   sub ckrequire {

@@ -244,6 +244,12 @@ sub logger {
 #========================================
 
 DESTROY {
+  # Note: localizing $@ in DESTROY is not so good idea in general.
+  # But I do this here because I found some module stamps $@ in mkheader.
+  # Anyway, in usual case, $con lives along with entire request processing,
+  # so this may not be a problem.
+  local $@;
+
   my PROP $prop = prop(my $glob = shift);
   $glob->flush_headers;
   if (my $backend = delete $prop->{cf_backend}) {

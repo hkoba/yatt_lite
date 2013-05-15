@@ -29,7 +29,6 @@ ERROR: ^No such variable 'foo'
 
 FILE: perlerr.yatt
 ERROR: ^Global symbol "\$unknown_var" requires explicit package name at \.?(?:/[^/]+)*/+perlerr\.yatt line 4\.
-PERL_MINVER: 5.012
 
 FILE: noncode.ydo
 ERROR: ^file '(?:/[^/]*)*/noncode\.ydo' should return CODE \(but not\)!

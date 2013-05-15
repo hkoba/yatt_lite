@@ -2,5 +2,4 @@
 
 FILE: index.yatt
 ERROR: ^Use of uninitialized value in concatenation \(\.\) or string at (?:(?:/[^/]+)*/)?t_undef_error.pm line 10.
-PERL_MINVER: 5.012
 

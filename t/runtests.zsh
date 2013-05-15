@@ -127,9 +127,9 @@ function plenv_install_missings {
 }
 
 if ((! $+opts[--noplenv])) && (($+commands[plenv])) &&
-    [[ -t 0 ]] &&
-    plenv which perl | grep plenv >/dev/null; then
-    # If you run
+    plenv which perl | grep plenv >/dev/null &&
+    [[ -n $o_yn || -t 0 ]]; then
+    # If you enabled plenv and either -y or has tty input
     plenv_exec=(plenv exec)
     unset PERL5LIB
     plenv_install_minimum
