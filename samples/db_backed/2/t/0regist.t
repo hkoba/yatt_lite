@@ -3,14 +3,18 @@
 #----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
-sub MY () {__PACKAGE__}
-use base qw(File::Spec);
-use File::Basename;
-
 use FindBin;
-sub untaint_any {$_[0] =~ m{(.*)} and $1}
+BEGIN {
+  if (-d (my $dir = "$FindBin::RealBin/../../../../t")) {
+    local (@_, $@) = $dir;
+    do "$dir/t_lib.pl";
+    die $@ if $@;
+  }
+}
+use lib $FindBin::RealBin;
+
 use Cwd ();
-my ($app_root, @libdir);
+my ($app_root);
 BEGIN {
   if (-r __FILE__) {
     # detect where app.psgi is placed.
@@ -19,14 +23,7 @@ BEGIN {
     # older uwsgi do not set __FILE__ correctly, so use cwd instead.
     $app_root = Cwd::cwd();
   }
-  my $dn;
-  if (-d (($dn = "$app_root/lib") . "/YATT")) {
-    push @libdir, $dn
-  } elsif (($dn) = $app_root =~ m{^(.*?/)YATT/}) {
-    push @libdir, $dn;
-  }
 }
-use lib $FindBin::Bin, @libdir;
 #----------------------------------------
 use utf8;
 use Test::More;

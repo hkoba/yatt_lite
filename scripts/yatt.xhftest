@@ -2,18 +2,7 @@
 #----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
-sub MY () {__PACKAGE__}
-use base qw(File::Spec);
-use File::Basename;
-use FindBin;
-my $libdir;
-BEGIN {
-  unless (grep {$_ eq 'YATT'} MY->splitdir($FindBin::Bin)) {
-    die "Can't find YATT in runtime path: $FindBin::Bin\n";
-  }
-  $libdir = dirname(dirname($FindBin::Bin));
-}
-use lib $libdir;
+use FindBin; my $libdir; BEGIN {($libdir) = do "$FindBin::RealBin/libdir.pl"}
 #----------------------------------------
 use 5.010;
 use Cwd qw(realpath);
@@ -24,7 +13,7 @@ use List::Util qw(sum);
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::XHF;
-use YATT::Lite::Util qw(ckdo ostream);
+use YATT::Lite::Util qw(ostream);
 
 {
   package TestSection;

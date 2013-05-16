@@ -18,7 +18,15 @@ function die { warn $@; return 1 }
 
 # chdir to $DIST_ROOT
 bindir=$(cd $0:h; print $PWD)
-if [[ $bindir != */YATT/t ]]; then
+if [[ $bindir != */YATT/t ]] && [[ -d $bindir:h/_build/lib/YATT ]]; then
+    distdir=$bindir:h
+    libdir=$bindir:h/_build/lib
+elif [[ $bindir == */YATT/t ]]; then
+    libdir=$bindir:h:h
+    distdir=$bindir:h
+fi
+
+if [[ -z $distdir ]]; then
     cat 1>&2 <<EOF; exit 1
 YATT installation path problem!
 To use this t/runtests.zsh, your installation should end with 'YATT'.
@@ -27,8 +35,6 @@ EOF
 
 fi
 
-libdir=$bindir:h:h
-distdir=$bindir:h
 cd $distdir
 
 optspec=(

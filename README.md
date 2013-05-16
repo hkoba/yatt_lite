@@ -1,4 +1,4 @@
-YATT::Lite version 0.0.4
+YATT::Lite version 0.0_5
 ==================
 
 YATT is Yet Another Template Toolkit, aimed at Web Designers, rather than
@@ -92,7 +92,7 @@ You can also look for Source Code Repository at:
 COPYRIGHT AND LICENCE
 --------------------
 
-Copyright (C) 2007..2012 "KOBAYASI, Hiroaki"
+Copyright (C) 2007..2013 "KOBAYASI, Hiroaki"
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

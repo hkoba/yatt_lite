@@ -3,18 +3,7 @@
 #----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
-sub MY () {__PACKAGE__}
-use base qw(File::Spec);
-use File::Basename;
-use FindBin;
-my $libdir;
-BEGIN {
-  unless (grep {$_ eq 'YATT'} MY->splitdir($FindBin::Bin)) {
-    die "Can't find YATT in runtime path: $FindBin::Bin\n";
-  }
-  $libdir = dirname(dirname($FindBin::Bin));
-}
-use lib $libdir;
+use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
 use Test::More;

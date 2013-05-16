@@ -29,3 +29,13 @@ if ($ENV{DEBUG_BUILD}) {
 }
 
 $builder->create_build_script();
+
+unless ($FindBin::Bin =~ m{[/\\]YATT[/\\]t$}) {
+  my $libdir = "$FindBin::Bin/_build/lib";
+  unless (-d $libdir) {
+    mkdir $libdir or die "mkdir: $!: $libdir";
+  }
+  unless (-l (my $lnk = "$libdir/YATT")) {
+    symlink "../../", $lnk or die "symlink: $!: $lnk";
+  }
+}

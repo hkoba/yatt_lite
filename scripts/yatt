@@ -2,20 +2,11 @@
 # -*- mode: perl; coding: utf-8 -*-
 use strict;
 use warnings FATAL => qw/all/;
+use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
+#----------------------------------------
 use 5.010;
 
-use FindBin;
-use File::Spec;
-use File::Basename;
-
-BEGIN {
-  my @split = File::Spec->splitdir($FindBin::RealBin);
-  if (@split >= 2 and [@split[-2,-1]] ~~ [qw/YATT scripts/]) {
-    unshift @INC, File::Spec->catdir(@split[0 .. $#split-2]);
-  }
-}
-
-use base qw/YATT::Lite::Object/; sub MY () {__PACKAGE__}
+use base qw/YATT::Lite::Object/;
 use YATT::Lite::MFields
   (()
    , [cf_help => doc => "show help messages"]

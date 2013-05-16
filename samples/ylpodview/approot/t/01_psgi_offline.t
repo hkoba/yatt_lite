@@ -20,22 +20,13 @@ foreach my $mod (qw/Locale::PO/) {
 }
 
 use FindBin;
-use File::Basename;
-use Cwd ();
-my @libdir;
 BEGIN {
-  my $mod = "YATT/Lite.pm";
-  if (-r ((my $dn = "$FindBin::Bin/../lib/").$mod)) {
-    push @libdir, $dn
-  } elsif (Cwd::cwd() =~ m!^(.*?)/lib/YATT!) {
-    push @libdir, "$1/lib";
-  } elsif ($FindBin::Bin =~ m{^(.*?)/lib(?=/YATT/)}) {
-    push @libdir, $1;
-  } else {
-    warn "Can't find YATT installation. cwd=".Cwd::cwd();
-  }
+  my $dir = "$FindBin::RealBin/../../../../t";
+  $dir = $FindBin::RealBin unless -d $dir;
+  local (@_, $@) = $dir;
+  do "$dir/t_lib.pl";
+  die $@ if $@;
 }
-use lib @libdir;
 
 use YATT::Lite::Factory;
 

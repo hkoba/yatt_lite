@@ -22,6 +22,9 @@ use Config '%Config';
       push @libdir, $dn
     } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {
       push @libdir, $found;
+    } elsif (my @d = grep {-d} map {"$app_root/../../../$_"}
+	     qw!_build/lib blib/lib!) {
+      push @libdir, @d
     }
     if (-d (my $dn = "$app_root/extlib")) {
       push @libdir, $dn;

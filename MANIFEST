@@ -484,6 +484,7 @@ samples/ylpodview/approot/html/vendor/shjs/VERSION.txt
 samples/ylpodview/approot/t/01_psgi_offline.t
 scripts/cleanup.zsh
 scripts/hunt-nonutf8.pl
+scripts/libdir.pl
 scripts/mkdist.zsh
 scripts/mkhtaccess.zsh
 scripts/setup-min.zsh
@@ -542,6 +543,7 @@ t/scripts/render.ytmpl/2/index.yatt.in
 t/scripts/render.ytmpl/3/index.err
 t/scripts/render.ytmpl/3/index.yatt
 t/subroutes.t
+t/t_lib.pl
 t/t_preload.pm
 t/use.t
 t/util_other.t
