@@ -95,6 +95,7 @@ samples/basic/1/t/http_localhost.t
 samples/basic/1/t/lntests.zsh
 samples/basic/1/t/offline.t
 samples/basic/1/t/psgi_offline.t
+samples/basic/1/t/t_lib.pl
 samples/basic/2/.symlinks
 samples/basic/2/app.psgi
 samples/basic/2/html/index.yatt
@@ -217,6 +218,7 @@ samples/db_backed/1/t/1-basic.xhf
 samples/db_backed/1/t/basic.inc.xhf
 samples/db_backed/1/t/http_localhost.t
 samples/db_backed/1/t/psgi_offline.t
+samples/db_backed/1/t/t_lib.pl
 samples/db_backed/1/t/t_regist.pm
 samples/db_backed/1/t/z_cleanup.t
 samples/db_backed/2/.symlinks
@@ -482,6 +484,7 @@ samples/ylpodview/approot/html/vendor/shjs/sh_style.css
 samples/ylpodview/approot/html/vendor/shjs/sh_style.min.css
 samples/ylpodview/approot/html/vendor/shjs/VERSION.txt
 samples/ylpodview/approot/t/01_psgi_offline.t
+samples/ylpodview/approot/t/t_lib.pl
 scripts/cleanup.zsh
 scripts/hunt-nonutf8.pl
 scripts/libdir.pl
