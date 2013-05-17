@@ -1,6 +1,6 @@
 Revision history for YATT::Lite
 
-0.0_5 2013-05-16
+0.0_6 2013-05-17
 
  * To make sure all tests are runnable for cpantesters.
 

@@ -26,9 +26,10 @@ recommends:
   Pod::Simple::SimpleTree: 0
   YAML::Tiny: 0
 requires:
+  List::MoreUtils: 0
   List::Util: 0
   Plack: 0
   perl: v5.10.1
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.0_5
+version: 0.0_6
