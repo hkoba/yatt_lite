@@ -4,6 +4,7 @@ conflicts 'YATT';
 
 requires 'perl' => '5.10.1'; # for named capture and //
 requires 'List::Util' => 0;
+requires 'List::MoreUtils' => 0;
 requires 'Plack' => 0;
 recommends 'YAML::Tiny' => 0;
 

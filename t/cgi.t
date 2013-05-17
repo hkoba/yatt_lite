@@ -3,8 +3,8 @@
 #----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
-use FindBin;
-BEGIN { do "$FindBin::Bin/t_lib.pl" }
+use Carp;
+use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 
 #----------------------------------------
 

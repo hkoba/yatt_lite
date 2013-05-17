@@ -3,7 +3,7 @@
 #----------------------------------------
 use strict;
 use warnings FATAL => qw(all);
-use FindBin; my $libdir; BEGIN { local @_ = "$FindBin::Bin/.."; ($libdir) = do "$FindBin::Bin/../t_lib.pl" }
+use FindBin; my $dist; BEGIN { local @_ = "$FindBin::Bin/.."; ($dist) = do "$FindBin::Bin/../t_lib.pl" }
 #----------------------------------------
 
 use Test::More;
@@ -11,7 +11,7 @@ use Test::More;
 use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Util qw(dict_sort rootname read_file);
 my $func = rootname(basename($0));
-my $script = "$libdir/YATT/scripts/yatt.$func";
+my $script = "$dist/scripts/yatt.$func";
 
 unless (-x $script) {
   plan skip_all => "Can't find yatt.$func: $script";
@@ -57,7 +57,7 @@ sub test_html {
   if (-r (my $fn = "$src.in")) {
     $args .= " " . read_file($fn);
   }
-  if (not defined(my $out = qx($^X -I$libdir $script $src$args)) or $?) {
+  if (not defined(my $out = qx($^X $script $src$args)) or $?) {
     fail $src;
   } else {
     eq_or_diff $out, read_file($res), $title // $src;
@@ -72,7 +72,7 @@ sub test_err {
   if (-r (my $fn = "$src.in")) {
     $args .= " " . read_file($fn);
   }
-  my $out = qx($^X -I$libdir $script $src$args 2>&1);
+  my $out = qx($^X $script $src$args 2>&1);
   if (defined $out and $?) {
     eq_or_diff_subst($out, read_file($res), $title // $src);
   } else {

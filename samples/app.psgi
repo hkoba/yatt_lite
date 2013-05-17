@@ -5,6 +5,8 @@ use warnings FATAL => qw(all);
 use File::Spec;
 use File::Basename ();
 use Cwd ();
+use Carp;
+use List::MoreUtils qw/last_index/;
 
 {
   my ($app_root, @libdir);
@@ -27,8 +29,30 @@ use Cwd ();
     if (-d (my $dn = "$app_root/extlib")) {
       push @libdir, $dn;
     }
+
+    require lib; import lib @libdir;
+
+    if (not eval {require YATT::Lite::Breakpoint}
+	and -l __FILE__
+	and (my $d = last_index {$_ eq 'samples'}
+	     my @d = File::Spec->splitdir(__FILE__)) >= 0) {
+      print STDERR "d=$d; @d\n";
+      my $dir = File::Spec->catdir(@d[0 .. ($d - 1)]);
+      my $hook = sub {
+	my ($this, $orig_modfn) = @_;
+	return unless (my $modfn = $orig_modfn) =~ s!^YATT/!!;
+	Carp::cluck("orig_modfn=$orig_modfn\n") if $ENV{DEBUG_INC};
+	return unless -r (my $realfn = "$dir/../$modfn");
+	warn "=> found $realfn" if $ENV{DEBUG_INC};
+	open my $fh, '<', $realfn or die "Can't open $realfn:$!";
+	$fh;
+      };
+
+      unshift @INC, $hook;
+      push @INC, $hook, $hook;
+      # XXX: Why I need to put this into @INC-hook 3times?!
+    }
   }
-  use lib @libdir;
 
   #
   # Now, we are ready to load YATT libraries.

@@ -11,12 +11,7 @@ use Test::More;
 chdir $FindBin::Bin
   or die "chdir to test dir failed: $!";
 
-my ($lib_yatt) = grep(-e "$_/YATT/Lite"
-		      , 'lib', @INC);
-
-unless (defined $lib_yatt) {
-  BAIL_OUT("lib/YATT is missing??");
-}
+my $dist_root = "$FindBin::Bin/..";
 
 use File::Find;
 
@@ -29,20 +24,20 @@ my %ignore; map ++$ignore{$_}, ();
 
 
 my @modules = ('YATT::Lite');
-my (%modules) = ('YATT::Lite' => "$lib_yatt/YATT/Lite.pm");
+my (%modules) = ('YATT::Lite' => "$dist_root/Lite.pm");
 find {
   no_chdir => 1,
   wanted => sub {
   my $name = $File::Find::name;
   return unless $name =~ m{\.pm$};
-  $name =~ s{^\Q$lib_yatt\E/}{};
+  $name =~ s{^\Q$dist_root\E/}{YATT/};
   $name =~ s{/}{::}g;
   $name =~ s{\.pm$}{}g;
   return if $ignore{$name};
   print "$File::Find::name => $name\n" if $ENV{VERBOSE};
   $modules{$name} = $File::Find::name;
   push @modules, untaint_any($name);
-}}, untaint_any("$lib_yatt/YATT/Lite");
+}}, untaint_any("$dist_root/Lite");
 
 plan tests => 3 * @modules;
 

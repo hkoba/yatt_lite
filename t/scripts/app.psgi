@@ -1,7 +1,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 use strict;
 use warnings FATAL => qw(all);
-use FindBin; my $libdir; BEGIN { local @_ = "$FindBin::Bin/.."; ($libdir) = do "$FindBin::Bin/../t_lib.pl" }
+use FindBin; BEGIN { local @_ = "$FindBin::Bin/.."; do "$FindBin::Bin/../t_lib.pl" }
 
 my $app_root = ::dirname(::untaint_any(__FILE__));
 
