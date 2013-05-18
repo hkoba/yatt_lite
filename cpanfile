@@ -2,10 +2,14 @@
 
 conflicts 'YATT';
 
-requires 'perl' => '5.10.1'; # for named capture and //
+requires 'perl' => '>= 5.10.1, != 5.17';
+# >= 5.10.1, for named capture and //
+# != 5.17, to avoid death by 'given is experimental'
+
 requires 'List::Util' => 0;
 requires 'List::MoreUtils' => 0;
 requires 'Plack' => 0;
+requires 'version' => 0.77;
 recommends 'YAML::Tiny' => 0;
 
 configure_requires 'Module::CPANfile';

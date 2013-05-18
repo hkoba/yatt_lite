@@ -3,6 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use Carp;
 use File::Basename;
+use version;
 
 use base qw/YATT::Lite::Object
 	    YATT::Lite::Util::CmdLine
@@ -265,7 +266,7 @@ sub connect_to_dbi {
 
 sub connect_to_sqlite {
   (my MY $schema, my ($dsn_or_sqlite_fn, %opts)) = @_;
-  require DBD::SQLite; my $minver = 1.30_02;
+  require DBD::SQLite; my $minver = version->parse("1.30_02");
 
   my ($sqlite_fn, $dbi_dsn) = do {
     if ($dsn_or_sqlite_fn =~ /^dbi:SQLite:(?:dbname=)?(.*)$/i) {
@@ -276,7 +277,7 @@ sub connect_to_sqlite {
   };
   unless (delete $opts{RO}) {
     $opts{sqlite_use_immediate_transaction} = 1
-      if $DBD::SQLite::VERSION >= $minver;
+      if version->parse($DBD::SQLite::VERSION) >= $minver;
   }
   $schema->{dbtype} //= 'sqlite';
   my $first_time = not -e $sqlite_fn;
