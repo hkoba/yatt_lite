@@ -13,8 +13,11 @@ use YATT::Lite::Util qw(dict_sort rootname read_file);
 my $func = rootname(basename($0));
 my $script = "$dist/scripts/yatt.$func";
 
-unless (-x $script) {
+unless (-r $script) {
   plan skip_all => "Can't find yatt.$func: $script";
+}
+unless ($^O =~ /^MSWin/ or -x $script) {
+  plan skip_all => "Not executable: yatt.$func: $script";
 }
 
 $ENV{LANG} = "C"; # To avoid Wide char in $!

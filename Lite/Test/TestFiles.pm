@@ -3,6 +3,7 @@ package
 sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+use base qw/File::Spec/;
 use fields qw(basedir Dict List cf_auto_clean cf_quiet);
 
 sub new {
@@ -17,7 +18,7 @@ sub new {
 
 sub mkdir {
   (my MY $self, my ($fn)) = @_;
-  my $real = $_[2] = join '/', grep {defined} $self->{basedir}, $fn;
+  my $real = $_[2] = $self->catdir(grep {defined} $self->{basedir}, $fn);
   unless (-d $real) {
     CORE::mkdir($real) or die "Can't mkdir $real: $!";
     print "# o mkdir $real\n" unless $self->{cf_quiet};

@@ -65,7 +65,8 @@ sub rootname {
   $fn;
 }
 
-{
+SKIP: {
+  skip 'pipe open is not supported on windows' if $^O =~ /^MSWin\d+/;
   my $exe = rootname(__FILE__) . ".d/t_cmd1.pl";
   my $run = sub {
     my ($cmdline) = @_;

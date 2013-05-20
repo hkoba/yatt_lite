@@ -355,7 +355,7 @@ sub app_name_for {
   (my MY $self, my ($path, $basedir)) = @_;
   ensure_slash($path);
   if ($basedir) {
-    ensure_slash($basedir = $self->rel2abs($basedir));
+    ensure_slash($basedir);
     $self->_extract_app_name($path, $basedir)
       // $self->error("Can't extract app_name path=%s, base=%s"
 		      , $path, $basedir);
@@ -375,7 +375,7 @@ sub _extract_app_name {
   (my MY $self, my ($path, $basedir)) = @_;
   my ($bs, $name) = unpack('A'.length($basedir).'A*', $path);
   return undef unless $bs eq $basedir;
-  $name =~ s{/+$}{};
+  $name =~ s{[/\\]+$}{};
   $name;
 }
 
@@ -388,7 +388,10 @@ sub ensure_slash {
   unless (defined $_[0] and $_[0] ne '') {
     $_[0] = '/';
   } else {
-    $_[0] =~ s{^/?(.*?)/?$}{/$1/}; # Both of start/end must be '/'.
+    my $abs = File::Spec->rel2abs($_[0]);
+    my $sep = $^O =~ /^MSWin/ ? "\\" : "/";
+    $abs =~ s{(?:\Q$sep\E)?$}{$sep}; # Should end with path-separator.
+    $_[0] = $abs;
   }
 }
 

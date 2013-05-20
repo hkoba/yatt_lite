@@ -20,7 +20,7 @@ plan 'no_plan';
 
 use YATT::Lite::Test::TestUtil;
 use List::Util qw(sum);
-
+use File::Temp qw/tempdir/;
 #========================================
 use YATT::Lite::Breakpoint;
 use YATT::Lite::WebMVC0::SiteApp ();
@@ -33,9 +33,12 @@ use YATT::t::t_preload; # To make Devel::Cover happy.
 sub myapp {join _ => MyTest => appname($0), shift}
 
 my ($quiet, $i) = (1);
-my $BASE = "/tmp/yatt-test$$.d";
+my $BASE = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);
+END {
+  chdir('/');
+}
 my $dig = YATT::Lite::Test::TestFiles->new($BASE
-				     , quiet => $quiet, auto_clean => 1);
+				     , quiet => $quiet, auto_clean => 0);
 
 $i = 1;
 {
