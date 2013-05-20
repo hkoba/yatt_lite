@@ -303,7 +303,21 @@ sub psgi_handle_static {
     require Plack::App::File;
     Plack::App::File->new(root => $self->{cf_doc_root})->to_app;
   };
+
+  # When PATH_INFO contains virtual path prefix (like /~$user/),
+  # we need to strip them (for Plack::App::File).
+  local $env->{PATH_INFO} = $self->trim_site_prefix($env->{PATH_INFO});
+
   $app->($env);
+}
+
+sub trim_site_prefix {
+  (my MY $self, my $path) = @_;
+  if (my $pfx = $self->{cf_site_prefix}) {
+    substr($path, length($pfx));
+  } else {
+    $path;
+  }
 }
 
 # XXX: Do we need to care about following headers too?:
