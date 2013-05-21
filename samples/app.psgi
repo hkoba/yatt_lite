@@ -36,7 +36,7 @@ use List::MoreUtils qw/last_index/;
 	and -l __FILE__
 	and (my $d = last_index {$_ eq 'samples'}
 	     my @d = File::Spec->splitdir(__FILE__)) >= 0) {
-      print STDERR "d=$d; @d\n";
+      print STDERR "d=$d; @d\n" if $ENV{DEBUG_INC};
       my $dir = File::Spec->catdir(@d[0 .. ($d - 1)]);
       my $hook = sub {
 	my ($this, $orig_modfn) = @_;
@@ -50,7 +50,7 @@ use List::MoreUtils qw/last_index/;
 
       unshift @INC, $hook;
       push @INC, $hook, $hook;
-      # XXX: Why I need to put this into @INC-hook 3times?!
+      # XXX: @INC-hook Only Live Twice :-<
     }
   }
 

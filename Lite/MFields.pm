@@ -166,7 +166,7 @@ __END__
 
 =head1 NAME
 
-YATT::Lite::Fields -- fields for multiple inheritance.
+YATT::Lite::MFields -- fields for multiple inheritance.
 
 =head1 SYNOPSIS
 

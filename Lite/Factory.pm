@@ -8,7 +8,7 @@ sub MY () {__PACKAGE__}
 use 5.010;
 use Scalar::Util qw(weaken);
 
-use parent qw(YATT::Lite::NSBuilder File::Spec);
+use parent qw/YATT::Lite::NSBuilder File::Spec/;
 use File::Path ();
 
 use YATT::Lite::MFields qw/cf_doc_root
@@ -31,8 +31,8 @@ use YATT::Lite::MFields qw/cf_doc_root
 
 			   cf_only_parse cf_namespace
 			   cf_offline
+			   cf_config_filetypes
 			  /;
-
 
 use YATT::Lite::Util::AsBase;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
@@ -40,7 +40,8 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			secure_text_plain
 			psgi_error
 		       /;
-use YATT::Lite::XHF;
+
+use YATT::Lite::XHF ();
 
 use YATT::Lite::Partial::ErrorReporter;
 use YATT::Lite::Partial::AppPath;
@@ -213,14 +214,50 @@ sub load_yatt {
   if (not $self->{cf_allow_missing_dir} and not -d $path) {
     croak "Can't find '$path'!";
   }
-  if (-e (my $cf = untaint_any($path) . "/.htyattconfig.xhf")) {
-    _with_loading_file {$self} $cf, sub {
-      $self->build_yatt($path, $basedir, $cycle
-			, $self->read_file_xhf($cf, bytes => $self->{cf_binary_config}));
+  if (my (@cf) = map {
+    my $cf = untaint_any($path) . "/.htyattconfig.$_";
+    -e $cf ? $cf : ()
+  } $self->config_filetypes) {
+    $self->error("Multiple configuration files!", @cf) if @cf > 1;
+    _with_loading_file {$self} $cf[0], sub {
+      $self->build_yatt($path, $basedir, $cycle, $self->read_file($cf[0]));
     };
   } else {
     $self->build_yatt($path, $basedir, $cycle);
   }
+}
+
+sub read_file {
+  (my MY $self, my $fn) = @_;
+  my ($ext) = $fn =~ /\.(\w+)$/
+    or croak "Can't extract fileext from filename: $fn";
+  my $sub = $self->can("read_file_$ext")
+    or croak "filetype $ext is not supported: $fn";
+  $sub->($self, $fn);
+}
+
+sub default_config_filetypes {qw/xhf yml/}
+sub config_filetypes {
+  (my MY $self) = @_;
+  if (my $item = $self->{cf_config_filetypes}) {
+    lexpand($item)
+  } else {
+    $self->default_config_filetypes
+  }
+}
+
+sub read_file_xhf {
+  (my MY $self, my $fn) = @_;
+  my $bytes_semantics = ref $self && $self->{cf_binary_config};
+  $self->YATT::Lite::XHF::read_file_xhf
+    ($fn, bytes => $bytes_semantics);
+}
+
+sub read_file_yml {
+  (my MY $self, my $fn) = @_;
+  require YAML::Tiny;
+  my $yaml = YAML::Tiny->read($fn);
+  wantarray ? lexpand($yaml->[0]) : $yaml;
 }
 
 sub build_yatt {

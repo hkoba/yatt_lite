@@ -124,6 +124,36 @@ my $root_sanity = sub {
 
 ++$i;
 {
+  my $THEME = "[read_config xhf, yml]";
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+
+  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+base: @ytmpl
+other_config: in docroot
+END
+
+	     , "$docroot/yamltest/.htyattconfig.yml" => <<'END'
+---
+base: '@ytmpl'
+other_config: 'read from yml'
+END
+	     );
+
+  # In xhf, order must be preserved.
+  is_deeply [Factory->read_file("$docroot/.htyattconfig.xhf")]
+    , [base => '@ytmpl', other_config => 'in docroot']
+      , "Factory->read_file .htyattconfig.xhf";
+
+  # In yaml, order is not preserved.
+  is_deeply +{Factory->read_file("$docroot/yamltest/.htyattconfig.yml")}
+    , +{base => '@ytmpl', other_config => 'read from yml'}
+      , "Factory->read_file .htyattconfig.yml";
+
+}
+
+++$i;
+{
   my $THEME = "[config+rc]";
   # * root に config と rc があり、 config から ytmpl への継承が指定されているケース
   # * サブディレクトリ(config 無し)がデフォルト値を継承するケース
@@ -144,6 +174,14 @@ my $root_sanity = sub {
 base: @ytmpl
 other_config: in docroot
 END
+
+	     , "$docroot/yamltest/.htyattconfig.yml" => <<'END'
+---
+base: '@ytmpl'
+other_config: 'read from yml'
+END
+
+
 	     , "$docroot/.htyattrc.pl" => <<'END'
 use strict;
 use warnings FATAL => qw(all);
@@ -174,6 +212,9 @@ END
   
   is $yatt->bar, "my bar result", "$THEME root inherits ytmpl bar";
   ok($yatt->find_part('bar'), "$THEME inst part bar is visible");
+
+  is $F->get_yatt('/yamltest/')->cget('other_config')
+   , 'read from yml', "yaml support .htyattconfig.yml";
 }
 
 ++$i;
