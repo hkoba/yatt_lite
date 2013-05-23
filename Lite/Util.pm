@@ -510,12 +510,21 @@ sub dispatch_one {
   }
 }
 
+sub con_error {
+  my ($con, $err, @args) = @_;
+  if ($con->can("raise") and my $sub = $con->can("error")) {
+    $sub->error($err, @args)
+  } else {
+    sprintf $err, @args;
+  }
+}
+
 sub safe_render {
   my ($this, $con, $wspec, @args) = @_;
   my @nsegs = lexpand($wspec);
   my $wname = join _ => map {defined $_ ? $_ : ''} @nsegs;
   my $sub = $this->can("render_$wname")
-    or die $con->error("Can't find widget '%s'", $wname);
+    or die con_error($con, "Can't find widget '%s'", $wname);
   $sub->($this, $con, @args);
 }
 
