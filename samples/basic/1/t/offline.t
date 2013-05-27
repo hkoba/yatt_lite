@@ -24,7 +24,7 @@ BEGIN {
   }
 }
 #----------------------------------------
-use 5.010; no if $] >= 5.018, warnings => "experimental";
+use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(ostream);

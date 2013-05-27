@@ -1,6 +1,6 @@
 use strict;
 use YATT::Lite::Macro;
-use 5.010; no if $] >= 5.018, warnings => "experimental";
+use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 Macro given => sub {
   my ($cgen, $node) = @_;
@@ -9,7 +9,7 @@ Macro given => sub {
   # my ($given) = $cgen->terse_dump($primary);
   # my ($given) = $cgen->terse_dump($primary->[0]);
   my $result = "";
-  $result .= q!no warnings "experimental";! if $] >= 5.018;
+  $result .= q!no warnings "experimental";! if $] >= 5.017011;
   $result .= "given (";
   $result .= $cgen->as_list($cgen->node_body($primary->[0]));
   $result .= ") {";

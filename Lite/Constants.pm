@@ -1,7 +1,7 @@
 package YATT::Lite::Constants;
 use strict;
 use warnings FATAL => qw(all);
-use 5.010; no if $] >= 5.018, warnings => "experimental";
+use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 require Carp;
 
