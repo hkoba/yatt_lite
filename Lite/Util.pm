@@ -513,7 +513,7 @@ sub dispatch_one {
 sub con_error {
   my ($con, $err, @args) = @_;
   if ($con->can("raise") and my $sub = $con->can("error")) {
-    $sub->error($err, @args)
+    $sub->($con, $err, @args)
   } else {
     sprintf $err, @args;
   }
