@@ -45,6 +45,7 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
   $self->{cf_index_name} //= $self->default_index_name;
+  $self->{cf_use_subpath} //= 1;
 }
 
 sub _cf_delegates {

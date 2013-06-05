@@ -192,7 +192,11 @@ require Scalar::Util;
       if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.yatt") {
 	$subpath = substr($subpath, 1+length $1);
 	$file = "$1.yatt";
+      } elsif (-e "$dir/index.yatt") {
+	# index.yatt should subsume all subpath.
       } elsif ($subpath =~ s{^/([^/]+)$}{}) {
+	# Note: Actually, $file is not accesible in this case.
+	# This is just for better error diag.
 	$file = $1;
       }
     }
