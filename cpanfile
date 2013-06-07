@@ -10,6 +10,11 @@ requires 'List::Util' => 0;
 requires 'List::MoreUtils' => 0;
 requires 'Plack' => 0;
 requires 'version' => 0.77;
+requires 'parent' => 0;
+
+requires 'URI::Escape' => 0;
+requires 'Tie::IxHash' => 0; # For nested_query
+
 recommends 'YAML::Tiny' => 0;
 
 configure_requires 'Module::CPANfile';

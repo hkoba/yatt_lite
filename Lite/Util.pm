@@ -2,6 +2,9 @@ package YATT::Lite::Util;
 use strict;
 use warnings FATAL => qw(all);
 
+use URI::Escape ();
+use Tie::IxHash;
+
 require Scalar::Util;
 
 {
@@ -40,6 +43,7 @@ require Scalar::Util;
 				  num_is_ge
 				  secure_text_plain
 				  psgi_error
+				  parse_nested_query
 				/);
   }
   use Carp;
@@ -632,6 +636,62 @@ sub secure_text_plain {
 sub psgi_error {
   my ($self, $status, $msg, @rest) = @_;
   return [$status, [$self->secure_text_plain, @rest], [$msg]];
+}
+
+sub ixhash {
+  tie my %hash, 'Tie::IxHash', @_;
+  \%hash;
+}
+
+# Ported from: Rack::Utils.parse_nested_query
+sub parse_nested_query {
+  return {} unless defined $_[0] and $_[0] ne '';
+  my ($enc) = $_[1];
+  my $params = ixhash();
+  foreach my $p (split /[;&]/, $_[0]) {
+    my ($k, $v) = map {
+      s/\+/ /g;
+      my $raw = URI::Escape::uri_unescape($_);
+      $enc ? Encode::decode($enc, $raw) : $raw;
+    } split /=/, $p, 2;
+    normalize_params($params, $k, $v) if defined $k;
+  }
+  $params;
+}
+
+sub normalize_params {
+  my ($params, $name, $v) = @_;
+  my ($k) = $name =~ m(\A[\[\]]*([^\[\]]+)\]*)
+    or return;
+
+  my $after = substr($name, length $&);
+
+  if ($after eq '') {
+    $params->{$k} = $v;
+  } elsif ($after eq "[]") {
+    my $item = $params->{$k} //= [];
+    croak "expected ARRAY (got ".(ref $item || 'String').") for param `$k'"
+      unless ref $item eq 'ARRAY';
+    push @$item, $v;
+  } elsif ($after =~ m(^\[\]\[([^\[\]]+)\]$) or $after =~ m(^\[\](.+)$)) {
+    my $child_key = $1;
+    my $item = $params->{$k} //= [];
+    croak "expected ARRAY (got ".(ref $item || 'String').") for param `$k'"
+      unless ref $item eq 'ARRAY';
+    if (@$item and ref $item->[-1] eq 'HASH'
+	and not exists $item->[-1]->{$child_key}) {
+      normalize_params($item->[-1], $child_key, $v);
+    } else {
+      push @$item, normalize_params(ixhash(), $child_key, $v);
+    }
+  } else {
+    my $item = $params->{$k} //= ixhash();
+    croak "expected HASH (got ".(ref $item || 'String').") for param `$k'"
+      unless ref $item eq 'HASH';
+    $params->{$k} = normalize_params($item, $after, $v);
+  }
+
+  $params;
 }
 
 1;

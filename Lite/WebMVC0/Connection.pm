@@ -6,12 +6,14 @@ use Carp;
 use base qw(YATT::Lite::Connection);
 use fields qw/cf_cgi
 	      cf_is_psgi cf_hmv
+	      params_hash
 
 	      cf_site_prefix
 
 	      cf_dir cf_file cf_subpath
 	      cf_root cf_location
 	      cf_is_index
+	      cf_no_nested_query
 
 	      current_user
 	    /;
@@ -70,7 +72,23 @@ BEGIN {
 
 sub param {
   my PROP $prop = (my $glob = shift)->prop;
-  if (my $hmv = $prop->{cf_hmv}) {
+  if (my $ixh = $prop->{params_hash}) {
+    return keys %$ixh unless @_;
+    defined (my $key = shift)
+      or croak "undefined key!";
+    if (@_) {
+      if (@_ >= 2) {
+	$ixh->{$key} = [@_]
+      } else {
+	$ixh->{$key} = shift;
+      }
+    } else {
+      my $item = $ixh->{$key};
+      return unless defined $item;
+      my @vals = lexpand($item);
+      return wantarray ? @vals : $vals[0];
+    }
+  } elsif (my $hmv = $prop->{cf_hmv}) {
     return $hmv->keys unless @_;
     if (@_ == 1) {
       return wantarray ? $hmv->get_all($_[0]) : $hmv->get($_[0]);
@@ -87,7 +105,7 @@ sub param {
 
 sub queryobj {
   my PROP $prop = (my $glob = shift)->prop;
-  $prop->{cf_hmv} || $prop->{cf_cgi};
+  $prop->{params_hash} || $prop->{cf_hmv} || $prop->{cf_cgi};
 }
 
 #========================================
@@ -95,38 +113,28 @@ sub queryobj {
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_cgi} = my $cgi = shift;
-  #if ($prop->{cf_use_array_param}) {
+  unless ($prop->{cf_no_nested_query}) {
     if ($prop->{cf_is_psgi}) {
       $glob->convert_array_param_psgi($cgi);
     } else {
       $glob->convert_array_param_cgi($cgi);
     }
-  #}
+  }
 }
 
 sub convert_array_param_psgi {
-  my ($glob, $req) = @_;
-  my $params = $req->body_parameters || $req->query_parameters;
-  foreach my $name (keys %$params) {
-    (my $newname = $name) =~ s{^\*|\[\]$}{}
-      or next;
-    my %hash; $hash{$_} = 1 for $params->get_all($name);
-    $params->remove($name);
-    $params->add($newname, \%hash);
-  }
-  $req;
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($req) = @_;
+  my Env $env = $prop->{cf_env};
+  my $qs = $req->raw_body || $env->{QUERY_STRING};
+  $prop->{params_hash} = YATT::Lite::Util::parse_nested_query($qs);
 }
 
 sub convert_array_param_cgi {
-  my ($glob, $cgi) = @_;
-  foreach my $name ($cgi->param) {
-    (my $newname = $name) =~ s{^\*|\[\]$}{}
-      or next;
-    my %hash; $hash{$_} = 1 for $cgi->param($name);
-    $cgi->delete($name);
-    $cgi->param($newname, \%hash);
-  }
-  $cgi;
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($cgi) = @_;
+  $prop->{params_hash}
+    = YATT::Lite::Util::parse_nested_query($cgi->query_string);
 }
 
 # Location(path part of url) of overall SiteApp.
@@ -244,7 +252,10 @@ sub mkquery {
     $param = $param->queryobj;
   }
 
-  if ($fkeys = UNIVERSAL::can($param, 'keys')
+  if (ref $param eq 'HASH') {
+    push @enc_param, $self->url_encode($_).'='.$self->url_encode($param->{$_})
+      for sort keys %$param;
+  } elsif ($fkeys = UNIVERSAL::can($param, 'keys')
       and $fgetall = UNIVERSAL::can($param, 'get_all')
       or ($fkeys = $fgetall = UNIVERSAL::can($param, 'param'))) {
     foreach my $key (YATT::Lite::Util::unique($fkeys->($param))) {
@@ -252,9 +263,6 @@ sub mkquery {
       push @enc_param, "$enc=".$self->url_encode($_)
 	for $fgetall->($param, $key);
     }
-  } elsif (ref $param eq 'HASH') {
-    push @enc_param, $self->url_encode($_).'='.$self->url_encode($param->{$_})
-      for sort keys %$param;
   } elsif (ref $param eq 'ARRAY') {
     my @list = @$param;
     while (my ($key, $value) = splice @list, 0, 2) {

@@ -39,7 +39,7 @@ use Plack::Test;
 use Plack::Util;
 
 use YATT::Lite::Breakpoint;
-# use YATT::Lite::Util qw(ostream);
+use YATT::Lite::Util qw(lexpand);
 use YATT::Lite::Test::XHFTest2;
 use base qw(YATT::Lite::Test::XHFTest2);
 use YATT::t::t_preload; # To make Devel::Cover happy.
@@ -52,9 +52,11 @@ plan $tests->test_plan(1);
 
 use Cwd;
 $ENV{YATT_DOCUMENT_ROOT} = cwd;
-ok(my $app = Plack::Util::load_psgi("$FindBin::Bin/../app.psgi"), "load_psgi");
+use YATT::Lite::Factory; sub Factory () {'YATT::Lite::Factory'}
+ok(my $site = Factory->load_factory_script("$FindBin::Bin/../app.psgi")
+   , "load_psgi");
 
-test_psgi $app, sub {
+test_psgi $site->to_app, sub {
   my ($cb) = shift;
   foreach my File $sect (@{$tests->{files}}) {
     my $dir = $tests->{cf_dir};
@@ -80,7 +82,12 @@ test_psgi $app, sub {
 	$item->{cf_METHOD} //= 'GET';
 	my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
 
-	my $res = $tests->run_psgicb($cb, $item);
+	my $res = do {
+	  $site->cf_let([lexpand($item->{cf_SITE_CONFIG})]
+			, sub {
+			  $tests->run_psgicb($cb, $item);
+			});
+	};
 
 	if ($item->{cf_ERROR}) {
 	  (my $str = $res->content) =~ s/^Internal Server error\n//;

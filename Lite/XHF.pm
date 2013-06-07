@@ -24,6 +24,7 @@ use YATT::Lite::Util;
 use YATT::Lite::Util::Enum _ => [qw(NAME SIGIL VALUE)];
 
 our $cc_name  = qr{\w|[\.\-/~!]};
+our $re_suffix= qr{\[$cc_name*\]};
 our $cc_sigil = qr{[:\#,\-=\[\]\{\}]};
 our $cc_tabsp = qr{[\ \t]};
 
@@ -128,7 +129,7 @@ sub tokenize_1 {
       next if $token eq '';
     }
 
-    unless ($token =~ s{^($cc_name*(?:\[\])?) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
+    unless ($token =~ s{^($cc_name*$re_suffix*) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
       croak "Invalid XHF token '$token': line " . token_lineno(\@tokens, $pos);
     }
     my ($name, $sigil, $tabsp, $eol) = ($1, $2, $3, $4);

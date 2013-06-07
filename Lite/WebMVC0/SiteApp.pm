@@ -14,6 +14,7 @@ use 5.010; no if $] >= 5.017011, warnings => "experimental";
 use parent qw(YATT::Lite::Factory);
 use YATT::Lite::MFields qw/cf_noheader
 			   cf_is_psgi
+			   cf_no_nested_query
 			   allow_debug_from
 			   cf_debug_cgi
 			   cf_debug_psgi
@@ -471,7 +472,7 @@ sub connection_param {
 
    # May be overridden.
    , root => $self->{cf_doc_root}  # XXX: is this ok?
-   , $self->cf_delegate_defined(qw(is_psgi))
+   , $self->cf_delegate_defined(qw(is_psgi no_nested_query))
 
    # override by explict ones
    , @rest

@@ -100,6 +100,9 @@ BODY: OK. foo=
 
 FILE: index.yatt
 TITLE: arg=list auto mapping
+SITE_CONFIG[
+no_nested_query: 1
+]
 PARAM[
 ~testlistarg: show checked list
 chklst[

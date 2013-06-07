@@ -210,6 +210,12 @@ baz:
 END
     , [foo => 1, bar => 2, baz => "3\n"];
 
+  test_parser [parser(<<END)->read]
+chklst[]: 1
+chklst[]: 2
+chklst[]: 5
+END
+    , ['chklst[]' => 1, 'chklst[]' => 2, 'chklst[]' => 5];
 
   test_error <<END, qr/Missing close '\]'/, "missing close ]";
 foo[

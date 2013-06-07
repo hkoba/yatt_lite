@@ -19,6 +19,7 @@ use YATT::Lite::Types
 			     cf_BREAK
 			     cf_SAME_RESULT
 			     cf_PERL_MINVER
+			     cf_SITE_CONFIG
 			     cf_PARAM cf_HEADER cf_BODY cf_ERROR)]]);
 
 our @EXPORT;
