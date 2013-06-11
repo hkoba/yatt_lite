@@ -6,11 +6,13 @@ use YATT::Lite::Partial
   (fields => [qw/cf_at_done
 		 cf_error_handler
 		 cf_die_in_error
+		 cf_ext_pattern
 		/]);
-use Carp qw/longmess/;
+require Devel::StackTrace;
 
 use YATT::Lite::Error; sub Error () {'YATT::Lite::Error'}
 use YATT::Lite::Util qw/incr_opt/;
+
 
 #========================================
 # error reporting.
@@ -25,10 +27,39 @@ sub make_error {
   my ($self, $depth, $opts) = splice @_, 0, 3;
   my $fmt = $_[0];
   my ($pkg, $file, $line) = caller($depth);
+  my $bt = do {
+    my @bt_opts = (ignore_package => __PACKAGE__);
+    if (my $frm = delete $opts->{ignore_frame}) {
+      # $YATT::Lite::CON->logdump(ignore_frame => $frm);
+      push @bt_opts, frame_filter => sub {
+	my ($hash) = @_;
+	my $caller = $hash->{'caller'};
+	my $res = not not grep {($frm->[$_] // '') ne ($caller->[$_] // '')}
+	  0..2;
+	# $YATT::Lite::CON->logdump(frame_filter_res => $res, $caller);
+	$res;
+      }
+    }
+    Devel::StackTrace->new(@bt_opts);
+  };
+
+  my $pattern = $self->{cf_ext_pattern} // qr/\.(yatt|ytmpl|ydo)$/;
+
+  my @tmplinfo;
+  foreach my $fr ($bt->frames) {
+    my $fn = $fr->filename
+      or next;
+    $fn =~ $pattern
+      or next;
+    push @tmplinfo, tmpl_file => $fn, tmpl_line => $fr->line;
+    last;
+  }
+
   $self->Error->new
     (file => $opts->{file} // $file, line => $opts->{line} // $line
+     , @tmplinfo
      , format => $fmt, args => [@_[1..$#_]]
-     , backtrace => longmess()
+     , backtrace => $bt
      , $opts ? %$opts : ());
 }
 

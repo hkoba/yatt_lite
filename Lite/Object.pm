@@ -112,6 +112,14 @@ sub cf_list {
   sort map {($_ =~ $pat) ? $1 : ()} keys %$fields;
 }
 
+sub cf_pairs {
+  my ($obj) = shift;
+  my $fields = YATT::Lite::Util::fields_hash($obj);
+  map {
+    [substr($_, 3) => $obj->{$_}]
+  } grep {/^cf_/} keys %$fields;
+}
+
 #
 # util for delegate
 #

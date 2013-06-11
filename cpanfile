@@ -14,8 +14,10 @@ requires 'parent' => 0;
 
 requires 'URI::Escape' => 0;
 requires 'Tie::IxHash' => 0; # For nested_query
+requires 'Devel::StackTrace' => 0;
 
 recommends 'YAML::Tiny' => 0;
+recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';

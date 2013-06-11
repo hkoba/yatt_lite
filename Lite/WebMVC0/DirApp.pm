@@ -28,11 +28,13 @@ sub handle {
   chdir($self->{cf_dir})
     or die "Can't chdir '$self->{cf_dir}': $!";
   local $SIG{__WARN__} = sub {
-    die $self->make_error(2, {reason => $_[0]});
+    my ($msg) = @_;
+    die $self->raise(warn => $_[0]);
   };
   local $SIG{__DIE__} = sub {
     my ($err) = @_;
-    die(ref $err ? $err : $self->make_error(2, {reason => $err}));
+    die $err if ref $err;
+    die $self->error({ignore_frame => [MY,__FILE__, __LINE__]}, $err);
   };
   if (my $charset = $self->header_charset) {
     $con->set_charset($charset);

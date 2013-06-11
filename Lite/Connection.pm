@@ -146,13 +146,23 @@ sub configure {
   }
 }
 
+# For debugging aid.
+sub cf_pairs {
+  my PROP $prop = prop(my $glob = shift);
+  my $fields = fields_hash($glob);
+  map {
+    [substr($_, 3) => $prop->{$_}]
+  } grep {/^cf_/ && $_ ne 'cf_buffer'} keys %$fields;
+}
+
 #========================================
 
 sub as_error {
   my PROP $prop = prop(my $glob = shift);
   $prop->{is_error} = 1;
   if (my $buf = $prop->{cf_buffer}) {
-    $prop->{oldbuf} = $$buf; $$buf = '';
+    $prop->{oldbuf} = $$buf;
+    $glob->rewind;
   }
   $glob->configure(@_) if @_;
   $glob;
