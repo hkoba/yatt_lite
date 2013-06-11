@@ -18,33 +18,6 @@ require Scalar::Util;
 		     nonempty
 		     subname
 		   /;
-    our @EXPORT_OK = (@EXPORT, qw/cached_in split_path rootname dict_order
-				  lookup_path lookup_dir
-				  appname extname
-				  unique
-				  captured is_debugging callerinfo
-				  dofile_in compile_file_in
-				  url_encode url_decode
-				  url_encode_kv encode_query
-				  ostream
-				  read_file
-				  named_attr
-				  mk_http_status
-				  get_locale_encoding
-				  fields_hash
-				  list_isa
-				  set_inc
-				  look_for_globref
-				  try_invoke
-				  NIMPL
-
-				  shallow_copy
-				  incr_opt
-				  num_is_ge
-				  secure_text_plain
-				  psgi_error
-				  parse_nested_query
-				/);
   }
   use Carp;
   sub numLines {
@@ -692,6 +665,19 @@ sub normalize_params {
   }
 
   $params;
+}
+
+#
+# to put all functions into @EXPORT_OK.
+#
+{
+  our @EXPORT_OK;
+  my $symtab = symtab(__PACKAGE__);
+  foreach my $name (grep {/^[a-z]/} keys %$symtab) {
+    my $glob = $symtab->{$name};
+    next unless *{$glob}{CODE};
+    push @EXPORT_OK, $name;
+  }
 }
 
 1;
