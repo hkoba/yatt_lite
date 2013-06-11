@@ -205,13 +205,13 @@ sub session_init {
       $self->error("Undefined session initializer");
     } elsif (ref $spec eq 'ARRAY') {
       my ($name, @value) = @$spec;
-      $sess->param($name, @value > 1 ? \@value : $value[0]);
+      $sess->param($name, @value);
     } elsif (not ref $spec or ref $spec eq 'Regexp') {
       $spec = qr{^\Q$spec} unless ref $spec;
       foreach my $name ($con->param) {
 	next unless $name =~ $spec;
 	my (@value) = $con->param($name);
-	$sess->param($name, @value > 1 ? \@value : $value[0]);
+	$sess->param($name, @value);
       }
     } else {
       $self->error("Invalid session initializer: %s"

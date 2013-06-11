@@ -2,6 +2,7 @@ use strict;
 use fields qw(cf_datadir cf_config);
 use YATT::Lite::Entities qw(*CON);
 Entity YATT => sub {shift->YATT};
+use Carp;
 
 #========================================
 Entity config => sub {
@@ -106,3 +107,23 @@ sub after_new {
   $self->{cf_datadir} //= $self->app_path_ensure_existing
     ('@var/data');
 }
+
+Entity sess_obj => sub {
+  my ($this) = shift;
+
+  # This will call MY->session_resume.
+  $CON->get_session
+};
+
+Entity att_value_of => sub {
+  my ($this, $type, $name, $formal_value, $opts) = @_;
+
+  my $in       = delete $opts->{in} // $CON;
+  my $as_value = delete $opts->{as_value};
+
+  if (%$opts) {
+    croak "Unknown option for att_value_of(): ".join(", ", sort keys %$opts);
+  }
+
+  \ YATT::Lite::Util::att_value_in($in, $type, $name, $formal_value, $as_value);
+};

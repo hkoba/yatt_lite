@@ -76,7 +76,7 @@ TITLE: !baz=any
 PARAM[
 !baz: any
 ]
-BODY: OK. foo=
+BODY: OK. foo=(NULL)
 
 FILE: index.yatt
 METHOD: POST
@@ -95,7 +95,7 @@ TITLE: !!=baz
 PARAM[
 !!: baz
 ]
-BODY: OK. foo=
+BODY: OK. foo=(NULL)
 
 
 FILE: index.yatt

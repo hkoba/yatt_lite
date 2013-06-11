@@ -71,6 +71,14 @@ require Scalar::Util;
       wantarray ? () : 0;
     }
   }
+  sub lsearch (&@) {
+    my $sub = shift;
+    my $i = 0;
+    foreach (@_) {
+      return $i if $sub->($_);
+    } continue {$i++}
+    return;
+  }
   # $fn:e
   sub extname { my $fn = shift; return $1 if $fn =~ s/\.(\w+)$// }
   # $fn:r
@@ -338,10 +346,26 @@ BEGIN {
 	  $$str;
 	} elsif (my $sub = UNIVERSAL::can($str, 'as_escaped')) {
 	  $sub->($str);
+	} elsif ($sub = UNIVERSAL::can($str, 'cf_pairs')) {
+	  ref($str).'->new('.(join(", ", map {
+	    my ($k, $v) = @$_;
+	    "$k => " . do {
+	      my $esc = escape($v);
+	      if (not defined $esc) {
+		'undef'
+	      } elsif ($esc eq '') {
+		"''"
+	      } else {
+		$esc;
+	      }
+	    };
+	  } $sub->($str))).')';
 	} else {
 	  # XXX: Is this secure???
 	  # XXX: Should be JSON?
-	  terse_dump($str);
+	  my $copy = terse_dump($str);
+	  $copy =~ s{([<\"])}{$escape{$1}}g; # XXX: Minimum. May be insecure.
+	  $copy;
 	}
       };
     }
@@ -369,23 +393,95 @@ sub named_attr {
     , 'YATT::Lite::Util::named_attr';
 }
 
-sub value_checked  { _value_checked($_[0], $_[1], checked => '') }
-sub value_selected { _value_checked($_[0], $_[1], selected => '') }
+{
+  # XXX: These functions are deprecated. Use att_value_in() instead.
 
-sub _value_checked {
-  my ($value, $hash, $then, $else) = @_;
-  sprintf q|value="%s"%s|, escape($value)
-    , _if_checked($hash, $value, $then, $else);
+  sub value_checked  { _value_checked($_[0], $_[1], checked => '') }
+  sub value_selected { _value_checked($_[0], $_[1], selected => '') }
+
+  sub _value_checked {
+    my ($value, $hash, $then, $else) = @_;
+    sprintf q|value="%s"%s|, escape($value)
+      , _if_checked($hash, $value, $then, $else);
+  }
+
+  sub _if_checked {
+    my ($in, $value, $then, $else) = @_;
+    $else //= '';
+    return $else unless defined $in;
+    if (ref $in ? $in->{$value // ''} : ($in eq $value)) {
+      " $then"
+    } else {
+      $else;
+    }
+  }
 }
 
-sub _if_checked {
-  my ($in, $value, $then, $else) = @_;
-  $else //= '';
-  return $else unless defined $in;
-  if (ref $in ? $in->{$value // ''} : ($in eq $value)) {
-    " $then"
-  } else {
-    $else;
+{
+  our %input_types = qw!select 0 radio 1 checkbox 2!;
+  sub att_value_in {
+    my ($in, $type, $name, $formal_value, $as_value) = @_;
+    defined (my $typeid = $input_types{$type})
+      or croak "Unknown type: $type";
+
+    unless (defined $name and $name ne '') {
+      croak "name is empty";
+    }
+
+    unless (defined $formal_value and $formal_value ne '') {
+      croak "value is empty";
+    }
+
+    my @res;
+
+    if ($type and $typeid) {
+      push @res, qq|type="$type"|;
+    }
+
+    if ($typeid) {
+      my $sfx = $typeid ? '['.escape($formal_value).']' : '';
+      push @res, qq|name="@{[escape($name)]}$sfx"|;
+    }
+
+    if (not $typeid) {
+      # select
+      push @res, qq|value="@{[escape($formal_value)]}"|;
+    } elsif ($as_value) {
+      # checkbox/radio, with explicit value
+      push @res, qq|value="@{[escape($as_value)]}"|;
+    }
+
+    if (find_value_in($in, $name, $formal_value)) {
+      push @res, $typeid ? "checked" : "selected";
+    }
+
+    join(" ", @res);
+  }
+
+  sub find_value_in {
+    my ($in, $name, $formal_value) = @_;
+
+    my $actual_value = do {
+      if (my $sub = $in->can("param")) {
+	$sub->($in, $name);
+      } elsif (ref $in eq 'HASH') {
+	$in->{$name};
+      } else {
+	croak "Can't extract parameter from $in";
+      }
+    };
+
+    if (not defined $actual_value) {
+      0
+    } elsif (not ref $actual_value) {
+      $actual_value eq $formal_value
+    } elsif (ref $actual_value eq 'HASH') {
+      $actual_value->{$formal_value};
+    } elsif (ref $actual_value eq 'ARRAY') {
+      defined lsearch {$_ eq $formal_value} @$actual_value
+    } else {
+      undef
+    }
   }
 }
 

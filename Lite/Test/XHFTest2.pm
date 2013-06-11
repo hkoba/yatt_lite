@@ -268,6 +268,12 @@ sub mkformref_if_post {
   return unless $item->{cf_METHOD} eq 'POST';
   defined (my $ary = $item->{cf_PARAM})
     or return;
+  if (ref $ary eq 'ARRAY'
+      and grep(ref $_ eq 'HASH', @$ary)
+      or ref $ary eq 'HASH'
+      and grep(ref $_ eq 'HASH', values %$ary)) {
+    croak "HASH value is not allowed in PARAM block!";
+  }
   $ary;
 }
 

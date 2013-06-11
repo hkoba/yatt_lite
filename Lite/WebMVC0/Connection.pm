@@ -83,10 +83,8 @@ sub param {
 	$ixh->{$key} = shift;
       }
     } else {
-      my $item = $ixh->{$key};
-      return unless defined $item;
-      my @vals = lexpand($item);
-      return wantarray ? @vals : $vals[0];
+      # If params_hash is enabled, value is returned AS-IS.
+      $ixh->{$key};
     }
   } elsif (my $hmv = $prop->{cf_hmv}) {
     return $hmv->keys unless @_;

@@ -18,9 +18,9 @@
   <yatt:item>
     <label>Gender</label>
     <select name="gender">
-      <option &yatt:value_selected(0,:sess(gender));>-</option>
-      <option &yatt:value_selected(1,:sess(gender));>Female</option>
-      <option &yatt:value_selected(2,:sess(gender));>Male</option>
+      <option &yatt:att_value_of(select,gender,0,{in,:sess_obj()});>-</option>
+      <option &yatt:att_value_of(select,gender,1,{in,:sess_obj()});>Female</option>
+      <option &yatt:att_value_of(select,gender,2,{in,:sess_obj()});>Male</option>
     </select>
   </yatt:item>
 
@@ -35,8 +35,8 @@
       <yatt:foreach my=row list="&yatt:tsvfile(config/fruits);">
       <tr>
 	<th class="left">&yatt:row[-1];</th>
-	<td class="center"><input type="checkbox" name="fruits[]" &yatt:value_checked(:row[0],:sess(fruits)); /></td>
-	<td class="center"><input type="radio" name="best_fruits" &yatt:value_checked(:row[0],:sess(best_fruits));/></td>
+	<td class="center"><input &yatt:att_value_of(checkbox,fruits,:row[0],{in,:sess_obj()}); /></td>
+	<td class="center"><input &yatt:att_value_of(radio,fond_fruits,:row[0],{in,:sess_obj()}); /></td>
       </tr>
       </yatt:foreach>
     </table>
