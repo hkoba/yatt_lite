@@ -20,7 +20,6 @@ ERROR: Missing close tag 'yatt:my' line 3
 
 
 TITLE: tag open/close mismatch
-BREAK: 1
 IN:
  foo
  <yatt:my bar>
