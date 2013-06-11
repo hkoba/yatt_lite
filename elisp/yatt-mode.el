@@ -17,6 +17,7 @@
 (require 'mmm-sample)
 (require 'derived)
 (require 'sgml-mode)
+(require 'cperl-mode)
 
 (require 'yatt-lint-any-mode)
 
@@ -32,7 +33,11 @@
   "Where YATT is installed. This is used to locate ``yatt.lint''.")
 
 (defvar yatt-mode-default-mmm-classes
-  '(yatt-declaration html-js embedded-css)
+  '(yatt-declaration 
+    yatt-pi-perl-raw-output
+    yatt-pi-perl-escaped-output
+    yatt-pi-perl-code
+    html-js embedded-css)
   "Default mmm-classes for *.yatt files.")
 
 ;;========================================
@@ -72,6 +77,16 @@
   '((t (:background "#f4f2f5")))
   "Face used for yatt action part (<!yatt:...>)")
 
+(defface yatt-pi-perl-raw-output-submode-face
+  '((t (:background "Plum")))
+  "Face used for <?perl=== ?>")
+(defface yatt-pi-perl-escaped-output-submode-face
+  '((t (:background "#f4f2f5")))
+  "Face used for <?perl= ?>")
+(defface yatt-pi-perl-code-submode-face
+  '((t (:background "LightGray")))
+  "Face used for <?perl ?>")
+
 ;; html の中の、 <!yatt:...> を識別して yatt-declaration-mode へ。
 (mmm-add-classes
  '((yatt-declaration
@@ -80,6 +95,24 @@
     :include-front t :include-back t
     :front "^<!\\sw+:"
     :back ">\n")))
+
+(mmm-add-classes
+ '((yatt-pi-perl-raw-output
+    :submode cperl-mode
+    :face yatt-pi-perl-raw-output-submode-face
+    :front "<\\?perl==="
+    :back "\\?>")
+   (yatt-pi-perl-escaped-output
+    :submode cperl-mode
+    :face yatt-pi-perl-escaped-output-submode-face
+    :front "<\\?perl="
+    :back "\\?>")
+   (yatt-pi-perl-code
+    :submode cperl-mode
+    :face yatt-pi-perl-code-submode-face
+    :front "<\\?perl"
+    :back "\\?>")
+   ))
 
 ;; patch js-inline from mmm-samples.el
 ;; setf doesn't work for assoc, assoc*
