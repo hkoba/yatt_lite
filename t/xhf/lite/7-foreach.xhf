@@ -21,7 +21,6 @@ OUT:
 
 
 TITLE: foreach list=x pass through
-BREAK: 1
 IN:
  <!yatt:args x=list>
  <ul>
@@ -64,7 +63,6 @@ OUT:
 
 
 TITLE: foreach list pass through, type mismatch.
-BREAK: 1
 IN:
  <!yatt:args x>
  <ul>
@@ -93,3 +91,23 @@ OUT:
  <li>3</li>
  </ul>
 
+
+TITLE: foreach nth=i
+IN:
+ <!yatt:args list=list>
+ <yatt:foreach my=val nth=i list><li>&yatt:i; = &yatt:val;</li>
+ </yatt:foreach>
+PARAM[
+[
+- a
+- b1
+- b2
+- c
+]
+]
+OUT:
+ <li>1 = a</li>
+ <li>2 = b1</li>
+ <li>3 = b2</li>
+ <li>4 = c</li>
+ 

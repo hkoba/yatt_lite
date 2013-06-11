@@ -875,13 +875,15 @@ sub feed_arg_spec {
 }
 
 {
-  MY->make_arg_spec(\ my %args, \ my @args, qw(list my ith));
+  MY->make_arg_spec(\ my %args, \ my @args, qw(list my nth));
   sub macro_foreach {
     (my MY $self, my ($node, $opts)) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);
     $self->feed_arg_spec($primary, \%args, \@args
-			 , my ($list, $my, $ith))
+			 , my ($list, $my, $nth))
       or die $self->generror("Not enough arguments!");
+
+    my ($prologue, $continue, $epilogue) = ('', '', '');
 
     unless (defined $list) {
       die $self->generror("no list= is given");
@@ -900,7 +902,24 @@ sub feed_arg_spec {
       }
     };
 
-    my $fmt = q{foreach %1$s (%2$s) %3$s};
+    my ($nth_var, @nth_type) = do {
+      if ($nth and my $vn = $nth->[NODE_VALUE]) {
+	my ($x, @t) = lexpand($nth->[NODE_PATH]);
+	if ($vn =~ /^(\w+)$/) {
+	  ($vn, @t);
+	} else {
+	  die $self->generror("Invalid nth var: %s", $nth);
+	}
+      }
+    };
+    if ($nth_var) {
+      $local{$nth_var} = $self->mkvar_at(undef, $nth_type[0] || '' => $nth_var);
+
+      $prologue .= sprintf q{ my $%s = 1;}, $nth_var;
+      $continue .= sprintf q{ $%s++;}, $nth_var;
+    }
+
+    my $fmt = q|{%4$s; foreach %1$s (%2$s) %3$s continue {%5$s} %6$s}|;
     my $listexpr = do {
       unless (my $passThruVarName = passThruVar($list)) {
 	$self->as_list(lexpand($list->[NODE_VALUE]));
@@ -920,9 +939,11 @@ sub feed_arg_spec {
     my $statements = '{'.$self->as_print('}');
 
     if ($opts and $opts->{fragment}) {
-      ($fmt, $loopvar, $listexpr, $statements);
+      ($fmt, $loopvar, $listexpr, $statements
+       , $prologue, $continue, $epilogue);
     } else {
-      \ sprintf $fmt, $loopvar, $listexpr, $statements;
+      \ sprintf $fmt, $loopvar, $listexpr, $statements
+	, $prologue, $continue, $epilogue;
     }
   }
 }
