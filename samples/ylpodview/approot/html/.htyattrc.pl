@@ -60,7 +60,7 @@ sub podtree {
   my ($yatt, $fn) = @_;
   require Pod::Simple::SimpleTree;
   my $parser = Pod::Simple::SimpleTree->new;
-  $parser->accept_targets(qw(html css code));
+  $parser->accept_targets(qw(html css code image));
   #XXX: open my $fh, "<:encoding(utf-8)", $fn or die "Can't open $fn: $!";
   my $tree = $parser->parse_file($fn)->root;
   &YATT::Lite::Breakpoint::breakpoint();

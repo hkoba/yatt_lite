@@ -28,6 +28,31 @@
 
 </yatt:if>
 
+<!yatt:action image>
+my ($this, $con) = @_;
+my $subpath = $con->cget('subpath')
+ or $con->error("subpath is empty");
+
+my ($mod, $file) = $subpath =~ m{^/mod/([^/]+)/([^/]+)$}
+ or $con->error("Can't parse subpath %s", $subpath);
+
+my ($real) = $this->entity_search_pod($mod)
+ or $con->error("Can't find module %s", $mod);
+
+my ($ext) = $file =~ m{(\.\w+)$}
+ or $con->error("Can't parse filename %s", $file);
+
+use File::Basename;
+
+my $dir = dirname($real);
+my $img = "$dir/$file";
+
+-r $img
+  or $con->error("Can't find image file %s in %s", $file, $dir);
+
+use Plack::App::File;
+die Plack::App::File->new->serve_path($con->cget('env'), $img);
+
 <!yatt:widget front mobile="value/0">
 <yatt:envelope mobile>
 <:yatt:style>
@@ -309,6 +334,11 @@ DUMP(found=&yatt:found;)
 <style>
 &yatt:data[-1][-1];
 </style>
+
+<!yatt:widget for_image atts=value data=list
+	      -- image file in same dir --
+	      >
+<img src="&yatt:CON:mkurl(,:CON,local,1,mapped_path,1);/&yatt:data[-1][-1];?!!=image">
 
 <!yatt:widget for_code atts=value data=list
 	      -- To store current syntax into stash(code) --
