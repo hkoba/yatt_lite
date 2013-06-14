@@ -1,22 +1,67 @@
-YATT::Lite version 0.0_5
+YATT::Lite - Template Engine with PSGI support.
 ==================
 
-YATT is Yet Another Template Toolkit, aimed at Web Designers, rather than
-well-trained programmers. To achieve this goal, YATT provides more
-readable syntax for HTML/XML savvy designers, ``lint`` for static syntax
-checking and many safer default behaviors, ie. automatic output escaping
+YATT is Yet Another Template Toolkit.
+[YATT::Lite] is latest version of YATT.
+
+Unlike other template engines, YATT::Lite comes with its own Web Framework
+([WebMVC0]) which runs under [PSGI].
+So, you can concentrate on writing your most important parts: Views and Models.
+
+Like PHP, (SiteApp of) YATT::Lite routes incoming requests directly into
+``*.yatt`` template files in webapp's document directory. 
+(Of course you can define per-directory hook, url routing patterns
+and have many abstraction ways too.)
+Each templates are compiled on-the-fly and cached as perl scripts
+so you can add/modify your templates while running your webapp.
+
+Unlike PHP and other template engines, YATT has quite HTML-like syntax
+and mostly declarative semantics. 
+All YATT syntax items are *namespace-prefixed* ones
+of HTML syntax items. i.e. ``<!yatt:...>`` for *yatt widget* declarations,
+``<yatt:...>`` for widget invocations and ``&yatt:...;`` for entity references.
+
+You can define ``entity functions`` in ``app.psgi`` and/or
+per-directory ``.htyattrc.pl`` script.
+Entity functions are used like ``&yatt:myfunc(..);``
+anywhere in .yatt templates
+to embed variables, process parameters and access backend databases.
+
+Unlike Ruby-on-Rails and other major Web Frameworks,
+YATT::Lite itself is Model-Agnostic. So you can use your favorite ORMs.
+(Actually, WebMVC0 contains some support for ORM ([DBIx::Class]),
+but you are not limited to them.)
+
+
+
+YATT focuses empowering Web Designers
+--------------------
+
+YATT makes special efforts to help **Non Programmers** joining to
+Web Application development.
+
+With ``yatt lint``, which is integrated to [Emacs] via ``yatt-mode.el``,
+you can check correctness of yatt templates whenever you save them.
+Spelling miss of variables and widget names will be detected 
+before you actually run, and emacs will be directed to the line of the error.
+
+Also, YATT has many safer default behaviors, ie. automatic output escaping
 based on argument type declaration and config file naming convention
 which helps access protection.
 
-YATT::Lite is template-syntax-compatible, lightweight, full rewrite of
-YATT with superior functionalities.
 
 INSTALLATION
 --------------------
 
-It's all pure Perl, so it's ok to put the .pm files (or git repo itself)
-in their appropriate perl @INC path.
-(But see NON-STANDARD DIRECTORY STRUCTURE)
+YATT::Lite is now on CPAN, so you can install YATT::Lite like
+other CPAN modules.
+
+    $ cpanm YATT::Lite
+
+Also, if you want to use latest version of YATT::Lite,
+and if you already have Plack and other modules,
+you can install YATT::Lite just through git command.
+(But see [NON-STANDARD DIRECTORY STRUCTURE](#non-standard-directory-structure))
 
 The easiest way to use this distribution in your project is:
 
@@ -69,16 +114,16 @@ NON-STANDARD DIRECTORY STRUCTURE
 --------------------
 
 Unfortunately, YATT::Lite distribution doesn't conform
-normal CPAN style structure. This is experimental,
-but intentional. Because:
+normal CPAN style directory structure. This is experimental,
+but intentional. Because: 
 
-1. Engine(modules) and support scripts should be directly bundled together.
-   To achieve this, scripts/* and elisp/* is placed in YATT/.
+1. I want to use YATT::Lite as git submodule(or symlink), for each project.
+   This is to keep maximum freedom of code-evolution.
+   So, cloning as ``lib/YATT`` is the MUST.
 
-2. Since YATT::Lite is still evolving, single (system-wide) installation
-   may not fit for multi-service site. To isolate instability risk,
-   individual service should have its own installation of engine.
-   To achieve this, runyatt.cgi uses runyatt.lib first.
+2. Since I usually want to modify each installation instance of YATT::Lite,
+   I need to bundle all test suits and support scripts too.
+   So, scripts for yatt is placed under ``lib/YATT/scripts``.
 
 SUPPORT AND DOCUMENTATION
 --------------------
@@ -86,7 +131,6 @@ SUPPORT AND DOCUMENTATION
 You can also look for Source Code Repository at:
 
         https://github.com/hkoba/yatt_lite
-        git://github.com/hkoba/yatt_lite.git
 
 
 COPYRIGHT AND LICENCE
@@ -96,3 +140,10 @@ Copyright (C) 2007..2013 "KOBAYASI, Hiroaki"
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
+
+[YATT::Lite]: http://ylpodview-hkoba.dotcloud.com/mod/YATT::Lite
+[PSGI]: http://plackperl.org/
+[WebMVC0]: http://ylpodview-hkoba.dotcloud.com/mod/YATT::Lite::WebMVC0::SiteApp
+[DBIx::Class]: http://ylpodview-hkoba.dotcloud.com/mod/DBIx::Class
+[Emacs]: http://www.gnu.org/software/emacs/
+[cpanminus]: http://search.cpan.org/perldoc?App::cpanminus#INSTALL
