@@ -1,11 +1,11 @@
-YATT::Lite - Template runs under PSGI.
+YATT::Lite - Template runs on PSGI.
 ==================
 
 YATT is Yet Another Template Toolkit.
 [YATT::Lite] is latest version of YATT, written in Pure Perl.
 
 Unlike other template engines, YATT::Lite comes with its own Web Framework
-([WebMVC0]) which runs under [PSGI], FastCGI and CGI.
+([WebMVC0]) which runs on [PSGI], FastCGI and CGI.
 So, you can concentrate on writing your most important parts: Views and Models.
 
 Like PHP, (SiteApp of) YATT::Lite routes incoming requests directly into
