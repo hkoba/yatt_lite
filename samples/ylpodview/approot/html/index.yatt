@@ -85,14 +85,16 @@ die Plack::App::File->new->serve_path($con->cget('env'), $img);
     <h3>&yatt[[;...or you can see local pods listed below:&yatt]];</h3>
     <dl>
       <yatt:foreach my:value=pod_info list=files>
+	<yatt:if &yatt:pod_info[-1];>
 	<dt><a href="&yatt:site_prefix();/mod/&yatt:pod_info[2];">&yatt:pod_info[0];</a></dt>
 	<dd>
-	  <yatt:if &yatt:pod_info[-1];>
-	    &yatt:pod_info[-1];
-	    <:yatt:else/>
-	    (Not available in current language)
-	  </yatt:if>
+	  &yatt:pod_info[-1];
 	</dd>
+	
+	<:yatt:else/>
+	<dt>&yatt:pod_info[0];</dt>
+	<dd>(Not available in current language)</dd>
+	</yatt:if>
       </yatt:foreach>
     </dl>
   </yatt:if>

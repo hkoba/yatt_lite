@@ -18,7 +18,7 @@ Lite/Connection.pm
 Lite/Constants.pm
 Lite/Core.pm
 Lite/docs/index.lst
-Lite/docs/prog_tutorial.ja.pod
+Lite/docs/prog_guide.ja.pod
 Lite/docs/readme.ja.pod
 Lite/docs/readme.pod
 Lite/docs/todo.ja.pod

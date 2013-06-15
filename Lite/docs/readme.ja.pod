@@ -260,14 +260,15 @@ XXX: (残念ながら、最初に生成した .po ファイルには複数行メ
 
 =head2 Installation
 
-(残念ながら) yatt_lite はまだ CPAN にはリリースしておらず、 github の上にしか
-公開されていません。
+yatt_lite をインストールする方法は通常の CPAN モジュールと同様です。
 
-ただ、 L<github 上のリポジトリ|https://github.com/hkoba/yatt_lite>は、
-B<git clone するだけ> でそのまま使えるディレクトリ構成になっています。
+    cpanm YATT::Lite
+
+あるいは、最新版の yatt_lite を使いたい場合は、
+L<github 上のリポジトリ|https://github.com/hkoba/yatt_lite>を
+B<git clone するだけ> でそのまま使用できます。
 (make や Build は不要です。依存するのは Plack くらいです)
-
-ですので、例えばあなたの Web アプリの perl lib ディレクトリが F<./lib> にあるとすれば
+例えばあなたの Web アプリの perl lib ディレクトリが F<./lib> にあるとすれば
 
 =for code sh
 
@@ -453,7 +454,7 @@ yatt の構文の詳しい説明は L<yatt_manual|YATT::Lite::docs::yatt_manual>
 =head2 for Programmers
 
 yatt を呼び出す Webアプリを書く perl プログラマーの方は、
-まず L<prog_tutorial|YATT::Lite::docs::prog_tutorial> から始めてください。
+まず L<prog_guide|YATT::Lite::docs::prog_guide> から始めてください。
 
 具体的な例を見たい場合は、 F<samples/> ディレクトリ以下も参考にしてください。
 

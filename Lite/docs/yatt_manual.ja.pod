@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-yatt syntax manual -- 構文マニュアル (日本語版)
+yatt_manual(ja) -- 構文マニュアル (日本語版)
 
 =for code yatt
 
@@ -148,7 +148,7 @@ page を呼び出すには request parameter の name に "~ページ名" を指
 
 テンプレートの中に POST 動作も記述したい時に使います。
 action 部分に書けるプログラムの詳細は
-L<prog_action|YATT::Lite::docs::prog_action> を参照してください
+L<XXX: (未完) prog_action|YATT::Lite::docs::prog_action> を参照してください
 
 
     <!yatt:page confirm>
@@ -203,30 +203,31 @@ widget 名が自動生成されます。
 
 =over 4
 
-=item :name notation
+=item :var - colon notation
 
    <!yatt:page '/authors/:id'>
    <!yatt:page '/authors/:id/edit'>
    <!yatt:page '/articles/:article_id/comments/:id'>
 
-=item '{year}' notation
+=item '{var}' - curly notation
 
    <!yatt:page "/{controller}/{action}/{id}">
    <!yatt:page '/blog/{year}/{month}'>
 
-=item '{year:regexp}' notation
+=item '{var:regexp}' - curly with regexp notation
 
    <!yatt:page '/blog/{year:[0-9]+}/{month:[0-9]{2}}'>
 
-=item '{year:named_pattern}' notation
+=item '{var:named_pattern}' - curly with named pattern notation
 
    <!yatt:page '/blog/{year:digits}-{month:digits}'>
 
 XXX: named_pattern の拡張方法を書かねば... 現状では変数の型名とは無関係です。
 
-=item (pattern) notation
+=item (pattern) - optional match notation
 
-optional match を書きたいときに使います。
+optional match, つまり, (..)
+にマッチする内容が無いケースも許すパターンを書きたいときに使います。
 
    <!yatt:args "/:article(/:comment(/:action))">
 
@@ -569,9 +570,19 @@ HASH リテラルを表します。
 
 配列リテラルを表します。
 
-=item C<=expr>
+=item C<(...text with matching parens...)>
 
-C<expr> を perl の式として埋め込みます。部分式に計算式を書きたい時に使います。
+文字列に空白や C<,> などを含めたい時には、全体を C<(...)> で囲んで下さい。
+
+  &yatt:query((select x, y from t));
+
+=item C<=expr>, C<(=expr)>
+
+文字列の先頭が C<=> で始まる場合、(perl の)式として扱われます。
+部分式に計算式を書きたい時に使います。
+
+  &yatt:if(=$x<$y,yes,no);
+  &yatt:if((= $x < $y),yes,no);
 
 =item C<その他の文字列>
 
@@ -588,7 +599,7 @@ B<現時点では> ここに perl の C<$var> 形式の変数埋め込みを書�
   &yatt:x[0][:y][1];
   &yatt:if(=$$list[0]or$$list[1],yes,no);
   &yatt:if(=$$list[0]*$$list[1]==24,yes,no);
-  &yatt:if(=($$list[0]+$$list[1])==11,yes,no);
+  &yatt:if((=($$list[0]+$$list[1])==11),yes,no);
   &yatt:HTML(:dump([3]));
   &yatt:HTML([=3][0]);
   &yatt:HTML(=@$var);

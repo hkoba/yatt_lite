@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-yatt tutorial for perl programmer's -- perl プログラマー向け yatt チュートリアル(日本語版)
+prog_guide(ja) -- perl プログラマー向け yatt チュートリアル(日本語版)
 
 =head1 DESCRIPTION
 
@@ -12,8 +12,7 @@ yatt は汎用のテンプレートエンジンである L</YATT::Lite> と、
 それを用いた Webアプリケーションフレームワークのサンプル実装である
 L</WebMVC0> から構成されています。
 
-=for html
-<img src="yatt_lite.svg"/>
+=for image yatt_lite.svg
 
 なお、この文書では分かりやすさのため、
 実際には上位クラスで定義されているメソッドやメンバー変数でも、

@@ -21,149 +21,93 @@ YATT::Lite - Yet Another Template Toolkit, Lightweight rewrite.
     </div>
   };
 
-  my $yatt = new YATT::Lite(vfs => [data => $tmpl], app_ns => "MyApp");
+  # string based templating.
+  my $yatt = YATT::Lite->new(vfs => [data => $tmpl], app_ns => "MyApp");
 
+  # to invoke above template, call 'render' method.
   print $yatt->render("", {title => "My First YATT"}), "\n";
-  # or
+
+  # If you want to write large data directly into filehandle, use 'render_into'.
   $yatt->render_into(\*STDOUT, alter => ["My Second YATT"]);
 
   # Multiple template.
-  my $yatt2 = new YATT::Lite(vfs => [data => {foo => "..", bar => ".."}]
+  my $yatt2 = YATT::Lite->new(vfs => [data => {foo => "..", bar => ".."}]
                              , app_ns => "MyApp2");
   print $yatt2->render(foo => [1,2]);
   print $yatt2->render(bar => [3,4]);
 
   # And filesystem based templating.
-  my $yatt3 = new YATT::Lite(vfs => [file => "my.yatt"], app_ns => "MyApp3");
-  my $yatt4 = new YATT::Lite(vfs => [dir  => "my.ytmpl"], app_ns => "MyApp4");
+  my $yatt3 = YATT::Lite->new(vfs => [file => "my.yatt"], app_ns => "MyApp3");
+  my $yatt4 = YATT::Lite->new(vfs => [dir  => "my.ytmpl"], app_ns => "MyApp4");
 
 =head1 DESCRIPTION
 
-YATT is Yet Another Template Toolkit, aimed at Web Designers, rather
-than well-trained programmers. To achieve this goal, YATT provides
-more readable syntax for HTML/XML savvy designers, ``lint'' for static
-syntax checking and many safer default behaviors, ie. automatic output
-escaping based on argument type declaration and file extension based
-visibility handling of template.
+YATT is Yet Another Template Toolkit, aimed at empowering Web Designers.
+C<YATT::Lite> is latest version of YATT.
+For overview, see L<readme|YATT::Lite::docs::readme>.
 
-YATT::Lite is template-syntax-compatible, lightweight, full rewrite of
-YATT with superior functionalities.
-
-In YATT, basic building block is called ``widget''. Template text is
-treated as a sequence of ``widget definition'', each of which is
-leaded by ``widget declaration: <!yatt:widget>'', like multipart
-email.
-
-A widget is translated into a perl subroutine (on memory, currently).
-A template text is translated into a perl package (class). The
-translation is per-template basis and occurs on demand of
-widget. Template can be given to YATT::Lite as a data(string/hash),
-filename or directory name.
-
-Package name of template is automatically generated with respect to
-option and filepath. If template is loaded from filesystem, it is
-cached and reloaded if modified.
-
-Although widget is basically 'named', head of each template text can
-be a ``unnamed (default) widget'', so that designers can treat a
-template file itself as a widget. This means plain HTML files *just
-works* as template set.
-
-In future, mainline YATT will incorporate YATT::Lite interface. It
-means, today, if you want to adapt next generation YATT before its
-release, write your script using YATT::Lite.
-
-This is (still) alpha release. Although template syntax and
-facade(YATT::Lite) API became stable (I want), internal modules are
-*open* for discussion.
+YATT::Lite converts templates into perl scripts on demand.
 
 
-=head1 INSTALLATION
+=head1 CONFIGS
 
-It's all pure Perl, so it's ok to put the .pm files (or git repo itself)
-in their appropriate perl @INC path.
-(But see L<NON-STANDARD DIRECTORY STRUCTURE>)
+=head2 vfs
 
-The easiest way to use this distribution in your project is:
+=head2 app_ns
 
-=for syntax sh
-
-    git clone git://github.com/hkoba/yatt_lite.git lib/YATT
-
-    # or If your project is managed in git, clone as submodule like this:
-
-    git submodule add git://github.com/hkoba/yatt_lite.git lib/YATT
-    git submodule init
-    git submodule update
-
-Then you can use sample app.psgi to start yatt-enabled webapp, like this:
-
-    cp lib/YATT/samples/app.psgi .
-    mkdir html
-    plackup
-
-Now you are ready to write your first index.yatt.
-Open your favorite editor and create html/index.yatt like this:
-
-=for syntax yatt
-
-    <!yatt:args x y>
-    <h2>Hello &yatt:x; world!</h2>
-    &yatt:y;
-
-
-Then try to access:
-
-=for syntax sh
-
-     http://0:5000/
-     http://0:5000/?x=foo
-     http://0:5000/?x=foo&y=bar
-
-
-=head1 NON-STANDARD DIRECTORY STRUCTURE
-
-Unfortunately, YATT::Lite distribution doesn't conform
-normal CPAN style structure. This is experimental,
-but intentional. Because:
+=head1 EXPORTS
 
 =over 4
 
-=item 1 I want to embed YATT::Lite into other git repo as submodule.
-Use of git submodule greatly helps development.
+=item -as_base
 
-To allow this, all modules are placed under topdir of the distribution.
+=item Entity
 
-=item 2 Engine(modules), support scripts and tests should be bundled together.
 
-To achieve this, scripts/* and elisp/* is placed in YATT/.
 
-=item 3 Also, I want to bundle ready-to-run samples.
-
-To achieve this, redundant F<lib/> directory and symbolically F<lib/YATT>
-is linked to to dist topdir.
-
-This means YATT::Lite distribution has cycle of symbolic link. Please take care.
+=item *CON, *YATT, *SYS
+X<*CON> X<*YATT> X<*SYS>
 
 =back
 
-=head1 SUPPORT AND DOCUMENTATION
+=head1 METHODS
 
-You can also look for Source Code Repository at:
+=head2 render($name, %$args)
+X<render>
 
-        https://github.com/hkoba/yatt_lite
-        git://github.com/hkoba/yatt_lite.git
+=head2 render_into($fh, $name, %$args)
+X<render_into>
 
+=head2 entity($name, @args)
+X<entity>
+
+=head2 find_handler($type, $name);
+X<find_handler>
+
+=head2 find_renderer
+
+=head2 find_part
+
+=head2 find_file
+
+=head2 find_product
+
+=head1 ENTITIES
+
+=head2 template()
+
+=head2 stash()
+
+=head2 file_rootname()
+
+=head1 HOOKS
+
+=head2 _handle_$type($fh, $file)
+
+=head2 _handle_yatt($fh, $file)
 
 =head1 AUTHOR
 
 "KOBAYASI, Hiroaki" <hkoba@cpan.org>
-
-=head1 COPYRIGHT AND LICENCE
-
-Copyright (C) 2007..2012 "KOBAYASI, Hiroaki"
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
 
 =cut
