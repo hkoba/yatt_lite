@@ -221,9 +221,9 @@ require Scalar::Util;
       $ext = ($cur =~ s/(\.[^\.]+)$// ? $1 : undef);
       foreach my $dir (@dirlist) {
 	my $base = "$dir$loc/$cur";
-	if (defined $ext) {
+	if (defined $ext and -r "$base$ext") {
 	  # If extension is specified and it is readable, use it.
-	  return ($dir, "$loc/", "$cur$ext", $pi) if -r "$base$ext";
+	  return ($dir, "$loc/", "$cur$ext", $pi);
 	} elsif ($pi =~ m{^/} and -d $base) {
 	  # path_info has '/' and directory exists.
 	  next; # candidate
@@ -231,7 +231,7 @@ require Scalar::Util;
 	  return ($dir, "$loc/", "$cur$want_ext", $pi);
 	} elsif ($use_subpath
 		 and -r (my $alt = "$dir$loc/$ixfn")) {
-	  return ($dir, "$loc/", $ixfn, "/$cur$pi", 1);
+	  return ($dir, "$loc/", $ixfn, "/$cur$ext$pi", 1);
 	} else {
 	  # Neither dir nor $cur$want_ext exists, it should be ignored.
 	  undef $dir;
