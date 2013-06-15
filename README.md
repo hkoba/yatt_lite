@@ -1,4 +1,4 @@
-YATT::Lite - Template Engine with PSGI support.
+YATT::Lite - Template runs under PSGI.
 ==================
 
 YATT is Yet Another Template Toolkit.
