@@ -231,6 +231,7 @@ require Scalar::Util;
 	  return ($dir, "$loc/", "$cur$want_ext", $pi);
 	} elsif ($use_subpath
 		 and -r (my $alt = "$dir$loc/$ixfn")) {
+	  $ext //= "";
 	  return ($dir, "$loc/", $ixfn, "/$cur$ext$pi", 1);
 	} else {
 	  # Neither dir nor $cur$want_ext exists, it should be ignored.
