@@ -10,6 +10,7 @@ use Scalar::Util qw(weaken);
 
 use parent qw/YATT::Lite::NSBuilder File::Spec/;
 use File::Path ();
+use File::Basename qw/dirname/;
 
 use YATT::Lite::MFields qw/cf_doc_root
 			   cf_allow_missing_dir
@@ -132,6 +133,10 @@ sub configure_offline {
 sub load_factory_script {
   my ($pack, $fn) = @_;
   local $want_object = 1;
+  local $0 = $fn;
+  local ($FindBin::Bin, $FindBin::Script
+	 , $FindBin::RealBin, $FindBin::RealScript);
+  FindBin->again if FindBin->can("again");
   if ($fn =~ /\.psgi$/) {
     $pack->load_psgi_script($fn);
   } else {

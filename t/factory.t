@@ -380,6 +380,35 @@ END
   # あと、Subroutine filename redefined になるケースがあるが、同じ現象か別か不明。
 }
 
+++$i;
+{
+  my $THEME = "[app.psgi loading]";
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/html";
+
+  MY->mkfile("$approot/html/index.yatt", q|dummy|);
+
+  MY->mkfile(my $fn = "$approot/app.psgi", <<'END');
+use FindBin;
+use YATT::Lite::WebMVC0::SiteApp -as_base;
+
+return do {
+  my $site = MY->new(app_root => $FindBin::Bin
+		     , doc_root => "$FindBin::Bin/html");
+
+  if (MY->want_object) {
+    $site
+  } else {
+    $site->to_app;
+  }
+};
+
+END
+
+  ok(Factory->load_factory_script($fn)
+     , "Factory->load_factory_script(app.psgi)");
+}
+
 #----------------------------------------
 # misc
 #----------------------------------------

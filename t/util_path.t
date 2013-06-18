@@ -46,6 +46,12 @@ my $i = 1;
   };
 
   my $res;
+  $test->(html => "/index.yatt"
+	  , $res = [$docroot, "/", "index.yatt", "", '']);
+
+  $test->(html => "/unknown.png"
+	  , $res = [$docroot, "/", "", "/unknown.png", 1]);
+
   $test->(html => "/auth.yatt"
 	  , $res = [$docroot, "/", "auth.yatt", "", '']);
   $test->(html => "/auth", $res);
