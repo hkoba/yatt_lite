@@ -1,5 +1,17 @@
 Revision history for YATT::Lite
 
+0.0_7 2013-06-18
+
+ * #19 PHP/RoR like hash-and-array parameters.
+ * #2 support for .htyattconfig.yml
+ * SiteApp psgi_fallback, for 404 not found handler.
+ * better backtrace in ytmpl/error.ytmpl
+ * escape($array_or_hash) behavior change. This is still experimental.
+ * yatt:foreach nth
+
+ * ylpodview more for alt_lang link.
+ * To pass/skip safely more tests on MSWin.
+
 0.0.6 2013-05-18
 
  * To make sure all tests are runnable for cpantesters (except on perl-5.17)
