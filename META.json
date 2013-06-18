@@ -4,7 +4,7 @@
       "\"KOBAYASI, Hiroaki\" <hkoba@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4004, CPAN::Meta::Converter version 2.120921",
+   "generated_by" : "Module::Build version 0.4005, CPAN::Meta::Converter version 2.130880",
    "license" : [
       "perl_5"
    ],
@@ -26,6 +26,7 @@
             "DBD::SQLite" : "0",
             "DBD::mysql" : "0",
             "DBIx::Class" : "0",
+            "Devel::StackTrace::WithLexicals" : "0.08",
             "Email::Sender" : "0",
             "Email::Simple" : "0",
             "FCGI::Client" : "0",
@@ -35,9 +36,13 @@
             "YAML::Tiny" : "0"
          },
          "requires" : {
+            "Devel::StackTrace" : "0",
             "List::MoreUtils" : "0",
             "List::Util" : "0",
             "Plack" : "0",
+            "Tie::IxHash" : "0",
+            "URI::Escape" : "0",
+            "parent" : "0",
             "perl" : ">= v5.10.1, != 5.17",
             "version" : "0.77"
          }

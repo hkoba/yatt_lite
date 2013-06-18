@@ -19,6 +19,7 @@ Lite/Constants.pm
 Lite/Core.pm
 Lite/docs/index.lst
 Lite/docs/prog_guide.ja.pod
+Lite/docs/prog_guide.pod
 Lite/docs/readme.ja.pod
 Lite/docs/readme.pod
 Lite/docs/todo.ja.pod
@@ -26,9 +27,11 @@ Lite/docs/whyfields.ja.pod
 Lite/docs/yatt_design_uml.xmi
 Lite/docs/yatt_lite.svg
 Lite/docs/yatt_manual.ja.pod
+Lite/docs/yatt_manual.pod
 Lite/Entities.pm
 Lite/Error.pm
 Lite/Factory.pm
+Lite/Factory.pod
 Lite/Inc.pm
 Lite/LRXML.pm
 Lite/LRXML/ParseBody.pm
@@ -37,6 +40,7 @@ Lite/Macro.pm
 Lite/MFields.pm
 Lite/NSBuilder.pm
 Lite/Object.pm
+Lite/Object.pod
 Lite/Partial.pm
 Lite/Partial/AppPath.pm
 Lite/Partial/ErrorReporter.pm
@@ -59,12 +63,14 @@ Lite/VarMaker.pm
 Lite/VarTypes.pm
 Lite/VFS.pm
 Lite/WebMVC0/Connection.pm
+Lite/WebMVC0/Connection.pod
 Lite/WebMVC0/DBSchema.pm
 Lite/WebMVC0/DBSchema/DBIC.pm
 Lite/WebMVC0/DirApp.pm
 Lite/WebMVC0/Partial/LangSwitch.pm
 Lite/WebMVC0/Partial/Session.pm
 Lite/WebMVC0/SiteApp.pm
+Lite/WebMVC0/SiteApp.pod
 Lite/WebMVC0/SiteApp/CGI.pm
 Lite/WebMVC0/SiteApp/FCGI.pm
 Lite/WebMVC0/SubRoutes.pm
@@ -254,6 +260,7 @@ samples/sess_backed/1/html/.htyattconfig.xhf
 samples/sess_backed/1/html/.htyattrc.pl
 samples/sess_backed/1/html/00readme.html
 samples/sess_backed/1/html/envelope.ytmpl
+samples/sess_backed/1/html/error.ytmpl
 samples/sess_backed/1/html/index.yatt
 samples/sess_backed/1/html/main.css
 samples/sess_backed/1/html/sess_forget.ydo
@@ -485,6 +492,8 @@ samples/ylpodview/approot/html/vendor/shjs/sh_style.min.css
 samples/ylpodview/approot/html/vendor/shjs/VERSION.txt
 samples/ylpodview/approot/t/01_psgi_offline.t
 samples/ylpodview/approot/t/t_lib.pl
+samples/ylpodview/approot/ytmpl/envelope.ytmpl
+samples/ylpodview/approot/ytmpl/error.ytmpl
 scripts/cleanup.zsh
 scripts/hunt-nonutf8.pl
 scripts/libdir.pl
@@ -549,6 +558,7 @@ t/subroutes.t
 t/t_lib.pl
 t/t_preload.pm
 t/use.t
+t/util_nestedq.t
 t/util_other.t
 t/util_path.t
 t/vfs.t
@@ -588,4 +598,5 @@ vendor/ubuntu/required.lst
 vendor/ubuntu/ubuntu-enable-cgi.pl
 vendor/ubuntu/ubuntu-enable.zsh
 ytmpl/.htaccess
+ytmpl/error.ytmpl
 ytmpl/std.ytmpl/envelope.ytmpl
