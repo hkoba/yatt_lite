@@ -7,6 +7,21 @@ use fields qw/cf_docpath
 	      cf_mod_overlay
 	     /;
 
+sub after_new {
+  (my MY $self) = @_;
+  $self->SUPER::after_new;
+  $self->{cf_lang_available} //= [qw/en ja/];
+}
+
+Entity alt_lang => sub {
+  my ($this, $list) = @_;
+  $list //= do {
+    my MY $self = $this->YATT;
+    $self->{cf_lang_available};
+  };
+  $this->entity_alternative($this->entity_current_lang, $list);
+};
+
 Entity search_pod => sub {
   my ($this, $modname) = @_;
 

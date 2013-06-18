@@ -22,9 +22,6 @@ use Config '%Config';
       push @libdir, $dn
     } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {
       push @libdir, $found;
-    } elsif (my @d = grep {-d} map {"$app_root/../../../$_"}
-	     qw!_build/lib blib/lib!) {
-      push @libdir, @d
     }
     if (-d (my $dn = "$app_root/extlib")) {
       push @libdir, $dn;
@@ -78,6 +75,8 @@ use Config '%Config';
      , tmpl_encoding => 'utf-8'
      , output_encoding => 'utf-8'
      , use_subpath => 1
+     , (@docpath
+	? (psgi_fallback => MY->psgi_file_app($docpath[0])) : ())
     );
 
   # Use given argument as docpath (or use current directory instead).
@@ -89,21 +88,7 @@ use Config '%Config';
     } @docpath]);
   }
 
-  my $app = do {
-    if (@docpath) {
-      # Note: To keep lint working,
-      # (it relies on YATT::Lite::Factory->load_factory_offline),
-      # we need to pass outer-most cascade app as argument of Factory->to_app.
-      # Rest arguments are also added to cascade after $dispatcher.
-      require Plack::App::File;
-      require Plack::App::Cascade;
-      my $union = Plack::App::Cascade->new;
-      $dispatcher->to_app($union
-			  , Plack::App::File->new(root => $docpath[0])->to_app)
-    } else {
-      $dispatcher->to_app;
-    }
-  };
+  my $app = $dispatcher->to_app;
 
   unless (caller) {
     require Plack::Runner;

@@ -21,6 +21,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_debug_connection
 			   cf_debug_backend
 			   cf_psgi_static
+			   cf_psgi_fallback
 			   cf_index_name
 			   cf_backend
 			   cf_site_config
@@ -189,7 +190,7 @@ sub call {
   }
 
   unless (@pi) {
-    return [404, [], ["Cannot understand: ", $env->{PATH_INFO}]];
+    return $self->psgi_handle_fallback($env->{PATH_INFO});
   }
 
   my $virtdir = "$self->{cf_doc_root}$loc";
@@ -298,15 +299,29 @@ sub render {
 
 #========================================
 
+sub psgi_file_app {
+  my ($pack, $path) = @_;
+  require Plack::App::File;
+  Plack::App::File->new(root => $path)->to_app;
+}
+
 sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;
-  my $app = $self->{cf_psgi_static} || do {
-    require Plack::App::File;
-    Plack::App::File->new(root => $self->{cf_doc_root})->to_app;
-  };
+  my $app = $self->{cf_psgi_static}
+    || $self->psgi_file_app($self->{cf_doc_root});
 
   # When PATH_INFO contains virtual path prefix (like /~$user/),
   # we need to strip them (for Plack::App::File).
+  local $env->{PATH_INFO} = $self->trim_site_prefix($env->{PATH_INFO});
+
+  $app->($env);
+}
+
+sub psgi_handle_fallback {
+  (my MY $self, my Env $env) = @_;
+  my $app = $self->{cf_psgi_fallback}
+    or return [404, [], ["Cannot understand:", $env->{PATH_INFO}]];
+
   local $env->{PATH_INFO} = $self->trim_site_prefix($env->{PATH_INFO});
 
   $app->($env);

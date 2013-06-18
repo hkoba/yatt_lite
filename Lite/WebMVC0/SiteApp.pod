@@ -151,3 +151,7 @@ Build helper for L<YATT::Lite::WebMVC0::Connection> object.
 C<$parent_fh> can be undef.
 If specified, C<< $con->flush >> will flush buffered contents to $parent_fh.
 
+=head1 HOOKS
+
+=head2 before_dirhandler($dirapp, $connection, $filename)
+

@@ -85,15 +85,18 @@ die Plack::App::File->new->serve_path($con->cget('env'), $img);
     <h3>&yatt[[;...or you can see local pods listed below:&yatt]];</h3>
     <dl>
       <yatt:foreach my:value=pod_info list=files>
+	<yatt:my url="&yatt:site_prefix();/mod/&yatt:pod_info[2];"/>
 	<yatt:if &yatt:pod_info[-1];>
-	<dt><a href="&yatt:site_prefix();/mod/&yatt:pod_info[2];">&yatt:pod_info[0];</a></dt>
+	<dt><a href="&yatt:url;">&yatt:pod_info[0];</a></dt>
 	<dd>
 	  &yatt:pod_info[-1];
 	</dd>
 	
 	<:yatt:else/>
 	<dt>&yatt:pod_info[0];</dt>
-	<dd>(Not available in current language)</dd>
+	<dd>
+	  (Not available in current language. <yatt:altlang_link to=url/>)
+	</dd>
 	</yatt:if>
       </yatt:foreach>
     </dl>
@@ -340,7 +343,7 @@ DUMP(found=&yatt:found;)
 <!yatt:widget for_image atts=value data=list
 	      -- image file in same dir --
 	      >
-<img src="&yatt:CON:mkurl(,:CON,local,1,mapped_path,1);/&yatt:data[-1][-1];?!!=image">
+<img src="&yatt:CON:mkurl(,,local,1,mapped_path,1);/&yatt:data[-1][-1];?!!=image">
 
 <!yatt:widget for_code atts=value data=list
 	      -- To store current syntax into stash(code) --
@@ -411,12 +414,14 @@ Z(<yatt:inline list=rest/>)
 </yatt:if>
 
 <!yatt:widget langswitcher>
-<yatt:my clang:value="&yatt:current_lang();"
-	 nx:value="&yatt:CON:mkurl(,:CON,local,1,mapped_path,1);"
-	 nxesc:value="&yatt:url_encode(:nx);"
-	 altlang:value="&yatt:alternative(:clang,[en,ja]);"/>
+<yatt:my nx:value="&yatt:CON:mkurl(,:CON,local,1,mapped_path,1);"
+	 nxesc:value="&yatt:url_encode(:nx);"/>
 
-<a href="&yatt:append_params(:nx,[--lang,:altlang]);">
+<yatt:altlang_link to=nx/>
+
+<!yatt:widget altlang_link to altlang="?&yatt:alt_lang();">
+
+<a href="&yatt:append_params(:to,[--lang,:altlang]);">
 &#10157; &yatt:render([langname,:altlang]);
 </a>
 
