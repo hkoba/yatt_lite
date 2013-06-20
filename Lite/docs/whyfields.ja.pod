@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-whyfields -- or Modern use of fields.pm and %FIELDS.
+whyfields(ja) -- or Modern use of fields.pm and %FIELDS.
 
 =head1 DESCRIPTION
 

@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-yatt_lite README -- 初めにお読み下さい (日本語版)
+yatt_lite_readme(ja) -- 初めにお読み下さい (日本語版)
 
 =head1 SYNOPSIS
 

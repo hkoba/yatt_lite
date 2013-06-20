@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-todo -- 課題の一覧
+todo(ja) -- 課題の一覧
 
 =head1 Issues
 
@@ -24,13 +24,6 @@ todo -- 課題の一覧
 
 英訳しなきゃ... .pm 側の pod も書かなきゃ
 
-=item F<.htyattconfig.xhf> でなく yaml も読めるように
-
-xhf を使ったのは依存を減らすためだけだったのだから。
-使いたい人が使えるようにするのはあり。
-
-...yaml2xhf とか添付すべきよね...
-
 =item rename scripts/yatt.* to scripts/yatt-*
 
 F<yatt.*> だと windows で困るから。 F<yatt-*.pl> とかに rename しようかと。
@@ -47,7 +40,7 @@ F<yatt.*> だと windows で困るから。 F<yatt-*.pl> とかに rename しよ
 
 =item F<.htyatt*> の再読み込みを簡単に...
 
-同じく。 L<Factory|YATT::Lite::docs::prog_tutorial/Factory> API
+同じく。 L<Factory|YATT::Lite::docs::prog_guide/Factory> API
 の改良が必要になるはず。
 
 =item C<< DirApp->cmd_SUB >> に C<$CON> を渡すべき

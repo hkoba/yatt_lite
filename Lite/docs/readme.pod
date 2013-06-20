@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-yatt_lite README -- Introduction to YATT::Lite
+yatt_lite_readme -- Introduction to YATT::Lite
 
 =for code yatt
 
