@@ -76,3 +76,4 @@
 
 (?:^|\/)\.htdbpass$
 
+.perl-version

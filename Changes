@@ -1,6 +1,6 @@
 Revision history for YATT::Lite
 
-0.0_7 2013-06-18
+0.0.7 2013-06-20
 
  * #19 PHP/RoR like hash-and-array parameters.
  * #2 support for .htyattconfig.yml
