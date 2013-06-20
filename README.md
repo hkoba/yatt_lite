@@ -141,7 +141,7 @@ basic documents are placed under ``YATT/Lite/docs``. You can read them via:
 http://ylpodview-hkoba.dotcloud.com/
 (But for now, most pods are not yet finished and written only in Japanese.)
 
-Also, you can run ylpodview (POD viewer) locally like:
+Also, you can run ylpodview (POD viewer) locally by:
 
     cd lib
     plackup YATT/samples/ylpodview/approot/app.psgi

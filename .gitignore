@@ -1,6 +1,7 @@
 *.bak
 *.tar.gz
 .xslate_cache
+/.perl-version
 /.svn
 /Build
 /MYMETA.json

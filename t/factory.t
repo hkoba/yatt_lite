@@ -27,6 +27,10 @@ END {
   isa_ok(YATT::Lite->EntNS, 'YATT::Lite::Entities');
 }
 
+my $has_yaml = do {
+  eval {require YAML::Tiny};
+};
+
 my $YL = 'YATT::Lite';
 my $i = 0;
 
@@ -145,11 +149,13 @@ END
     , [base => '@ytmpl', other_config => 'in docroot']
       , "Factory->read_file .htyattconfig.xhf";
 
-  # In yaml, order is not preserved.
-  is_deeply +{Factory->read_file("$docroot/yamltest/.htyattconfig.yml")}
-    , +{base => '@ytmpl', other_config => 'read from yml'}
-      , "Factory->read_file .htyattconfig.yml";
-
+ SKIP: {
+    skip 1, "YAML::Tiny is not installed" unless $has_yaml;
+    # In yaml, order is not preserved.
+    is_deeply +{Factory->read_file("$docroot/yamltest/.htyattconfig.yml")}
+      , +{base => '@ytmpl', other_config => 'read from yml'}
+	, "Factory->read_file .htyattconfig.yml";
+  }
 }
 
 ++$i;
@@ -213,8 +219,11 @@ END
   is $yatt->bar, "my bar result", "$THEME root inherits ytmpl bar";
   ok($yatt->find_part('bar'), "$THEME inst part bar is visible");
 
-  is $F->get_yatt('/yamltest/')->cget('other_config')
-   , 'read from yml', "yaml support .htyattconfig.yml";
+ SKIP: {
+    skip 1, "YAML::Tiny is not installed" unless $has_yaml;
+    is $F->get_yatt('/yamltest/')->cget('other_config')
+     , 'read from yml', "yaml support .htyattconfig.yml";
+  }
 }
 
 ++$i;

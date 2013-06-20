@@ -207,7 +207,6 @@ samples/benchmarks/yt-x-rich-env.pl
 samples/db_backed/1/.symlinks
 samples/db_backed/1/app.psgi
 samples/db_backed/1/data/.htaccess
-samples/db_backed/1/data/.htdata.db
 samples/db_backed/1/html/.htyattrc.pl
 samples/db_backed/1/html/envelope.ytmpl
 samples/db_backed/1/html/index.yatt
