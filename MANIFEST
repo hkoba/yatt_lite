@@ -8,7 +8,6 @@ elisp/yatt-lint-any-mode.el
 elisp/yatt-mode.el
 elisp/yatt-utils.el
 LICENSE
-Lite.ja.pod
 Lite.pm
 Lite.pod
 Lite/Breakpoint.pm
