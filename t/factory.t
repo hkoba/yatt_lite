@@ -150,7 +150,7 @@ END
       , "Factory->read_file .htyattconfig.xhf";
 
  SKIP: {
-    skip 1, "YAML::Tiny is not installed" unless $has_yaml;
+    skip "YAML::Tiny is not installed", 1 unless $has_yaml;
     # In yaml, order is not preserved.
     is_deeply +{Factory->read_file("$docroot/yamltest/.htyattconfig.yml")}
       , +{base => '@ytmpl', other_config => 'read from yml'}
@@ -220,7 +220,7 @@ END
   ok($yatt->find_part('bar'), "$THEME inst part bar is visible");
 
  SKIP: {
-    skip 1, "YAML::Tiny is not installed" unless $has_yaml;
+    skip "YAML::Tiny is not installed", 1 unless $has_yaml;
     is $F->get_yatt('/yamltest/')->cget('other_config')
      , 'read from yml', "yaml support .htyattconfig.yml";
   }
