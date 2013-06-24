@@ -7,7 +7,7 @@ use File::Find;
 use File::Basename ();
 use File::Path;
 
-use parent qw(Module::Build File::Spec);
+use base qw(Module::Build File::Spec);
 use Module::CPANfile;
 
 sub lexpand {
