@@ -191,7 +191,7 @@ sub call {
   }
 
   unless (@pi) {
-    return $self->psgi_handle_fallback($env->{PATH_INFO});
+    return $self->psgi_handle_fallback($env);
   }
 
   my $virtdir = "$self->{cf_doc_root}$loc";

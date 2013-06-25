@@ -67,6 +67,8 @@ sub prepare_part_handler {
       croak $self->error("No such file: %s", $file);
     };
     ($part, my ($formal, $actual)) = $tmpl->match_subroutes($subpath) or do {
+      # XXX: Is this secure against XSS? <- how about URI encoding?
+      # die $self->psgi_error(404, "No such subpath: ". $subpath);
       die $self->psgi_error(404, "No such subpath");
     };
     $pkg = $trans->find_product(perl => $tmpl) or do {
