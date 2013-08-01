@@ -721,7 +721,7 @@ sub ixhash {
 sub parse_nested_query {
   return {} unless defined $_[0] and $_[0] ne '';
   my ($enc) = $_[1];
-  my $params = ixhash();
+  my $params = $_[2] // ixhash();
   foreach my $p (split /[;&]/, $_[0]) {
     my ($k, $v) = map {
       s/\+/ /g;

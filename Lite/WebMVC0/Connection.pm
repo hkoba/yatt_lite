@@ -124,8 +124,22 @@ sub convert_array_param_psgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($req) = @_;
   my Env $env = $prop->{cf_env};
-  my $qs = $req->raw_body || $env->{QUERY_STRING};
-  $prop->{params_hash} = YATT::Lite::Util::parse_nested_query($qs);
+  $prop->{params_hash} = do {
+    if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
+      my $body = YATT::Lite::Util::parse_nested_query($req->raw_body);
+      my $qs = YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
+      foreach my $key (keys %$qs) {
+	if (exists $body->{$key}) {
+	  die $glob->error("Attempt to overwrite post param '%s' by qs"
+			   , $key);
+	}
+	$body->{$key} = $qs->{$key};
+      }
+      $body;
+    } else {
+      YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
+    }
+  };
 }
 
 sub convert_array_param_cgi {

@@ -7,3 +7,16 @@ World&yatt:any;
 <yatt:hello id="other">
 ok?(&yatt:id;)
 </yatt:hello>
+
+<!yatt:page qux any>
+Qux!
+
+<!yatt:action redir>
+my ($this, $con) = @_;
+
+$con->redirect("/qux");
+
+<!yatt:action hello>
+my ($this, $con) = @_;
+
+$this->render_($con, " from action");

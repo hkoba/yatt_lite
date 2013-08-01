@@ -22,6 +22,7 @@ BEGIN {
   }
 }
 
+use Plack::Response;
 use HTTP::Request::Common;
 use YATT::Lite::WebMVC0::SiteApp;
 use YATT::Lite::PSGIEnv;
@@ -127,6 +128,51 @@ END
       while (my ($key, $value) = splice @h, 0, 2) {
 	is_or_like $header{$key}, $value, "[header][$key] $path";
       }
+    }
+  }
+
+  {
+    my $path;
+    # For post
+    my $post_env = sub {
+      my ($path, $data) = @_;
+      my Env $env = Env->psgi_simple_env;
+      $env->{REQUEST_METHOD} = "POST";
+      if (($env->{PATH_INFO} = $path) =~ s/\?(.*)//) {
+	$env->{QUERY_STRING} = $1;
+      }
+      $env->{SCRIPT_NAME} = '';
+      $data //= "";
+      $env->{CONTENT_LENGTH} = length $data;
+      $env->{CONTENT_TYPE} = 'application/x-www-form-urlencoded';
+      open my $fh, '<', \ $data or die "Can't open memstream: $!";
+      $env->{'psgi.input'} = $fh;
+      $env;
+    };
+
+    {
+      my $theme = "POST ";
+      my $res = $app->($post_env->(my $p = "/?~~=qux", "any=data1"));
+      is $res->[0], 200, "$theme $p status";
+      like join("", @{$res->[2]}), qr/Qux!/, "$theme $p body";
+    }
+
+    {
+      my $theme = "POST redirect ";
+      my $p = "/?!!=redir";
+      my $res = Plack::Response->new
+	(@{$app->($post_env->($p, "z=w"))});
+      is $res->status, 302, "$theme $p status";
+      is $res->headers->header('Location'), "/qux", "$theme $p location";
+    }
+
+    {
+      my $theme = "render from action";
+      my $res = $app->($post_env->(my $p = "/?!!=hello", "any=data"));
+      is $res->[0], 200, "$theme $p status";
+      is_or_like join("", @{$res->[2]})
+	, $hello->(content => "World from action")
+	  , "$theme $p body";
     }
   }
 }
