@@ -28,7 +28,7 @@ sub make_error {
   my $fmt = $_[0];
   my ($pkg, $file, $line) = caller($depth);
   my $bt = do {
-    my @bt_opts = (ignore_package => __PACKAGE__);
+    my @bt_opts = (ignore_package => [__PACKAGE__]);
     if (my $frm = delete $opts->{ignore_frame}) {
       # $YATT::Lite::CON->logdump(ignore_frame => $frm);
       push @bt_opts, frame_filter => sub {
