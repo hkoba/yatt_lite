@@ -10,7 +10,8 @@ BEGIN {
   package YATT::Lite::MFields::Decl;
   use parent qw/YATT::Lite::Object/;
   our %FIELDS = map {$_ => 1}
-    qw/cf_is cf_isa cf_required cf_name
+    qw/cf_is cf_isa cf_required
+       cf_name cf_public_name cf_getter
        cf_package
        cf_default
        cf_doc cf_label
@@ -22,7 +23,9 @@ BEGIN {
     qw/fields cf_package known_parent/;
 }
 
-use YATT::Lite::Util qw/globref look_for_globref list_isa fields_hash/;
+use YATT::Lite::Util qw/globref look_for_globref list_isa fields_hash
+			lexpand
+		       /;
 use Carp;
 
 sub import {
@@ -121,20 +124,57 @@ sub fields {
 }
 
 sub has {
-  (my MY $self, my $name, my @atts) = @_;
-  if (my $old = $self->{fields}->{$name}) {
-    carp "Redefinition of field $self->{cf_package}.$name is prohibited!";
+  (my MY $self, my $nameSpec, my @atts) = @_;
+  (my $attName, @atts) = ($self->parse_field_spec($nameSpec), @atts);
+  if (my $old = $self->{fields}->{$attName}) {
+    carp "Redefinition of field $self->{cf_package}.$attName is prohibited!";
   }
-  $self->{fields}->{$name} = do {
-    if (@atts >= 2 || @atts == 0) {
-      $self->Decl->new(name => $name, @atts, package => $self->{cf_package});
-    } elsif (not defined $atts[0]
-	     or not UNIVERSAL::isa($atts[0], $self->Decl)) {
-      $self->Decl->new(name => $name, package => $self->{cf_package});
-    } else {
-      $atts[0];
+  unless (@atts % 2 == 0) {
+    croak "Invalid number of field spec for $self->{cf_package}.$attName";
+  }
+  my Decl $field = $self->Decl->new(
+    name => $attName, @atts, package => $self->{cf_package}
+  );
+  if ($field->{cf_getter}) {
+    my ($name, $code) = lexpand($field->{cf_getter});
+    if (not defined $code) {
+      $code = sub {$_[0]->{$attName}};
+    } elsif (not ref $code) {
+      $code = $self->make_accessor_type($code, $attName);
+    } elsif (ref $code ne 'CODE') {
+      croak "field getter code must be CODE ref! for field $attName";
     }
-  };
+    *{globref($field->{cf_package}, $name)} = $code;
+  }
+  $self->{fields}->{$attName} = $field;
+}
+
+sub make_accessor_type {
+  (my MY $self, my ($type, $name)) = @_;
+  my $builder = $self->can("make_accessor_type_$type")
+  or croak "Unknown auto accessor type: $type";
+  $builder->($self, $name);
+}
+
+sub make_accessor_type_hash {
+  (my MY $self, my $name) = @_;
+  sub { $_[0]->{$name} }
+}
+
+sub make_accessor_type_glob {
+  (my MY $self, my $name) = @_;
+  sub { (*{$_[0]}{HASH})->{$name} }
+}
+
+sub parse_field_spec {
+  my $pack = shift;
+  if ($_[0] =~ m{^(\w*)\^(\w+)$}) {
+    ($1.$2, getter => $2, ($1 ? (public_name => $2) : ()));
+  } elsif ($_[0] =~ m{^cf_(\w+)$}) {
+    ($_[0], public_name => $1);
+  } else {
+    $_[0];
+  }
 }
 
 sub add_isa_to {
@@ -170,12 +210,22 @@ YATT::Lite::MFields -- fields for multiple inheritance.
 
 =head1 SYNOPSIS
 
+  #
   # Like fields.pm
+  #
   use YATT::Lite::MFields qw/foo bar baz/;
+
+  #
+  # Getter generation.
+  #
+  use YATT::Lite::MFields qw/^name cf_^age/;
+  #
+  # In above, ->name and ->value is defined.
 
   # Or more descriptive (but these attributes are for documentation only)
   use YATT::Lite::MFields
-    ([name => is => 'ro', doc => "Name of the user"]
+    ([name => is => 'ro', doc => "Name of the user"
+      , getter => "get_name"]
     , [age => is => 'rw', doc => "Age of the user"]
     );
 
