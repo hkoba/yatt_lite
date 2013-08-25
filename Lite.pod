@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-YATT::Lite - Yet Another Template Toolkit, Lightweight rewrite.
+YATT::Lite - Template with "use strict"
 
 =head1 SYNOPSIS
 
@@ -45,9 +45,6 @@ YATT::Lite - Yet Another Template Toolkit, Lightweight rewrite.
 YATT is Yet Another Template Toolkit, aimed at empowering Web Designers.
 C<YATT::Lite> is latest version of YATT.
 For overview, see L<readme|YATT::Lite::docs::readme>.
-
-YATT::Lite converts templates into perl scripts on demand.
-
 
 =head1 CONFIGS
 

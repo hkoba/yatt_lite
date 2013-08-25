@@ -8,7 +8,7 @@ sub MY () {__PACKAGE__}
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 #========================================
-# Dispatcher 層: Request に応じた DirApp をロードし起動する
+# Dispatcher Layer: load and run corresponding DirApp for incoming request.
 #========================================
 
 use parent qw(YATT::Lite::Factory);
@@ -22,7 +22,6 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_debug_backend
 			   cf_psgi_static
 			   cf_psgi_fallback
-			   cf_index_name
 			   cf_backend
 			   cf_site_config
 			   cf_logfile
@@ -82,14 +81,6 @@ sub runas_fcgi {
 # -> Util::cached_in
 # -> Factory::load
 # -> Factory::buildspec
-
-sub get_lochandler {
-  (my MY $self, my ($location, $tmpldir)) = @_;
-  $tmpldir //= $self->{cf_doc_root};
-  $self->get_yatt($location) || do {
-    $self->{loc2yatt}{$location} = $self->load_yatt("$tmpldir$location");
-  };
-}
 
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
@@ -163,7 +154,7 @@ sub call {
   if (defined $self->{cf_app_root} and -e "$self->{cf_app_root}/.htdebug_env") {
     return [200
 	    , [$self->secure_text_plain]
-	    , [map {"$_\t$env->{$_}\n"} sort keys %$env]];
+	    , [map {escape("$_\t$env->{$_}\n")} sort keys %$env]];
   }
 
   if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})
@@ -197,14 +188,14 @@ sub call {
   my $virtdir = "$self->{cf_doc_root}$loc";
   my $realdir = "$tmpldir$loc";
   unless (-d $realdir) {
-    return [404, [], ["Not found: ", $virtdir]];
+    return $self->psgi_error(404, "Not found: $virtdir");
   }
 
   # Default index file.
   # Note: Files may placed under (one of) tmpldirs instead of docroot.
   if ($file eq '') {
     $file = "$self->{cf_index_name}.yatt";
-  } elsif ($file eq $self->{cf_index_name}) {
+  } elsif ($file eq $self->{cf_index_name}) { #XXX: $is_index
     $file .= ".yatt";
   }
 
@@ -213,15 +204,16 @@ sub call {
   }
 
   my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
-    return [404, [], ["No such directory: ", $loc]];
+    return $self->psgi_error(404, "No such directory: $loc");
   };
 
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
-  my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]
-				       , $is_index ? (is_index => 1) : ()
-				       , is_psgi => 1, cgi => $req);
+  my @params = (env => $env
+		, $self->connection_quad([$virtdir, $loc, $file, $trailer])
+		, $is_index ? (is_index => 1) : ()
+		, is_psgi => 1, cgi => $req);
 
   my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
 
@@ -256,46 +248,27 @@ sub call {
   }
 }
 
-sub render {
-  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+sub make_debug_params {
+  (my MY $self, my ($reqrec, $args)) = @_;
 
-  # [$path_info, $subpage, $action]
   my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
-
-  my ($tmpldir, $loc, $file, $trailer)
-    = my @pi = lookup_path($path_info
-			   , $self->{tmpldirs}
-			   , $self->{cf_index_name}, ".yatt");
-  unless (@pi) {
-    die "No such location: $path_info";
-  }
-
-  my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
-    die "No such directory: $path_info";
-  };
-
-  my $virtdir = "$self->{cf_doc_root}$loc";
-  my $realdir = "$tmpldir$loc";
 
   my Env $env = Env->psgi_simple_env;
   $env->{PATH_INFO} = $path_info;
   $env->{REQUEST_URI} = $path_info;
 
-  my @params = $self->connection_param($env, [$virtdir, $loc, $file, $trailer]);
+  my @params = ($self->SUPER::make_debug_params($reqrec, $args)
+		, env => $env);
 
+  #
+  # Only for debugging aid. See YATT/samples/db_backed/1/t/t_signup.pm
+  #
   if (@rest == 2 and defined $rest[-1] and ref $args eq 'HASH') {
     require Hash::MultiValue;
     push @params, hmv => Hash::MultiValue->from_mixed($args);
   }
 
-  my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
-
-  $self->invoke_dirhandler($dh, $con
-			   , render_into => $con
-			   , @rest ? [$file, @rest] : $file
-			   , $args, @opts);
-
-  $con->buffer;
+  @params;
 }
 
 #========================================
@@ -476,26 +449,6 @@ sub configure_allow_debug_from {
 
 #========================================
 
-sub connection_param {
-  (my MY $self, my ($env, $quad, @rest)) = @_;
-  my ($virtdir, $loc, $file, $subpath) = @$quad;
-  (env => $env
-   , dir => $virtdir
-   , location => $loc
-   , file => $file
-   , subpath => $subpath
-   , system => $self
-
-   # May be overridden.
-   , root => $self->{cf_doc_root}  # XXX: is this ok?
-   , $self->cf_delegate_defined(qw(is_psgi no_nested_query))
-
-   # override by explict ones
-   , @rest
-  );
-}
-
-
 #========================================
 
 use YATT::Lite::WebMVC0::Connection;
@@ -533,7 +486,10 @@ sub make_connection {
   if (my $enc = $$self{cf_output_encoding}) {
     push @opts, encoding => $enc;
   }
-  $self->SUPER::make_connection(@opts, @args);
+  $self->SUPER::make_connection
+  (@opts
+   , $self->cf_delegate_defined(qw(is_psgi no_nested_query))
+   , @args);
 }
 
 sub finalize_connection {

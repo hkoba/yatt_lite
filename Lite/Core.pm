@@ -192,10 +192,9 @@ sub create_file {
 	();
       } elsif (ref $args eq 'ARRAY') {
 	@$args
-      } elsif (ref $args eq 'HASH') {
-	$part->reorder_hash_params($args);
       } else {
-	croak "BUG: Unknown type args for render_into";
+	# $args can be a Hash::MultiValue and other HASH compatible obj.
+	$part->reorder_hash_params($args);
       }
     };
 

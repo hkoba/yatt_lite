@@ -16,6 +16,7 @@ use YATT::Lite::MFields qw/cf_doc_root
 			   cf_allow_missing_dir
 			   cf_app_base
 			   cf_site_prefix
+			   cf_index_name
 
 			   tmpldirs
 
@@ -38,6 +39,7 @@ use YATT::Lite::MFields qw/cf_doc_root
 use YATT::Lite::Util::AsBase;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_dir fields_hash
+			lookup_path
 			secure_text_plain
 			psgi_error
 		       /;
@@ -189,6 +191,64 @@ sub _after_after_new {
 }
 
 #========================================
+
+sub render {
+  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+  # [$path_info, $subpage, $action]
+  my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
+
+  my ($tmpldir, $loc, $file, $trailer)
+    = my @pi = lookup_path($path_info
+			   , $self->{tmpldirs}
+			   , $self->{cf_index_name}, ".yatt");
+  unless (@pi) {
+    die "No such location: $path_info";
+  }
+
+  my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
+    die "No such directory: $path_info";
+  };
+
+  my $con = $self->make_simple_connection
+  (
+    \@pi, yatt => $dh, noheader => 1
+    , $self->make_debug_params($reqrec, $args)
+  );
+
+  $self->invoke_dirhandler
+  (
+    $dh, $con
+   , render_into => $con
+   , @rest ? [$file, @rest] : $file
+   , $args, @opts
+  );
+
+  $con->buffer;
+}
+
+sub make_simple_connection {
+  (my MY $self, my ($quad, @rest)) = @_;
+  my ($tmpldir, $loc, $file, $trailer) = @$quad;
+  my $virtdir = "$self->{cf_doc_root}$loc";
+  my $realdir = "$tmpldir$loc";
+  my @params = $self->connection_quad([$virtdir, $loc, $file, $trailer]);
+  $self->make_connection(undef, @params, @rest);
+}
+
+sub make_debug_params {
+  (my MY $self, my ($reqrec, $args)) = @_;
+  ();
+}
+
+#========================================
+
+sub get_lochandler {
+  (my MY $self, my ($location, $tmpldir)) = @_;
+  $tmpldir //= $self->{cf_doc_root};
+  $self->get_yatt($location) || do {
+    $self->{loc2yatt}{$location} = $self->load_yatt("$tmpldir$location");
+  };
+}
 
 # location => yatt (dirhandler, dirapp)
 
@@ -443,10 +503,24 @@ sub Connection () {'YATT::Lite::Connection'};
 sub make_connection {
   (my MY $self, my ($fh, @params)) = @_;
   require YATT::Lite::Connection;
-  $self->Connection->create($fh, @params);
+  $self->Connection->create(
+    $fh, @params, system => $self, root => $self->{cf_doc_root}
+ );
 }
 
 sub finalize_connection {}
+
+sub connection_param {
+  croak "Use of YATT::Lite::Factory::connection_param is deprecated!\n";
+}
+sub connection_quad {
+  (my MY $self, my ($quad)) = @_;
+  my ($virtdir, $loc, $file, $subpath) = @$quad;
+  (dir => $virtdir
+   , location => $loc
+   , file => $file
+   , subpath => $subpath);
+}
 
 #========================================
 #

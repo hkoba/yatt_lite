@@ -119,8 +119,8 @@ sub make_cgi {
     $cgi = $self->new_cgi(@$args);
   }
 
-  $self->connection_param($env, ["$root$loc", $loc, $file, $trailer]
-			  , cgi => $cgi, root => $root, is_psgi => 0);
+  (env => $env, $self->connection_quad(["$root$loc", $loc, $file, $trailer])
+   , cgi => $cgi, root => $root, is_psgi => 0);
 }
 
 sub init_by_env {
