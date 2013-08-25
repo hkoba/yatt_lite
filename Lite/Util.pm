@@ -709,7 +709,7 @@ sub secure_text_plain {
 
 sub psgi_error {
   my ($self, $status, $msg, @rest) = @_;
-  return [$status, [$self->secure_text_plain, @rest], [$msg]];
+  return [$status, [$self->secure_text_plain, @rest], [escape($msg)]];
 }
 
 sub ixhash {
