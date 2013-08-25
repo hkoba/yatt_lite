@@ -1,4 +1,8 @@
 #!/usr/bin/perl -w
+#
+# perl -i $this_script /etc/httpd/conf.d/userdir.conf
+#
+
 use strict;
 use warnings;
 
@@ -13,7 +17,7 @@ while (<>) {
   if ($line = m{^(\Q<IfModule mod_userdir.c>\E)} .. m{^\Q</IfModule>\E}) {
     $context = $1 if $line == 1;
     set_config(qw(UserDir public_html));
-  } elsif ($line = m{^\#?(\Q<Directory /home/*/public_html>\E)}
+  } elsif ($line = m{^\#?(<Directory \"?/home/\*/public_html\"?>)}
 	   .. m{^\#?</Directory}) {
     $context = $1 if $line == 1;
     s/^\#//;
