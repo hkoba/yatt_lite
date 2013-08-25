@@ -1,4 +1,8 @@
 #!/usr/bin/perl -w
+#
+# perl -i $this_script /etc/httpd/conf/httpd.conf
+#
+
 use strict;
 use warnings;
 

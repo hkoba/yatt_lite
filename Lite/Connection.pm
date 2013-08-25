@@ -118,14 +118,16 @@ sub configure_encoding {
 #========================================
 
 sub cget {
-  confess "Not enough argument" unless @_ == 2;
+  confess "Not enough arguments" if @_ < 2;
+  confess "Too many arguments" if @_ > 3;
   my PROP $prop = prop(my $glob = shift);
+  my ($default) = @_;
   my $fields = fields_hash($glob);
   my ($name) = @_;
   if (not exists $fields->{"cf_$name"}) {
     confess "No such config item '$name' in class " . ref $glob;
   }
-  $prop->{"cf_$name"};
+  $prop->{"cf_$name"} // $default;
 }
 
 sub configure {
