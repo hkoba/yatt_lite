@@ -9,7 +9,7 @@ Note: Although I have been using YATT::Lite in some side-projects
 for my client since 2011
 (and previous version YATT.pm in all other main-projects
 for them since late 2008),
-I am not yet satisfied with its API.
+I am not yet satisfied especially with its API.
 Actually, I want to discuss *How web templates should be* with someone.
 If you are interested in this topic, please contact me!
 
@@ -76,7 +76,7 @@ return sub {
 ```
 
 Above code only serves ``*.yatt`` templates. To serve other static files
-like ``*.css`` and ``*.gif``, your psgi app needs to analyze request
+like ``*.css`` and ``*.gif``, your psgi app needs to analyze a request
 and route it to other handler (ie. Plack::App::File) for static files.  
 Since this is very common,
 YATT::Lite comes with sample Web Framework([WebMVC0]) 
