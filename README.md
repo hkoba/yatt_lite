@@ -104,7 +104,7 @@ directory and (primary) template directory. It routes incoming requests
 directly into ``*.yatt`` template files. Also, it can hide ``.yatt`` extension
 by default (ie. if you have ``foo.yatt`` and
 incoming request is ``foo``, ``foo/bar`` or ``foo/bar/baz``, the ``foo.yatt``
-will invoked).
+will be invoked).
 Also, you can define url routing patterns and per-directory hooks.
 You can use many abstraction techniques too.
 Each templates are compiled on-the-fly and cached as perl scripts
@@ -139,7 +139,7 @@ use YATT::Lite::PSGIEnv;
   Entity session => sub {
     my ($this, $name, $default) = @_;
     my Env $env = $CON->env;
-    $env->{'psgix.session'}{$name} || $default;
+    $env->{'psgix.session'}{$name} // $default;
   };
 
   Entity set_session => sub {
