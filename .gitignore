@@ -8,5 +8,6 @@
 /MYMETA.yml
 /_build
 /tmon.out
+/YATT-Lite-*
 blib
 tmp

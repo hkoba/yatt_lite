@@ -531,11 +531,13 @@ t/lite_xhf.t
 t/lrxml.t
 t/object.t
 t/partial.t
+t/psgi.d.fallback/beta/fbck.html
 t/psgi.d/.htaccess
 t/psgi.d/beta/world_line.yatt
 t/psgi.d/hidden.ytmpl
 t/psgi.d/index.yatt
 t/psgi.d/no_subpath.yatt
+t/psgi.d/test.css
 t/psgi.d/test.lib/Foo.pm
 t/psgi.t
 t/psgi.ytmpl/hello.ytmpl

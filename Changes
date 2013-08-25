@@ -1,5 +1,10 @@
 Revision history for YATT::Lite
 
+0.0_8 2013-08-25
+
+ * Mainly for README.md polishment
+ * As its side effect, YATT::Lite::Factory now supports render() method;-)
+
 0.0.7 2013-06-20
 
  * #19 PHP/RoR like hash-and-array parameters.

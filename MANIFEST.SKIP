@@ -10,6 +10,7 @@
 \B\.gitignore\b
 \b_darcs\b
 \B\.cvsignore$
+\B\.out$
 
 # Avoid VMS specific MakeMaker generated files
 \bDescrip.MMS$
@@ -55,6 +56,8 @@
 \bcover_db\b
 \bcovered\b
 
+\b/.xslate_cache\b
+
 # Avoid MYMETA files
 ^MYMETA\.
 #!end included /usr/share/perl5/ExtUtils/MANIFEST.SKIP
@@ -77,3 +80,5 @@
 (?:^|\/)\.htdbpass$
 
 .perl-version
+
+samples/benchmarks/template/[^/]+\.out$
