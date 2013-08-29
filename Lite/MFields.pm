@@ -222,11 +222,11 @@ YATT::Lite::MFields -- fields for multiple inheritance.
   #
   # In above, ->name and ->value is defined.
 
-  # Or more descriptive (but these attributes are for documentation only)
+  # Or more descriptive (but most attributes are only for documentation)
   use YATT::Lite::MFields
-    ([name => is => 'ro', doc => "Name of the user"
-      , getter => "get_name"]
-    , [age => is => 'rw', doc => "Age of the user"]
+    ([name => (is => 'ro', doc => "Name of the user"
+              , getter => "get_name")]
+    , [age => (is => 'rw', doc => "Age of the user")]
     );
 
   # Or, more procedural way.

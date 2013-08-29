@@ -12,29 +12,54 @@ use parent qw/YATT::Lite::NSBuilder File::Spec/;
 use File::Path ();
 use File::Basename qw/dirname/;
 
-use YATT::Lite::MFields qw/cf_doc_root
-			   cf_allow_missing_dir
-			   cf_app_base
-			   cf_site_prefix
-			   cf_index_name
+# Note: Definition of default values are not yet gathered here.
+# Some are in YATT::Lite, others are in YATT::Lite::Core, CGen.. and so on.
 
-			   tmpldirs
+use YATT::Lite::MFields
+([cf_namespace =>
+  (doc => "namespace prefix for yatt. (default: [yatt, perl])")]
 
-			   loc2yatt
-			   path2yatt
+ , [cf_doc_root =>
+    (doc => "Primary template directory")]
 
-			   tmpl_cache
+ , [cf_app_base =>
+    (doc => "Base dir for this siteapp")]
 
-			   cf_binary_config
+ , [cf_site_prefix =>
+    (doc => "Location prefix for this siteapp")]
 
-			   cf_tmpl_encoding cf_output_encoding
-			   cf_header_charset
-			   cf_debug_cgen
+ , [cf_index_name =>
+    (doc => "Rootname of index template. (default: index)")]
 
-			   cf_only_parse cf_namespace
-			   cf_offline
-			   cf_config_filetypes
-			  /;
+ , [cf_header_charset =>
+    (doc => "Charset for outgoing HTTP Content-Type. (default: utf-8)")]
+
+ , [cf_tmpl_encoding =>
+    (doc => "Perl encoding used while reading yatt templates. (default: '')")]
+
+ , [cf_output_encoding =>
+    (doc => "Perl encoding used for outgoing response body. (default: '')")]
+
+ , [cf_offline =>
+    (doc => "Whether header should be emitted or not.")]
+
+ , [cf_binary_config   =>
+    (doc => "(This may be changed in future release) Whether .htyattconfig.* should be read with encoding or not.")]
+
+ , qw/
+       cf_allow_missing_dir
+
+       tmpldirs
+       loc2yatt
+       path2yatt
+
+       tmpl_cache
+
+       cf_debug_cgen
+
+       cf_only_parse
+       cf_config_filetypes
+     /);
 
 use YATT::Lite::Util::AsBase;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
@@ -166,6 +191,18 @@ sub init_app_ns {
   $self->SUPER::init_app_ns;
   $self->{default_app}->ensure_entns($self->{app_ns});
 }
+
+sub after_new {
+  (my MY $self) = @_;
+  $self->SUPER::after_new;
+  $self->{cf_output_encoding} //= $self->default_output_encoding;
+  $self->{cf_header_charset} //= (
+    $self->{cf_output_encoding} || $self->default_header_charset
+  );
+}
+
+sub default_output_encoding { '' }
+sub default_header_charset  { 'utf-8' }
 
 sub _after_after_new {
   (my MY $self) = @_;
