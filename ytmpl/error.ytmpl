@@ -38,11 +38,17 @@
 	      >
 <yatt:envelope msg="&yatt:err:reason();">
 <h1>Error trace</h1>
-<pre class="message">&yatt:msg;
-&yatt:err:place();
-</pre>
+<pre class="message">&yatt:msg;</pre>
 <ol>
-<yatt:foreach my=frame nth=i list="&yatt:err:cget(backtrace):frames();">
+<yatt:my backtrace:list="&yatt:err:cget(backtrace):frames();"
+	 top:value="shift @$backtrace"
+/>
+<li class="frame top">
+at &yatt:top:filename();
+<b>around</b> line &yatt:top:line(); <b class="note">(might not accurate, see neighbouring lines too)</b>
+<yatt:context frame=top/>
+</li>
+<yatt:foreach my=frame nth=i list=backtrace>
   <yatt:my sub="&yatt:frame:subroutine();"/>
   <li class="frame">
     in &yatt:frame:subroutine();
@@ -74,6 +80,8 @@ pre.context { border: 1px solid #aaa; padding: 0.2em 0; background: #fff; color:
 pre .match { color: #000;background-color: #f99; font-weight: bold }
 pre.vardump { margin:0 }
 pre code strong { color: #000; background: #f88; }
+
+b.note { background-color: #e4aad8; }
 
 table.lexicals, table.arguments { border-collapse: collapse }
 table.lexicals td, table.arguments td { border: 1px solid #000; margin: 0; padding: .3em }

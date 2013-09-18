@@ -34,7 +34,7 @@ sub handle {
   local $SIG{__DIE__} = sub {
     my ($err) = @_;
     die $err if ref $err;
-    die $self->error({ignore_frame => [MY,__FILE__, __LINE__]}, $err);
+    die $self->error({ignore_frame => [undef, __FILE__, __LINE__]}, $err);
   };
   if (my $charset = $self->header_charset) {
     $con->set_charset($charset);

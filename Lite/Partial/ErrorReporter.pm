@@ -34,10 +34,10 @@ sub make_error {
       push @bt_opts, frame_filter => sub {
 	my ($hash) = @_;
 	my $caller = $hash->{'caller'};
-	my $res = not not grep {($frm->[$_] // '') ne ($caller->[$_] // '')}
-	  0..2;
-	# $YATT::Lite::CON->logdump(frame_filter_res => $res, $caller);
-	$res;
+	my $all_match = grep {($frm->[$_] // '') eq ($caller->[$_] // '')}
+	  1, 2; # __FILE__, __LINE__
+	# print STDERR YATT::Lite::Util::terse_dump("filter: ", $all_match, $frm, $caller), "\n";
+	$all_match != 2;
       }
     }
     Devel::StackTrace->new(@bt_opts);
