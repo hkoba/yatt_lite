@@ -1,5 +1,41 @@
-<!yatt:args -- This code is dumb port of Devel::StackTrace::AsHTML --
-   err>
+<!yatt:args err>
+<yatt:if "&yatt:is_debug_allowed_ip();">
+<yatt:error_trace err/>
+<:yatt:else/>
+<yatt:public_error err/>
+</yatt:if>
+
+<!yatt:widget public_error err>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ERROR: &yatt:err:reason();</title>
+</head>
+<body>
+<div id="wrapper" style="width: 800px; margin-left: 50px;">
+<div id="topnav">
+  <h2 style="display: inline;">&yatt:err:reason();</h2>
+</div>
+<div id="body" style="text-align: left;">
+  <script><!--
+ document.write(
+'<form>'
+ + '<input type="BUTTON" onClick="history.go(-1)" value="&yatt[[;Back&yatt]];">'
+ + '</form>');
+ window.name = "ERROR";
+// --></script>
+<noscript>
+&yatt[[;Please go back to previous page&yatt]];
+</noscript>
+</div>
+</div>
+</body>
+</html>
+
+<!yatt:widget error_trace err
+	      -- This code is dumb port of Devel::StackTrace::AsHTML --
+	      >
 <yatt:envelope msg="&yatt:err:reason();">
 <h1>Error trace</h1>
 <pre class="message">&yatt:msg;

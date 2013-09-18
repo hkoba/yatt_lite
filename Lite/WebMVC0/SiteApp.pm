@@ -26,6 +26,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_site_config
 			   cf_logfile
 			   cf_use_subpath
+			   cf_debug_allowed_ip
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -516,6 +517,26 @@ Entity site_config => sub {
   my MY $self = $SYS;
   return $self->{cf_site_config} unless defined $name;
   $self->{cf_site_config}{$name} // $default;
+};
+
+Entity is_debug_allowed_ip => sub {
+  my ($this, $remote_addr) = @_;
+  my MY $self = $SYS;
+
+  $remote_addr //= do {
+    my Env $env = $CON->env;
+    $env->{HTTP_X_REAL_IP}
+      // $env->{HTTP_X_CLIENT_IP}
+	// $env->{HTTP_X_FORWARDED_FOR}
+	  // $env->{REMOTE_ADDR};
+  };
+
+  unless (defined $remote_addr and $remote_addr ne '') {
+    return 0;
+  }
+
+  grep {$remote_addr ~~ $_} lexpand($self->{cf_debug_allowed_ip}
+				    // ['127.0.0.1']);
 };
 
 #========================================

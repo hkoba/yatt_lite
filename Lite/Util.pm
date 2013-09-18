@@ -329,6 +329,7 @@ sub compile_file_in {
 BEGIN {
   my %escape = (qw(< &lt;
 		   > &gt;
+		   --> --&gt;
 		   " &quot;
 		   & &amp;)
 		, "\'", "&#39;");
@@ -369,7 +370,7 @@ BEGIN {
 	  # XXX: Is this secure???
 	  # XXX: Should be JSON?
 	  my $copy = terse_dump($str);
-	  $copy =~ s{([<\"])}{$escape{$1}}g; # XXX: Minimum. May be insecure.
+	  $copy =~ s{([<\"]|-->)}{$escape{$1}}g; # XXX: Minimum. May be insecure.
 	  $copy;
 	}
       };
