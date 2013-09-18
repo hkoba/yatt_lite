@@ -350,9 +350,9 @@ BEGIN {
 	} elsif (ref $str eq 'SCALAR') {
 	  # PASS Thru. (Already escaped)
 	  $$str;
-	} elsif (my $sub = UNIVERSAL::can($str, 'as_escaped')) {
-	  $sub->($str);
-	} elsif ($sub = UNIVERSAL::can($str, 'cf_pairs')) {
+	} elsif (_is_escapable($str)) {
+	  $str->as_escaped;
+	} elsif (my $sub = UNIVERSAL::can($str, 'cf_pairs')) {
 	  ref($str).'->new('.(join(", ", map {
 	    my ($k, $v) = @$_;
 	    "$k => " . do {
@@ -379,9 +379,21 @@ BEGIN {
   }
 }
 
+# XXX: Since method name "as_escaped" conflicts with CGen::Perl->as_escaped,
+# We need a informational class for everything safely escapable
+# via "as_escape()"
+{
+  sub _is_escapable {
+    UNIVERSAL::isa($_[0], 'YATT::Lite::Util::escapable');
+  }
+  package
+    YATT::Lite::Util::escapable;
+}
+
 {
   package
     YATT::Lite::Util::named_attr;
+  BEGIN {our @ISA = ('YATT::Lite::Util::escapable')};
   use overload qw("" as_string);
   sub as_string {
     shift->[-1];
