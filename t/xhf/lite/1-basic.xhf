@@ -465,10 +465,10 @@ IN:
 ERROR: Global symbol "\$x" requires explicit package name at \S+ line 2[\.,]
 
 
-TITLE: valueless scalar arg -> 1
+TITLE: valueless bool arg -> 1
 IN:
  <yatt:foo x/>
- <!yatt:widget foo x=scalar>
+ <!yatt:widget foo x=bool>
  &yatt:x;
 OUT:
  1
@@ -483,16 +483,21 @@ OUT:
  1
  
 
-TITLE: valueless value arg -> 1
+TITLE: valueless value for value => error.
 IN:
  <yatt:foo x/>
  <!yatt:widget foo x=value>
  &yatt:x;
-OUT:
- 1
- 
+ERROR: ^valueless arg 'x' 
 
-TITLE: valueless arg other than scalar => error.
+TITLE: valueless value for list => error.
+IN:
+ <yatt:foo x/>
+ <!yatt:widget foo x=list>
+ &yatt:x;
+ERROR: ^valueless arg 'x' 
+
+TITLE: valueless arg for text => error.
 IN:
  <yatt:foo x/>
  <!yatt:widget foo x>

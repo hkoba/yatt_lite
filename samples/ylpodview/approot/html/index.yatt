@@ -1,5 +1,5 @@
 <!yatt:config ignore_trailing_newlines>
-<!yatt:args mod mobile="value/0" sh_style>
+<!yatt:args mod mobile="bool/0" sh_style>
 
 <yatt:if "not &yatt:mod;">
   <yatt:front mobile/>
@@ -14,7 +14,7 @@
 &yatt:redirect(:concat(:site_prefix(),/mod/,:mod));
 </yatt:if>
 
-<!yatt:page mod="/mod/:mod" mobile="value/0" sh_style>
+<!yatt:page mod="/mod/:mod" mobile="bool/0" sh_style>
 
 <yatt:if "not &yatt:search_pod(:mod);">
   Not found: &yatt:mod;<br>
@@ -53,7 +53,7 @@ my $img = "$dir/$file";
 use Plack::App::File;
 die Plack::App::File->new->serve_path($con->cget('env'), $img);
 
-<!yatt:widget front mobile="value/0">
+<!yatt:widget front mobile="bool/0">
 <yatt:envelope mobile>
 <:yatt:style>
   .container-narrow {
@@ -378,7 +378,7 @@ Z(<yatt:inline list=rest/>)
 
 
 <!yatt:widget envelope
-	      title="html?" style="html?" mobile="value/0"
+	      title="html?" style="html?" mobile="bool/0"
 	      sh_style
 	      body=[code title="html?"] body_class="?class"
 	      footer="html?">

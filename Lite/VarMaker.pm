@@ -11,7 +11,9 @@ use YATT::Lite::Util qw(lexpand default);
 # XXX: Should integrated to VarTypes.
 sub default_arg_type {'text'}
 sub default_type_alias {
-  qw(value scalar flag scalar
+  qw(value scalar
+     flag    bool
+     boolean bool
      expr code);
 }
 

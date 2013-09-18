@@ -6,7 +6,7 @@
 <yatt:sidenote />
 </yatt:envelope>
 
-<!yatt:widget req_form is_confirm="value/0">
+<!yatt:widget req_form is_confirm="bool/0">
 <form method="POST">
 <div>
   <yatt:text "name" is_confirm>
@@ -91,7 +91,7 @@ which is only visible to local user.<br>
 
 </yatt:envelope>
 
-<!yatt:widget item name is_confirm="value/0" label=html?>
+<!yatt:widget item name is_confirm="bool/0" label=html?>
 <div class="item">
 <yatt:if "&yatt:name;"><label for="&yatt:name;">&yatt:label;</label></yatt:if>
 <yatt:if "&yatt:is_confirm;">

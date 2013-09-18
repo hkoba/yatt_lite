@@ -63,9 +63,9 @@ BEGIN {
 
 BEGIN {
   # export する理由は無い?
-  our @types = (qw(text list)
+  our @types = (qw(text list scalar)
 		, [attr => {callable => 1}]
-		, [scalar => {flag => 1}]
+		, [bool => {flag => 1}]
 		, [html => {already_escaped => 1}]
 		, [code => {callable => 1}, qw(widget)]
 		, [delegate => {callable => 1}, qw(widget delegate_vars)]);

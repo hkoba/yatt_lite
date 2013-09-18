@@ -244,7 +244,7 @@ yatt の widget は引数を取ることが出来ます。引数は必ず名前�
 また、引数には L<型/TYPE> と L</DEFAULT FLAG> を指定することが出来ます。
 
    <!yatt:args title="text?Hello world!"  -- text型, ?フラグ, デフォルト値 --
-               yesno="value/0"            -- value型, /フラグ, デフォルト値 --
+               yesno="bool/0"             -- bool型, /フラグ, デフォルト値 --
    >
 
 =head1 TYPE
@@ -288,6 +288,18 @@ X<value>
    
    <!yatt:widget expr_and_result expr=text val=value>
    &yatt:expr; = &yatt:val;
+
+=head2 C<bool>
+X<bool>
+
+フラグ用の型です。変数名のみを書けば、フラグを立てたことになります。
+
+   <yatt:foo use_header/>
+
+   <!yatt:widget foo use_header="bool/0">
+   <yatt:if "&yatt:use_header;">
+     ...
+   </yatt:if>
 
 =head2 C<list>
 X<list>
@@ -345,7 +357,7 @@ X</>
 
 値が C<undef> の時はデフォルト値に置き換えられます。 (perl の C<//> に相当)
 
-   <!yatt:args  x="value/0">
+   <!yatt:args  x="bool/0">
 
 =head2 C<!>
 X<!>

@@ -446,6 +446,9 @@ use YATT::Lite::Constants;
     (my MY $self, my ($var, $value)) = @_;
     'scalar(do {'.(ref $value ? $self->as_list(@$value) : $value).'})';
   }
+  sub as_cast_to_bool {
+    shift->as_cast_to_scalar(@_);
+  }
   sub as_cast_to_list {
     (my MY $self, my ($var, $value)) = @_;
     '['.(ref $value ? $self->as_list(@$value) : $value).']';
