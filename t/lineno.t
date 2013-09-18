@@ -287,3 +287,47 @@ END
   my $pkg = $yatt->find_product(perl => $tmpl);
   run_list($THEME, \@list, $pkg, render_ => ());
 }
+
+$i = 8;
+{
+  my $THEME = "envelope";
+  my $yatt = new YATT::Lite(app_ns => myapp($i), vfs => [data => {}], @OPT);
+  my $SUB = 'index';
+  ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list), "$THEME - add_to $SUB");
+<!yatt:args>
+<yatt:envelope>
+<:yatt:style>
+h2 {
+  background: #ccc;
+}
+</:yatt:style>
+<!--8-->
+BODY
+
+<:yatt:footer/>
+<!--12-->FOOTER
+</yatt:envelope>
+
+<!yatt:widget envelope style="html?" footer="code">
+<!--16-->
+<head>
+<style>
+&yatt:style;
+</style>
+</head>
+<body>
+<div id=main>
+<yatt:body/>
+</div>
+&yatt:footer();
+</body>
+END
+
+  is $yatt->find_part($SUB, $THEME)->{cf_startln}, 15
+     , "$THEME-$SUB. lineno";
+
+  $yatt->ensure_parsed($yatt->find_part($SUB, ''));
+
+  my $pkg = $yatt->find_product(perl => $tmpl);
+  run_list($THEME, \@list, $pkg, render_ => ());
+}

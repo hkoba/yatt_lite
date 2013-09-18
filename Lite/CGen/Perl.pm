@@ -360,7 +360,6 @@ use YATT::Lite::Constants;
     # element 引数
     foreach my $arg (lexpand($head), $body ? $body : (), lexpand($foot)) {
       my ($name, $expr) = @$arg[NODE_PATH, NODE_VALUE];
-      push @argExpr, $self->sync_curline($arg->[NODE_LNO]);
       my $formal = $add_arg->(ref $name ? $name->[-1] : $name);
       push @argExpr, ", ", $self->as_cast_to($formal, $expr);
     }

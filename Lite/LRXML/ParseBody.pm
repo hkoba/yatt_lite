@@ -84,14 +84,15 @@ sub _parse_body {
 	drop_leading_ws($sink);
       }
 
-      # <:opt/> の時は $parent->[foot] へ、そうでなければ現在の $sink へ。
-      push @{$is_opt && $+{empty_elem}
-	       ? $parent->[NODE_AELEM_FOOT] ||= []
-		 : $sink}, $elem;
-
-      # <:opt> の時は, $parent->[head] にも(?)加える
-      push @{$parent->[NODE_AELEM_HEAD] ||= []}, $elem
-	if $is_opt && !$+{empty_elem};
+      if (not $is_opt) {
+	push @$sink, $elem;
+      } elsif ($+{empty_elem}) {
+	# <:opt/> の時は $parent->[foot] へ
+	push @{$parent->[NODE_AELEM_FOOT] ||= []}, $elem;
+      } else {
+	# <:opt> の時は, $parent->[head] へ
+	push @{$parent->[NODE_AELEM_HEAD] ||= []}, $elem
+      }
 
       my $bodystartln = $self->{endln};
       # <TAG>\n タグ直後の改行について。
