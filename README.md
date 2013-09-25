@@ -1,4 +1,4 @@
-YATT::Lite - Template with "use strict"
+YATT::Lite - Template with "use strict" [![Build Status](https://travis-ci.org/hkoba/yatt_lite.png?branch=dev)](https://travis-ci.org/hkoba/yatt_lite)
 ==================
 
 YATT is Yet Another Template Toolkit, strongly aimed at **static checking of
