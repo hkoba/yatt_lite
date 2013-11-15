@@ -14,7 +14,7 @@ our $context = "";
 my ($line);
 while (<>) {
   chomp;
-  if (s/^(\#)?(AddHandler cgi-script \.cgi\b.*)$/$2/) {
+  if (s/^\s*(\#)?\s*(AddHandler cgi-script \.cgi\b.*)$/$2/) {
     print STDERR $1 ? "Changed" : "Already OK", ": $2\n";
   } elsif ($line = m{^(<Directory "/var/www/cgi-bin">)} .. m{^</Directory}) {
     $context = $1 if $line == 1;
