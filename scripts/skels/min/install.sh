@@ -22,9 +22,18 @@ function setup {
 
     [[ -r .git ]] || x git init
 
-    x git submodule add $yatt_url lib/YATT
+    [[ -d lib ]]  || x mkdir -p lib
+
+    perl_has YATT::Lite || x git submodule add $yatt_url lib/YATT
 
     x cp -va $yatt_skel/approot/* .
+}
+
+function perl_has {
+    local m
+    for m in $*; do
+	perl -M$m -e0 >& /dev/null || return 1
+    done
 }
 
 if [[ $0 == "bash" ]]; then
