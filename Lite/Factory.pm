@@ -109,6 +109,42 @@ sub configure_offline {
   }
 }
 
+#========================================
+
+sub load_factory_for_psgi {
+  my ($pack, $psgi, %default) = @_;
+  unless (defined $psgi) {
+    croak "Usage: Factory->load_factory_for_psgi(psgi_filename, \%opts)";
+  }
+  unless (-r $psgi) {
+    croak "psgi is not readable: $psgi";
+  }
+  (my $app_rootname = $pack->rel2abs($psgi)) =~ s/\.psgi$//;
+  my $app_root = dirname($app_rootname);
+  unless (-d $app_root) {
+    croak "Can't find app_root for $psgi";
+  }
+
+  $default{doc_root} ||= "$app_root/html";
+  if (-d "$app_root/ytmpl") {
+    $default{app_base} ||= '@ytmpl';
+  }
+  if (my (@cf) = map {
+    my $cf = "$app_rootname.$_";
+    -e $cf ? $cf : ()
+  } $pack->default_config_filetypes) {
+    croak "Multiple configuration files!: @cf" if @cf > 1;
+    $pack->_with_loading_file($cf[0], sub {
+				$pack->new(app_root => $app_root, %default
+					   , $pack->read_file($cf[0]));
+			      })
+  } else {
+    $pack->new(app_root => $app_root, %default);
+  }
+}
+
+#========================================
+
 {
   my %sub2app;
   sub to_app {
@@ -131,7 +167,7 @@ sub configure_offline {
     my $sub = $pack->sandbox_dofile($fn);
     if (ref $sub eq 'CODE') {
       $sub2app{$sub};
-    } elsif ($sub->isa($pack)) {
+    } elsif ($sub->isa($pack) or $sub->isa(MY)) {
       $sub;
     } else {
       die "Unknown load result from: $fn";

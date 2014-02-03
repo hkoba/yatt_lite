@@ -184,7 +184,7 @@ sub error_handler {
   };
   $sub->($pkg, $errcon, $err);
   try_invoke($errcon, 'flush_headers');
-  $self->DONE; # XXX: bailout と分けるべき
+  $self->raise_psgi_html(200, $errcon->buffer); # ->DONE was not ok.
 }
 
 Entity dir_config => sub {

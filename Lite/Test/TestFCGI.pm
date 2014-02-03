@@ -19,6 +19,8 @@ my $Test = Test::Builder->new;
 		kidpid
 	      /;		# base form
 
+  use HTML::Entities ();
+
   sub check_skip_reason {
     my MY $self = shift;
 
@@ -153,6 +155,18 @@ my $Test = Test::Builder->new;
     } else {
       $self->{res};
     }
+  }
+
+  sub title {
+    my MY $self = shift;
+    defined (my $res = $self->content) or return undef;
+    my ($title) = $res =~ m{<title>(.*?)</title>}s or return $res;
+    HTML::Entities::decode_entities($title);
+  }
+
+  sub decode_entities {
+    (my MY $self, my $str) = @_;
+    HTML::Entities::decode_entities($str);
   }
 
   sub content_nocr {

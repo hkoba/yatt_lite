@@ -68,6 +68,8 @@ sub cgi_dirhandler {
 
   $self->run_dirhandler($dh, $con, $params{file});
 
+  try_invoke($con, 'flush_headers');
+
   wantarray ? ($dh, $con) : $con;
 }
 
@@ -82,10 +84,7 @@ sub make_cgi {
   my ($cgi, $root, $loc, $file, $trailer);
   unless ($self->{cf_noheader}) {
     $cgi = do {
-      if ($self->{cf_is_psgi}) {
-	require Plack::Request;
-	Plack::Request->new($env);
-      } elsif (ref $args and UNIVERSAL::can($args, 'param')) {
+      if (ref $args and UNIVERSAL::can($args, 'param')) {
 	$args;
       } else {
 	$self->new_cgi(@$args);
@@ -153,7 +152,17 @@ sub new_cgi {
 sub cgi_process_error {
   (my MY $self, my ($error, $con, $fh, $env)) = @_;
   if (not $error or is_done($error)) {
-    # NOP
+    if (not tell($fh) and (my $len = length($con->buffer))) {
+      # We have buffered content but not yet delivered!
+      # Possible misuse of Connection API.
+      $self->cgi_response($fh, $env
+			  , 200
+			  , ["Content-type", $con->_mk_content_type]
+			  # XXX: We should add API usage suggestion here.
+			  , [$con->buffer]);
+    } else {
+      # Already delivered.
+    }
   } elsif (ref $error eq 'ARRAY') {
     # Non local exit with PSGI response triplet.
     $self->cgi_response($fh, $env, @{$error});

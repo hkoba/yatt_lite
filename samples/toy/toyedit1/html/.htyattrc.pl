@@ -103,7 +103,8 @@ sub min {$_[0] < $_[1] ? $_[0] : $_[1]}
 sub after_new {
   my MY $self = shift;
   # $self->SUPER::after_new(); # Should call, but without this, should work.
-  $self->{cf_datadir} //= '../data';
+  # XXX: rewrite with (future) abstract path api.
+  $self->{cf_datadir} //= '../var/data';
   $self->{cf_limit} //= 100;
 }
 

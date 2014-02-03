@@ -13,7 +13,8 @@ foo=&yatt:foo;
 
 <!yatt:action baz>
 my ($this, $con) = @_;
-print $con "OK. foo=", map {defined $_ ? $_ : "(NULL)"} $con->param('foo');
+my $foo = $con->param('foo');
+print $con "OK. foo=", $foo // "(NULL)";
 
 <!yatt:page testlistarg chklst=list>
 checked=

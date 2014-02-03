@@ -17,6 +17,7 @@ use YATT::Lite::Types
 			   )]]
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
 			     cf_BREAK
+			     cf_SKIP_IF_ERROR
 			     cf_SAME_RESULT
 			     cf_PERL_MINVER
 			     cf_SITE_CONFIG
@@ -200,33 +201,46 @@ sub mechanized {
       my $res = $tests->mech_request($mech, $item);
       my $T = defined $item->{cf_TITLE} ? "[$item->{cf_TITLE}]" : '';
 
-      if (defined $error) {
-	fail "[$sect_name] $T Unknown error: $error";
-	next;
-      }
-
-      if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
-	while (my ($key, $pat) = splice @header, 0, 2) {
-	  my $title = "[$sect_name] $T HEADER $key of $method $item->{cf_FILE}";
-	  if ($res) {
-	    like $res->header($key), qr{$pat}s, $title;
+      SKIP: {
+	if (defined $error) {
+	  if (defined $item->{cf_SKIP_IF_ERROR}
+	      and $error =~ m{$item->{cf_SKIP_IF_ERROR}}) {
+	    my $skip_count = $tests->skipcount_for_request_error($item);
+	    skip $error, $skip_count;
 	  } else {
-	    fail "$title - no \$res";
+	    fail "[$sect_name] $T Unknown error: $error";
+	    next;
 	  }
 	}
-      }
 
-      if (my $body = $item->{cf_SAME_RESULT} ? $last_body : $item->{cf_BODY}) {
-	if (ref $body) {
-	  like nocr($mech->content), $tests->mkseqpat($body)
-	    , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
-	} else {
-	  eq_or_diff trimlast(nocr($mech->content)), $body
-	    , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
+	if ($item->{cf_HEADER} and my @header = @{$item->{cf_HEADER}}) {
+	  while (my ($key, $pat) = splice @header, 0, 2) {
+	    my $title = "[$sect_name] $T HEADER $key of $method $item->{cf_FILE}";
+	    if ($res) {
+	      like $res->header($key), qr{$pat}s, $title;
+	    } else {
+	      fail "$title - no \$res";
+	    }
+	  }
 	}
-      } elsif ($item->{cf_ERROR}) {
-	like $mech->content, qr{$item->{cf_ERROR}}
-	  , "[$sect_name] $T ERROR of $method $item->{cf_FILE}";
+
+	if (my $body = $item->{cf_SAME_RESULT} ? $last_body : $item->{cf_BODY}) {
+	  if (ref $body) {
+	    like nocr($mech->content), $tests->mkseqpat($body)
+	      , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
+	  } else {
+	    eq_or_diff trimlast(nocr($mech->content)), $body
+	      , "[$sect_name] $T BODY of $method $item->{cf_FILE}";
+	  }
+	} elsif (my $errpat = $item->{cf_ERROR}) {
+	  $errpat =~ s{\^}{^(?:(?i)ERROR: )?};
+
+	  # XXX: It might be better to wrap $mech to have specialized ->title()
+	  # for http_localhost.t too.
+	  #
+	  like $mech->title // $mech->content, qr{$errpat}
+	    , "[$sect_name] $T ERROR of $method $item->{cf_FILE}";
+	}
       }
     } continue {
       $last_body = $item->{cf_BODY} if $item->{cf_BODY};
@@ -317,6 +331,12 @@ sub item_query {
   my $param = $item->{cf_PARAM}
     or return;
   $tests->encode_query($item->{cf_PARAM});
+}
+
+sub skipcount_for_request_error {
+  (my Tests $tests, my Item $item) = @_;
+  lexpand($item->{cf_HEADER})/2
+    + (defined $item->{cf_BODY} || defined $item->{cf_ERROR});
 }
 
 #========================================

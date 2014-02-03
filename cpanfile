@@ -26,6 +26,7 @@ on test => sub {
  requires 'Test::More' => 0;
  requires 'Test::Differences' => 0;
  requires 'Test::WWW::Mechanize::PSGI' => 0;
+ requires 'HTML::Entities' => 0;
 
  recommends 'DBD::SQLite' => 0;
  recommends 'DBD::mysql' => 0;

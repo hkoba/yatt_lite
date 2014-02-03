@@ -99,6 +99,12 @@ sub DONE {
   }
 }
 
+sub raise_psgi_html {
+  (my MY $self, my ($status, $html, @rest)) = @_;
+  die [$status, ["Content-type" => "text/html; charset=utf-8", @rest]
+       , [$html]];
+}
+
 sub deref {
   return undef unless defined $_[0];
   if (ref $_[0] eq 'REF' or ref $_[0] eq 'SCALAR') {

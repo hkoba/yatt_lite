@@ -65,11 +65,8 @@ use List::MoreUtils qw/last_index/;
   # use YATT::Lite::MFields qw/cf_dbi_dsn cf_auto_deploy /;
   #
 
-  my $site = MY->new
-    (app_ns => 'MyApp'
-     , app_root => $app_root
-     , doc_root => "$app_root/html"
-     , (-d "$app_root/ytmpl" ? (app_base => '@ytmpl') : ())
+  my $site = MY->load_factory_for_psgi
+    (__FILE__, app_ns => 'MyApp'
      , namespace => ['yatt', 'perl', 'js']
      , header_charset => 'utf-8'
      , use_subpath => 1

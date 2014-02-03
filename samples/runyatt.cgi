@@ -25,9 +25,8 @@ my $app_root;
 my $rootname;
 my @libdir;
 BEGIN {
-  ($app_root) = map {
-    s{/html/cgi-bin/.*}{} ? $_ : ();
-  } $untaint_any->(File::Spec->rel2abs(__FILE__));
+  $app_root = $untaint_any->(File::Spec->rel2abs(__FILE__));
+  $app_root =~ s{/html/cgi-bin/.*}{};
   $rootname = $get_rootname->($untaint_any->(realpath(__FILE__)));
   if (-d "$app_root/lib/YATT") {
     push @libdir, "$app_root/lib";
@@ -57,20 +56,9 @@ for (; @ARGV and $ARGV[0] =~ /^--(\w+)(?:=(.*))?/s; shift @ARGV) {
 }
 
 #----------------------------------------
-# You may edit params.
+# To customize, edit app.psgi or app.yml.
 
-my $dispatcher = MY->new
-  (app_ns => 'MyApp'
-   , app_root => $app_root
-   , namespace => ['yatt', 'perl', 'js']
-   , header_charset => 'utf-8'
-   , (-d "$rootname.ytmpl" ? (app_base => "$rootname.ytmpl") : ())
-   , debug_cgen => $ENV{DEBUG}
-   , debug_cgi  => $ENV{DEBUG_CGI}
-   # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
-   # , tmpl_encoding => 'utf-8'
-   , @opts
-  );
+my $dispatcher = MY->load_psgi_script("$app_root/app.psgi");
 
 if (caller) {
   # For do 'runyatt.cgi'.

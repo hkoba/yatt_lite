@@ -188,6 +188,13 @@ else
     die Can\'t extract URL from destdir=$destdir.
 fi
 
+# SELinux check.
+if (($+commands[selinuxenabled])) && selinuxenabled; then
+    is_selinux=1
+else
+    is_selinux=0
+fi
+
 #========================================
 # Main.
 #========================================
@@ -200,6 +207,9 @@ else
 fi
 
 x install -m $cgi_bin_perm $samplecgi $cgi_bin/$driver_name.cgi
+if (($is_selinux)); then
+    x chcon $o_verbose -t httpd_${install_type}_script_exec_t $cgi_bin/$driver_name.cgi || true
+fi
 
 dn=$cgi_bin/$driver_name.ytmpl
 if ! [[ -e $dn ]]; then
@@ -211,6 +221,14 @@ x ln $o_verbose -nsf $driver_name.cgi $cgi_bin/$driver_name.fcgi
 mkfile $cgi_bin/.htaccess <<EOF
 Options +ExecCGI
 EOF
+
+dn=$destdir/../var
+if [[ -d $dn ]]; then
+    x chgrp -R $APACHE_RUN_GROUP $dn
+    if (($is_selinux)); then
+	x chcon $o_verbose -R -t httpd_${install_type}_script_rw_t $dn
+    fi
+fi
 
 # Then activate it!
 if [[ -r $destdir/dot.htaccess ]]; then
