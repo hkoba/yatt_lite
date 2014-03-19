@@ -11,7 +11,7 @@ use File::Temp qw(tempdir);
 use autodie qw(mkdir chdir);
 
 use YATT::Lite::Util::File qw(mkfile);
-use YATT::Lite::Util qw(appname);
+use YATT::Lite::Util qw(appname catch);
 
 sub myapp {join _ => MyTest => appname($0), @_}
 use YATT::Lite;
@@ -66,6 +66,34 @@ my $root_sanity = sub {
     , "$THEME(sanity) $rooten isa YATT::Lite::EntNS";
 
 };
+
+++$i;
+{
+  my $THEME = "[empty MyApp]";
+  #
+  # When given app_ns class has no definition,
+  # yatt should set its ISA correctly.
+  #
+  my $CLS = 'MyAppMissing';
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+
+  MY->mkfile("$docroot/index.yatt", q|FOO|);
+
+  #----------------------------------------
+  my $F = Factory->new(app_ns => $CLS
+		       , app_root => $approot
+		       , doc_root => $docroot);
+  ok $CLS->isa($YL), "$THEME $CLS isa $YL";
+
+  my $yatt = $F->get_yatt('/');
+  $root_sanity->($THEME, $CLS, $yatt, 1);
+
+  ok($yatt->find_part('index'), "$THEME inst index is visible");
+
+  is $yatt->render('index'), 'FOO', "$THEME inst->render(index)";
+}
+
 
 ++$i;
 {
@@ -338,6 +366,102 @@ END
     ok($yatt->find_part($key), "$THEME inst part $key is visible");
   }
 }
+
+++$i;
+{
+  my $THEME = "[cyclic inheritance error detection]";
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+
+  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+base[
+- foo
+]
+END
+	     , "$docroot/foo/.htyattconfig.xhf" => <<'END'
+base[
+- ../bar
+]
+END
+	     , "$docroot/bar/.htyattconfig.xhf" => <<'END'
+base[
+- ../foo
+]
+END
+	     );
+
+  #----------------------------------------
+
+  like catch {
+    Factory->new(app_ns => $CLS
+		 , app_root => $approot
+		 , doc_root => $docroot);
+  }, qr/^Template config error! base has cycle!/
+    , "$THEME";
+
+}
+
+++$i;
+{
+  my $THEME = "[No false alert of cyclic inheritance error detection - simple]";
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+  my $ytmpl   = "$approot/ytmpl";
+
+  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+base[
+- @ytmpl
+]
+END
+	     , "$ytmpl/common.ytmpl" => "shared"
+	     );
+
+  #----------------------------------------
+
+  is catch {
+    Factory->new(app_ns => $CLS
+		 , app_root => $approot
+		 , doc_root => $docroot
+		 , app_base => '@ytmpl'
+	       );
+  }, '', "$THEME";
+}
+
+++$i;
+{
+  my $THEME = "[No false alert of cyclic inheritance error detection - multi]";
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+  my $ytmpl   = "$approot/ytmpl";
+
+  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+base[
+- @ytmpl
+- foo
+]
+END
+	     , "$docroot/foo/.htyattconfig.xhf" => <<'END'
+base[
+- @ytmpl
+]
+END
+	     , "$ytmpl/common.ytmpl" => "shared"
+	     );
+
+  #----------------------------------------
+
+  is catch {
+    Factory->new(app_ns => $CLS
+		 , app_root => $approot
+		 , doc_root => $docroot
+		 , app_base => '@ytmpl'
+	       );
+  }, '', "$THEME";
+}
+
 
 ++$i;
 {

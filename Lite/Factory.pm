@@ -76,6 +76,9 @@ use YATT::Lite::Partial::AppPath;
 
 use YATT::Lite qw/Entity *SYS *YATT *CON/;
 
+
+use YATT::Lite::Util::CycleDetector qw/Visits/;
+
 #========================================
 #
 #
@@ -389,13 +392,18 @@ sub get_yatt {
 # phys-path => yatt
 
 sub load_yatt {
-  (my MY $self, my ($path, $basedir, $cycle)) = @_;
+  (my MY $self, my ($path, $basedir, $visits, $from)) = @_;
   $path = $self->rel2abs($path, $self->{cf_app_root});
   if (my $yatt = $self->{path2yatt}{$path}) {
     return $yatt;
   }
-  $cycle //= {};
-  $cycle->{$path} = keys %$cycle;
+  if (not $visits) {
+    $visits = Visits->start($path);
+  } elsif (my $preds = $visits->check_cycle($path, $from)) {
+    $self->error("Template config error! base has cycle!:\n     %s\n"
+		 , join "\n  -> ", $from, @$preds);
+  }
+  #-- DFS-visits --
   if (not $self->{cf_allow_missing_dir} and not -d $path) {
     croak "Can't find '$path'!";
   }
@@ -405,15 +413,15 @@ sub load_yatt {
   } $self->config_filetypes) {
     $self->error("Multiple configuration files!", @cf) if @cf > 1;
     _with_loading_file {$self} $cf[0], sub {
-      $self->build_yatt($path, $basedir, $cycle, $self->read_file($cf[0]));
+      $self->build_yatt($path, $basedir, $visits, $self->read_file($cf[0]));
     };
   } else {
-    $self->build_yatt($path, $basedir, $cycle);
+    $self->build_yatt($path, $basedir, $visits);
   }
 }
 
 sub build_yatt {
-  (my MY $self, my ($path, $basedir, $cycle, %opts)) = @_;
+  (my MY $self, my ($path, $basedir, $visits, %opts)) = @_;
   trim_slash($path);
 
   my $app_name = $self->app_name_for($path, $basedir);
@@ -422,11 +430,8 @@ sub build_yatt {
   # base package と base vfs object の決定
   #
   my (@basepkg, @basevfs);
-  if (my $explicit = delete $opts{base}) {
-    $self->_list_base_spec_in($path,$explicit, 0, $cycle, \@basepkg, \@basevfs);
-  } elsif (my $default = $self->{cf_app_base}) {
-    $self->_list_base_spec_in($path, $default, 1, $cycle, \@basepkg, \@basevfs);
-  }
+  $self->_list_base_spec_in($path, delete $opts{base}, $visits
+			    , \@basepkg, \@basevfs);
 
   my $app_ns = $self->buildns(INST => \@basepkg, $path);
 
@@ -458,37 +463,49 @@ sub build_yatt {
 }
 
 sub _list_base_spec_in {
-  (my MY $self, my ($in, $desc, $is_default, $cycle, $basepkg, $basevfs)) = @_;
+  (my MY $self, my ($in, $desc, $visits, $basepkg, $basevfs)) = @_;
+
+  my $is_implicit = not defined $desc;
+
+  $desc //= $self->{cf_app_base};
+
   my ($base, @mixin) = lexpand($desc)
     or return;
 
+  my @pkg_n_dir;
   foreach my $task ([1, $base], [0, @mixin]) {
-    my ($primary, @spec) = @$task;
+    my ($is_primary, @spec) = @$task;
     foreach my $basespec (@spec) {
       my ($pkg, $yatt);
       if ($basespec =~ /^::(.*)/) {
 	ckrequire($1);
-	$pkg = $1;
+	push @pkg_n_dir, [$is_primary, $1, undef];
       } elsif (my $realpath = $self->app_path_find_dir_in($in, $basespec)) {
-	if (defined $cycle->{$realpath}) {
-	  next if $is_default;
-	  $self->error("Template config error! base has cycle!: %s\n"
-		       , join("\n  -> ", (sort {$cycle->{$a} <=> $cycle->{$b}}
-					  keys %$cycle)
-			     , $realpath));
+	if ($is_implicit) {
+	  next if $visits->has_node($realpath);
 	}
-	$yatt = $self->load_yatt($realpath, undef, $cycle);
-	$pkg = ref $yatt;
+	$visits->ensure_make_node($realpath);
+	push @pkg_n_dir, [$is_primary, undef, $realpath];
       } else {
 	$self->error("Invalid base spec: %s", $basespec);
       }
-      if (not $primary and $pkg->isa('YATT::Lite::Object')) {
-	# XXX: This will cause inheritance error. But...
-      }
-      push @$basepkg, $pkg if $primary;
-      push @$basevfs, [dir => $yatt->cget('dir')] if $yatt;
     }
   }
+
+  foreach my $tuple (@pkg_n_dir) {
+    my ($is_primary, $pkg, $dir) = @$tuple;
+    next unless $dir;
+    my $yatt = $self->load_yatt($dir, undef, $visits, $in);
+    $tuple->[1] = ref $yatt;
+    push @$basevfs, [dir => $yatt->cget('dir')];
+  }
+
+  push @$basepkg, map {
+    my ($is_primary, $pkg, $dir) = @$_;
+    ($is_primary && $pkg) ? ($pkg) : ()
+  } @pkg_n_dir;
+
+  $visits->finish_node($in);
 }
 
 #========================================
