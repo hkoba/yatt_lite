@@ -8,7 +8,6 @@ BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
 use Test::More;
-plan 'no_plan';
 
 use YATT::Lite::Util qw(appname rootname catch ostream terse_dump);
 sub myapp {join _ => MyTest => appname($0), @_}
@@ -333,3 +332,4 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
   }
 }
 
+done_testing();

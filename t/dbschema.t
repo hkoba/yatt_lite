@@ -16,7 +16,6 @@ foreach my $req (qw(DBD::SQLite SQL::Abstract)) {
     plan skip_all => "$req is not installed."; exit;
   }
 }
-plan qw(no_plan);
 
 my $CLASS = 'YATT::Lite::WebMVC0::DBSchema';
 use_ok($CLASS);
@@ -434,3 +433,5 @@ END
     , [[qw/baz qux/], [qw/foo bar/]]
       , "multicol primary key insertion";
 }
+
+done_testing();

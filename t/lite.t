@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Breakpoint ();
 
@@ -519,3 +519,5 @@ END
   ok my $f = *{$sym}{HASH}, "$theme FIELDS hash exists";
   is_deeply $f, \%YATT::Lite::FIELDS, "$theme FIELDS hash became same.";
 }
+
+done_testing();

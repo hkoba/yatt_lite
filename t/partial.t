@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 
 sub eval_ok {
   my ($text, $title) = @_;
@@ -279,3 +279,5 @@ END
   ok $t6_Foo::{'EntNS'}, "$T *EntNS";
   ok t6_Foo::EntNS->can('entity_bar'), "$T EntNS->entity_bar()";
 }
+
+done_testing();

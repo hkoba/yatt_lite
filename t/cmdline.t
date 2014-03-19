@@ -7,7 +7,7 @@ use FindBin;
 BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 
 my $CLS = 'YATT::Lite::Util::CmdLine';
 
@@ -87,3 +87,4 @@ SKIP: {
       , "run($in)";
 }
 
+done_testing();

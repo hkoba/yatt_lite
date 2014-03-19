@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 
 {
   BEGIN {
@@ -68,3 +68,5 @@ use Test::More qw(no_plan);
   }; $@}, qr/^DUMMY\[Can't find widget 'unknown'\]/
     , "safe_render with raise-able connection";
 }
+
+done_testing();

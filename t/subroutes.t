@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Breakpoint ();
 
@@ -121,3 +121,5 @@ require_ok($CLASS);
        , [generic => [['controller'], ['action'], ['id']]
 	  => ['foo', 'bar', 'baz']]);
 }
+
+done_testing();

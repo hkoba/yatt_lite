@@ -29,8 +29,6 @@ use YATT::Lite::PSGIEnv;
 
 my $rootname = untaint_any($FindBin::Bin."/".rootname($FindBin::RealScript));
 
-plan qw(no_plan);
-
 sub is_or_like($$;$) {
   my ($got, $expect, $title) = @_;
   if (ref $expect) {
@@ -216,3 +214,4 @@ END
     , "backend startup is called";
 }
 
+done_testing();

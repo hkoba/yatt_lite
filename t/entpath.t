@@ -341,3 +341,5 @@ foreach my $test (@test) {
     is_entpath @$test;
   }
 }
+
+done_testing();

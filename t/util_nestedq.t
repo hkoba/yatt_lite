@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 
 BEGIN {
   use_ok('YATT::Lite::Util', qw(terse_dump parse_nested_query));
@@ -74,3 +74,5 @@ sub nil () {undef}
 
   $ng->("x[y]=1&x[y][][w]=2", "expected ARRAY (got String) for param `y'");
 }
+
+done_testing();

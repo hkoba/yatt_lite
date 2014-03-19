@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 use Data::Dumper;
 
 my $CLASS = 'YATT::Lite::XHF';
@@ -256,3 +256,5 @@ END
 END
 
 }
+
+done_testing();

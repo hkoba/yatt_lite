@@ -109,3 +109,5 @@ sub eq_or_diff_subst {
 
   eq_or_diff($got, $expect_pat, $title);
 }
+
+done_testing();

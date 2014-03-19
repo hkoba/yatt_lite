@@ -156,3 +156,5 @@ sub path_tail {
   splice @path, 0, @path - $len;
   wantarray ? @path : MY->catdir(@path);
 }
+
+done_testing();

@@ -18,7 +18,6 @@ BEGIN {
     }
   }
 }
-plan qw(no_plan);
 
 my $DBNAME = shift || ':memory:';
 
@@ -296,3 +295,5 @@ SQL
        , [2, chng => '2010-01-02T18:00', '2nd chng']
       ], "$CLASS timeline";
 }
+
+done_testing();

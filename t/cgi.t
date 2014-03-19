@@ -16,7 +16,6 @@ BEGIN {
     }
   }
 }
-plan 'no_plan';
 
 use YATT::Lite::Test::TestUtil;
 use List::Util qw(sum);
@@ -228,3 +227,5 @@ sub captured_runas {
     and $$header = $1;
   return $buf;
 }
+
+done_testing();

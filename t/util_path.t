@@ -9,7 +9,7 @@ use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 use autodie qw(mkdir chdir);
 use File::Temp qw(tempdir);
 use File::Path qw(make_path);
-use Test::More qw(no_plan);
+use Test::More;
 
 use YATT::Lite::Util::File qw(mkfile);
 
@@ -192,3 +192,5 @@ $i++;
 	    , [$tmpl, '/filevsdir/', 'index.yatt', '/virt/bar']);
   }
 }
+
+done_testing();

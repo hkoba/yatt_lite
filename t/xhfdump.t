@@ -176,3 +176,5 @@ foreach my $data (@dumponly) {
     "faked_string";
   }
 }
+
+done_testing();

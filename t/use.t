@@ -68,3 +68,5 @@ sub fgrep {
   }
   @result;
 }
+
+done_testing();

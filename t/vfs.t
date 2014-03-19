@@ -6,7 +6,7 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::More qw(no_plan);
+use Test::More;
 use File::Temp qw(tempdir);
 use autodie qw(mkdir chdir);
 
@@ -332,3 +332,5 @@ END
   is $root->find_part_from($foo, 'bar', 'baz', 'qux'), "PPP\n"
     , "$theme bar:baz:qux can be refered from foo";
 }
+
+done_testing();

@@ -9,7 +9,7 @@ use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 use YATT::Lite::Util qw(appname list_isa globref);
 sub myapp {join _ => MyTest => appname($0), @_}
 
-use Test::More qw(no_plan);
+use Test::More;
 
 sub NSBuilder () {'YATT::Lite::NSBuilder'}
 
@@ -102,3 +102,5 @@ my $i = 0;
   like $@, qr/^None of baseclass inherits YATT::Lite: $unknown/
     , "Unknown baseclass should raise error";
 }
+
+done_testing();

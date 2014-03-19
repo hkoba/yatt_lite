@@ -12,8 +12,6 @@ use YATT::Lite::Breakpoint;
 use YATT::Lite::Object;
 use YATT::Lite::Util::FindMethods;
 
-plan qw(no_plan);
-
 {
   package T1; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::Object);
@@ -109,3 +107,5 @@ plan qw(no_plan);
     , "FindMethods(\$obj1)";
 
 }
+
+done_testing();
