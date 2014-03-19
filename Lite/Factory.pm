@@ -299,6 +299,10 @@ sub render {
   $con->buffer;
 }
 
+#========================================
+
+sub Connection () {'YATT::Lite::Connection'};
+
 sub make_simple_connection {
   (my MY $self, my ($quad, @rest)) = @_;
   my ($tmpldir, $loc, $file, $trailer) = @$quad;
@@ -311,6 +315,49 @@ sub make_simple_connection {
 sub make_debug_params {
   (my MY $self, my ($reqrec, $args)) = @_;
   ();
+}
+
+sub make_connection {
+  (my MY $self, my ($fh, @params)) = @_;
+  require YATT::Lite::Connection;
+  $self->Connection->create(
+    $fh, @params, system => $self, root => $self->{cf_doc_root}
+ );
+}
+
+sub finalize_connection {}
+
+sub connection_param {
+  croak "Use of YATT::Lite::Factory::connection_param is deprecated!\n";
+}
+sub connection_quad {
+  (my MY $self, my ($quad)) = @_;
+  my ($virtdir, $loc, $file, $subpath) = @$quad;
+  (dir => $virtdir
+   , location => $loc
+   , file => $file
+   , subpath => $subpath);
+}
+
+#========================================
+#
+# Hook for subclassing
+#
+sub run_dirhandler {
+  (my MY $self, my ($dh, $con, $file)) = @_;
+  local ($SYS, $YATT, $CON) = ($self, $dh, $con);
+  $self->before_dirhandler($dh, $con, $file);
+  $self->invoke_dirhandler($dh, $con
+			   , handle => $dh->cut_ext($file), $con, $file);
+  $self->after_dirhandler($dh, $con, $file);
+}
+
+sub before_dirhandler { &maybe::next::method; }
+sub after_dirhandler  { &maybe::next::method; }
+
+sub invoke_dirhandler {
+  (my MY $self, my ($dh, $con, $method, @args)) = @_;
+  $dh->with_system($self, $method, @args);
 }
 
 #========================================
@@ -363,39 +410,6 @@ sub load_yatt {
   } else {
     $self->build_yatt($path, $basedir, $cycle);
   }
-}
-
-sub read_file {
-  (my MY $self, my $fn) = @_;
-  my ($ext) = $fn =~ /\.(\w+)$/
-    or croak "Can't extract fileext from filename: $fn";
-  my $sub = $self->can("read_file_$ext")
-    or croak "filetype $ext is not supported: $fn";
-  $sub->($self, $fn);
-}
-
-sub default_config_filetypes {qw/xhf yml/}
-sub config_filetypes {
-  (my MY $self) = @_;
-  if (my $item = $self->{cf_config_filetypes}) {
-    lexpand($item)
-  } else {
-    $self->default_config_filetypes
-  }
-}
-
-sub read_file_xhf {
-  (my MY $self, my $fn) = @_;
-  my $bytes_semantics = ref $self && $self->{cf_binary_config};
-  $self->YATT::Lite::XHF::read_file_xhf
-    ($fn, bytes => $bytes_semantics);
-}
-
-sub read_file_yml {
-  (my MY $self, my $fn) = @_;
-  require YAML::Tiny;
-  my $yaml = YAML::Tiny->read($fn);
-  wantarray ? lexpand($yaml->[0]) : $yaml;
 }
 
 sub build_yatt {
@@ -554,6 +568,43 @@ sub _extract_app_name {
   $name;
 }
 
+#========================================
+
+sub read_file {
+  (my MY $self, my $fn) = @_;
+  my ($ext) = $fn =~ /\.(\w+)$/
+    or croak "Can't extract fileext from filename: $fn";
+  my $sub = $self->can("read_file_$ext")
+    or croak "filetype $ext is not supported: $fn";
+  $sub->($self, $fn);
+}
+
+sub default_config_filetypes {qw/xhf yml/}
+sub config_filetypes {
+  (my MY $self) = @_;
+  if (my $item = $self->{cf_config_filetypes}) {
+    lexpand($item)
+  } else {
+    $self->default_config_filetypes
+  }
+}
+
+sub read_file_xhf {
+  (my MY $self, my $fn) = @_;
+  my $bytes_semantics = ref $self && $self->{cf_binary_config};
+  $self->YATT::Lite::XHF::read_file_xhf
+    ($fn, bytes => $bytes_semantics);
+}
+
+sub read_file_yml {
+  (my MY $self, my $fn) = @_;
+  require YAML::Tiny;
+  my $yaml = YAML::Tiny->read($fn);
+  wantarray ? lexpand($yaml->[0]) : $yaml;
+}
+
+#========================================
+
 sub trim_slash {
   $_[0] =~ s,/*$,,;
   $_[0];
@@ -568,52 +619,6 @@ sub ensure_slash {
     $abs =~ s{(?:\Q$sep\E)?$}{$sep}; # Should end with path-separator.
     $_[0] = $abs;
   }
-}
-
-#========================================
-sub Connection () {'YATT::Lite::Connection'};
-
-sub make_connection {
-  (my MY $self, my ($fh, @params)) = @_;
-  require YATT::Lite::Connection;
-  $self->Connection->create(
-    $fh, @params, system => $self, root => $self->{cf_doc_root}
- );
-}
-
-sub finalize_connection {}
-
-sub connection_param {
-  croak "Use of YATT::Lite::Factory::connection_param is deprecated!\n";
-}
-sub connection_quad {
-  (my MY $self, my ($quad)) = @_;
-  my ($virtdir, $loc, $file, $subpath) = @$quad;
-  (dir => $virtdir
-   , location => $loc
-   , file => $file
-   , subpath => $subpath);
-}
-
-#========================================
-#
-# Hook for subclassing
-#
-sub run_dirhandler {
-  (my MY $self, my ($dh, $con, $file)) = @_;
-  local ($SYS, $YATT, $CON) = ($self, $dh, $con);
-  $self->before_dirhandler($dh, $con, $file);
-  $self->invoke_dirhandler($dh, $con
-			   , handle => $dh->cut_ext($file), $con, $file);
-  $self->after_dirhandler($dh, $con, $file);
-}
-
-sub before_dirhandler { &maybe::next::method; }
-sub after_dirhandler  { &maybe::next::method; }
-
-sub invoke_dirhandler {
-  (my MY $self, my ($dh, $con, $method, @args)) = @_;
-  $dh->with_system($self, $method, @args);
 }
 
 #========================================
