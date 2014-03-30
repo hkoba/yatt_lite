@@ -39,7 +39,7 @@
 	</tr>
 	<tr>
 	  <td colspan="2">
-	    <a href="regist.yatt?nx=&yatt:CON:file();">Register</a>
+	    <a href="register.yatt?nx=&yatt:CON:file();">Register</a>
 	    | <a href="resetpass.yatt">Forgot password</a>
 	  </td>
 	</tr>

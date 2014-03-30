@@ -53,7 +53,7 @@ please dispose this mail.
 
 <!yatt:widget sent>
 <yatt:envelope  guest_ok >
-  <div id="content" class="center_col regist">
+  <div id="content" class="center_col register">
   <h2>Password reset sent</h2>
   </div>
 </yatt:envelope>

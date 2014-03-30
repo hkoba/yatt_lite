@@ -22,14 +22,14 @@
     <tr>
       <td colspan="2">
         <input type="hidden" name="nx" value="&yatt:nx;"/>
-        <input type="submit" name="!regist"/>
+        <input type="submit" name="!register"/>
       </td>
     </tr>
   </table>
 </form>
 </yatt:envelope>
 
-<!yatt:action regist>
+<!yatt:action register>
 my ($this, $con) = @_;
 
 my $login = $con->param_type

@@ -1,5 +1,5 @@
 package
-  t_regist;
+  t_register;
 
 use strict;
 use warnings FATAL => qw(all);
@@ -57,9 +57,9 @@ END
 
   unlink $email_fn if -e $email_fn;
 
-  my $got = nocr($app->render('/regist.yatt', {nx => 'index.yatt'}));
+  my $got = nocr($app->render('/register.yatt', {nx => 'index.yatt'}));
 
-  eq_or_diff($got, <<'END', 'regist.yatt');
+  eq_or_diff($got, <<'END', 'register.yatt');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
@@ -94,7 +94,7 @@ END
     <tr>
       <td colspan="2">
         <input type="hidden" name="nx" value="index.yatt"/>
-        <input type="submit" name="!regist"/>
+        <input type="submit" name="!register"/>
       </td>
     </tr>
   </table>
@@ -108,14 +108,14 @@ END
 END
 
   local $ENV{EMAIL_SENDER_TRANSPORT} = 'YATT_TEST';
-  $got = nocr($app->render(['/regist.yatt', action => 'regist']
+  $got = nocr($app->render(['/register.yatt', action => 'register']
 			   , {qw(login     hkoba
 				 password  foo
 				 password2 foo
 				 email     hkoba@foo.bar
 				 nx      index.yatt)}));
 
-  eq_or_diff($got, <<'END', 'regist.yatt !regist');
+  eq_or_diff($got, <<'END', 'register.yatt !register');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
@@ -150,7 +150,7 @@ END
 Thank you for registration. To confirm your registration,
 please click following link:
 
-\Ehttp://localhost/(?:[^/]+/)*regist\.yatt\?!confirm=1[;&]token=(?<token>[0-9a-f]+)\Q
+\Ehttp://localhost/(?:[^/]+/)*register\.yatt\?!confirm=1[;&]token=(?<token>[0-9a-f]+)\Q
 
 心当たりの無い方は、このメールは破棄してください。
 
@@ -161,7 +161,7 @@ please dispose this mail.
 
     ok(1, $theme);
 
-    $got = nocr($app->render(['/regist.yatt', action => 'confirm']
+    $got = nocr($app->render(['/register.yatt', action => 'confirm']
 			     , {token => $token}));
 
     eq_or_diff($got, <<'END', "confirm token=$token");
@@ -174,7 +174,7 @@ please dispose this mail.
 <body>
 <div id="wrapper">
       <div class="login">
-      <b>hkoba</b> | <a href="logout.ydo?nx=regist.yatt">logout</a>
+      <b>hkoba</b> | <a href="logout.ydo?nx=register.yatt">logout</a>
     </div>
   <center>
 <div id="body">

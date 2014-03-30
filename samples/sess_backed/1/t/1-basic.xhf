@@ -308,7 +308,7 @@ BODY:
  
    <div class="submit">
            <input type="submit" name="~" value="Back"/>
-       <input type="submit" name="!regist" value="Proceed"/>
+       <input type="submit" name="!register" value="Proceed"/>
        
    </div>
  </div>
@@ -640,7 +640,7 @@ BODY:
  
    <div class="submit">
            <input type="submit" name="~" value="Back"/>
-       <input type="submit" name="!regist" value="Proceed"/>
+       <input type="submit" name="!register" value="Proceed"/>
        
    </div>
  </div>
@@ -667,7 +667,7 @@ TITLE: Proceed
 FILE: index.yatt
 METHOD: POST
 PARAM[
-!regist: Proceed
+!register: Proceed
 ]
 BODY[
 - <title>Thank you! \(Example of session based input restoration\)</title>

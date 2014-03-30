@@ -28,7 +28,7 @@ BEGIN {
 
 
 use utf8;
-use base qw(t_regist);
+use base qw(t_register);
 
 MY->do_test("$FindBin::Bin/..", REQUIRE => [qw(DBD::SQLite)]);
 

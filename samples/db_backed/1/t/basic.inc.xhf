@@ -45,7 +45,7 @@ BODY:
  	</tr>
  	<tr>
  	  <td colspan="2">
- 	    <a href="regist.yatt?nx=index.yatt">Register</a>
+ 	    <a href="register.yatt?nx=index.yatt">Register</a>
  	    | <a href="resetpass.yatt">Forgot password</a>
  	  </td>
  	</tr>
@@ -147,7 +147,7 @@ BODY:
  	</tr>
  	<tr>
  	  <td colspan="2">
- 	    <a href="regist.yatt?nx=index.yatt">Register</a>
+ 	    <a href="register.yatt?nx=index.yatt">Register</a>
  	    | <a href="resetpass.yatt">Forgot password</a>
  	  </td>
  	</tr>

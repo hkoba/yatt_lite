@@ -48,7 +48,7 @@
   <div class="submit">
     <yatt:if "&yatt:is_confirm;">
       <input type="submit" name="~" value="Back"/>
-      <input type="submit" name="!regist" value="Proceed"/>
+      <input type="submit" name="!register" value="Proceed"/>
       <:yatt:else/>
       <input type="submit" name="~confirm" value="Confirm"/>
     </yatt:if>
@@ -65,7 +65,7 @@
 <yatt:req_form is_confirm/>
 </yatt:envelope>
 
-<!yatt:action regist>
+<!yatt:action register>
 my ($this, $con) = @_;
 
 if (my $sess = $con->get_session) {
