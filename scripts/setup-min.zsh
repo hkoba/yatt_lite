@@ -43,6 +43,8 @@ opt_spec=(
     x=o_xtrace
     n=o_dryrun
     q=o_quiet
+    C=o_clean
+    -setup=o_try_setup
 )
 
 zparseopts -D -A opts $opt_spec
@@ -224,9 +226,24 @@ EOF
 
 dn=$destdir/../var
 if [[ -d $dn ]]; then
+    dirs=($dn/*/tmp(/N))
+    if (($#dirs && $#o_clean)); then
+	rm -rf $dirs
+    fi
     x chgrp -R $APACHE_RUN_GROUP $dn
+    if (($#dirs && $#o_clean)); then
+	mkdir -p $dirs
+    fi
     if (($is_selinux)); then
 	x chcon $o_verbose -R -t httpd_${install_type}_script_rw_t $dn
+    fi
+fi
+
+if (($#o_try_setup)); then
+    top_app=$destdir/html/.htyattrc.pl
+    if [[ -r $top_app ]]; then
+	# XXX: This can fail second time, mmm...
+	x $realbin/yatt.command -d $top_app:h --if_can setup
     fi
 fi
 
