@@ -53,7 +53,7 @@ sub do_test {
 delete from user where login = 'hkoba'
 END
 
-  my $email_fn = "$app_root/data/.htdebug.eml";
+  my $email_fn = "$app_root/var/data/.htdebug.eml";
 
   unlink $email_fn if -e $email_fn;
 

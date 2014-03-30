@@ -197,5 +197,5 @@ sub after_new {
     }
   }
 
-  $self->{cf_datadir} //= "$self->{cf_dir}/../data";
+  $self->{cf_datadir} //= "$self->{cf_dir}/../var/data";
 }

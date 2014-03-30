@@ -13,6 +13,8 @@ use YATT::Lite::Breakpoint;
 
 require YATT::Lite::Util::CmdLine;
 
+use Cwd;
+
 use Getopt::Long;
 
 GetOptions("if_can" => \ my $if_can
@@ -33,7 +35,7 @@ my $dispatcher = YATT::Lite::Factory->load_factory_offline || do {
 	);
 };
 
-local $YATT = my $dirhandler = $dispatcher->get_dirhandler($o_dir // '.');
+local $YATT = my $dirhandler = $dispatcher->get_dirhandler($o_dir // getcwd());
 
 unless (@ARGV) {
   die <<END, join("\n", map {"  $_"} FindMethods($YATT, sub {s/^cmd_//}))."\n";

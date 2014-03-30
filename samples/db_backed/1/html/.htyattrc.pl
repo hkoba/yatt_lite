@@ -283,6 +283,6 @@ sub cmd_setup {
 #========================================
 sub after_new {
   my MY $self = shift;
-  $self->{cf_datadir} //= "$self->{cf_dir}/../data";
+  $self->{cf_datadir} //= "$self->{cf_dir}/../var/data";
   $self->{cf_dbname} //= "$self->{cf_datadir}/.htdata.db";
 }
