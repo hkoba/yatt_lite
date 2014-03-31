@@ -4,7 +4,7 @@ use warnings FATAL => qw/all/;
 
 use File::Path ();
 
-use YATT::Lite::Partial fields => [qw/cf_app_root/]
+use YATT::Lite::Partial fields => [qw/cf_^app_root/]
   , requires => [qw/error rel2abs/];
 
 # Note: Do *not* use YATT::Lite. YATT::Lite *uses* this.
@@ -49,6 +49,14 @@ sub app_path {
     $self->error("Can't find app_path: %s", $path);
   }
   $path;
+}
+
+sub app_path_var {
+  shift->app_path_ensure_existing(join('/', '@var', @_));
+}
+
+sub app_path_var_tmp {
+  shift->app_path_var('tmp', @_);
 }
 
 1;

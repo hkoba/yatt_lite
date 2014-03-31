@@ -1,5 +1,5 @@
 use strict;
-use fields qw(cf_datadir cf_config);
+use fields qw(cf_datadir cf_tmpdir cf_config);
 use YATT::Lite::Entities qw(*CON);
 Entity YATT => sub {shift->YATT};
 use Carp;
@@ -102,10 +102,20 @@ Entity tsvfile => sub {
 };
 
 #########################################
+
+sub cmd_setup {
+  my MY $self = shift;
+  require File::Path;
+  foreach my $dir ($self->{cf_datadir}, $self->{cf_tmpdir}) {
+    next if -d $dir;
+    File::Path::make_path($dir, {mode => 02775, verbose => 1});
+  }
+}
+
 sub after_new {
   my MY $self = shift;
-  $self->{cf_datadir} //= $self->app_path_ensure_existing
-    ('@var/data');
+  $self->{cf_tmpdir}  //= $self->app_path_var_tmp;
+  $self->{cf_datadir} //= $self->app_path_var('data');
 }
 
 Entity sess_obj => sub {

@@ -2,7 +2,7 @@
 use strict;
 use warnings FATAL => qw(all);
 
-use fields qw(cf_datadir cf_limit);
+use fields qw(cf_tmpdir cf_datadir cf_limit);
 
 #========================================
 use Fcntl qw(:DEFAULT :flock SEEK_SET);
@@ -100,11 +100,21 @@ sub escape_nl {
 
 sub min {$_[0] < $_[1] ? $_[0] : $_[1]}
 
+sub cmd_setup {
+  my MY $self = shift;
+  require File::Path;
+  foreach my $dir ($self->{cf_datadir}, $self->{cf_tmpdir}) {
+    next if -d $dir;
+    File::Path::make_path($dir, {mode => 02775, verbose => 1});
+  }
+}
+
 sub after_new {
   my MY $self = shift;
   # $self->SUPER::after_new(); # Should call, but without this, should work.
   # XXX: rewrite with (future) abstract path api.
-  $self->{cf_datadir} //= '../var/data';
+  $self->{cf_datadir} //= $self->app_path_var('data');
+  $self->{cf_tmpdir}  //= $self->app_path_var_tmp;
   $self->{cf_limit} //= 100;
 }
 

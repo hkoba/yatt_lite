@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 
 use fields qw(dbic
-	      cf_datadir cf_dbname);
+	      cf_tmpdir cf_datadir cf_dbname);
 
 use YATT::Lite::Entities qw(*CON);
 
@@ -268,9 +268,10 @@ sub dbi_dsn {
 
 sub cmd_setup {
   my MY $self = shift;
-  unless (-d $self->{cf_datadir}) {
-    require File::Path;
-    File::Path::make_path($self->{cf_datadir}, {mode => 02775, verbose => 1});
+  require File::Path;
+  foreach my $dir ($self->{cf_datadir}, $self->{cf_tmpdir}) {
+    next if -d $dir;
+    File::Path::make_path($dir, {mode => 02775, verbose => 1});
   }
   # XXX: more verbosity.
   # XXX: Should be idempotent.
@@ -283,6 +284,7 @@ sub cmd_setup {
 #========================================
 sub after_new {
   my MY $self = shift;
-  $self->{cf_datadir} //= "$self->{cf_dir}/../var/data";
-  $self->{cf_dbname} //= "$self->{cf_datadir}/.htdata.db";
+  $self->{cf_tmpdir}  //= $self->app_path_var_tmp;
+  $self->{cf_datadir} //= $self->app_path_var('data');
+  $self->{cf_dbname}  //= "$self->{cf_datadir}/.htdata.db";
 }

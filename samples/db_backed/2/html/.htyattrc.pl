@@ -3,7 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 
 use fields qw(dbic
-	      cf_datadir
+	      cf_tmpdir cf_datadir
 	      cf_dbname cf_dbuser cf_dbpass);
 
 use YATT::Lite::Entities qw(*CON);
@@ -167,9 +167,10 @@ sub dbi_dsn {
 
 sub cmd_setup {
   my MY $self = shift;
-  unless (-d $self->{cf_datadir}) {
-    require File::Path;
-    File::Path::make_path($self->{cf_datadir}, {mode => 02775, verbose => 1});
+  require File::Path;
+  foreach my $dir ($self->{cf_datadir}, $self->{cf_tmpdir}) {
+    next if -d $dir;
+    File::Path::make_path($dir, {mode => 02775, verbose => 1});
   }
   $self->DBIC->YATT_DBSchema->cf_let
     ([verbose => $ENV{VERBOSE} // 1, auto_create => 1
@@ -181,7 +182,10 @@ sub cmd_setup {
 sub after_new {
   my MY $self = shift;
 
-  my $passfile = "$self->{cf_dir}/../.htdbpass";
+  $self->{cf_tmpdir}  //= $self->app_path_var_tmp;
+  $self->{cf_datadir} //= $self->app_path_var('data');
+
+  my $passfile = $self->app_root."/.htdbpass";
   unless (-e $passfile) {
     die "Can't find $passfile";
   }
@@ -196,6 +200,4 @@ sub after_new {
       $self->error("'%s' is empty in '%s'!", $name, $passfile);
     }
   }
-
-  $self->{cf_datadir} //= "$self->{cf_dir}/../var/data";
 }

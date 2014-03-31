@@ -6,12 +6,15 @@ use Carp;
 
 use YATT::Lite::Partial
   (requires => [qw/error
-		   app_path_ensure_existing/]
+		   app_path_ensure_existing
+		   app_path_var_tmp
+		  /]
    , fields => [qw/cf_session_driver
 		   cf_session_config
 		   cf_session_debug
 		   cf_session_path
 		   cf_csrftok_name
+		   cf_tmpdir
 		  /]
    , -Entity, -CON
   );
@@ -294,8 +297,9 @@ sub default_session_config  {}
 
 sub default_session_driver  {
   (my MY $self) = @_;
+  my $tmpdir = $self->{cf_tmpdir} //= $self->app_path_var_tmp('sess');
   ("driver:file"
-   , Directory => $self->app_path_ensure_existing('@var/tmp/sess')
+   , Directory => $tmpdir
   )
 }
 
