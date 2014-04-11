@@ -426,7 +426,7 @@ sub build {
 }
 # 今度はこっちが今一ね。
 sub build_widget { shift->Widget->new(@_) }
-sub build_page { shift->Page->new(@_) }
+sub build_page { shift->Page->new(@_, public => 1) }
 sub build_action {
   (my MY $self, my (%opts)) = @_;
   $opts{name} = "do_$opts{name}";

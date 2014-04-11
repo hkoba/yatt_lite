@@ -68,6 +68,8 @@ foreach my $fn (@ARGV) {
 
   $dirhandler->configure(error_handler => $error_handler);
 
+  # XXX: Should rewrite with $dirhandler->compile(basename($fn))
+
   my $trans = $dirhandler->open_trans;
   my $tmpl = $trans->find_file(basename($fn)) or do {
     warn "No such file: $fn\n";

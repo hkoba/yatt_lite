@@ -12,6 +12,7 @@ use Carp;
   sub MY () {__PACKAGE__}
   use YATT::Lite::Types
     ([Item => -fields => [qw(cf_name cf_public)]
+      , -constants => [[public => 0]]
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
@@ -75,6 +76,10 @@ use Carp;
   sub list_items {
     (my VFS $vfs) = @_;
     $vfs->{root}->list_items($vfs);
+  }
+  sub list_public_items {
+    (my VFS $vfs) = @_;
+    $vfs->{root}->list_public_items($vfs);
   }
 
   #========================================
@@ -157,7 +162,11 @@ use Carp;
     @super;
   }
   sub YATT::Lite::VFS::File::list_items {
-    die "NIMPL";
+    (my vfs_file $file) = @_;
+    map {
+      my Item $item = $_;
+      $item->{cf_name};
+    } @{$file->{partlist}};
   }
   sub YATT::Lite::VFS::Dir::list_items {
     (my vfs_dir $in, my VFS $vfs) = @_;
@@ -174,6 +183,22 @@ use Carp;
       $name =~ s/\.\w+$//;
       $dup2{$name}++ ? () : $name;
     } glob("$in->{cf_path}/[a-z]*.{".join(",", @exts)."}");
+  }
+  sub YATT::Lite::VFS::File::list_public_items {
+    (my vfs_file $file) = @_;
+    map {
+      my Item $item = $_;
+      $item->{cf_public} ? $item->{cf_name} : ();
+    } @{$file->{partlist}};
+  }
+  sub YATT::Lite::VFS::Dir::list_public_items {
+    (my vfs_dir $in, my VFS $vfs) = @_;
+    return unless defined $in->{cf_path};
+    map {
+      my $name = substr($_, length($in->{cf_path})+1);
+      $name =~ s/\.\w+$//;
+      $name;
+    } glob("$in->{cf_path}/[a-z]*.{".$vfs->{cf_ext_public}."}");
   }
   #----------------------------------------
   sub YATT::Lite::VFS::Dir::load {

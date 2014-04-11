@@ -445,9 +445,11 @@ foreach
       find_product
       find_renderer
       find_part_handler
+      compile
       ensure_parsed
 
       list_items
+      list_public_items
 
       add_to
     /

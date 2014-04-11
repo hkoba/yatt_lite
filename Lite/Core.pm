@@ -224,6 +224,14 @@ sub create_file {
     wantarray ? ($part, $tmpl) : $part;
   }
 
+  sub compile {
+    (my MY $self, my @items) = @_;
+    @items = $self->list_items unless @items;
+    foreach my $item (@items) {
+      $self->find_part_handler($item);
+    }
+  }
+
   sub find_part_handler {
     (my MY $self, my $nameSpec, my %opts) = @_;
     my $ignore_error = delete $opts{ignore_error};
