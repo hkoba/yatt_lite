@@ -37,8 +37,8 @@
     )
   "Auto lint filename mapping for yatt and related files.")
 
-(defvar yatt-lint-any-mode-blacklist nil
-  "Avoid yatt-lint if after-save-hook contains these syms.")
+(defvar yatt-lint-any-mode-blacklist '(perl-minlint-mode)
+  "Avoid yatt-lint if any of modes in this list are t")
 
 (defvar yatt-lint-any-perl-mode 'yatt-lint-any-handle-perl-script
   "Check every perl-mode buffer even if it is not related to yatt.
@@ -50,7 +50,7 @@ To disable, set to nil.")
     (while (and ok lst)
       (setq i (car lst))
       (setq ok (and ok (not (cond ((symbolp i)
-				   (memq i after-save-hook))
+				   (symbol-value i))
 				  ((listp i)
 				   (funcall i))
 				  (t nil)))))
