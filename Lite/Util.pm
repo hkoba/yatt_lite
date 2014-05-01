@@ -17,6 +17,7 @@ require Scalar::Util;
 		     dict_sort terse_dump catch
 		     nonempty
 		     subname
+		     pkg2pm
 		   /;
   }
   use Carp;
@@ -779,6 +780,12 @@ sub normalize_params {
   }
 
   $params;
+}
+
+sub pkg2pm {
+  my ($pack) = @_;
+  $pack =~ s{::|'}{/}g;
+  "$pack.pm";
 }
 
 #

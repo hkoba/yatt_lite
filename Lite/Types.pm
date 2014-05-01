@@ -13,6 +13,7 @@ sub Desc () {'YATT::Lite::Types::TypeDesc'}
     our %FIELDS = map {$_ => 1}
       qw/cf_name cf_ns cf_fields cf_overloads cf_alias cf_base cf_eval
 	 fullname
+	 cf_no_require
 	 cf_constants cf_export_default/
   }
   sub pkg {
@@ -21,7 +22,7 @@ sub Desc () {'YATT::Lite::Types::TypeDesc'}
   }
 }
 
-use YATT::Lite::Util qw(globref look_for_globref lexpand ckeval);
+use YATT::Lite::Util qw(globref look_for_globref lexpand ckeval pkg2pm);
 
 sub import {
   my $pack = shift;
@@ -57,11 +58,13 @@ sub buildns {
   foreach my Desc $obj (@desc) {
     push @$export_ok, $obj->{cf_name};
     $obj->{fullname} = join '::', $$root{cf_ns}, $obj->{cf_name};
+    $INC{pkg2pm($obj->{fullname})} = 1; # To make require happy.
     push @script, qq|package $obj->{fullname};|;
     push @script, q|use YATT::Lite::Inc;|;
     my $base = $obj->{cf_base} || $root->{cf_base}
       || safe_invoke($$root{cf_ns}, $obj->{cf_name})
 	|| 'YATT::Lite::Object';
+    require "".pkg2pm($base) unless $root->{cf_no_require}; # To fail early.
     push @script, sprintf q|use base qw(%s);|, $base;
     push @script, sprintf q|use fields qw(%s);|, join " ", @{$obj->{cf_fields}}
       if $obj->{cf_fields};
@@ -144,3 +147,91 @@ sub parse_desc {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+YATT::Lite::Types - define inner types at compile time.
+
+=head1 SYNOPSIS
+
+In module I<MyClass.pm>:
+
+  package MyClass;
+  use YATT::Lite::Types
+    (base => 'MyBaseClass'
+     , [Album => fields => [qw/albumid artist title/]]
+     , [CD    => fields => [qw/cdid    artist title/]]
+     , [Track => fields => [qw/trackid cd     title/]]
+   );
+  
+  # Now you have MyClass::Album, MyClass::CD and MyClass::Track.
+  # also, alias (constant sub) of them are defined.
+  
+  my Album $album = Album->new;
+  
+  # my Albumm $album;
+  #  => No such class Albumm
+  
+  my CD $cd = CD->new;
+  
+  # $cd->{artistt};
+  #  => No such class field "artistt" in variable $cd of type MyClass::CD
+  
+  my Track $track = {};
+  
+  $track->{cd} = $cd;
+  
+  # $track->{cdd} = $cd;
+  # => No such class field "cdd" in variable $track of type MyClass::Track
+  
+  1;
+
+=head1 DESCRIPTION
+
+YATT::Lite::Types is a class builder, especially suitable to defining
+many inner classes at once.
+
+Basic usage is like this:
+
+  use YATT::Lite::Types
+    (OPTION => VALUE, ...
+    , [SPEC]
+    , [SPEC]
+    ,  :
+    );
+
+where SPEC array for single type is written (TYPENAME + OPT VAL pair list) as:
+
+   [TYPENAME => OPTION => VALUE, ...]
+
+Also you can write type hierachy in nested style as:
+
+   [BASETYPE => OPT => VAL, ...
+     , [SUBTYPE1 => OPT => VAL, ...]
+     , [SUBTYPE2 => OPT => VAL, ...
+       , [SUBSUBTYPE1 => OPT => VAL, ...]
+       , [SUBSUBTYPE2 => OPT => VAL, ...]
+       ]
+   ]
+
+=head2 options
+
+=over 4
+
+=item * base
+
+Base class for newly created type.
+This name is preloaded before type definition
+(unless you specify C<< no_require => 1 >>).
+
+=item * no_require
+
+=item * alias
+
+To define alias(synonym) too, use this.
+
+=head1 SEE ALSO
+
+L<fields>
