@@ -64,10 +64,19 @@ sub buildns {
     my $base = $obj->{cf_base} || $root->{cf_base}
       || safe_invoke($$root{cf_ns}, $obj->{cf_name})
 	|| 'YATT::Lite::Object';
-    require "".pkg2pm($base) unless $root->{cf_no_require}; # To fail early.
-    push @script, sprintf q|use base qw(%s);|, $base;
-    push @script, sprintf q|use fields qw(%s);|, join " ", @{$obj->{cf_fields}}
-      if $obj->{cf_fields};
+    #
+    # I finally found base::has_fields() is broken
+    # so there is no merit for fields mania to use base.pm over parent.pm.
+    #
+    push @script, sprintf q|use parent qw(%s);|, $base;
+    push @script, sprintf q|use YATT::Lite::MFields %s;|, do {
+      if ($obj->{cf_fields}) {
+	sprintf(q|qw(%s)|, join " ", @{$obj->{cf_fields}});
+      } else {
+	# To avoid generating 'use YATT::Lite::MFields qw()';
+	'';
+      }
+    };
     push @script, sprintf q|use overload qw(%s);|
       , join " ", @{$obj->{cf_overloads}} if $obj->{cf_overloads};
     push @script, $obj->{cf_eval} if $obj->{cf_eval};
