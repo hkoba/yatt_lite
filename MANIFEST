@@ -1,5 +1,6 @@
 .htaccess
 .shipit
+.travis.yml
 Build.PL
 Changes
 cpanfile
@@ -55,6 +56,7 @@ Lite/Types.pm
 Lite/Util.pm
 Lite/Util/AsBase.pm
 Lite/Util/CmdLine.pm
+Lite/Util/CycleDetector.pm
 Lite/Util/Enum.pm
 Lite/Util/File.pm
 Lite/Util/FindMethods.pm
@@ -158,6 +160,7 @@ samples/basic/6/t/offline.t
 samples/basic/6/t/psgi_offline.t
 samples/basic/7/.symlinks
 samples/basic/7/app.psgi
+samples/basic/7/app.xhf
 samples/basic/7/html/index.yatt
 samples/basic/7/t/.htaccess
 samples/basic/7/t/.symlinks
@@ -224,6 +227,7 @@ samples/db_backed/1/t/psgi_offline.t
 samples/db_backed/1/t/t_lib.pl
 samples/db_backed/1/t/t_register.pm
 samples/db_backed/1/t/z_cleanup.t
+samples/db_backed/1/var/.htaccess
 samples/db_backed/2/.symlinks
 samples/db_backed/2/app.psgi
 samples/db_backed/2/html/.htyattrc.pl
@@ -243,7 +247,9 @@ samples/db_backed/2/t/http_localhost.t
 samples/db_backed/2/t/psgi_offline.t
 samples/db_backed/2/t/t_register.pm
 samples/db_backed/2/t/z_cleanup.t
+samples/db_backed/2/var/.htaccess
 samples/minimum.psgi
+samples/mysql-use-htdbpass.zsh
 samples/README
 samples/runfcgi
 samples/runyatt.cgi
@@ -266,6 +272,7 @@ samples/sess_backed/1/t/fcgi_offline.t
 samples/sess_backed/1/t/http_localhost.t
 samples/sess_backed/1/t/offline.t
 samples/sess_backed/1/t/psgi_offline.t
+samples/sess_backed/1/var/.htaccess
 samples/setup-all.zsh
 samples/toy/toyedit1/.symlinks
 samples/toy/toyedit1/app.psgi
@@ -284,6 +291,7 @@ samples/toy/toyedit1/t/fcgi_offline.t
 samples/toy/toyedit1/t/http_localhost.t
 samples/toy/toyedit1/t/offline.t
 samples/toy/toyedit1/t/psgi_offline.t
+samples/toy/toyedit1/var/.htaccess
 samples/ylpodview/approot/app.psgi
 samples/ylpodview/approot/html/.htyattconfig.xhf
 samples/ylpodview/approot/html/.htyattmsg.ja.po
@@ -495,6 +503,9 @@ scripts/mkdist.zsh
 scripts/mkhtaccess.zsh
 scripts/setup-min.zsh
 scripts/setup.zsh
+scripts/skels/min/approot/app.psgi
+scripts/skels/min/approot/html/index.yatt
+scripts/skels/min/install.sh
 scripts/symlinks.pl
 scripts/yatt
 scripts/yatt.backend

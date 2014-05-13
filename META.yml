@@ -1,41 +1,41 @@
 ---
-abstract: "Template with \"use strict\""
+abstract: 'Template with "use strict"'
 author:
-  - "\"KOBAYASI, Hiroaki\" <hkoba@cpan.org>"
+  - '"KOBAYASI, Hiroaki" <hkoba@cpan.org>'
 build_requires: {}
 configure_requires:
-  Module::Build: 0
-  Module::CPANfile: 0
+  Module::Build: '0'
+  Module::CPANfile: '0'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.130880'
+generated_by: 'Module::Build version 0.4005, CPAN::Meta::Converter version 2.141170'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
+  version: '1.4'
 name: YATT-Lite
 recommends:
-  CGI::Session: 0
-  DBD::SQLite: 0
-  DBD::mysql: 0
-  DBIx::Class: 0
-  Devel::StackTrace::WithLexicals: 0.08
-  Email::Sender: 0
-  Email::Simple: 0
-  FCGI::Client: 0
-  HTTP::Headers: 0
-  Locale::PO: 0
-  Pod::Simple::SimpleTree: 0
-  YAML::Tiny: 0
+  CGI::Session: '0'
+  DBD::SQLite: '0'
+  DBD::mysql: '0'
+  DBIx::Class: '0'
+  Devel::StackTrace::WithLexicals: '0.08'
+  Email::Sender: '0'
+  Email::Simple: '0'
+  FCGI::Client: '0'
+  HTTP::Headers: '0'
+  Locale::PO: '0'
+  Pod::Simple::SimpleTree: '0'
+  YAML::Tiny: '0'
 requires:
-  Devel::StackTrace: 0
-  List::MoreUtils: 0
-  List::Util: 0
-  Plack: 0
-  Tie::IxHash: 0
-  URI::Escape: 0
-  parent: 0
+  Devel::StackTrace: '0'
+  List::MoreUtils: '0'
+  List::Util: '0'
+  Plack: '0'
+  Tie::IxHash: '0'
+  URI::Escape: '0'
+  parent: '0'
   perl: '>= v5.10.1, != 5.17'
-  version: 0.77
+  version: '0.77'
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.0_8
+version: v0.0.8

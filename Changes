@@ -1,5 +1,18 @@
 Revision history for YATT::Lite
 
+0.0.8 2014-05-13
+
+ Major changes:
+
+ * GH#20 - New type "bool" is introduced for yatt:widget arguments.
+ * GH#23 - Detect cyclic inheritance error.
+
+ Also minor fixes:
+
+ * GH#7  - Wrong line number is reported for element-attribute errors.
+ * GH#22 - CGI related tests didn't work.
+ * GH#27 - RT#95388 t/lite_xhf.t fails with non-UTF-8 locale.
+
 0.0_8 2013-08-25
 
  * Mainly for README.md polishment
@@ -7,8 +20,8 @@ Revision history for YATT::Lite
 
 0.0.7 2013-06-20
 
- * #19 PHP/RoR like hash-and-array parameters.
- * #2 support for .htyattconfig.yml
+ * GH#19 PHP/RoR like hash-and-array parameters.
+ * GH#2 support for .htyattconfig.yml
  * SiteApp psgi_fallback, for 404 not found handler.
  * better backtrace in ytmpl/error.ytmpl
  * escape($array_or_hash) behavior change. This is still experimental.

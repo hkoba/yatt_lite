@@ -4,7 +4,7 @@
       "\"KOBAYASI, Hiroaki\" <hkoba@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.3901, CPAN::Meta::Converter version 2.130880",
+   "generated_by" : "Module::Build version 0.4005, CPAN::Meta::Converter version 2.141170",
    "license" : [
       "perl_5"
    ],
@@ -48,11 +48,11 @@
          }
       }
    },
-   "release_status" : "testing",
+   "release_status" : "stable",
    "resources" : {
       "license" : [
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.0_8"
+   "version" : "v0.0.8"
 }

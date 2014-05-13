@@ -82,3 +82,5 @@
 .perl-version
 
 samples/benchmarks/template/[^/]+\.out$
+
+samples/.*?/data/\.ht_[^/]+$
