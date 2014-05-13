@@ -35,7 +35,9 @@ use YATT::Lite::Breakpoint;
 
 use YATT::Lite::Test::XHFTest qw(Item);
 use parent qw(YATT::Lite::Test::XHFTest File::Spec);
-use YATT::Lite::MFields qw(cf_VFS_CONFIG cf_YATT_CONFIG cf_YATT_RC);
+use YATT::Lite::MFields qw(cf_VFS_CONFIG cf_YATT_CONFIG cf_YATT_RC
+			   cf_ONLY_UTF8
+			);
 
 my @files = MY->list_files(@ARGV ? @ARGV
 			   : <$FindBin::Bin/xhf/*/*.xhf>);
@@ -56,6 +58,10 @@ plan tests => $ntests;
 
 my $i = 1;
 foreach my MY $sect (@section) {
+  my $skip_no_utf8 =
+    $sect->{cf_ONLY_UTF8} && $ENV{LANG}
+      && $ENV{LANG} !~ /\.UTF-?8$/i;
+
   my $fn = path_tail($sect->{cf_filename}, 2);
   # XXX: as_vfs_spec => data => {}, rc => '...';
   my $spec = [data => $sect->as_vfs_data];
@@ -80,12 +86,14 @@ foreach my MY $sect (@section) {
 			    // $test->{cf_ERROR} // "(undef)");
     $title .= " ($test->{num})" if $test->{num};
   SKIP: {
-      if (($test->{cf_SKIP} or $test->{cf_PERL_MINVER})
+      if (($test->{cf_SKIP} or $test->{cf_PERL_MINVER} or $skip_no_utf8)
 	  and my $skip = $test->ntests) {
 	if ($test->{cf_PERL_MINVER} and $] < $test->{cf_PERL_MINVER}) {
 	  skip "by perl-$] < PERL_MINVER($test->{cf_PERL_MINVER}) $title", $skip
 	} elsif ($test->{cf_SKIP}) {
 	  skip "by SKIP: $title", $skip;
+	} elsif ($skip_no_utf8) {
+	  skip "by LANG=$ENV{LANG}, which is not UTF8", $skip;
 	}
       }
       if ($test->{cf_REQUIRE}
