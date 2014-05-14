@@ -564,6 +564,7 @@ t/scripts/render.ytmpl/3/index.yatt
 t/subroutes.t
 t/t_lib.pl
 t/t_preload.pm
+t/types.t
 t/use.t
 t/util_nestedq.t
 t/util_other.t

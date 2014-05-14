@@ -1,5 +1,11 @@
 Revision history for YATT::Lite
 
+0.0_9 2014-05-14
+
+ * Mainly fix for perl 5.20 RC
+ * Also, YATT::Lite::Types pod and tests.
+ *  YATT::Lite::Types now correctly handles fields inheritance.
+
 0.0.8 2014-05-13
 
  Major changes:
