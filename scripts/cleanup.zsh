@@ -40,21 +40,32 @@ files=(
     html/.htaccess(N)
 )
 
+vars=(
+    var/tmp(N)
+)
+
 myapp=(
     html/cgi-bin/runyatt.lib/*.pm(.N)
 )
 
+all=($files $vars)
+if ! (($#myapp)); then
+    all+=(html/cgi-bin)
+fi
+
 (($#o_yn)) || {
     print Deleting following files:
-    print -c "  $PWD"/$^files
-    if ! (($#myapp)); then
-	print -c "  $PWD"/html/cgi-bin
-    fi
+    print -c "  $PWD"/$^all
 }
 
 confirm "Are you sure to $bg[red]delete$bg[default] these?"
 
 rm -f $o_verbose $files
+
+if (($#vars)); then
+    rm -rf $o_verbose $vars
+    mkdir -p $vars
+fi
 
 if ! (($#myapp)); then
     rm -rf $o_verbose html/cgi-bin

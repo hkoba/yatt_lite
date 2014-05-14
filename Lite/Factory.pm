@@ -123,7 +123,11 @@ sub load_factory_for_psgi {
     croak "psgi is not readable: $psgi";
   }
   (my $app_rootname = $pack->rel2abs($psgi)) =~ s/\.psgi$//;
-  my $app_root = dirname($app_rootname);
+
+  #
+  # Assume app_root is safe.
+  #
+  my $app_root = untaint_any(dirname($app_rootname));
   unless (-d $app_root) {
     croak "Can't find app_root for $psgi";
   }

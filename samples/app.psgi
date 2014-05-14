@@ -21,6 +21,7 @@ use List::MoreUtils qw/last_index/;
       # older uwsgi do not set __FILE__ correctly, so use cwd instead.
       $app_root = Cwd::cwd();
     }
+    $app_root = do { $app_root =~ m{^(.*)$} && $& }; # Untaint.
     if (-d (my $dn = "$app_root/lib")) {
       push @libdir, $dn
     } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {

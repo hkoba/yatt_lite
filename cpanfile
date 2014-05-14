@@ -2,9 +2,10 @@
 
 conflicts 'YATT';
 
-requires 'perl' => '>= 5.10.1, != 5.17';
+requires 'perl' => '>= 5.10.1, != 5.17, != 5.19.3';
 # >= 5.10.1, for named capture and //
 # != 5.17, to avoid death by 'given is experimental'
+# != 5.19.3 ~ 5.19.11, to avoid sub () {$value} changes
 
 requires 'List::Util' => 0;
 requires 'List::MoreUtils' => 0;
@@ -15,6 +16,10 @@ requires 'parent' => 0;
 requires 'URI::Escape' => 0;
 requires 'Tie::IxHash' => 0; # For nested_query
 requires 'Devel::StackTrace' => 0;
+
+# For perl 5.20. Actually, CGI is not required (I hope).
+requires CGI => 0;
+requires 'HTML::Entities' => 0;
 
 recommends 'YAML::Tiny' => 0;
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;

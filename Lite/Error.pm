@@ -7,7 +7,9 @@ use YATT::Lite::MFields qw/cf_file cf_line cf_tmpl_file cf_tmpl_line
 	      cf_backtrace
 	      cf_reason cf_format cf_args/;
 use overload qw("" message);
-use YATT::Lite::Util qw(lexpand);
+use YATT::Lite::Util qw(lexpand untaint_any);
+use Carp;
+require Scalar::Util;
 
 sub message {
   my Error $error = shift;
@@ -19,6 +21,16 @@ sub reason {
   if ($error->{cf_reason}) {
     $error->{cf_reason};
   } elsif ($error->{cf_format}) {
+    if (Scalar::Util::tainted($error->{cf_format})) {
+      croak "Format is tainted in error reason("
+	.join(" ", map {
+	  if (defined $_) {
+	    untaint_any($_)
+	  } else {
+	    '(undef)'
+	  }
+	} $error->{cf_format}, lexpand($error->{cf_args})).")";
+    }
     sprintf $error->{cf_format}, map {
       defined $_ ? $_ : '(undef)'
     } lexpand($error->{cf_args});
