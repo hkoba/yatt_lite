@@ -193,18 +193,19 @@ Currently only RHEL is supported."
 (defun yatt-lint-any-after ()
   "lint after file save."
   (interactive)
-  (let* ((buf (current-buffer))
-	 (spec (yatt-lint-any-lookup
-		(file-name-nondirectory (buffer-file-name buf))))
-	 handler filter)
-    (cond (spec
-	   (when (setq handler (plist-get spec 'handler))
-	     (when (or (not (setq filter (plist-get spec 'major-mode)))
-		       (member major-mode filter))
-	       (yatt-lint-any-run handler buf))))
-	  ((and yatt-lint-any-perl-mode
-		(member major-mode '(perl-mode cperl-mode)))
-	   (yatt-lint-any-run yatt-lint-any-perl-mode buf)))))
+  (when yatt-lint-any-mode
+    (let* ((buf (current-buffer))
+	   (spec (yatt-lint-any-lookup
+		  (file-name-nondirectory (buffer-file-name buf))))
+	   handler filter)
+      (cond (spec
+	     (when (setq handler (plist-get spec 'handler))
+	       (when (or (not (setq filter (plist-get spec 'major-mode)))
+			 (member major-mode filter))
+		 (yatt-lint-any-run handler buf))))
+	    ((and yatt-lint-any-perl-mode
+		  (member major-mode '(perl-mode cperl-mode)))
+	     (yatt-lint-any-run yatt-lint-any-perl-mode buf))))))
 
 (defun yatt-lint-any-lookup (bufname &optional registry)
   (setq registry (or registry yatt-lint-any-registry))
