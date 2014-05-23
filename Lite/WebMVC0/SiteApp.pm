@@ -33,6 +33,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			lookup_path nonempty try_invoke
 			mk_http_status
 			default ckrequire
+			escape
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
@@ -155,7 +156,7 @@ sub call {
   if (defined $self->{cf_app_root} and -e "$self->{cf_app_root}/.htdebug_env") {
     return [200
 	    , [$self->secure_text_plain]
-	    , [map {escape("$_\t$env->{$_}\n")} sort keys %$env]];
+	    , [map {escape("$_\t".($env->{$_}//"(undef)")."\n")} sort keys %$env]];
   }
 
   if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})
