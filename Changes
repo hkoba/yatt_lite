@@ -1,5 +1,10 @@
 Revision history for YATT::Lite
 
+0.0.9 2014-05-26
+
+ * To revert $app_root/.htdebug_env feature.
+ * Not to invoke yatt-lint-any-mode unless yatt-lint-any-mode
+
 0.0_9 2014-05-14
 
  * Mainly fix for perl 5.20 RC
