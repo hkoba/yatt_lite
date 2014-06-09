@@ -12,7 +12,7 @@ BEGIN {
   my $enc = encoding::find_encoding($locale);
   ${^ENCODING} = $enc; # XXX: Why do I need to do this??
   my $encName = $enc->name;
-  foreach my $fh (\*STDERR, \*STDOUT, \*STDIN) {
+  foreach my $fh (\*STDERR) {
     binmode $fh, ":raw :encoding($encName)";
   }
 }
