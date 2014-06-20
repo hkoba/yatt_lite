@@ -142,7 +142,13 @@ sub entity_url_encode {
 
 sub entity_alternative {
   my ($this, $value, $list) = @_;
-  my @alt = grep {$value ne $_} @$list;
+  my @alt = do {
+    if (defined $value) {
+      grep {$value ne $_} @$list;
+    } else {
+      grep {defined $_} @$list;
+    }
+  };
   $alt[0]
 }
 
