@@ -6,10 +6,23 @@ use parent qw(YATT::Lite::Object);
 use YATT::Lite::MFields qw/cf_file cf_line cf_tmpl_file cf_tmpl_line
 	      cf_backtrace
 	      cf_reason cf_format cf_args/;
-use overload qw("" message);
+use overload qw("" message
+		eq streq
+		bool has_error
+	      );
 use YATT::Lite::Util qw(lexpand untaint_any);
 use Carp;
 require Scalar::Util;
+
+sub has_error {
+  defined $_[0];
+}
+
+sub streq {
+  my ($obj, $other, $inv) = @_;
+  ($obj, $other) = ($other, $obj) if $inv;
+  $obj->message eq $other;
+}
 
 sub message {
   my Error $error = shift;

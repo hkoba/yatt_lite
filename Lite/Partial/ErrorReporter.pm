@@ -25,7 +25,7 @@ sub error {
 
 sub make_error {
   my ($self, $depth, $opts) = splice @_, 0, 3;
-  my $fmt = $_[0];
+  my ($fmt, @args) = @_;
   my ($pkg, $file, $line) = caller($depth);
   my $bt = do {
     my @bt_opts = (ignore_package => [__PACKAGE__]);
@@ -58,7 +58,9 @@ sub make_error {
   $self->Error->new
     (file => $opts->{file} // $file, line => $opts->{line} // $line
      , @tmplinfo
-     , format => $fmt, args => [@_[1..$#_]]
+     , (@args
+	? (format => $fmt, args => \@args)
+	: (reason => $fmt))
      , backtrace => $bt
      , $opts ? %$opts : ());
 }

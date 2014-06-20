@@ -246,7 +246,7 @@ sub call {
     return $error;
   } else {
     # system_error. Should be treated by PSGI Server.
-    die $error
+    die $error;
   }
 }
 
