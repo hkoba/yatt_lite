@@ -37,14 +37,15 @@
     )
   "Auto lint filename mapping for yatt and related files.")
 
-(defvar yatt-lint-any-mode-blacklist '(perl-minlint-mode)
+(defvar yatt-lint-any-mode-blacklist '(perl-minlint-mode
+				       flymake-mode flycheck-mode)
   "Avoid yatt-lint if any of modes in this list are t")
 
 (defvar yatt-lint-any-perl-mode 'yatt-lint-any-handle-perl-script
   "Check every perl-mode buffer even if it is not related to yatt.
 To disable, set to nil.")
 
-(defun yatt-lint-any-mode-unless-blacklisted ()
+(defun yatt-lint-any-mode-blacklistp ()
   (let ((ok t) (lst yatt-lint-any-mode-blacklist)
 	i)
     (while (and ok lst)
@@ -54,11 +55,13 @@ To disable, set to nil.")
 				  ((listp i)
 				   (funcall i))
 				  (t nil)))))
-      (setq lst (cdr lst)))
-    (cond (ok
-	   (yatt-lint-any-mode t))
-	  (yatt-lint-any-mode
-	   (yatt-lint-any-mode nil)))))
+      (setq lst (cdr lst)))))
+
+(defun yatt-lint-any-mode-unless-blacklisted ()
+  (cond ((yatt-lint-any-mode-blacklistp)
+	 (yatt-lint-any-mode t))
+	(yatt-lint-any-mode
+	 (yatt-lint-any-mode nil))))
 
 (defvar yatt-lint-any-mode-map (make-sparse-keymap))
 (define-key yatt-lint-any-mode-map [f5] 'yatt-lint-any-after)
@@ -70,8 +73,9 @@ To disable, set to nil.")
   :global nil
   (let ((hook 'after-save-hook) (fn 'yatt-lint-any-after)
 	(buf (current-buffer)))
-    (cond ((and (boundp 'mmm-temp-buffer-name)
-		(equal (buffer-name) mmm-temp-buffer-name))
+    (cond ((or (yatt-lint-any-mode-blacklistp)
+	       (and (boundp 'mmm-temp-buffer-name)
+		    (equal (buffer-name) mmm-temp-buffer-name)))
 	   (message "skipping yatt-lint-any-mode for %s" buf)
 	   nil)
 	  (yatt-lint-any-mode
