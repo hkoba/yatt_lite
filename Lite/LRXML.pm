@@ -27,6 +27,8 @@ use fields qw/re_decl
 	      cf_special_entities
 	      subroutes
 	      rootroute
+
+	      _original_entpath
 	    /;
 
 use YATT::Lite::Core qw(Part Widget Page Action Data Template);
@@ -701,6 +703,13 @@ sub first { ref $_[0] ? $_[0][0] : $_[0] }
 sub nonmatched {
   return unless defined $_[0] and length $_[0];
   $_[0];
+}
+
+sub shortened_original_entpath {
+  (my MY $self) = @_;
+  my $str = $self->{_original_entpath};
+  $str =~ s/\n.*\z//s;
+  $str;
 }
 
 #========================================

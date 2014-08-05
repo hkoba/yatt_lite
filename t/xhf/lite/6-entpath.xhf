@@ -140,7 +140,7 @@ PARAM[
 ]
 ]
 ]
-ERROR: Syntax error in entity: '\]\[0\];'
+ERROR: Syntax error in entity: ':x\[0\]\[0\]\]\[0\];'
 
 
 TITLE: array literal
