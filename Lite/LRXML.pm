@@ -104,11 +104,36 @@ sub after_new {
   $self;
 }
 #========================================
+
+# Debugging aid.
+# YATT::Lite::LRXML->load_from(string => '...template...')
+#
+sub load_from {
+  my ($pack, $loadSpec, $tmplSpec, @moreLoadArgs) = @_;
+
+  my ($loadType, @loadArgs) = ref $loadSpec ? @$loadSpec : $loadSpec;
+  unless (defined $loadType) {
+    croak "Undefined source type";
+  }
+  my $sub = $pack->can("load_${loadType}_into")
+    or croak "Unknown source type: $loadType";
+
+  my ($tmplFrom, @tmplArgs) = ref $tmplSpec ? @$tmplSpec : $tmplSpec;
+  my Template $tmpl = $pack->Template->new(@tmplArgs);
+
+  # デフォルトでは body もパースする.
+  # XXX: オプション名 all だと分かりにくい。公式にする前に、改名すべき。
+  $sub->($pack, $tmpl, $tmplFrom, all => 1, @loadArgs, @moreLoadArgs);
+}
+
 sub load_file_into {
   my ($pack, $tmpl, $fn) = splice @_, 0, 3;
   croak "Template argument is missing!
 YATT::Lite::Parser->from_file(filename, templateObject)"
     unless defined $tmpl and UNIVERSAL::isa($tmpl, $pack->Template);
+  unless (defined $fn) {
+    croak "filename is undef!";
+  }
   my MY $self = ref $pack ? $pack->configure(@_) : $pack->new(@_);
   open my $fh, '<', $fn or die "Can't open $fn: $!";
   binmode $fh, ":encoding($$self{cf_encoding})" if $$self{cf_encoding};
@@ -120,14 +145,19 @@ YATT::Lite::Parser->from_file(filename, templateObject)"
   };
   $self->load_string_into($tmpl, $string);
 }
+
 sub load_string_into {
   (my $pack, my Template $tmpl) = splice @_, 0, 2;
   my MY $self = ref $pack ? $pack->configure(@_[1 .. $#_])
     : $pack->new(@_[1 .. $#_]);
+  unless (defined $_[0]) {
+    croak "template string is undef!";
+  }
   $self->parse_decl($tmpl, $_[0]);
   $self->parse_body($tmpl) if $self->{cf_all};
   wantarray ? ($tmpl, $self) : $tmpl;
 }
+
 sub parse_body {
   (my MY $self, my Template $tmpl) = @_;
   return if $tmpl->{parse_ok};
@@ -135,16 +165,19 @@ sub parse_body {
   $self->parse_widget($_) for $tmpl->list_parts($self->Widget);
   $tmpl->{parse_ok} = 1;
 }
+
 sub posinfo {
   (my MY $self) = shift;
   ($self->{startpos}, $self->{curpos});
 }
+
 sub add_posinfo {
   (my MY $self, my ($len, $sync)) = @_;
   $self->{curpos} += $len;
   $self->{startpos} = $self->{curpos} if $sync;
   $len;
 }
+
 sub update_posinfo {
   my MY $self = shift;
   my ($sync) = splice @_, 1;
@@ -435,6 +468,7 @@ sub build_action {
   $self->Action->new(%opts);
 }
 sub build_data { shift->Data->new(@_) }
+
 #========================================
 # declare
 sub declare_base {
@@ -447,6 +481,7 @@ sub declare_base {
   push @{$tmpl->{cf_base}}, [@$att[NODE_PATH, NODE_BODY]]; # XXX: 定形？
   undef;
 }
+
 sub declare_args {
   (my MY $self, my Template $tmpl, my $ns) = splice @_, 0, 3;
   my Part $newpart = do {
@@ -537,8 +572,9 @@ sub namespace {
   return unless defined $self->{cf_namespace};
   ref $self->{cf_namespace} && wantarray
     ? @{$self->{cf_namespace}}
-      : $self->{cf_namespace}
-    }
+      : $self->{cf_namespace};
+}
+
 #========================================
 sub add_part {
   (my MY $self, my Template $tmpl, my Part $part) = @_;
@@ -554,12 +590,14 @@ sub add_part {
   $part->{cf_bodyln} = $self->{endln};
   push @{$tmpl->{partlist}}, $tmpl->{Item}{$part->{cf_name}} = $part;
 }
+
 sub add_text {
   (my MY $self, my Part $part, my $text) = @_;
   push @{$part->{toks}}, $text;
   $self->add_posinfo(length($text), 1);
   $self->{startln} = $self->{endln} += numLines($text);
 }
+
 sub add_lineinfo {
   (my MY $self, my $sink) = @_;
   # push @$sink, [TYPE_LINEINFO, $self->{endln}];
@@ -668,6 +706,7 @@ sub synerror_at {
   my %opts = ($self->_tmpl_file_line($ln), depth => 2);
   $self->_error(\%opts, @_);
 }
+
 sub _error {
   (my MY $self, my ($opts, $fmt)) = splice @_, 0, 3;
   if (my $vfs = $self->{cf_vfs}) {
@@ -676,17 +715,20 @@ sub _error {
     sprintf($fmt, @_);
   }
 }
+
 sub _tmpl_file_line {
   (my MY $self, my $ln) = @_;
   ($$self{cf_path} ? (tmpl_file => $$self{cf_path}) : ()
    , defined $ln ? (tmpl_line => $ln) : ());
 }
+
 #========================================
 sub is_ident {
   return undef unless defined $_[0];
   local %+;
   $_[0] =~ m{^[[:alpha:]_\:](?:\w+|:)*$}; # To exclude leading digit.
 }
+
 sub oneof {
   my $hash = shift;
   my $i = 0;
@@ -699,7 +741,9 @@ sub oneof {
   }
   die "really??";
 }
+
 sub first { ref $_[0] ? $_[0][0] : $_[0] }
+
 sub nonmatched {
   return unless defined $_[0] and length $_[0];
   $_[0];

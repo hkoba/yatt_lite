@@ -34,13 +34,14 @@ sub _parse_body {
       $self->accept_entity($sink, $parent, $par_ln, \$has_nonspace);
 
     } elsif (my $path = $+{elem}) {
+      my $formal_path = ($+{opt} // '') . $+{elem};
       if ($+{clo}) {
 	$parent->[NODE_BODY_END] = $self->{startpos};
 	if (defined $parent->[NODE_BODY_BEGIN]
 	    and $self->{template}->node_body_source($parent) =~ /(\r?\n)\Z/) {
 	  $parent->[NODE_BODY_END] -= length $1;
 	}
-	$self->verify_tag($path, $close);
+	$self->verify_tag($formal_path, $close);
 	if (@$sink and not ref $sink->[-1] and $sink->[-1] =~ s/(\r?\n)\Z//) {
 	  push @$sink, "\n";
 	}
@@ -113,7 +114,7 @@ sub _parse_body {
 	# expects </yatt:call> or </:yatt:opt>
 	# $self->{startln} = $self->{endln}; # No!
 	$self->_parse_body($widget, $body
-			   , $+{empty_elem} ? $close : $path
+			   , $+{empty_elem} ? $close : $formal_path
 			   , $elem, $bodyStartRef);
 	$$bodyStartRef //= $bodystartln;
       } elsif ($is_opt) {
