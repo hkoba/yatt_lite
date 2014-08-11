@@ -128,6 +128,8 @@ if [[ $OSTYPE == darwin* ]]; then
     o_chmod_c=()
 
     apache=/etc/apache2/httpd.conf
+    [[ -r $apache ]] || die "Can't find $apache!"
+
     document_root=$(find_pat '^DocumentRoot\s+"([^"]*)"' $apache) ||
     document_root=/Library/WebServer/Documents
 
@@ -136,6 +138,7 @@ if [[ $OSTYPE == darwin* ]]; then
 
 elif [[ -r /etc/redhat-release ]]; then
     apache=/etc/httpd/conf/httpd.conf
+    [[ -r $apache ]] || die "Can't find $apache!"
     document_root=$(find_pat '^DocumentRoot\s+"([^"]*)"' $apache)
     APACHE_RUN_GROUP=$(find_pat '^Group\s+(\S+)' $apache)
 elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
@@ -143,6 +146,7 @@ elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
 	(*Ubuntu*)
 
 	apache=/etc/apache2/sites-available/default
+	[[ -r $apache ]] || die "Can't find $apache!"
 	document_root=$(find_pat '^\s*DocumentRoot\s+"?([^"]*)"?' $apache)
 
 	# for APACHE_RUN_GROUP
