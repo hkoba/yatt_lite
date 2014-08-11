@@ -18,13 +18,19 @@ function x {
 YATT_SKEL=min
 
 function setup {
-    local yatt_url=$1 yatt_skel=$2
+    local yatt_url=$1 yatt_skel=$2 yatt_localrepo=$3
 
     [[ -r .git ]] || x git init
 
     [[ -d lib ]]  || x mkdir -p lib
 
-    perl_has YATT::Lite || x git submodule add $yatt_url lib/YATT
+    if perl_has YATT::Lite; then
+	true; # nop
+    elif (($use_symlink)); then
+	x ln -vs $yatt_localrepo lib/YATT
+    else 
+	x git submodule add $yatt_url lib/YATT
+    fi
 
     x cp -va $yatt_skel/approot/* .
 }
@@ -35,6 +41,8 @@ function perl_has {
 	perl -M$m -e0 >& /dev/null || return 1
     done
 }
+
+use_symlink=0
 
 if [[ $0 == "bash" ]]; then
     # assume remote installation.
@@ -55,7 +63,10 @@ elif [[ -r $0 && -x $0 ]]; then
 
     echo Using local git $YATT_GIT_URL
 
-    setup "$YATT_GIT_URL" "$skel"
+    if [[ $1 = -s || $1 = -l ]]; then
+	use_symlink=1
+    fi
+    setup "$YATT_GIT_URL" "$skel" "${repo:a}"
 
 else
     die Really\?\?
