@@ -437,11 +437,15 @@ sub named_attr {
 }
 
 {
-  our %input_types = qw!select 0 radio 1 checkbox 2!;
+  our %input_spec = (select => [0, 0]
+		     , radio => [1, 0]
+		     , checkbox => [2, 1]);
   sub att_value_in {
     my ($in, $type, $name, $formal_value, $as_value) = @_;
-    defined (my $typeid = $input_types{$type})
+    defined (my $spec = $input_spec{$type})
       or croak "Unknown type: $type";
+
+    my ($typeid, $has_sfx) = @$spec;
 
     unless (defined $name and $name ne '') {
       croak "name is empty";
@@ -458,11 +462,11 @@ sub named_attr {
     }
 
     if ($typeid) {
-      my $sfx = $typeid ? '['.escape($formal_value).']' : '';
+      my $sfx = $has_sfx ? '['.escape($formal_value).']' : '';
       push @res, qq|name="@{[escape($name)]}$sfx"|;
     }
 
-    if (not $typeid) {
+    if (not $has_sfx) {
       # select
       push @res, qq|value="@{[escape($formal_value)]}"|;
     } elsif ($as_value) {
