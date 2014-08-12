@@ -211,6 +211,24 @@ sub entity_redirect {
   $CON->redirect(@_);
 }
 
+# &yatt:code_of_entity(redirect);
+#
+sub entity_code_of_entity {
+  shift->entity_code_of(entity => @_);
+}
+
+sub entity_code_of {
+  my ($this, $prefix, $name) = @_;
+  $this->can(join("_", $prefix, $name));
+}
+
+sub entity_inspector {
+  require Sub::Inspector;
+  my ($this, $code) = @_;
+  croak "Not a code ref" unless ref $code;
+  Sub::Inspector->new($code);
+}
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 

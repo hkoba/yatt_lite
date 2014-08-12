@@ -688,7 +688,7 @@ sub shallow_copy {
   }
 }
 
-if (catch {require Sub::Name}) {
+if (not is_debugging() or catch {require Sub::Name}) {
   *subname = sub { my ($name, $sub) = @_; $sub }
 } else {
   *subname = *Sub::Name::subname;
