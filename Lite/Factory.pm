@@ -528,6 +528,12 @@ sub buildns {
     *$my = sub () { $newns };
   }
 
+  # もし $newns の EntNS が Factory(SiteApp, app.psgi) の EntNS を継承していない
+  # なら、継承する
+  unless ($newns->EntNS->isa($self->EntNS)) {
+    push *{globref($newns->EntNS, 'ISA')}{ARRAY}, $self->EntNS;
+  }
+
   $newns;
 }
 
