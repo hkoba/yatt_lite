@@ -1,6 +1,12 @@
 package YATT::Lite::WebMVC0::DirApp; sub MY () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
+
+{
+  package YATT::Lite::WebMVC0::DirApp::EntNS;
+  use parent qw/YATT::Lite::WebMVC0::Entities/;
+}
+sub EntNS () {'YATT::Lite::WebMVC0::DirApp::EntNS'}
 use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
 use YATT::Lite::MFields qw/cf_header_charset

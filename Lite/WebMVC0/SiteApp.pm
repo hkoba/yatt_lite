@@ -36,7 +36,14 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			escape
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
+
+{
+  package YATT::Lite::WebMVC0::SiteApp::EntNS;
+  use parent qw/YATT::Lite::WebMVC0::Entities/;
+}
+sub EntNS () {'YATT::Lite::WebMVC0::SiteApp::EntNS'}
 use YATT::Lite qw/Entity *SYS *CON/;
+
 use YATT::Lite::WebMVC0::DirApp ();
 sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}
@@ -518,26 +525,6 @@ Entity site_config => sub {
   my MY $self = $SYS;
   return $self->{cf_site_config} unless defined $name;
   $self->{cf_site_config}{$name} // $default;
-};
-
-Entity is_debug_allowed_ip => sub {
-  my ($this, $remote_addr) = @_;
-  my MY $self = $SYS;
-
-  $remote_addr //= do {
-    my Env $env = $CON->env;
-    $env->{HTTP_X_REAL_IP}
-      // $env->{HTTP_X_CLIENT_IP}
-	// $env->{HTTP_X_FORWARDED_FOR}
-	  // $env->{REMOTE_ADDR};
-  };
-
-  unless (defined $remote_addr and $remote_addr ne '') {
-    return 0;
-  }
-
-  grep {$remote_addr ~~ $_} lexpand($self->{cf_debug_allowed_ip}
-				    // ['127.0.0.1']);
 };
 
 #========================================
