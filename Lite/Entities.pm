@@ -17,11 +17,13 @@ sub default_export { qw(*YATT) }
 our $YATT;
 sub symbol_YATT { return *YATT }
 sub YATT { $YATT }
+sub DIR { $YATT }
 
 # Factory/Dispatcher/Logger/... を template に見せる
 our $SYS;
 sub symbol_SYS { return *SYS }
 sub SYS { $SYS }
+sub SITE { $SYS }
 
 # Connection
 our $CON;
