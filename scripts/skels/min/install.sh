@@ -15,7 +15,7 @@ function x {
     "$@"
 }
 
-YATT_SKEL=min
+: ${YATT_SKEL:=min}
 
 function setup {
     local yatt_url=$1 yatt_skel=$2 yatt_localrepo=$3
@@ -42,9 +42,27 @@ function perl_has {
     done
 }
 
+if ! $(which realpath 2>&1 >/dev/null); then
+    function realpath {
+	local fn=$1
+	if [[ $fn = /* ]]; then
+	    echo $fn
+	else
+	    echo $(pwd)/$fn
+	fi
+	    
+    }
+fi
+
 use_symlink=0
 
-if [[ $0 == "bash" ]]; then
+: skel="" repo=""
+if [[ $0 != "bash" && -r $0 && -x $0 ]]; then
+    skel=$(dirname $(realpath $0))
+    repo=$(dirname $(dirname $(dirname $skel)))
+fi
+
+if ! [[ -n $repo && -d $repo ]]; then
     # assume remote installation.
 
     YATT_GIT_URL=${YATT_GIT_URL:-https://github.com/hkoba/yatt_lite.git}
@@ -53,11 +71,8 @@ if [[ $0 == "bash" ]]; then
 
     setup "$YATT_GIT_URL" lib/YATT/scripts/skels/$YATT_SKEL
 
-elif [[ -r $0 && -x $0 ]]; then
+else
     # assume we already have yatt repo
-
-    skel=$(dirname $(realpath $0))
-    repo=$(dirname $(dirname $(dirname $skel)))
 
     YATT_GIT_URL=${YATT_GIT_URL:-$repo}
 
@@ -66,8 +81,6 @@ elif [[ -r $0 && -x $0 ]]; then
     if [[ $1 = -s || $1 = -l ]]; then
 	use_symlink=1
     fi
-    setup "$YATT_GIT_URL" "$skel" "${repo:a}"
+    setup "$YATT_GIT_URL" "$skel" "$repo"
 
-else
-    die Really\?\?
 fi
