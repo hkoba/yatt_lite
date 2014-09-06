@@ -18,6 +18,7 @@ require Scalar::Util;
 		     nonempty
 		     subname
 		     pkg2pm
+		     globref_default
 		   /;
   }
   use Carp;
@@ -42,6 +43,17 @@ require Scalar::Util;
     my $class = ref $thing || $thing;
     no strict 'refs';
     \*{join("::", $class, defined $name ? $name : ())};
+  }
+  sub globref_default {
+    unless (@_ == 2) {
+      croak "Too few arguments";
+    }
+    my ($globref, $default) = @_;
+    my $kind = ref $default;
+    *{$globref}{$kind} || do {
+      *{$globref} = $default;
+      $default;
+    };
   }
   sub symtab {
     *{globref(shift, '')}{HASH}

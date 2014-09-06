@@ -67,6 +67,7 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_path
 			secure_text_plain
 			psgi_error
+			globref_default
 		       /;
 
 use YATT::Lite::XHF ();
@@ -531,7 +532,8 @@ sub buildns {
   # もし $newns の EntNS が Factory(SiteApp, app.psgi) の EntNS を継承していない
   # なら、継承する
   unless ($newns->EntNS->isa($self->EntNS)) {
-    push *{globref($newns->EntNS, 'ISA')}{ARRAY}, $self->EntNS;
+    push @{globref_default(globref($newns->EntNS, 'ISA')
+			   , [])}, $self->EntNS;
   }
 
   $newns;
