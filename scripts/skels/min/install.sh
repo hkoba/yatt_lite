@@ -30,6 +30,7 @@ function setup {
 	x ln -vs $yatt_localrepo lib/YATT
     else 
 	x git submodule add $yatt_url lib/YATT
+	(cd lib/YATT && x cpanm --installdeps .)
     fi
 
     x cp -va $yatt_skel/approot/* .
