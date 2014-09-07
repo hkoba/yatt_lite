@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-yatt_manual(ja) -- 構文マニュアル (日本語版)
+yatt_manual(ja) -- yatt 構文マニュアル (日本語版)
 
 =head1 SYNOPSIS
 
@@ -28,46 +28,50 @@ yatt_manual(ja) -- 構文マニュアル (日本語版)
 =head1 Overview
 
 yatt のテンプレートは、通常の HTML に、
-B<指定した名前空間> で始まる構文要素を埋め込んだ形式で記述します。
-(以下の説明では名前空間 C<yatt> を用います。)
-テンプレートの構文は XML に似ていますが、XML よりも再帰性を改善した、
+B<名前空間 yatt:> で始まる yattの構文要素を加えたものです。
+(名前空間は設定で変更可能です)。
+yatt の構文は XML に似ていますが、XML よりも再帰性を改善した、
 よりテンプレート向きの独自構文 LRXML (Loose but Recursive XML)
 を採用しています。
 
 =over 4
 
-=item C<< <!yatt:...> >>
+=item C<< <!yatt: >> ... C<< > >>
 
 L<yatt 宣言|/YATT Declaration> (部品の始まり)
 
-=item C<< &yatt:...; >>
+=item C<< &yatt: >> ... C<< ; >>
 
 L<Entity 参照|/Entity reference> (変数や関数、メソッドの呼び出し)
 
-=item C<< <yatt:.../> >>, C<< <yatt:...> ～ </yatt:...> >>
+=item C<< <yatt: >> ... C<< /> >>
+
+=item C<< <yatt: >> ... C<< > >> ～ C<< </yatt:...> >>
 
 L<部品(widget) の呼び出し|/Widget Invocation>
 
-=item C<< <:yatt:.../> ～ >>, C<< <:yatt:...> ～ </:yatt:...> >>
+=item C<< <:yatt: >> ... C<< />  >>～
 
-L<部品(widget) への引数(タグ形式)|/attribute element>
+=item C<< <:yatt: >> ... C<< > >> ～ C<< </:yatt:...> >>
 
+L<部品(widget) への引数(タグ形式)|/attribute element>.
+(引数の中に更にタグを含めたい時に使うと、HTML らしいテンプレートが書けます)
 
-=item C<< <?yatt ... ?> >>, C<< <?perl ... ?> >>
+=item C<< <!--#yatt  >> ... C<<  --> >>
 
-L<ロジックを直接埋め込みたい時|/Processing instruction>
+L<コメント|/Comment block>. この部分は yatt の解析対象外。
 
-=item C<< &yatt[[; ... &yatt]]; >>
+XXX: 将来的に、閉じを C<< #--> >> に変更する案があります。
 
-=item C<< &yatt#num[[; ...singular... &yatt||; ...plural...  &yatt]]; >>
+=item C<< &yatt[[;  >> ... C<<  &yatt]]; >>
+
+=item C<< &yatt#num[[;  >> ... C<< SINGULAR >> ... C<<  &yatt||;  >> ... C<< PLURAL >> ... C<<   &yatt]]; >>
 
 多国語化メッセージ. B<yatt xgettext> で抽出。
 
-=item C<< <!--#yatt ... --> >>
+=item C<< <?yatt  >> ... C<<  ?> >>, C<< <?perl  >> ... C<<  ?> >>
 
-コメント. この部分は yatt の解析対象外。
-
-XXX: 閉じを C<< #--> >> に変更したい、と思い始めています。
+L<ターゲット言語の記述を直接埋め込みたい時|/Processing instruction>
 
 =back
 
@@ -103,374 +107,12 @@ F<.ytmpl> をつけてください。
 残念ながら、現時点では、C<*.ytmpl>, C<.htyattconfig.yml> と
 C<.htyattrc.pl> の更新を反映させるには、 B<プロセスの再起動> が必要です。
 
-=head1 YATT Declaration
-
-yatt のテンプレートは宣言文と本文の並びです。 yatt宣言 は C<< <!yatt:... >>
-で始まり C<< > >> で終わります。以下は宣言の例です。
-
-  <!yatt:args
-      x y="text" z='code'
-      -- コメント --
-      body=[
-         title="text"
-         name="text"
-      ]
-  >
-
-  <!yatt:page "/doc/:item">
-
-  <!yatt:page other="/foo/:item">
-
-  <!yatt:widget another x y>
-
-宣言の中に書けるものは、以下のものが有ります。
-
-=over 4
-
-=item C<name>, C<ns:name...> (ターゲット言語で許された識別子と C<:>)
-
-引数や、widget 自体の名前は、(引用符抜きで) そのまま書くことが出来ます。
-
-=item C<name=...>
-
-C<...>には C<"..">, C<'..'>, C<[..]> いずれかの引用記法か、
-スペースと閉じタグ C<< > >> を含まない文字列を書くことができます。
-
-=item C<"text in double quote">, C<'text in single quote'>, C<[ ... nested ... ]>
-
-引数の型やデフォルト値、ルーティングを書くときの記法です。
-
-=item C<-- ... -->
-
-宣言の中には L<-- ... -- で囲んで|/Inline comment> コメントを書くことが出来ます。
-
-=back
-
-
-
-=head2 C<< <!yatt:args> >>
-X<!args> X<default-widget>
-
-yatt では、拡張子が F<*.yatt> 又は F<*.ytmpl> となったファイルは自動的に
-widget として扱われ、ファイル名から widget の名前が与えられます。例えば
-F<index.yatt> は同じディレクトリの別ファイルから C<< <yatt:index/> >>
-として呼び出すことが可能です。
-
-そのようにして作った widget は(ファイルの中の) B<default widget> と呼ばれます。
-この default widget に引数を渡せるようにするための宣言が、 C<< <!yatt:args> >> です。
-
-  <!yatt:args x y>
-  ...(以下、このテンプレートでは引数x と y が使用可能に)...
-
-引数には L</Argument Declaration> を用いて型やデフォルト値を指定することが出来ます。
-
-また、L<URL Pattern|/subrouting> を用いて,
-path_info の残りを引数に用いるよう指定することも出来ます。
-
-
-  <!yatt:args "/:doc" x y>
-  ... (引数 doc, x, y が使用可能に)...
-
-=head2 C<< <!yatt:widget> >>
-
-yatt では一つのテンプレートの中に複数の widget を定義することが出来ます。
-
-  <!yatt:widget foo x y>
-   ...(foo の定義)...
-  
-  <!yatt:widget bar x y>
-   ...(bar の定義)...
-
-
-このようにして定義した widget は (次の L</page> とは異なって)
-内部的なものであり、外部からのリクエストで勝手に呼び出されることは有りません。
-
-=head2 C<< <!yatt:page> >>
-X<page>
-
-public な widget を定義します。一つのテンプレートファイルで
-複数の page を記述したい時に使います。
-ファイル内の page を呼び出すには L</Request Sigil Mapping> か
-L<URL Pattern|/subrouting> を使って下さい。
-
-    <h2>以下をご記入ください</h2>
-    <yatt:input_form />
-    
-    <!yatt:page confirm>
-    <h2>入力内容をご確認ください</h2>
-    <yatt:input_form confirm_mode=1 />
-    
-    <!yatt:widget input_form confirm_mode>
-    ...(入力フォーム)...
-
-=head2 C<< <!yatt:action> >>
-
-テンプレートの中に POST 動作も記述したい時に使います。
-action 部分に書けるプログラムの詳細は
-L<XXX: (未完) prog_action|YATT::Lite::docs::prog_action> を参照してください
-
-
-    <!yatt:page confirm>
-    <h2>入力内容をご確認ください</h2>
-    <yatt:input_form confirm_mode=1 />
-
-    <!yatt:action register>
-    ...(ここからperl のプログラム)...
-
-=head1 Request Sigil Mapping
-
-=head2 page
-
-page を呼び出すには POST/GET の parameter に C<~~=ページ名> か
-C<~ページ名=...> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
-(複数指定した場合はエラーになります)
-
-例えば
-
-    <input type="submit" name="~back" value="戻る">
-    <input type="submit" name="~confirm" value="確認画面へ進む">
-
-あるいは
-
-    <input type="hidden" name="~~" value="confirm">
-    <input type="submit" value="確認画面へ進む">
-
-(submit ボタンが一つしか無いときは、後者の方が安全です)
-
-=head2 action
-
-action を呼び出すには request parameter の name に "!ページ名" を指定したボタンを
-押すか、 "!!" の value に ページ名を指定します。上記の register 操作の例では
-
-    <input type="submit" name="!register" value="登録する">
-
-あるいは
-
-    <input type="hidden" name="!!" value="register">
-    <input type="submit" value="登録する">
-
-
-=head1 Inline URL Router
-X<subrouting>
-
-yatt の args 又は page には、URL パターンを書く事が出来ます。
-
-   <!yatt:args "/:user">
-     ... &yatt:user; ...
-
-   <!yatt:page blog="/blog/:article_id">
-     ... &yatt:article_id; ...
-
-   <!yatt:page blog_comments="/blog/:article_id/:comment_id">
-     ... &yatt:article_id; ... &yatt:comment_id; ...
-
-   <!yatt:page "/admin/:action" x y z>
-     ...
-
-パターンは yatt 宣言の中の先頭(引数よりも前)に
-文字列形式 (C<'/...'> か C<"/...">) で書きます。
-
-パターンの前に C<識別子=> を加えて C<name="/..パターン.."> の形式で書いた場合、
-C<name> が widget の名前として用いられます。
-C<name=> を省略することも可能です。この場合、URLパターンから
-widget 名が自動生成されます。
-
-(パターンは必ず C<"/"> で始まる必要が有ります。(将来の拡張のため))
-
-(C<!yatt:args> は (既に名前が決まっているので) C<name=> は不要です。)
-
-
-実際のルーティングでは、最初に page のパターンが上から順に試され、
-最後に args のパターンが試されます。
-
-=over 4
-
-=item :var - colon notation
-
-   <!yatt:page '/authors/:id'>
-   <!yatt:page '/authors/:id/edit'>
-   <!yatt:page '/articles/:article_id/comments/:id'>
-
-=item '{var}' - curly notation
-
-   <!yatt:page "/{controller}/{action}/{id}">
-   <!yatt:page '/blog/{year}/{month}'>
-
-=item '{var:regexp}' - curly with regexp notation
-
-   <!yatt:page '/blog/{year:[0-9]+}/{month:[0-9]{2}}'>
-
-=item '{var:named_pattern}' - curly with named pattern notation
-
-   <!yatt:page '/blog/{year:digits}-{month:digits}'>
-
-XXX: named_pattern の拡張方法を書かねば... 現状では変数の型名とは無関係です。
-
-=item (pattern) - optional match notation
-
-optional match, つまり, (..)
-にマッチする内容が無いケースも許すパターンを書きたいときに使います。
-
-   <!yatt:args "/:article(/:comment(/:action))">
-
-
-=back
-
-
-=head1 Argument Declaration
-
-   <!yatt:args
-       x y z  -- 3つの引数 x y z を宣言。--
-       title="text?Hello world!"
-              -- text型の引数 title を宣言, デフォルト値は Hello world  --
-       yesno="bool/0"
-              -- bool型の引数 yesno を宣言, デフォルト値は 0 --
-   >
-
-yatt の widget には引数を宣言することが出来ます。引数宣言は
-正式には C<引数名 = "型名 フラグ文字 デフォルト値"> の形式で書かれます。
-この内、型名は省略可能で、省略時は L<text|/text> 型(出力時に全て escape される)に
-なります。
-
-引数にデフォルト値を指定するには、型名と区別するため、
-L<デフォルト・フラグ文字|/DEFAULT FLAG> を書いてからデフォルト値を続けて書きます。
-
-以下は正しい引数宣言の例です。
-
-    x
-    y=text
-    z="text"
-
-    victor="text?bar"
-    dave  ="?baz"
-    ginger= "?"
-
-=head1 TYPE
-
-引数には(escapeの)型があります。型を指定しなかった場合は L</text> 型として扱われます。
-
-=head2 C<text>
-X<text>
-
-出力時に escape されます。通常はこちらを用います。
-
-   <yatt:foo x="my x" y="my y"/>
-
-   <!yatt:widget foo x  y="text">
-     &yatt:x;
-     &yatt:y;
-
-=head2 C<html>
-X<html>
-
-引数として渡される値が、既に外側で何らかの方法で
-安全な html へと escape 済みであると分かっている場合に指定します。
-(なお body 引数の解説は L<こちら|/body> を参照してください)
-
-  <yatt:bq>
-    <h2>foo</h2>
-    bar
-  </yatt:bq>
-
-   <!yatt:widget bq body=html>
-   <blockquote>
-      &yatt:body;
-   </blockquote>
-
-=head2 C<value>
-X<value>
-
-引数に数値など計算結果を渡したい時に使います。
-
-   <yatt:expr_and_result expr="3 * 4" val="3 * 4"/>
-   
-   <!yatt:widget expr_and_result expr=text val=value>
-   &yatt:expr; = &yatt:val;
-
-=head2 C<bool>
-X<bool>
-
-フラグ用の型です。変数名のみを書けば、フラグを立てたことになります。
-
-   <yatt:foo use_header/>
-
-   <!yatt:widget foo use_header="bool/0">
-   <yatt:if "&yatt:use_header;">
-     ...
-   </yatt:if>
-
-=head2 C<list>
-X<list>
-
-引数としてリスト形式のデータを渡したいときに使います。
-
-   <yatt:mymenu list="&yatt:some_db_query();"/>
-
-   <!yatt:widget mymenu items=list>
-   <ul>
-   <yatt:foreach my=item list=items>
-     <li>&yatt:item;</li>
-   </yatt:foreach>
-   </ul>
-
-=head2 C<code>
-X<code>
-
-条件式や widget を渡したいときに使います。遅延評価されます。
-widget の場合、更に引数の型指定が可能です。
-
-
-  <!yatt:widget myquote  author=[code name=text url=text]>
-
-  <yatt:foreach my=rec list="&yatt:some_db_query();">
-   ...
-    <yatt:author name="&yatt:rec{name};" url="&yatt:rec{url};" />
-   ...
-  </yatt:foreach>
-
-=head2 XXX: C<attr>
-X<attr>
-
-=head2 XXX: C<delegate>
-X<delegate>
-
-=head1 DEFAULT FLAG
-
-=head2 C<|>
-X<|>
-
-値が C<undef>, C<"">, C<0> の時はデフォルト値に置き換えられます。(perl の C<||> に相当)
-
-   <!yatt:args  x="| 1">
-
-=head2 C<?>
-X<?>
-
-値が C<undef>, C<""> の時はデフォルト値に置き換えられます。
-
-   <!yatt:args  x="?foo" y="html?bar">
-
-=head2 C</>
-X</>
-
-値が C<undef> の時はデフォルト値に置き換えられます。 (perl の C<//> に相当)
-
-   <!yatt:args  x="bool/0">
-
-=head2 C<!>
-X<!>
-
-必ず指定しなければならない引数であることを宣言します。
-この指定がある場合、引数を忘れるとコンパイルエラー扱いになります。
-
-   <!yatt:args  title="!" x="value!">
-
 =head1 Widget Invocation
 
-定義した widget を呼び出すには、 C<< <yatt:... >  >> で始まるタグを書きます。
+widget を呼び出すには、 C<< <yatt:... >  >> で始まるタグを書きます。
 タグは C<< /> >> で閉じる empty element 形式か、閉じタグ C<< </yatt:... > >> を
 使う形式、どちらでも書けます。引数は C< x="..." > のようにタグの属性として渡すか、
-後述の L<属性タグ|/attribute element> 形式で渡します。
+L<引数を表す別のタグ|/attribute element> として渡すことが出来ます。
 
   ...
   <yatt:foo x="hello!"/>
@@ -480,11 +122,13 @@ X<!>
   <!yatt:widget foo x>
   ...foo の定義...
 
+=head2 widget search order
+
 widget は同一ファイル内 → 同一ディレクトリ内 → 他に指定されたテンプレートディレクトリ、
 の順で検索され、最初に見つかったものが使われます。この検索はコンパイル時に行われ、
 見つからない場合はコンパイルエラーとなります。
 
-=head2 widget path
+=head2 widget B<path>
 
 別のファイルやディレクトリ内で定義された widget を呼び出す事も可能です。
 この場合、パス名を C<:> でつなげて書きます。(拡張子 F<.yatt> は省いて下さい)
@@ -510,7 +154,11 @@ C<name=> を省略して引数を書く話
 
 引数の右辺に bareword を渡したときの挙動
 
-=head2 body argument
+=head2 Implicit arguments
+
+=head3 XXX: this, CON
+
+=head3 body argument
 X<body>
 
 全ての widget は閉じタグを使う形式で呼び出すことが出来ます。
@@ -764,25 +412,400 @@ B<現時点では> ここに perl の C<$var> 形式の変数埋め込みを書�
 XXX: dump, render, HTML, default, join, url_encode, datetime, mkhash, breakpoint
 site_prefix, site_config, dir_config
 
-=head1 Processing instruction
+=head1 YATT Declaration
+
+yatt のテンプレートは宣言文と本文の並びです。 yatt宣言 は C<< <!yatt:... >>
+で始まり C<< > >> で終わります。以下は宣言の例です。
+
+  <!yatt:args
+      x y="text" z='code'
+      -- コメント --
+      body=[
+         title="text"
+         name="text"
+      ]
+  >
+
+  <!yatt:page "/doc/:item">
+
+  <!yatt:page other="/foo/:item">
+
+  <!yatt:widget another x y>
+
+宣言の中に書けるものは、以下のものが有ります。
 
 =over 4
 
-=item C<< <?perl= ... ?> >>
+=item C<name>, C<ns:name...> (ターゲット言語で許された識別子と C<:>)
 
-処理結果を escape して出力します。
+引数や、widget 自体の名前は、(引用符抜きで) そのまま書くことが出来ます。
 
-=item C<< <?perl=== ... ?> >>
+=item C<name=...>
 
-escape せずに、生のままで結果を出力します。
+C<...>には C<"..">, C<'..'>, C<[..]> いずれかの引用記法か、
+スペースと閉じタグ C<< > >> を含まない文字列を書くことができます。
 
-=item C<< <?perl ... ?> >>
+=item C<"text in double quote">, C<'text in single quote'>, C<[ ... nested ... ]>
 
-単純に処理だけ行います。
+引数の型やデフォルト値、ルーティングを書くときの記法です。
+
+=item C<-- ... -->
+
+宣言の中には L<-- ... -- で囲んで|/Inline comment> コメントを書くことが出来ます。
 
 =back
 
+
+
+=head2 C<< <!yatt:args ARGS...> >>
+X<!args> X<decl-args> X<default-widget>
+
+yatt では、拡張子が F<*.yatt> 又は F<*.ytmpl> となったファイルは自動的に
+widget として扱われ、ファイル名から widget の名前が与えられます。例えば
+F<index.yatt> は同じディレクトリの別ファイルから C<< <yatt:index/> >>
+として呼び出すことが可能です。
+
+そのようにして作った widget は(ファイルの中の) B<default widget> と呼ばれます。
+この default widget に引数を渡せるようにするための宣言が、 C<< <!yatt:args> >> です。
+
+  <!yatt:args x y>
+  ...(以下、このテンプレートでは引数x と y が使用可能に)...
+
+引数には L</Argument Declaration> を用いて型やデフォルト値を指定することが出来ます。
+
+また、L<URL Pattern|/subrouting> を用いて,
+path_info の残りを引数に用いるよう指定することも出来ます。
+
+
+  <!yatt:args "/:doc" x y>
+  ... (引数 doc, x, y が使用可能に)...
+
+=head2 C<< <!yatt:widget NAME ARGS...> >>
+X<!widget> X<decl-widget>
+
+yatt では一つのテンプレートの中に複数の widget を定義することが出来ます。
+
+  <!yatt:widget foo x y>
+   ...(foo の定義)...
+  
+  <!yatt:widget bar x y>
+   ...(bar の定義)...
+
+
+このようにして定義した widget は (次の L</page> とは異なって)
+内部的なものであり、外部からのリクエストで勝手に呼び出されることは有りません。
+
+=head2 C<< <!yatt:page NAME ARGS...> >>
+X<!page> X<decl-page>
+
+public な widget を定義します。一つのテンプレートファイルで
+複数の page を記述したい時に使います。
+ファイル内の page を呼び出すには L</Request Sigil Mapping> か
+L<URL Pattern|/subrouting> を使って下さい。
+
+    <h2>以下をご記入ください</h2>
+    <yatt:input_form />
+    
+    <!yatt:page confirm>
+    <h2>入力内容をご確認ください</h2>
+    <yatt:input_form confirm_mode=1 />
+    
+    <!yatt:widget input_form confirm_mode>
+    ...(入力フォーム)...
+
+=head2 C<< <!yatt:action NAME> >>
+X<!action> X<decl-action>
+
+テンプレートの中に POST 動作も記述したい時に使います。
+action 部分に書けるプログラムの詳細は
+L<XXX: (未完) prog_action|YATT::Lite::docs::prog_action> を参照してください
+
+
+    <!yatt:page confirm>
+    <h2>入力内容をご確認ください</h2>
+    <yatt:input_form confirm_mode=1 />
+
+    <!yatt:action register>
+    ...(ここからperl のプログラム)...
+
+=head1 Request Sigil Mapping
+
+=head2 C<~PAGE=title>, C<~~=PAGE>
+
+page を呼び出すには POST/GET の parameter に C<~~=ページ名> か
+C<~ページ名=...> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
+(複数同時に送信した場合はエラーになります)
+
+例えば
+
+    <input type="submit" name="~back" value="戻る">
+    <input type="submit" name="~confirm" value="確認画面へ進む">
+
+あるいは
+
+    <input type="hidden" name="~~" value="confirm">
+    <input type="submit" value="確認画面へ進む">
+
+(submit ボタンが一つしか無いときは、後者の方が安全です)
+
+=head2 C<!ACTION=title>, C<!!=ACTION>
+
+action を呼び出すには POST/GET の parameter に C<!!=ページ名> か
+C<!ページ名=...> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
+(複数同時に送信した場合はエラーになります)
+
+例えば
+
+    <input type="submit" name="~back" value="戻る">
+    <input type="submit" name="!register" value="登録する">
+
+あるいは
+
+    <input type="hidden" name="!!" value="register">
+    <input type="submit" value="登録する">
+
+(これも、submit ボタンが一つしか無いときは、後者の方が安全です)
+
+=head1 Inline URL Router
+X<subrouting>
+
+yatt の args 又は page には、URL パターンを書く事が出来ます。
+
+パターンは yatt 宣言の中の先頭(引数よりも前)に
+文字列形式 (C<'/...'> か C<"/...">) で書きます。
+
+パターンの前に C<識別子=> を加えて C<name="/..パターン.."> の形式で書いた場合、
+C<name> が widget の名前として用いられます。
+C<name=> を省略することも可能です。この場合、URLパターンから
+widget 名が自動生成されます。
+
+(パターンは必ず C<"/"> で始まる必要が有ります。(将来の拡張のため))
+
+=head2 C<< <!yatt:args ROUTE ARGS...> >>
+X<decl-args-route>
+
+
+   <!yatt:args "/:user">
+     ... &yatt:user; ...
+
+(C<!yatt:args> は (既に名前が決まっているので) C<name=> は不要です。)
+
+=head2 C<< <!yatt:page ROUTE ARGS...> >>
+
+   <!yatt:page "/admin/:action" x y z>
+     ...
+
+=head2 C<< <!yatt:page NAME=ROUTE ARGS...> >>
+
+   <!yatt:page blog="/blog/:article_id">
+     ... &yatt:article_id; ...
+
+   <!yatt:page blog_comments="/blog/:article_id/:comment_id">
+     ... &yatt:article_id; ... &yatt:comment_id; ...
+
+
+=head2 Routing patterns
+
+実際のルーティングでは、最初に page のパターンが上から順に試され、
+最後に args のパターンが試されます。
+
+=head3 C<:VAR>
+X<route-colon notation>
+
+C<[^/]+> にマッチしたものが、引数 C<:VAR> に渡されます。
+
+   <!yatt:page '/authors/:id'>
+   <!yatt:page '/authors/:id/edit'>
+   <!yatt:page '/articles/:article_id/comments/:id'>
+
+=head3 C<{VAR}>
+X<route- curly notation>
+
+   <!yatt:page "/{controller}/{action}/{id}">
+   <!yatt:page '/blog/{year}/{month}'>
+
+=head3 C<{VAR:REGEXP}>
+X<route-curly with regexp notation>
+
+   <!yatt:page '/blog/{year:[0-9]+}/{month:[0-9]{2}}'>
+
+=head3 C<{VAR:NAMED_PATTERN}>
+X<route-curly with named pattern notation>
+
+   <!yatt:page '/blog/{year:digits}-{month:digits}'>
+
+XXX: named_pattern の拡張方法を書かねば... 現状では変数の型名とは無関係です。
+
+=head3 C<(PATTERN)>
+X<route-optional match notation>
+
+C<(PAT)> は、後ろに正規表現の C<?> を付けて C<(PAT)?> として解釈されます。
+つまり, (..) にマッチする内容が無いケースも許すパターンを書きたいときに使います。
+
+   <!yatt:args "/:article(/:comment(/:action))">
+
+
+=head1 Argument Declaration
+
+   <!yatt:args
+       x y z  -- 3つの引数 x y z を宣言。--
+       title="text?Hello world!"
+              -- text型の引数 title を宣言, デフォルト値は Hello world  --
+       yesno="bool/0"
+              -- bool型の引数 yesno を宣言, デフォルト値は 0 --
+   >
+
+yatt の widget には引数を宣言することが出来ます。引数宣言は
+正式には C<引数名 = "型名 フラグ文字 デフォルト値"> の形式で書かれます。
+この内、型名は省略可能で、省略時は L<text|/text> 型(出力時に全て escape される)に
+なります。
+
+引数にデフォルト値を指定するには、型名と区別するため、
+L<デフォルト・フラグ文字|/DEFAULT FLAG> を書いてからデフォルト値を続けて書きます。
+
+以下は正しい引数宣言の例です。
+
+    x
+    y=text
+    z="text"
+
+    victor="text?bar"
+    dave  ="?baz"
+    ginger= "?"
+
+=head1 TYPE
+
+引数には(escapeの)型があります。型を指定しなかった場合は L</text> 型として扱われます。
+
+=head2 C<text>
+X<text>
+
+出力時に escape されます。通常はこちらを用います。
+
+   <yatt:foo x="my x" y="my y"/>
+
+   <!yatt:widget foo x  y="text">
+     &yatt:x;
+     &yatt:y;
+
+=head2 C<html>
+X<html>
+
+引数として渡される値が、既に外側で何らかの方法で
+安全な html へと escape 済みであると分かっている場合に指定します。
+(なお body 引数の解説は L<こちら|/body> を参照してください)
+
+  <yatt:bq>
+    <h2>foo</h2>
+    bar
+  </yatt:bq>
+
+   <!yatt:widget bq body=html>
+   <blockquote>
+      &yatt:body;
+   </blockquote>
+
+=head2 C<value>
+X<value>
+
+引数に書いたものがターゲット言語(perl) の計算式として扱われます。
+数値など計算結果を渡したい時に使います。
+
+例
+
+   <yatt:expr_and_result expr="3 * 4" val="3 * 4"/>
+   
+   <!yatt:widget expr_and_result expr=text val=value>
+   &yatt:expr; = &yatt:val;
+
+この結果は以下のように表示されます。
+
+   3 * 4 = 12
+
+
+=head2 C<bool>
+X<bool>
+
+フラグ用の型です。C<=1> を省略出来る以外は、L</value> 型と同じです。
+
+   <yatt:foo use_header/>
+
+   <!yatt:widget foo use_header="bool/0">
+   <yatt:if "&yatt:use_header;">
+     ...
+   </yatt:if>
+
+=head2 C<list>
+X<list>
+
+引数としてターゲット言語のリスト形式のデータを渡したいときに使います。
+
+   <yatt:mymenu list="1..5"/>
+   <yatt:mymenu list="&yatt:some_db_query();"/>
+
+   <!yatt:widget mymenu items=list>
+   <ul>
+   <yatt:foreach my=item list=items>
+     <li>&yatt:item;</li>
+   </yatt:foreach>
+   </ul>
+
+=head2 C<code>
+X<code>
+
+条件式や widget を渡したいときに使います。遅延評価されます。
+widget の場合、更に引数の型指定が可能です。
+(L<暗黙の body 引数|/body argument>はこの型になります。)
+
+
+  <!yatt:widget myquote  author=[code name=text url=text]>
+
+  <yatt:foreach my=rec list="&yatt:some_db_query();">
+   ...
+    <yatt:author name="&yatt:rec{name};" url="&yatt:rec{url};" />
+   ...
+  </yatt:foreach>
+
+=head2 XXX: C<attr>
+X<attr>
+
+=head2 XXX: C<delegate>
+X<delegate>
+
+=head1 DEFAULT FLAG
+
+=head2 C<|> - C<undef>, C<"">, C<0>
+X<|>
+
+値が C<undef>, C<"">, C<0> の時はデフォルト値に置き換えられます。(perl の C<||> に相当)
+
+   <!yatt:args  x="| 1">
+
+=head2 C<?> - C<undef>, C<"">
+X<?>
+
+値が C<undef>, C<""> の時はデフォルト値に置き換えられます。
+
+   <!yatt:args  x="?foo" y="html?bar">
+
+=head2 C</> - C<undef>
+X</>
+
+値が C<undef> の時はデフォルト値に置き換えられます。 (perl の C<//> に相当)
+
+   <!yatt:args  x="bool/0">
+
+=head2 C<!> - mandatory
+X<!>
+
+必ず指定しなければならない引数であることを宣言します。
+この指定がある場合、引数を忘れるとコンパイルエラー扱いになります。
+
+   <!yatt:args  title="!" x="value!">
+
 =head1 Comment block
+
+XXX: 将来的に、閉じを C<< #--> >> に変更する案があります。
 
 C<< <!--#yatt ... --> >> で囲まれた範囲は yatt の解析対象から外され、
 また出力にも出されません。これに対し、
@@ -817,3 +840,21 @@ C<-- ... --> でコメントを書き入れることが出来ます(タグ内コ
      title -- title には○○を入れて下さい... --
   >
   ...
+
+=head1 Processing instruction
+
+=over 4
+
+=item C<< <?perl= ... ?> >>
+
+処理結果を escape して出力します。
+
+=item C<< <?perl=== ... ?> >>
+
+escape せずに、生のままで結果を出力します。
+
+=item C<< <?perl ... ?> >>
+
+単純に処理だけ行います。
+
+=back

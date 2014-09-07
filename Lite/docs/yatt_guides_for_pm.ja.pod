@@ -4,16 +4,16 @@
 
 =head1 NAME
 
-yatt_guides_for_pm(ja) - Perl Monger のための YATT::Lite ガイド
+yatt_guides_for_pm(ja) - Perl Monger のための yatt (YATT::Lite) ガイド
 
 =head1 INTRODUCTION
 
-この文書では Perl Monger を対象に、YATT::Lite で
+この文書では Perl Monger を対象に、yatt (YATT::Lite) で
 Web アプリを作る方法を解説します。
 特に、最初のシンプルなバージョンを自分で動かしたあとで、
 B<テンプレート書きをデザイナーさんにアウトソース>したり、
-顧客に納品して B<以後の変更は顧客に委ねる> 、
-という使い方を想定して説明を進めます。
+システムとして顧客に納品して以後の B<ビジネスレベルの成長は顧客が自活的に進める> 、
+という業態を想定して説明を進めます。
 
 解説は複数のツアーに別れており、
 Hello world から初めて、テンプレートの部品化(widget 化)、
@@ -194,6 +194,7 @@ web からアクセスするよりも前に、
 XXX: readme からここへ転記
 
 =head1 TOUR2: How to write yatt widgets and compose them.
+X<TOUR2>
 
 今度は複数の widget を組み合わせる方法を解説します。
 L<先ほど|/TOUR1-index.yatt>の F<html/index.yatt> を次のように myhello.yatt へと rename して下さい。
@@ -220,14 +221,12 @@ L<先ほど|/TOUR1-index.yatt>の F<html/index.yatt> を次のように myhello.
       <yatt:body/>
    </body>
 
-改めて L<http://0:5000/> をアクセスしてみて下さい。今度は h2 タグが
+保存したら L<http://0:5000/> をアクセスしてみて下さい。今度は h2 タグが
 css で着色されて表示されたのではないでしょうか？
 
 この例では、新たに 2つの widget が出てきました。rename して出来た
 F<html/myhello.yatt> が表す C<yatt:myhello> と、
 F<html/index.yatt> の後半で定義された、C<yatt:layout>です。
-
-yatt では widget
 
 前半の
 
@@ -241,7 +240,6 @@ L<body 引数|YATT::Lite::docs::yatt_manual/body>と呼ばれる
 closure として扱われます。ここでは更に
 C<yatt:myhello> の呼び出しを二回書いています。ここで layout に渡した closure は
 
-
   ...
    <body>
       <yatt:body/>
@@ -249,8 +247,9 @@ C<yatt:myhello> の呼び出しを二回書いています。ここで layout �
 
 の C<< <yatt:body/> >> の所で呼び出されます。
 
+=head2 XXX: genperl
 
-=head2 delegate
+=head2 XXX: delegate
 
 
    <!yatt:args mh=[delegate:myhello]>
@@ -258,17 +257,17 @@ C<yatt:myhello> の呼び出しを二回書いています。ここで layout �
       <yatt:mh/>
    </yatt:layout>
 
+=cut
 
-
-=head1 error ytmpl, backtrace, inspect
-
-=head1 <:yatt:arg>..</:yatt:arg>, <:yatt:arg />..
-
-=head1 TOURx: XXX: param as arg, sigil と routing
-
-=head1 TOURx: XXX: sigil と routing
-
-=head1 Entity
-
-=head1 my, foreach, if
-
+# 
+# =head1 XXX: error ytmpl, backtrace, inspect
+# 
+# =head1 XXX: <:yatt:arg>..</:yatt:arg>, <:yatt:arg />..
+# 
+# =head1 TOURx: XXX: param as arg, sigil と routing
+# 
+# =head1 TOURx: XXX: sigil と routing
+# 
+# =head1 XXX: Entity
+# 
+# =head1 XXX: my, foreach, if

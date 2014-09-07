@@ -4,12 +4,12 @@
 
 =head1 NAME
 
-prog_guide(ja) -- perl プログラマー向け yatt チュートリアル(日本語版)
+prog_guide(ja) -- perl プログラマー向け yatt 内部構造解説(日本語版)
 
 =head1 DESCRIPTION
 
 yatt は汎用のテンプレートエンジンである L</YATT::Lite> と、
-それを用いた Webアプリケーションフレームワークのサンプル実装である
+それを用いた Webアプリケーションフレームワークの Reference Implementation である
 L</WebMVC0> から構成されています。
 
 =for image yatt_lite.svg
@@ -437,7 +437,7 @@ C<XXX:> 現在のところ、 C<Entity> 定義関数を使うには、
 更に加えて C<YATT::Lite> も use する必要が有ります。
 
 
-=head1 XXX: WebMVC0 -- Sample Web Framework
+=head1 WebMVC0 -- Reference Impl of a Web Framework on YATT
 X<WebMVC0>
 
 汎用品である L<YATT::Lite> をベースに、

@@ -451,10 +451,12 @@ yatt テンプレートを書く Web デザイナーの方は、
 yatt の構文の詳しい説明は L<yatt_manual|YATT::Lite::docs::yatt_manual> を
 参照してください。
 
-=head2 for Programmers
+=head2 for Perl Mongers
 
 yatt を呼び出す Webアプリを書く perl プログラマーの方は、
-まず L<prog_guide|YATT::Lite::docs::prog_guide> から始めてください。
+L<Perl Monger のための yatt (YATT::Lite) ガイド|YATT::Lite::docs::yatt_guides_for_pm>
+から始めてください。より詳しい YATT::Lite の内部構造については
+L<prog_guide|YATT::Lite::docs::prog_guide> をご覧ください。
 
 具体的な例を見たい場合は、 F<samples/> ディレクトリ以下も参考にしてください。
 
