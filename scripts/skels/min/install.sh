@@ -30,7 +30,14 @@ function setup {
 	x ln -vs $yatt_localrepo lib/YATT
     else 
 	x git submodule add $yatt_url lib/YATT
-	(cd lib/YATT && x cpanm --installdeps .)
+	(
+	    cd lib/YATT;
+	    if [[ -w $cpanm ]]; then
+		x cpanm --installdeps .
+	    else
+		x sudo cpanm --installdeps .
+	    fi
+	)
     fi
 
     x cp -va $yatt_skel/approot/* .
@@ -43,7 +50,7 @@ function perl_has {
     done
 }
 
-if ! $(which realpath 2>&1 >/dev/null); then
+if ! $(which realpath >/dev/null 2>&1); then
     function realpath {
 	local fn=$1
 	if [[ $fn = /* ]]; then
@@ -62,6 +69,8 @@ if [[ $0 != "bash" && -r $0 && -x $0 ]]; then
     skel=$(dirname $(realpath $0))
     repo=$(dirname $(dirname $(dirname $skel)))
 fi
+
+cpanm=$(which cpanm 2>/dev/null)
 
 if ! [[ -n $repo && -d $repo ]]; then
     # assume remote installation.
