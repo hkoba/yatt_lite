@@ -32,7 +32,7 @@ function setup {
 	x git submodule add $yatt_url lib/YATT
 	(
 	    cd lib/YATT;
-	    if [[ -n $cpanm && -w $cpanm ]]; then
+	    if [[ -n $cpanm && -w $(dirname $cpanm) ]]; then
 		x cpanm --installdeps .
 	    else
 		x sudo cpanm --installdeps .
