@@ -32,7 +32,7 @@ function setup {
 	x git submodule add $yatt_url lib/YATT
 	(
 	    cd lib/YATT;
-	    if [[ -w $cpanm ]]; then
+	    if [[ -n $cpanm && -w $cpanm ]]; then
 		x cpanm --installdeps .
 	    else
 		x sudo cpanm --installdeps .
@@ -70,7 +70,7 @@ if [[ $0 != "bash" && -r $0 && -x $0 ]]; then
     repo=$(dirname $(dirname $(dirname $skel)))
 fi
 
-cpanm=$(which cpanm 2>/dev/null)
+cpanm=$(which cpanm 2>/dev/null) || true
 
 if ! [[ -n $repo && -d $repo ]]; then
     # assume remote installation.
