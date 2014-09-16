@@ -19,6 +19,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_factory
 	      cf_output_encoding
 	      cf_tmpl_encoding
+	      cf_index_name
 	      cf_app_ns cf_ent_ns
 	      cf_app_name
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
@@ -279,6 +280,7 @@ sub build_trans {
 				     die_in_error tmpl_encoding
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
+				     index_name
 				     rc_script
 				     lcmsg_sink
 				     only_parse/));
