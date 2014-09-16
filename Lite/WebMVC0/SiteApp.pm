@@ -39,14 +39,12 @@ use YATT::Lite qw/Entity *SYS *CON/;
 use YATT::Lite::WebMVC0::DirApp ();
 sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}
-sub default_index_name { 'index' }
 
 use File::Basename;
 
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
-  $self->{cf_index_name} //= $self->default_index_name;
   $self->{cf_use_subpath} //= 1;
 }
 
