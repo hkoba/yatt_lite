@@ -57,6 +57,7 @@ sub Facade () {__PACKAGE__}
 sub default_app_ns {'MyApp'}
 sub default_trans {'YATT::Lite::Core'}
 sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
+sub default_index_name { '' }
 
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
@@ -66,6 +67,7 @@ sub with_system {
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
+  $self->{cf_index_name} //= "";
   weaken($self->{cf_factory});
 }
 
