@@ -64,6 +64,10 @@ IN:
  moe
 ERROR: ^No such variable 'z' at file \S+ line 10,
 
+TITLE: Unknown entity function name
+IN:
+ &yatt:unknown_entity();
+ERROR: ^No such entity in namespace "\w+::EntNS::\w+": unknown_entity
 
 TITLE: Unknown type
 IN:
