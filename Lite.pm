@@ -20,7 +20,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_output_encoding
 	      cf_tmpl_encoding
 	      cf_index_name
-	      cf_app_ns cf_ent_ns
+	      cf_app_ns entns
 	      cf_app_name
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
 	      cf_special_entities cf_no_lineinfo cf_check_lineno
@@ -275,7 +275,7 @@ sub build_trans {
     (\@vfsspec
      , facade => $self
      , cache => $vfscache
-     , entns => $self->{cf_ent_ns}
+     , entns => $self->{entns}
      , @rest
      # XXX: Should be more extensible.
      , $self->cf_delegate_defined(qw/namespace base
@@ -291,7 +291,7 @@ sub build_trans {
 sub _before_after_new {
   (my MY $self) = @_;
   $self->{cf_app_ns} //= $self->default_app_ns;
-  $self->{cf_ent_ns} //= $self->ensure_entns($self->{cf_app_ns});
+  $self->{entns} = $self->ensure_entns($self->{cf_app_ns});
 }
 
 #========================================
