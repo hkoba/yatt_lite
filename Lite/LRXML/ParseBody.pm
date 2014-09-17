@@ -62,7 +62,9 @@ sub _parse_body {
 
       # タグの直後の改行は、独立したトークンにしておく
       s{^(?<empty_elem>/)? >(\r?\n)?}{}xs
-	or die $self->synerror_at($self->{startln}, q{Missing CLO(>) for: <%s}, $path);
+	or die $self->synerror_at($self->{startln}
+				  , q{Missing CLO(>) for: <%s, rest: '%s'}
+				  , $path, trimmed($_));
 
       # body slot の初期化
       # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
@@ -260,6 +262,12 @@ sub _undef_if_empty {
   unless (@{$_[0]}) {
     undef $_[0];
   }
+}
+
+sub trimmed {
+  my ($str) = @_;
+  $str =~ s/\n.*\z//s;
+  $str;
 }
 
 use YATT::Lite::Breakpoint qw(break_load_parsebody);
