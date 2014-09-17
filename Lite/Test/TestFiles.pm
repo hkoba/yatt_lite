@@ -32,8 +32,8 @@ sub mkdir {
 sub add {
   (my MY $self, my ($fn, $content)) = @_;
   my $real = "$self->{basedir}/$fn";
-  if (-e $real and (stat($real))[9] == time) {
-    # mtime が確実に変化するように。
+  while (-e $real and (stat($real))[9] == time) {
+    # wailt until mtime is changed.
     sleep 1;
   }
   open my $fh, '>', $real or die "Can't create $real: $!";
