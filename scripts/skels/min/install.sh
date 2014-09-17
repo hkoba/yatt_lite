@@ -30,14 +30,19 @@ function setup {
 	x ln -vs $yatt_localrepo lib/YATT
     else 
 	x git submodule add $yatt_url lib/YATT
-	(
-	    cd lib/YATT;
-	    if [[ -n $cpanm && -w $(dirname $cpanm) ]]; then
-		x cpanm --installdeps .
-	    else
-		x sudo cpanm --installdeps .
-	    fi
-	)
+	if [[ -z $cpanm ]]; then
+	    echo "Can't find cpanm!"
+	    echo "Please install dependencies with \"cpanm --installdeps .\" manually"
+	else
+	    (
+		cd lib/YATT;
+		if [[ -w $(dirname $cpanm) ]]; then
+		    x cpanm --installdeps .
+		else
+		    x sudo cpanm --installdeps .
+		fi
+	    )
+	fi
     fi
 
     x cp -va $yatt_skel/approot/* .
