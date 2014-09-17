@@ -33,7 +33,7 @@ sub add {
   (my MY $self, my ($fn, $content)) = @_;
   my $real = "$self->{basedir}/$fn";
   while (-e $real and (stat($real))[9] == time) {
-    # wailt until mtime is changed.
+    # wait until mtime is changed.
     sleep 1;
   }
   open my $fh, '>', $real or die "Can't create $real: $!";
