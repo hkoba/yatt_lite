@@ -6,101 +6,149 @@ use warnings FATAL => qw(all);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use YATT::Lite::Util qw(appname list_isa globref);
+use YATT::Lite::Util qw(appname list_isa globref catch);
 sub myapp {join _ => MyTest => appname($0), @_}
 
-use Test::More;
+use Test::Kantan;
 
 sub NSBuilder () {'YATT::Lite::NSBuilder'}
 
-use_ok(NSBuilder);
-
-{
-  my $builder = NSBuilder->new(app_ns => 'Foo');
-  sub Foo::bar {'baz'}
-  is my $pkg = $builder->buildns('INST'), 'Foo::INST1', "inst1";
-  is $pkg->bar, "baz", "$pkg->bar";
-}
-
-{
-  my $WDH = 'YATT::Lite::WebMVC0::DirApp';
-  {
-    package MyTest_NSB_Web;
-    use base qw(YATT::Lite::NSBuilder);
-    use YATT::Lite::MFields;
-    sub default_default_app {$WDH}
-    use YATT::Lite::Inc;
-  }
-  my $NS = 'MyTest_NSB';
-  my $builder = MyTest_NSB_Web->new(app_ns => $NS);
-
-  my $sub = $builder->buildns('INST');
-  is_deeply [list_isa($sub, 1)]
-    , [[$NS, [$WDH, list_isa($WDH, 1)]]]
-      , "sub inherits $NS, which inherits $WDH only.";
-
-  ok $WDH->can('_handle_yatt'), "$WDH is loaded (can handle_yatt)";
-}
-
-my $i = 0;
-{
-  my $CLS = myapp(++$i);
-  is $CLS, 'MyTest_instpkg_1', "sanity check of test logic itself";
-  my $builder = NSBuilder->new(app_ns => $CLS);
-  sub MyTest_instpkg_1::bar {'BARRR'}
-  is my $pkg = $builder->buildns, "${CLS}::INST1", "$CLS inst1";
-  is $pkg->bar, "BARRR", "$pkg->bar";
-
-  is my $pkg2 = $builder->buildns('TMPL'), "${CLS}::TMPL1", "$CLS tmpl1";
-  is $pkg2->bar, "BARRR", "$pkg2->bar";
-}
-
-{
-  my $NS = myapp(++$i);
-  my $builder = NSBuilder->new(app_ns => $NS);
-
-  my $base1 = $builder->buildns('TMPL');
-  # my $base2 = $builder->buildns('TMPL');
-
-  my $sub1 = $builder->buildns(INST => [$base1]
-			       , my $fake_fn =  __FILE__ . "/fake.yatt");
-
-  is_deeply [list_isa($sub1, 1)]
-    , [[$base1, [$NS, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]]
-      , "sub1 inherits base1";
-
-  is $sub1->filename, $fake_fn, "sub1->filename is defined";
-}
-
-{
-  my $YL = 'MyTest_instpkg_YL';
-  {
-    package MyTest_instpkg_YL;
-    use base qw(YATT::Lite);
-    use YATT::Lite::Inc;
-  }
-
-  my $NS = myapp(++$i);
-  my $builder = NSBuilder->new(app_ns => $NS);
-
-  my $sub = $builder->buildns(INST => [$YL]
-			      , my $fake2 = __FILE__ . "/fakefn2");
-  is_deeply [list_isa($sub, 1)]
-    , [[$YL, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]
-      , "sub inherits $YL only.";
-
-  {
-    my $sym = globref($sub, 'filename');
-    ok my $code = *{$sym}{CODE}, "sub has filename()";
-    is $code->(), $fake2, "filename is correct";
-  }
-
-  my $unknown = 'MyTest_instpkg_unk';
-  eval {
-    $builder->buildns(INST => [$unknown]);
+describe "NSBuilder", sub {
+  it "should be loaded", sub {
+    ok {require YATT::Lite::NSBuilder};
   };
-  like $@, qr/^None of baseclass inherits YATT::Lite: $unknown/
-    , "Unknown baseclass should raise error";
-}
+
+  describe "NSBuilder->new(app_ns => 'Foo')", sub {
+    my $builder = NSBuilder->new(app_ns => 'Foo');
+    sub Foo::bar {'baz'}
+    my $pkg;
+    it "should return instpkg(Foo::INST#)", sub {
+      ok {($pkg = $builder->buildns('INST')) eq 'Foo::INST1'}
+    };
+    describe "instpkg  (Foo::INST#)", sub {
+      it "should inherit app_ns(Foo)", sub {
+	ok {$pkg->bar eq "baz"};
+      };
+    };
+  };
+  
+  describe "Subclassed use of NSBuilder", sub {
+    my $WDH = 'YATT::Lite::WebMVC0::DirApp';
+    {
+      package MyTest_NSB_Web;
+      use base qw(YATT::Lite::NSBuilder);
+      use YATT::Lite::MFields;
+      sub default_default_app {'YATT::Lite::WebMVC0::DirApp'}
+      use YATT::Lite::Inc;
+    }
+    my $NS = 'MyTest_NSB';
+    describe "NSB_Subclass->new(app_ns => $NS)", sub {
+      my $builder = MyTest_NSB_Web->new(app_ns => $NS);
+      my $sub = $builder->buildns('INST');
+
+      it "should inherit $NS and $WDH", sub {
+	expect([list_isa($sub, 1)])->to_be([[$NS, [$WDH, list_isa($WDH, 1)]]]);
+      };
+
+      it "should load $WDH after buildns", sub {
+	ok {$WDH->can('_handle_yatt')};
+      };
+    };
+  };
+  ;
+
+  describe "myapp(\$i) tests", sub {
+    my $i = 0;
+    {
+      my $CLS = myapp(++$i);
+      describe "myapp(++\$i)", sub {
+	it "should return correct pakcage name", sub {
+	  ok {$CLS eq 'MyTest_instpkg_1'};
+	};
+
+	describe "NSBuilder->new(app_ns => $CLS)", sub {
+	  my $builder = NSBuilder->new(app_ns => $CLS);
+	  sub MyTest_instpkg_1::bar {'BARRR'}
+
+	  describe "->buildns() result", sub {
+	    my $pkg;
+	    ok {($pkg = $builder->buildns) eq "${CLS}::INST1"};
+	    ok {$pkg->bar eq "BARRR"};
+	  };
+	  describe "->buildns(TMPL) result", sub {
+	    my $pkg2;
+	    ok {($pkg2 = $builder->buildns('TMPL')) eq "${CLS}::TMPL1"};
+	    ok {$pkg2->bar eq "BARRR"};
+	  };
+	}
+      };
+    }
+    ;
+    describe "INST, inherits a TMPL", sub {
+      {
+	my $NS = myapp(++$i);
+	my $BLD = NSBuilder->new(app_ns => $NS);
+
+	describe "BLD->buildins(INST => [BLD->buildns(TMPL)], fake.yatt)", sub {
+	  my $base1 = $BLD->buildns('TMPL');
+	  my $sub1 = $BLD->buildns(INST => [$base1]
+				   , my $fake_fn =  __FILE__ . "/fake.yatt");
+
+	  it "should inherit TMPL, $NS, YATT::Lite", sub {
+	    expect([list_isa($sub1, 1)])
+	      ->to_be([[$base1, [$NS, ['YATT::Lite'
+				       , list_isa('YATT::Lite', 1)]]]]);
+	  };
+
+	  it "should has ->filename()", sub {
+	    ok {$sub1->filename eq $fake_fn};
+	  };
+	};
+      }
+    };
+
+    describe "INST, inherits only YATT::Lite", sub {
+      my $YL = 'MyTest_instpkg_YL';
+      {
+	package MyTest_instpkg_YL;
+	use base qw(YATT::Lite);
+	use YATT::Lite::Inc;
+      }
+
+      my $NS = myapp(++$i);
+
+      describe "BLD->buildns(INST => [subclass-of-YL], ./fakefn)", sub {
+	my $BLD = NSBuilder->new(app_ns => $NS);
+	my $sub = $BLD->buildns(INST => [$YL]
+				    , my $fake2 = __FILE__ . "/fakefn2");
+	it "should inherit subclass-of-YL (only)", sub {
+	  expect([list_isa($sub, 1)])
+	    ->to_be([[$YL, ['YATT::Lite', list_isa('YATT::Lite', 1)]]]);
+	};
+
+	describe "->filename() method(symbol)", sub {
+	  my $sym = globref($sub, 'filename');
+	  my $code;
+	  it "should be defined as CODE", sub {
+	    ok {defined ($code = *{$sym}{CODE})};
+	  };
+	  it "should return correct filename", sub {
+	    ok {$code->() eq $fake2};
+	  };
+	};
+      };
+    };
+    ;
+    describe "buildns() error detection", sub {
+      my $NS = myapp(++$i);
+      my $BLD = NSBuilder->new(app_ns => $NS);
+      it "should raise error when baseclass do not inherit YATT::Lite", sub {
+	my $unknown = 'MyTest_instpkg_unk';
+	expect(catch {$BLD->buildns(INST => [$unknown])})
+	  ->to_match(qr/^None of baseclass inherits YATT::Lite: $unknown/);
+      };
+    };
+  };
+};
 
 done_testing();

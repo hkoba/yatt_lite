@@ -31,6 +31,7 @@ configure_requires 'Module::Build';
 
 on test => sub {
  requires 'Test::More' => 0;
+ requires 'Test::Kantan' => 0;
  requires 'Test::Differences' => 0;
  requires 'Test::WWW::Mechanize::PSGI' => 0;
  requires 'HTML::Entities' => 0;
