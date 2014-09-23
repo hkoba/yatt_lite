@@ -462,7 +462,7 @@ TITLE: Unknown variable: html
 IN:
  <!yatt:args x=html>
  <?perl= $x ?>
-ERROR: Global symbol "\$x" requires explicit package name at \S+ line 2[\.,]
+ERROR: Global symbol "\$x" requires explicit package name (\(did you forget[^\)]+\) )?at \S+ line 2[\.,]
 
 
 TITLE: valueless bool arg -> 1
