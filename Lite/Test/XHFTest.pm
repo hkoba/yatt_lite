@@ -131,9 +131,14 @@ sub fixup_item {
     }
   };
 
-  $test->{realfile} = $test->{cf_IN}
-    ? sprintf($test->{cf_FILE}, 1+@{$self->{file_list} //= []})
-      : $prev->{realfile};
+  $test->{realfile} = do {
+    if ($test->{cf_IN}) {
+      no if $] >= 5.021002, warnings => qw/redundant/;
+      sprintf($test->{cf_FILE}, 1+@{$self->{file_list} //= []})
+    } else {
+      $prev->{realfile}
+    }
+  };
 
   $test->{cf_WIDGET} ||= do {
     my $widget = $test->{realfile};
