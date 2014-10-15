@@ -504,14 +504,14 @@ public な widget を定義します。一つのテンプレートファイル�
 L<URL Pattern|/subrouting> を使って下さい。
 
     <h2>以下をご記入ください</h2>
-    <yatt:input_form />
+    <form>
+     ...
+     <input type="submit" name="~confirm" value="確認">
+    </form>
     
     <!yatt:page confirm>
     <h2>入力内容をご確認ください</h2>
-    <yatt:input_form confirm_mode=1 />
-    
-    <!yatt:widget input_form confirm_mode>
-    ...(入力フォーム)...
+    ...
 
 =head2 C<< <!yatt:action NAME> >>
 X<!action> X<decl-action>
@@ -523,7 +523,10 @@ L<XXX: (未完) prog_action|YATT::Lite::docs::prog_action> を参照してくだ
 
     <!yatt:page confirm>
     <h2>入力内容をご確認ください</h2>
-    <yatt:input_form confirm_mode=1 />
+    <form>
+     ...
+     <input type="submit" name="!register" value="登録">
+    </form>
 
     <!yatt:action register>
     ...(ここからperl のプログラム)...
@@ -532,8 +535,8 @@ L<XXX: (未完) prog_action|YATT::Lite::docs::prog_action> を参照してくだ
 
 =head2 C<~PAGE=title>, C<~~=PAGE>
 
-page を呼び出すには POST/GET の parameter に C<~~=ページ名> か
-C<~ページ名=...> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
+page を呼び出すには POST/GET の parameter に C<~ページ名=...> か
+ C<~~=ページ名> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
 (複数同時に送信した場合はエラーになります)
 
 例えば
@@ -550,8 +553,8 @@ C<~ページ名=...> を含めて下さい。(B<...> 部分は任意の文字列
 
 =head2 C<!ACTION=title>, C<!!=ACTION>
 
-action を呼び出すには POST/GET の parameter に C<!!=ページ名> か
-C<!ページ名=...> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
+action を呼び出すには POST/GET の parameter に C<!ページ名=...> か
+ C<!!=ページ名> を含めて下さい。(B<...> 部分は任意の文字列で構いません。)
 (複数同時に送信した場合はエラーになります)
 
 例えば
@@ -581,7 +584,7 @@ widget 名が自動生成されます。
 
 (パターンは必ず C<"/"> で始まる必要が有ります。(将来の拡張のため))
 
-=head2 C<< <!yatt:args ROUTE ARGS...> >>
+=head2 C<< <!yatt:args "ROUTE" ARGS...> >>
 X<decl-args-route>
 
 
@@ -590,12 +593,12 @@ X<decl-args-route>
 
 (C<!yatt:args> は (既に名前が決まっているので) C<name=> は不要です。)
 
-=head2 C<< <!yatt:page ROUTE ARGS...> >>
+=head2 C<< <!yatt:page "ROUTE" ARGS...> >>
 
    <!yatt:page "/admin/:action" x y z>
      ...
 
-=head2 C<< <!yatt:page NAME=ROUTE ARGS...> >>
+=head2 C<< <!yatt:page NAME="ROUTE" ARGS...> >>
 
    <!yatt:page blog="/blog/:article_id">
      ... &yatt:article_id; ...
@@ -777,7 +780,8 @@ X<delegate>
 =head2 C<|> - C<undef>, C<"">, C<0>
 X<|>
 
-値が C<undef>, C<"">, C<0> の時はデフォルト値に置き換えられます。(perl の C<||> に相当)
+値が C<undef>, C<"">, C<0> の時はデフォルト値に置き換えられます。
+(覚え方：perl の C<||> に相当)
 
    <!yatt:args  x="| 1">
 
@@ -785,13 +789,15 @@ X<|>
 X<?>
 
 値が C<undef>, C<""> の時はデフォルト値に置き換えられます。
+(覚え方：キーボードの C</> に shift を加えると C<?>)
 
    <!yatt:args  x="?foo" y="html?bar">
 
 =head2 C</> - C<undef>
 X</>
 
-値が C<undef> の時はデフォルト値に置き換えられます。 (perl の C<//> に相当)
+値が C<undef> の時はデフォルト値に置き換えられます。
+(覚え方：perl の C<//> に相当)
 
    <!yatt:args  x="bool/0">
 

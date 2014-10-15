@@ -12,7 +12,8 @@ yatt_guides_for_pm(ja) - Perl Monger のための yatt (YATT::Lite) ガイド
 Web アプリを作る方法を解説します。
 特に、最初のシンプルなバージョンを自分で動かしたあとで、
 B<テンプレート書きをデザイナーさんにアウトソース>したり、
-システムとして顧客に納品して以後の B<ビジネスレベルの成長は顧客が自活的に進める> 、
+システムとして顧客に納品して以後の
+B<ビジネスレベルの改良・拡張・カスタマイズは顧客が自分で進める> 、
 という業態を想定して説明を進めます。
 
 解説は複数のツアーに別れており、
@@ -27,11 +28,15 @@ X<TOUR1>
 説明を簡単にするため、一連のツアーは、github 上のインストーラを
 直接使う方法を用います。
 
-ターミナルを開いて、以下のようにインストーラを実行して下さい。
 
 =for code sh
 
+まずターミナルを開いて、開発用のディレクトリを作り、そこに cd して下さい。
+
     $ mkdir -p ~/public_apps/app1 && cd ~/public_apps/app1   # or wherever.
+
+次に、以下のようにインストーラを実行して下さい。
+
     $ curl https://raw.githubusercontent.com/hkoba/yatt_lite/dev/scripts/skels/min/install.sh | bash
       % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                      Dload  Upload   Total   Spent    Left  Speed
@@ -48,6 +53,10 @@ X<TOUR1>
     Receiving objects: 100% (5775/5775), 1.32 MiB | 332.00 KiB/s, done.
     Resolving deltas: 100% (4029/4029), done.
     Checking connectivity... done.
+    # cpanm --installdeps .
+    --> Working on .
+    Configuring YATT-Lite-v0.0.9 ... OK
+    <== Installed dependencies for .. Finishing.
     # cp -va lib/YATT/scripts/skels/min/approot/app.psgi lib/YATT/scripts/skels/min/approot/html .
     `lib/YATT/scripts/skels/min/approot/app.psgi' -> `./app.psgi'
     `lib/YATT/scripts/skels/min/approot/html' -> `./html'
@@ -163,9 +172,10 @@ L<引数の宣言|YATT::Lite::docs::yatt_manual/Argument Declaration>は
 C<引数名 = "型名 フラグ文字 デフォルト値"> の形式で書かれます。
 型名は省略すると C<text> 型になり、出力時に自動的に escape されます。
 
-C<foo> にはデフォルト値として C<"world"> が設定されています。
+この例では引数 B<foo> が B<text> 型で、フラグ文字が B<?>、
+デフォルト値が B<world> となっています。
 デフォルトモードフラグが C<?> なので、 C<foo> の値が空文字列 C<""> か C<undef>
-の時にデフォルト値が使われます。
+の時にデフォルト値 C<world> が使われます。
 
 =back
 
@@ -175,8 +185,8 @@ C<foo> にはデフォルト値として C<"world"> が設定されています�
 C<&yatt:> で始まり C<;> で終わる部分は、(html の entity 参照記法に習って)
 外から来た値を埋め込む(置換する)、L<Entity 参照|YATT::Lite::docs::yatt_manual/Entity reference> を表しています。
 
-ここでは引数 foo, bar を埋め込みます。
-entity 記法は引数以外に処理の式を埋め込むためにも使います。
+この例では引数 foo, bar を html 中に埋め込んでいます。
+なお、entity 記法は引数以外に計算処理の式を埋め込むためにも使います。
 
 
 =back
