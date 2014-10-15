@@ -22,7 +22,7 @@ before it actually run. For example, YATT can detect
 misspellings of template parameters and (so-called) widget names.
 Following is an example of valid yatt template:
 
-```html
+```xml
 <!yatt:args who content>
 <h2>Hello &yatt:who;!</h2>
 <p>&yatt:content;</p>
@@ -163,7 +163,7 @@ use YATT::Lite::PSGIEnv;
 Now you can use two entity functions: 
 ``&yatt:session(name,default);`` and ``&yatt:set_session(name,value);``.
 
-```html
+```xml
 <!yatt:args user>
 <yatt:if "&yatt:user;">
 
@@ -284,7 +284,7 @@ Now you are ready to write your first yatt app.
 Open your favorite editor and create a yatt template ``html/index.yatt``
 like this:
 
-```html
+```xml
 <!yatt:args x y>
 <h2>Hello &yatt:x; world!</h2>
 &yatt:y;
