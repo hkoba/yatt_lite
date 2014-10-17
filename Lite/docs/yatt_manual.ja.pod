@@ -36,14 +36,6 @@ yatt の構文は XML に似ていますが、XML よりも再帰性を改善し
 
 =over 4
 
-=item C<< <!yatt: >> ... C<< > >>
-
-L<yatt 宣言|/YATT Declaration> (部品の始まり)
-
-=item C<< &yatt: >> ... C<< ; >>
-
-L<Entity 参照|/Entity reference> (変数や関数、メソッドの呼び出し)
-
 =item C<< <yatt: >> ... C<< /> >>
 
 =item C<< <yatt: >> ... C<< > >> ～ C<< </yatt:...> >>
@@ -57,11 +49,19 @@ L<部品(widget) の呼び出し|/Widget Invocation>
 L<部品(widget) への引数(タグ形式)|/attribute element>.
 (引数の中に更にタグを含めたい時に使うと、HTML らしいテンプレートが書けます)
 
+=item C<< &yatt: >> ... C<< ; >>
+
+L<Entity 参照|/Entity reference> (埋め込み要素：変数や関数呼び出し)
+
+=item C<< <!yatt: >> ... C<< > >>
+
+L<yatt 宣言|/YATT Declaration> (部品定義の始まり)
+
 =item C<< <!--#yatt  >> ... C<<  --> >>
 
 L<コメント|/Comment block>. この部分は yatt の解析対象外。
 
-XXX: 将来的に、閉じを C<< #--> >> に変更する案があります。
+B<XXX:> 将来的に、閉じを C<< #--> >> に変更する案があります。
 
 =item C<< &yatt[[;  >> ... C<<  &yatt]]; >>
 
@@ -114,18 +114,46 @@ widget を呼び出すには、 C<< <yatt:... >  >> で始まるタグを書き�
 使う形式、どちらでも書けます。引数は C< x="..." > のようにタグの属性として渡すか、
 L<引数を表す別のタグ|/attribute element> として渡すことが出来ます。
 
-  ...
-  <yatt:foo x="hello!"/>
-  ...
+  <!--foo の呼び出し. 閉じタグ無し. 引数は属性 x として渡す例-->
+  <yatt:foo x="hello!" y="world!"/>
+  
+  <!--開きタグ＋閉じタグの例。囲まれた部分は body 引数として渡されます-->
+  <yatt:foo x="hello!" y="world!">
+    my contents!
+  </yatt:foo>
+  
+  <!--中に属性タグ形式で引数 x を書く例-->
+  <yatt:foo>
+    <:yatt:x>hello!</:yatt:x>
+    <:yatt:y>world!</:yatt:y>
+    my contents!
+  </yatt:foo>
+  
+  <!--属性タグの、閉じタグ無し形式の例-->
+  <yatt:foo>
+    my contents!
+  <:yatt:x/>
+    hello!
+  <:yatt:y/>
+    world!
+  </yatt:foo>
 
-
-  <!yatt:widget foo x>
-  ...foo の定義...
 
 =head2 widget search order
 
-widget は同一ファイル内 → 同一ディレクトリ内 → 他に指定されたテンプレートディレクトリ、
-の順で検索され、最初に見つかったものが使われます。この検索はコンパイル時に行われ、
+widget は
+
+=over 4
+
+=item * 同一ファイル内
+
+=item * → 同一ディレクトリ内
+
+=item * → 他に指定されたテンプレートディレクトリ
+
+=back
+
+の順で検索され、最初に見つかったものが使われます。B<検索はコンパイル時に> 行われ、
 見つからない場合はコンパイルエラーとなります。
 
 =head2 widget B<path>
