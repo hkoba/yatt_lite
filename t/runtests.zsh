@@ -41,6 +41,8 @@ optspec=(
     -nosamples
     -samples
     -noplenv
+    -list-deps
+    -list-missings
     -brew::
 )
 
@@ -71,8 +73,8 @@ function confirm {
     if [[ -n $o_yn ]]; then
 	true
     elif [[ -t 0 ]]; then
-	# (g::) is for \n expansion.
-	read -q "yn?${(g::)confirm_msg}$c_off (Y/n) " || die "\n$bg[red]Canceled."
+	# (g::) is not supported in zsh4
+	read -q "yn?${confirm_msg}$c_off (Y/n) " || die "\n$bg[red]Canceled."
 	print
     else
 	die $dying_msg, exiting...
@@ -86,7 +88,7 @@ function cpanfile_modules {
     else
 	phases=(runtime test)
     fi
-    plenv exec perl -MModule::CPANfile -Mstrict -le '
+    $plenv_exec perl -MModule::CPANfile -Mstrict -le '
       my %ignored = map {$_=>1} qw/perl/;
       my $req = Module::CPANfile->load(shift)->prereq_specs;
       print join "\n", grep {not $ignored{$_}} map {
@@ -107,26 +109,41 @@ function plenv_install_minimum {
 	Module::CPANfile
     )
     for m in $minmods; do
-	plenv exec perl -M$m -e0 >&/dev/null || {
+	$plenv_exec perl -M$m -e0 >&/dev/null || {
 	    confirm "$m is not yet installed for plenv. $c_em[1]Install now?"\
                "Can't use $m"
-	    plenv exec cpanm $m
+	    $plenv_exec cpanm $m
 	}
     done
 }
 
+function list_missings {
+    local cpanfile=$1 m
+    for m in $(cpanfile_modules $cpanfile); do
+	$plenv_exec perl -M$m -e0 >&/dev/null && continue
+        if (($+functions[allow-missing-$m])); then
+           allow-missing-$m && continue
+	fi
+        print $m
+    done
+}
+
+function allow-missing-DBD::mysql {
+   ! [[ -r /usr/include/mysql/mysql.h ]]
+}
+
 function plenv_install_missings {
     local cpanfile=$1 missings
-    missings=()
-    local m
-    for m in $(cpanfile_modules $cpanfile); do
-	plenv exec perl -M$m -e0 >&/dev/null || missings+=($m)
-    done
+    missings=($(list_missings $cpanfile))
     if (($#missings)); then
-        confirm "Following modules are not yet installed for plenv:\n----\n${(F)missings}\n----\n$c_em[1]Install (with plenv exec cpanm) now? "\
+        confirm "Following modules are not yet installed for current perl:
+----
+${(F)missings}
+----
+$c_em[1]Install (with $cpanm) now? "\
                "Can't use $m"
 
-	plenv exec cpanm -n -f $missings
+	$cpanm -n -f $missings
     fi
 }
 
@@ -136,10 +153,29 @@ if ((! $+opts[--noplenv])) && (($+commands[plenv])) &&
 then
     # If you enabled plenv and either -y or has tty input
     plenv_exec=(plenv exec)
+    cpanm=($plenv_exec cpanm)
     unset PERL5LIB
     plenv_install_minimum
-    plenv_install_missings $distdir/cpanfile; # cpanm --installdeps $distdir, with confirmation.
+else
+    plenv_exec=()
+    if [[ -w $commands[perl]:h ]]; then
+      cpanm=(cpanm)
+    else
+      cpanm=(sudo cpanm)
+    fi
 fi
+
+if (($+opts[--list-deps])); then
+    cpanfile_modules $distdir/cpanfile
+    exit
+elif (($+opts[--list-missings])); then
+    list_missings $distdir/cpanfile
+    exit
+else
+    # cpanm --installdeps $distdir, with confirmation.
+    plenv_install_missings $distdir/cpanfile
+fi
+
 #========================================
 
 if (($+opts[--brew])); then
