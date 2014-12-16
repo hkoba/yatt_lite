@@ -53,14 +53,25 @@ foreach my $fn (@files) {
   die "Error while loading $fn: $@" if $@;
 }
 
+my $test_lang = $ENV{LANG} && $ENV{LANG} =~ /\.UTF-?8$/i;
+
 my $ntests = (@section * 2) + sum(map {$_->ntests} @section);
-plan tests => $ntests;
+plan tests => $ntests + ($test_lang ? 1 : 0);
+
+my $skip_test_lang = !$test_lang;
+if ($test_lang) {
+  my $got = captured(undef, sub {
+		       my ($this, $fh) = @_;
+		       # 世界！
+		       print $fh "\x{4e16}\x{754c}\x{ff01}";
+		     });
+  $skip_test_lang = $got ne "\xe4\xb8\x96\xe7\x95\x8c\xef\xbc\x81";
+  ok !$skip_test_lang, "Sanity check for captured. LANG=$ENV{LANG}.";
+}
 
 my $i = 1;
 foreach my MY $sect (@section) {
-  my $skip_no_utf8 =
-    $sect->{cf_ONLY_UTF8} && $ENV{LANG}
-      && $ENV{LANG} !~ /\.UTF-?8$/i;
+  my $skip_no_utf8 = $sect->{cf_ONLY_UTF8} && $skip_test_lang;
 
   my $fn = path_tail($sect->{cf_filename}, 2);
   # XXX: as_vfs_spec => data => {}, rc => '...';
@@ -152,7 +163,11 @@ sub captured {
   open my $fh, ">", \ (my $buf = "") or die $!;
   binmode $fh, ":encoding(utf8)"; #XXX: 常に、で大丈夫なのか?
   # XXX: locale と一致しなかったらどうすんの?
-  $obj->$method($fh, @args);
+  if (ref $method) {
+    $method->($obj, $fh, @args);
+  } else {
+    $obj->$method($fh, @args);
+  }
   close $fh;
   $buf;
 }
