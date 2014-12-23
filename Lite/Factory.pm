@@ -239,6 +239,7 @@ sub init_app_ns {
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
+  $self->{cf_index_name} //= $self->default_index_name;
   $self->{cf_output_encoding} //= $self->default_output_encoding;
   $self->{cf_header_charset} //= (
     $self->{cf_output_encoding} || $self->default_header_charset
@@ -247,6 +248,7 @@ sub after_new {
 
 sub default_output_encoding { '' }
 sub default_header_charset  { 'utf-8' }
+sub default_index_name { 'index' }
 
 sub _after_after_new {
   (my MY $self) = @_;
@@ -547,6 +549,7 @@ sub _cf_delegates {
      at_done
      app_root
      namespace
+     index_name
      only_parse);
 }
 

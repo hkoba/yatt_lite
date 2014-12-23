@@ -24,6 +24,7 @@ requires 'HTML::Entities' => 0;
 
 recommends 'YAML::Tiny' => 0;
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
+recommends 'Sub::Inspector' => 0;
 
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';

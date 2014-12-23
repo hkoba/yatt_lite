@@ -4,6 +4,7 @@ use warnings FATAL => qw(all);
 use Carp;
 use parent qw(YATT::Lite::VFS);
 use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
+			   cf_index_name
 	      cf_tmpl_encoding
 	      cf_debug_parser
 	      cf_parse_while_loading cf_only_parse
@@ -230,6 +231,7 @@ sub create_file {
     my ($partName, $kind, $pureName, @rest)
       = ref $nameSpec ? @$nameSpec : $nameSpec;
 
+    $partName ||= $self->{cf_index_name};
     $kind //= 'page';
     $pureName //= '';
 

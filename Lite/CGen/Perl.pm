@@ -671,7 +671,8 @@ use YATT::Lite::Constants;
 
     my Template $tmpl = $self->{curtmpl};
     unless ($tmpl->{cf_entns}->can("entity_$name")) {
-      die $self->generror("No such entity: %s", $name);
+      die $self->generror(q!No such entity in namespace "%s": %s!
+			  , $tmpl->{cf_entns}, $name);
     }
     my $call = sprintf '$this->entity_%s(%s)', $name
       , scalar $self->gen_entlist(undef, @_);

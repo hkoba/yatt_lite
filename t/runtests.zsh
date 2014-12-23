@@ -126,13 +126,14 @@ function plenv_install_missings {
         confirm "Following modules are not yet installed for plenv:\n----\n${(F)missings}\n----\n$c_em[1]Install (with plenv exec cpanm) now? "\
                "Can't use $m"
 
-	plenv exec cpanm $missings
+	plenv exec cpanm -n -f $missings
     fi
 }
 
 if ((! $+opts[--noplenv])) && (($+commands[plenv])) &&
     plenv which perl | grep plenv >/dev/null &&
-    [[ -n $o_yn || -t 0 ]]; then
+    [[ -n $o_yn || -t 0 ]]
+then
     # If you enabled plenv and either -y or has tty input
     plenv_exec=(plenv exec)
     unset PERL5LIB
