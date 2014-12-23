@@ -91,11 +91,13 @@ foreach my MY $sect (@section) {
   is ref $yatt, 'YATT::Lite', 'new YATT::Lite package';
   local $YATT::Lite::YATT = $yatt; # XXX: runyatt に切り替えられないか？
   my $last_title;
+  TODO:
   foreach my Item $test (@{$sect->{tests}}) {
     next unless $test->is_runnable;
     my $title = "[$fn] " . ($test->{cf_TITLE} // $last_title
 			    // $test->{cf_ERROR} // "(undef)");
     $title .= " ($test->{num})" if $test->{num};
+    local $TODO = $test->{cf_TODO};
   SKIP: {
       if (($test->{cf_SKIP} or $test->{cf_PERL_MINVER} or $skip_no_utf8)
 	  and my $skip = $test->ntests) {

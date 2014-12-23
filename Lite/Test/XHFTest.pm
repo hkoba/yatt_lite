@@ -28,6 +28,7 @@ use Encode;
 		cf_TITLE
 		cf_BREAK
 		cf_SKIP
+		cf_TODO
 		cf_PERL_MINVER
 
 		cf_WIDGET
