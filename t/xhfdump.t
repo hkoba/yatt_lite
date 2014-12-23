@@ -28,8 +28,10 @@ END
 - foo
 END
      #
+     , undef
      , [<<END, '' => 'bar']
-: bar
+- 
+- bar
 END
      , [<<END, undef, 'bar']
 = #null
@@ -122,7 +124,8 @@ END
 
      , [<<END, {foo => 'bar', '' => 'baz', bang => undef}]
 {
-: baz
+- 
+- baz
 bang= #null
 foo: bar
 }
