@@ -94,7 +94,7 @@ F<.ytmpl> をつけてください。
 =item C<.htyattconfig.yml>, C<.htyattconfig.xhf>
 
 ディレクトリ毎の L<YATT::Lite> をロードする時に渡される設定パラメータを記述します。
-書式は YAML か L<XHF|YATT::Lite::XHF> 形式です。
+書式は YAML か L<XHF|YATT::Lite::XHF::Syntax> 形式です。
 
 =item C<.htyattrc.pl>
 

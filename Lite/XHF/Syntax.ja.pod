@@ -60,6 +60,7 @@ Note: 元々 XHF は unit test のテスト入力・出力ペアを簡単に書�
 ありません。そのような用途には L<YAML> 一族や, L<Storable> などを用いて下さい。
 
 =head2 最小限のエスケープルール
+X<minimum-escaping>
 
 最も単純な用途では、 YAML と XHF はとても良く似て見えます。例えば、
 C<< {foo => 1, bar => 2} >> というデータを表現する時、YAML と
@@ -103,6 +104,7 @@ B<XHF> では以下のように書けます:
 =back
 
 =head3 複数行文字列と、"書いたまま"モード
+X<multi-line-text>
 
 XHF の C<キー：値> ペアの B<値> 部分では、エスケープする必要がある文字は
 改行文字 C<\n> (と、値の前後の空白文字) だけです。
@@ -270,6 +272,7 @@ XHF では、以下のブロック：
 ですので、上記は C<< +{ foo => 1, bar => 2 } >> を返すでしょう。
 
 =head3 順序付き、キー・値ペアのリスト、重複有り
+X<ordered-kv-pairs>
 
 以上のように XHF のブロックの一番外側はフラットなリストを表しているので、
 そこには (Perl の HASH データ構造から来る) 制限は適用されません。
@@ -310,6 +313,7 @@ Note: 現在のところ、入れ子要素は perl の普通の HASH と ARRAY �
 ですので、上記の順序・重複保護が有効に働くのは、一番外側のみです。
 
 =head2 パラグラフのストリーム (コメント読み飛ばし付き)
+X<paragraph-stream>
 
 XHF の入力ストリームは連続空行 C<"\n\n+"> で区切られます
 (これは Email ヘッダや HTTP ヘッダと同様です)。
@@ -368,6 +372,7 @@ C<< read(skip_comment => 0) >> のように、
   }
 
 =head1 複雑な例 (YAML との対比つき)
+X<complex-example>
 
 Here is a more dense example B<in XHF>:
 
@@ -574,6 +579,7 @@ Here is a syntax definition of XHF in extended BNF
   NAME            = [0-9A-Za-z_.-/~!]
 
 =head2 Some notes on current definition
+X<notes-on-current-def>
 
 =over 4
 

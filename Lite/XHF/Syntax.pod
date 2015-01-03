@@ -56,6 +56,7 @@ It is not my design goal).
 If you want such complex serializer, you should use L<YAML> family, L<Storable> and such instead.
 
 =head2 Minimum escaping for value of name-value pairs
+X<minimum-escaping>
 
 For simplest cases, YAML and XHF may look fairly similar. For example,
 a hash structure C<< {foo => 1, bar => 2} >> can be written in a same way
@@ -99,6 +100,7 @@ The differences are:
 =back
 
 =head3 Multi-line text value and verbatim text
+X<multi-line-text>
 
 In XHF, you I<only> need to escape C<\n>
 (and leading/trailing C<SPACE>, C<TAB>, if you need)
@@ -266,6 +268,7 @@ In contrast in YAML, C<:> always means I<map(dictionary)>. So, above
 will be always C<< +{ foo => 1, bar => 2 } >>.
 
 =head3 Ordered kv-pair list with key duplicates (limited)
+X<ordered-kv-pairs>
 
 Since outermost xhf-block means flattened list, you can use XHF
 to write down ordered key-value pair list with key duplicates,
@@ -301,6 +304,7 @@ above is (equivalent of) valid output from following html form in HTTP:
 Note: currently, nested elements are deserialized as ordinally perl hash and array, so this order/dup-key preservation only works for outermost list.
 
 =head2 Paragraph based block stream (with comment skipping)
+X<paragraph-stream>
 
 XHF input stream is delimited by consecutive empty-line(s) C<"\n\n+">
 (like Email header and HTTP header),
@@ -356,6 +360,7 @@ Then
   }
 
 =head1 COMPLEX EXAMPLE, compared with YAML
+X<complex-example>
 
 Here is a more dense example B<in XHF>:
 
@@ -557,6 +562,7 @@ Here is a syntax definition of XHF in extended BNF
   NAME            = [0-9A-Za-z_.-/~!]
 
 =head2 Some notes on current definition
+X<notes-on-current-def>
 
 =over 4
 
