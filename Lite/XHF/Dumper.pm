@@ -83,3 +83,46 @@ sub dump_hash {
   my ($item) = @_;
   "{\n" . _dump_pairs(map {$_, $item->{$_}} sort keys %$item) . "\n}";
 }
+
+__END__
+
+=head1 NAME
+
+YATT::Lite::XHF::Dumper - Serializer for XHF format
+
+=for code perl
+
+=head1 SYNOPSIS
+
+  require YATT::Lite::XHF::Dumper;
+  print YATT::Lite::XHF::Dumper->dump_xhf(foo => [1..3], bar => {baz => "qux"});
+
+  # or use this as mixin:
+  use YATT::Lite::XHF::Dumper;
+  print __PACKAGE__->dump_xhf(foo => [1..3], bar => {baz => "qux"});
+
+
+Then you will get a xhf-block:
+
+  foo[
+  - 1
+  - 2
+  - 3
+  ]
+  bar{
+  baz: qux
+  }
+
+
+=head1 DESCRIPTION
+
+This is a serializer for L<XHF|YATT::Lite::XHF::Syntax>.
+
+=head1 AUTHOR
+
+"KOBAYASI, Hiroaki" <hkoba@cpan.org>
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+

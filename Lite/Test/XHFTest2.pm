@@ -152,7 +152,7 @@ sub load_file_into {
   _with_loading_file {$pack} $fn, sub {
     my File $file = $pack->File->new(file => $fn);
     my $parser = $pack->Parser->new(file => $fn);
-    if (my @global = $parser->read) {
+    if (my @global = $parser->read(skip_comment => 0)) {
       $file->configure(@global);
     }
     while (my @config = $parser->read) {

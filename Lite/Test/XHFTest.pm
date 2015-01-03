@@ -83,11 +83,10 @@ sub load {
   my Parser $parser = $pack->Parser->new(@_);
   my MY $self = $pack->new($parser->cf_delegate(qw(filename))
 			   , parser => $parser);
-  if (my @global = $parser->read) {
+  if (my @global = $parser->read(skip_comment => 0)) {
     $self->configure(@global);
     $parser->configure($self->cf_delegate_defined(qw(encoding)));
   }
-  $parser->configure(skip_comment => 1);
   while (my @config = $parser->read) {
     $self->add_item($self->Item->new(@config));
   }
