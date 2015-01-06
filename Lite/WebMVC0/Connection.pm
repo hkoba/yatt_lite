@@ -109,6 +109,7 @@ sub queryobj {
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_cgi} = my $cgi = shift;
+  return unless $glob->is_form_content_type($cgi->content_type);
   unless ($prop->{cf_no_nested_query}) {
     if ($prop->{cf_is_psgi}) {
       $glob->convert_array_param_psgi($cgi);
@@ -116,6 +117,20 @@ sub configure_cgi {
       $glob->convert_array_param_cgi($cgi);
     }
   }
+}
+
+sub is_form_content_type {
+  my ($self, $real_ct) = @_;
+  return 1 if ($real_ct // '') eq '';
+  foreach my $check_ct ($self->form_content_types) {
+    return 1 if $check_ct eq $real_ct;
+  }
+  return 0;
+}
+
+sub form_content_types {
+  qw(multipart/form-data
+     application/x-www-form-urlencoded);
 }
 
 sub convert_array_param_psgi {
@@ -143,6 +158,7 @@ sub convert_array_param_psgi {
 sub convert_array_param_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($cgi) = @_;
+  return if ($cgi->content_type // "") eq "application/json";
   $prop->{params_hash}
     = YATT::Lite::Util::parse_nested_query($cgi->query_string);
 }
