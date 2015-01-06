@@ -22,6 +22,17 @@ use YATT::Lite::PSGIEnv;
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
+
+  foreach my $name (qw(raw_body)) {
+    *{globref(PROP, $name)} = sub {
+      my PROP $prop = (my $glob = shift)->prop;
+      unless ($prop->{cf_is_psgi}) {
+	croak "Connection method $name is PSGI mode only!"
+      }
+      $prop->{cf_cgi}->$name;
+    };
+  }
+
   foreach my $name (qw(url_param)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
