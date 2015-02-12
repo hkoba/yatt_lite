@@ -1,0 +1,128 @@
+=encoding utf-8
+
+=head1 NAME
+
+YATT::Lite::LRXML::Syntax - Loose but Recursive XML (LRXML) format.
+
+=for code perl
+
+=head1 SYNOPSIS
+
+  require YATT::Lite::LRXML;
+  my $container = YATT::Lite::LRXML->load_from(string => <<'END');
+  <!yatt:args x y>
+  <h2>&yatt:x;</h2>
+  &yatt:y;
+
+  <!yatt:widget foo id x>
+  <div id="&yatt:id;">
+    &yatt:x;
+  </div>
+  END
+
+=head1 DESCRIPTION
+
+Loose but Recursive XML (B<LRXML>), which I'm defining here,
+is a XML-like template format. LRXML is first used in
+my template engine L<YATT> and then extended in
+my former template engine L<YATT::Lite>.
+
+=head1 FORMAT SPECIFICATION
+
+=head2 LRXML Syntax definition in ABNF (with negative-match extension)
+X<syntax> X<BNF>
+
+LRXML format consists of two layers of syntax definition
+which are L<"LRXML multi-part container"|/LRXML-multi-part-container>
+(or simply I<container>) and L<"LRXML template"|/LRXML-template> (I<template>).
+A container can carry multiple templates and other types of text payload.
+
+In this document, I (roughly) use L<ABNF|https://tools.ietf.org/html/rfc5234>,
+with some modification/extension
+
+=over 4
+
+=item C<[..]> means a character set, like regexp in perl5.
+
+=item The operator "C<?>" is equivalent of C<*1> and indicates I<optional element>.
+
+=item The operator "C< ¬ >" preceding an element indicates I<negative-match>.
+
+If an element is written like:
+
+   ¬ elem
+
+then this pattern matches I<longest> possible character sequence
+which do not match C<elem>. This operator helps defining customizable namespace.
+
+=back
+
+=head3 Namespace qualifier
+
+In LRXML, every top-level constructs are marked by I<namespace qualifier>
+(or simply I<namespace>).
+Namespace can be customized to arbitrary set of words.
+For simplicity, in this document, I put "sample" defition of C<NS> rule like:
+
+  NS            = ("yatt")
+
+But every implementation of LRXML parser should allow overriding this rule like
+following instead:
+
+  NS            = ("yatt" / "js" / "perl")
+
+=head3 BNF of LRXML multi-part container
+X<LRXML-multi-part-container>
+
+  lrxml-container  = ?(lrxml-payload) *( lrxml-header lrxml-payload
+                                       / lrxml-comment )
+
+  lrxml-header    = "<!" NS ":" NSNAME lrxml-attlist ">" EOL
+
+  lrxml-comment   = "<!--#" NS *comment-payload "-->"
+
+  lrxml-payload   = ¬("<!" (NS ":" / "#" NS))
+
+  lrxml-attlist   = *(1*WS / decl-comment / decl-macro / att-pair)
+
+  decl-comment    = "--" comment-payload "--"
+
+  comment-payload = ([^-] / "-" [^-])
+
+  decl-macro      = "%" NAME *[0-9A-Za-z_:\.\-=\[\]\{\}\(,\)] ";"
+
+  att-pair        = ?(NSNAME "=") att-value
+
+  att-value       = squoted-att / dquoted-att / nested-att
+
+  squoted-att     = ['] *[^'] [']
+
+  dquoted-att     = ["] *[^"] ["]
+
+  nested-att      = '[' lrxml-attlist ']'
+
+  NSNAME          = NAME *(":" NAME)
+
+  NAME            = 1*[0-9A-Za-z_]
+
+  WS              = [\ \t\n]
+
+  EOL             = ?[\r] [\n]
+
+
+(Actually, in current YATT::Lite, C<NAME> can cotain C<\w> in perl unicode semantics.)
+
+=head3 BNF of LRXML template syntax
+X<LRXML-template>.
+
+
+
+
+
+=head1 AUTHOR
+
+"KOBAYASI, Hiroaki" <hkoba@cpan.org>
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
