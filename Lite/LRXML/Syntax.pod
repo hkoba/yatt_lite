@@ -27,18 +27,31 @@ is a XML-like template format. LRXML is first used in
 my template engine L<YATT> and then extended in
 my former template engine L<YATT::Lite>.
 
+=head2 WIP
+
+=over 4
+
+=item * lrxml-boundary is designed to carry meta-info of template.
+
+=back
+
 =head1 FORMAT SPECIFICATION
 
-=head2 LRXML Syntax definition in ABNF (with negative-match extension)
+=head2 LRXML Syntax definition in ABNF (with negative-match)
 X<syntax> X<BNF>
 
-LRXML format consists of two layers of syntax definition
+LRXML format consists of 3 layers of syntax definition
 which are L<"LRXML multi-part container"|/LRXML-multi-part-container>
-(or simply I<container>) and L<"LRXML template"|/LRXML-template> (I<template>).
-A container can carry multiple templates and other types of text payload.
+(or simply I<container>),
+L<"LRXML template"|/LRXML-template> (I<template>)
+and L<"LRXML entity reference"|/LRXML-entity-reference> (I<entref>)
+A container can carry multiple parts.
+Parts can be templates and other types of text payload.
+At LRXML format level, type of each part is not defined.
+It must be defined by LRXML user.
 
 In this document, I (roughly) use L<ABNF|https://tools.ietf.org/html/rfc5234>,
-with some modification/extension
+with some modifications/extensions.
 
 =over 4
 
@@ -55,39 +68,50 @@ If an element is written like:
 then this pattern matches I<longest> possible character sequence
 which do not match C<elem>. This operator helps defining customizable namespace.
 
+=item Rule can take parameter.
+
+If left-hand-side of a rule definition consists of two or more words,
+it is a parametric rule. Parametric rule is used like C<< <rule Param> >>.
+
+   group C          =  *term C
+
+   ...other rule... =   <group ")">
+
+
 =back
 
-=head3 Namespace qualifier
+=head3 Customizable namespace qualifier
 
 In LRXML, every top-level constructs are marked by I<namespace qualifier>
 (or simply I<namespace>).
 Namespace can be customized to arbitrary set of words.
-For simplicity, in this document, I put "sample" defition of C<NS> rule like:
+For simplicity, in this document, I put a "sample" definition of
+customizable namespace rule C<CNS> like:
 
-  NS            = ("yatt")
+  CNS             = ("yatt")
 
 But every implementation of LRXML parser should allow overriding this rule like
 following instead:
 
-  NS            = ("yatt" / "js" / "perl")
+  CNS             = ("yatt" / "js" / "perl")
 
 =head3 BNF of LRXML multi-part container
 X<LRXML-multi-part-container>
 
-  lrxml-container  = ?(lrxml-payload) *( lrxml-header lrxml-payload
-                                       / lrxml-comment )
+  lrxml-container = ?(lrxml-payload) *( lrxml-boundary lrxml-payload
+                                      / lrxml-comment )
 
-  lrxml-header    = "<!" NS ":" NSNAME lrxml-attlist ">" EOL
+  lrxml-boundary  = "<!" CNS ":" NSNAME lrxml-attlist ">" EOL
 
-  lrxml-comment   = "<!--#" NS *comment-payload "-->"
+  lrxml-comment   = "<!--#" CNS *comment-payload "-->"
 
-  lrxml-payload   = ¬("<!" (NS ":" / "#" NS))
+  lrxml-payload   = ¬("<!" (CNS ":" / "#" CNS))
 
   lrxml-attlist   = *(1*WS / decl-comment / decl-macro / att-pair)
 
   decl-comment    = "--" comment-payload "--"
 
-  comment-payload = ([^-] / "-" [^-])
+  comment-payload = *([^-] / "-" [^-])
 
   decl-macro      = "%" NAME *[0-9A-Za-z_:\.\-=\[\]\{\}\(,\)] ";"
 
@@ -115,9 +139,55 @@ X<LRXML-multi-part-container>
 =head3 BNF of LRXML template syntax
 X<LRXML-template>.
 
+  lrxml-template   = ?(template-payload) *( (lrxml-entref / template-tag)
+                                           ?(template-payload) )
 
+  template-payload = ¬("<" (CNS ":" / "?" CNS))
 
+  template-tag     = element / pi
 
+  element          = "<" (single-elem / open-tag / close-tag) ">"
+
+  pi               = "<?" CNS ?NSNAME pi-payload "?>"
+
+  single-elem      = CNS NSNAME lrxml-attlist ?"/"
+
+  open-tag         = CNS NSNAME lrxml-attlist
+
+  close-tag        =  "/" CNS NSNAME
+
+  pi-payload       = *([^?] / "?" [^>])
+
+=head3 BNF of LRXML entity reference syntax
+X<LRXML-entity-reference> X<LRXML-entref>
+
+  lrxml-entref     = "&" (CNS (pipeline / lcmsg)
+                         / special-entity "(" <group ")">)
+                     ";"
+  pipeline         = 1*( ":" NAME ?( "(" <group ")">)
+                       / "[" <group "]">
+                       / "{" <group "}">
+                       )
+
+  group C          = ent-term C
+
+  ent-term         =
+
+  lcmsg            =
+
+  special-entity   = SPECIAL
+
+I<Special entity> is another customizable syntax element.
+For example, it is usually defined like:
+
+  SPECIAL          = ("HTML")
+
+And then you can write C<&HTML(:var);>.
+
+But every implementation of LRXML parser should allow overriding this rule like
+following instead:
+
+  SPECIAL          = ("HTML" / "JSON" / "DUMP")
 
 =head1 AUTHOR
 
