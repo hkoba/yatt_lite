@@ -45,7 +45,7 @@ my @command;
     my %param = %common;
     MY->parse_params(\@ARGV, \%param);
 
-    my $dir = dirname($file);
+    my $dir = dirname($dispatcher->rel2abs($file));
     $dir =~ s,/*$,/,;
     my $dirhandler = $dispatcher->get_dirhandler($dir)
       or die "Can't find dirhandler for $dir";

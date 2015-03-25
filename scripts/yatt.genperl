@@ -29,7 +29,7 @@ local $SYS = my $dispatcher = YATT::Lite::Factory->load_factory_offline
 
 my $nerror = 0;
 foreach my $fn (@ARGV) {
-  my $dir = dirname($fn);
+  my $dir = dirname($dispatcher->rel2abs($fn));
   my $dirhandler = $dispatcher->get_dirhandler($dir);
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   my $trans = $dirhandler->open_trans;
