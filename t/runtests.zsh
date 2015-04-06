@@ -116,10 +116,14 @@ function plenv_install_minimum {
 }
 
 function plenv_install_missings {
-    local cpanfile=$1 missings
+    local cpanfile=$1 missings wants
     missings=()
+    wants=($(cpanfile_modules $cpanfile))
+    if (($+o_cover)); then
+	wants+=(Devel::Cover)
+    fi
     local m
-    for m in $(cpanfile_modules $cpanfile); do
+    for m in $wants; do
 	plenv exec perl -M$m -e0 >&/dev/null || missings+=($m)
     done
     if (($#missings)); then
