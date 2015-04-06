@@ -111,7 +111,7 @@ use YATT::Lite::Breakpoint ();
       next unless $name =~ /^[a-z]\w*$/i;
       my $argdecl = $widget->{arg_dict}{$name}
 	or die "Unknown args for widget '$widget->{cf_name}': $name";
-      my @value = $cgi->param($name);
+      my @value = $cgi->multi_param($name);
       $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
 	? \@value : $value[0];
     }

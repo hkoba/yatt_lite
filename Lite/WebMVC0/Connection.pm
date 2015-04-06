@@ -18,6 +18,8 @@ use YATT::Lite::MFields
 use YATT::Lite::Util qw(globref url_encode nonempty lexpand);
 use YATT::Lite::PSGIEnv;
 
+use YATT::Lite::Util::CGICompat;
+
 #----------------------------------------
 
 BEGIN {
@@ -105,6 +107,28 @@ sub param {
     }
   } elsif (my $cgi = $prop->{cf_cgi}) {
     return $cgi->param(@_);
+  } else {
+    croak "Neither Hash::MultiValue nor CGI is found in connection!";
+  }
+}
+
+# Annoying multi_param support.
+sub multi_param {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (my $ixh = $prop->{params_hash}) {
+    return keys %$ixh unless @_;
+    defined (my $key = shift)
+      or croak "undefined key!";
+    # If params_hash is enabled, value is returned AS-IS.
+    $ixh->{$key};
+
+  } elsif (my $hmv = ($prop->{cf_hmv} // do {
+    $prop->{cf_is_psgi} && $prop->{cf_cgi}->parameters
+  })) {
+    return $hmv->keys unless @_;
+    return wantarray ? $hmv->get_all($_[0]) : $hmv->get($_[0]);
+  } elsif (my $cgi = $prop->{cf_cgi}) {
+    return $cgi->multi_param(@_);
   } else {
     croak "Neither Hash::MultiValue nor CGI is found in connection!";
   }
