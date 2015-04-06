@@ -54,7 +54,7 @@ sub _import_as_base {
   YATT::Lite::MFields->define_fields($callpack);
 
   my $sym = globref($callpack, 'MY');
-  *$sym = sub () { $callpack } unless *{$sym}{CODE};
+  YATT::Lite::Util::define_const($sym, $callpack) unless *{$sym}{CODE};
 }
 
 1;

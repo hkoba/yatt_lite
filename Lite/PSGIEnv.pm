@@ -62,7 +62,7 @@ BEGIN {
   our %FIELDS = map {$_ => ''} @PSGI_FIELDS;
 }
 
-use YATT::Lite::Util qw(ckeval globref);
+use YATT::Lite::Util qw(ckeval globref define_const);
 
 sub import {
   my ($myPack, @more_fields) = @_;
@@ -75,7 +75,7 @@ sub import {
       my $old = $val->();
       croak "Conflicting definition of Env" unless $old eq $envpack;
     } else {
-      *{$sym} = sub () { $envpack };
+      define_const($sym, $envpack);
     }
   }
   {

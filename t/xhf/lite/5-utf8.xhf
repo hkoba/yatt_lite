@@ -45,7 +45,6 @@ OUT:
  world~~
 
 TITLE: Japanese ns plus Japanese output
-TODO: To suppress unknown travis-ci perl-5.18, perl-5.20 failures.
 IN:
  <!漢字:args x y>
  <漢字:こんにちは x y/>世界！

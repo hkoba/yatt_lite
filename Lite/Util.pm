@@ -38,11 +38,18 @@ require Scalar::Util;
     defined $_[0] && $_[0] ne '';
   }
 
+  sub define_const {
+    my ($name_or_glob, $value) = @_;
+    my $glob = ref $name_or_glob ? $name_or_glob : globref($name_or_glob);
+    *$glob = my $const_sub = sub () { $value };
+    $const_sub;
+  }
+
   sub globref {
-    my ($thing, $name) = @_;
+    my ($thing, @name) = @_;
     my $class = ref $thing || $thing;
     no strict 'refs';
-    \*{join("::", $class, defined $name ? $name : ())};
+    \*{join("::", $class, grep {defined} @name)};
   }
   sub globref_default {
     unless (@_ == 2) {
@@ -808,7 +815,7 @@ sub pkg2pm {
 # to put all functions into @EXPORT_OK.
 #
 {
-  our @EXPORT_OK;
+  our @EXPORT_OK = qw(define_const);
   my $symtab = symtab(__PACKAGE__);
   foreach my $name (grep {/^[a-z]/} keys %$symtab) {
     my $glob = $symtab->{$name};

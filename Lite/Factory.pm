@@ -68,6 +68,7 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			secure_text_plain
 			psgi_error
 			globref_default
+			define_const
 		       /;
 
 use YATT::Lite::XHF ();
@@ -528,7 +529,7 @@ sub buildns {
   # instns には MY を定義しておく。
   my $my = globref($newns, 'MY');
   unless (*{$my}{CODE}) {
-    *$my = sub () { $newns };
+    define_const($my, $newns);
   }
 
   # もし $newns の EntNS が Factory(SiteApp, app.psgi) の EntNS を継承していない

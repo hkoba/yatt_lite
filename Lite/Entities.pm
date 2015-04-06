@@ -87,7 +87,7 @@ sub define_MY {
   my ($myPack, $opts, $callpack) = @_;
   my $my = globref($callpack, 'MY');
   unless (*{$my}{CODE}) {
-    *$my = sub () { $callpack };
+    YATT::Lite::Util::define_const($my, $callpack);
   }
 }
 

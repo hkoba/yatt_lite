@@ -1,7 +1,7 @@
 package YATT::Lite::Util::Enum;
 use strict;
 use warnings FATAL => qw(all);
-use YATT::Lite::Util qw(globref);
+use YATT::Lite::Util qw(globref define_const);
 
 sub import {
   my $pack = shift;
@@ -22,7 +22,7 @@ sub import {
 	# print STDERR "$fullName\n";
 	my $glob = do {no strict 'refs'; \*$fullName};
 	my $i = $offset;
-	*$glob = sub () {$i};
+	define_const($glob, $i);
 	unless ($shortName =~ /^_/) {
 	  push @$export_ok, $shortName;
 	  push @$export, $shortName;

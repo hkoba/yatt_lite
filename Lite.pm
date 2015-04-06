@@ -51,6 +51,7 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			look_for_globref
 			subname ckeval
 			secure_text_plain
+			define_const
 		       /;
 
 sub Facade () {__PACKAGE__}
@@ -336,7 +337,7 @@ sub ensure_entns {
 
   # EntNS() を足すのは最後にしないと、再帰継承に陥る
   unless (my $code = *{$sym}{CODE}) {
-    *$sym = sub () { $entns };
+    define_const($sym, $entns);
   } elsif ((my $old = $code->()) ne $entns) {
     croak "Can't add EntNS() to '$app_ns'. Already has EntNS as $old!";
   } else {

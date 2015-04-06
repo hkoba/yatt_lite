@@ -18,7 +18,7 @@ use YATT::Lite::Types
    , [Column => -fields => [qw(cf_dbic_opts)]]
   );
 
-use YATT::Lite::Util qw(globref lexpand terse_dump);
+use YATT::Lite::Util qw(globref define_const lexpand terse_dump);
 
 sub dbic {
   (my MY $schema) = @_;
@@ -105,7 +105,7 @@ sub build_dbic {
   {
     my $sym = globref($DBIC, undef);
     unless (*{$sym}{CODE}) {
-      *$sym = sub () { $DBIC }
+      define_const($sym, $DBIC);
     }
   }
 

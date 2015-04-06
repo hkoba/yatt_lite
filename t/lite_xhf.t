@@ -15,12 +15,13 @@ BEGIN {
   require encoding;
   my $locale = encoding::_get_locale_encoding() || 'utf-8';
   my $enc = encoding::find_encoding($locale);
-  ${^ENCODING} = $enc; # XXX: Why do I need to do this??
   my $encName = $enc->name;
   foreach my $fh (\*STDERR, \*STDOUT, \*STDIN) {
     binmode $fh, ":raw :encoding($encName)";
   }
 }
+
+use Encode;
 
 use YATT::Lite::Test::TestUtil;
 #========================================
@@ -53,20 +54,20 @@ foreach my $fn (@files) {
   die "Error while loading $fn: $@" if $@;
 }
 
-my $test_lang = $ENV{LANG} && $ENV{LANG} =~ /\.UTF-?8$/i;
+my ($test_lang) = grep {defined $ENV{$_}} qw/LC_ALL LANG/;
+my $skip_test_lang = !$test_lang || ($ENV{$test_lang} !~ /\.UTF-?8$/i);
 
 my $ntests = (@section * 2) + sum(map {$_->ntests} @section);
-plan tests => $ntests + ($test_lang ? 1 : 0);
+plan tests => $ntests + ($skip_test_lang ? 0 : 1);
 
-my $skip_test_lang = !$test_lang;
-if ($test_lang) {
+if (not $skip_test_lang) {
   my $got = captured(undef, sub {
 		       my ($this, $fh) = @_;
 		       # 世界！
 		       print $fh "\x{4e16}\x{754c}\x{ff01}";
 		     });
   $skip_test_lang = $got ne "\xe4\xb8\x96\xe7\x95\x8c\xef\xbc\x81";
-  ok !$skip_test_lang, "Sanity check for captured. LANG=$ENV{LANG}.";
+  ok !$skip_test_lang, "Sanity check for captured. $test_lang=$ENV{$test_lang}.";
 }
 
 my $i = 1;
@@ -141,7 +142,7 @@ foreach my MY $sect (@section) {
 	} else {
 	  eval {
 	    eq_or_diff captured($pkg => render_ => lexpand($test->{cf_PARAM}))
-	      , $test->{cf_OUT}, "$title";
+	      , encode(utf8 => $test->{cf_OUT}), "$title";
 	  };
 	  if ($@) {
 	    fail "$title: runtime error: $@";
