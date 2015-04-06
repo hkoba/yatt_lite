@@ -2,6 +2,7 @@ package YATT::Lite::Error; sub Error () {__PACKAGE__}
 use strict;
 use warnings FATAL => qw(all);
 use parent qw(YATT::Lite::Object);
+use constant DEBUG_VERBOSE => $ENV{YATT_DEBUG_VERBOSE};
 
 use YATT::Lite::MFields qw/cf_file cf_line cf_tmpl_file cf_tmpl_line
 	      cf_backtrace
@@ -26,7 +27,9 @@ sub streq {
 
 sub message {
   my Error $error = shift;
-  $error->reason . $error->place;
+  my $msg = $error->reason . $error->place;
+  $msg .= $error->{cf_backtrace} // '' if DEBUG_VERBOSE;
+  $msg;
 }
 
 sub reason {
