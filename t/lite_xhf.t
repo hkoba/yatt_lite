@@ -107,7 +107,11 @@ foreach my MY $sect (@section) {
 	} elsif ($test->{cf_SKIP}) {
 	  skip "by SKIP: $title", $skip;
 	} elsif ($skip_no_utf8) {
-	  skip "by LANG=$ENV{LANG}, which is not UTF8", $skip;
+	  if ($test_lang) {
+	    skip "by $test_lang=$ENV{$test_lang}, which is not UTF8", $skip;
+	  } else {
+	    skip "by empty LC_ALL/LANG", $skip;
+	  }
 	}
       }
       if ($test->{cf_REQUIRE}

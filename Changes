@@ -1,7 +1,8 @@
 Revision history for YATT::Lite
 
-0.0.9_001 2015-04-09
+0.0.9_002 2015-04-09
     * fixes
+        - [GH #42] [RT#103406] Test suite fails if LANG environment variable is unset (0.0.9_001)
         - [GH #41] [RT #103393] - YATT::Lite::Util::define_const
         - [GH #35] CGI->multi_param adaption
         - [GH #40] yatt.render / yatt.genperl relative path problems
