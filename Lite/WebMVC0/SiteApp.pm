@@ -27,6 +27,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_logfile
 			   cf_use_subpath
 			   cf_debug_allowed_ip
+			   re_handled_ext
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -47,6 +48,7 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
   $self->{cf_use_subpath} //= 1;
+  $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|$self->{cf_ext_private})$};
 }
 
 sub _cf_delegates {
@@ -151,10 +153,9 @@ sub call {
 
   YATT::Lite::Breakpoint::break_psgi_call();
 
-  if (defined $self->{cf_app_root} and -e "$self->{cf_app_root}/.htdebug_env") {
-    return [200
-	    , [$self->secure_text_plain]
-	    , [map {escape("$_\t".($env->{$_}//"(undef)")."\n")} sort keys %$env]];
+  if ($self->has_htdebug("env")) {
+    return $self->psgi_dump(map {"$_\t".($env->{$_}//"(undef)")."\n"}
+			    sort keys %$env);
   }
 
   if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})
@@ -165,6 +166,13 @@ sub call {
   # XXX: user_dir?
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->split_path_info($env);
+
+  if ($self->has_htdebug("path_info")) {
+    return $self->psgi_dump([tmpldir   => $tmpldir]
+			    , [loc     => $loc]
+			    , [file    => $file]
+			    , [trailer => $trailer]);
+  }
 
   if ($self->{cf_debug_psgi}) {
     # XXX: should be configurable.
@@ -194,12 +202,16 @@ sub call {
   # Default index file.
   # Note: Files may placed under (one of) tmpldirs instead of docroot.
   if ($file eq '') {
-    $file = "$self->{cf_index_name}.yatt";
+    $file = "$self->{cf_index_name}.$self->{cf_ext_public}";
   } elsif ($file eq $self->{cf_index_name}) { #XXX: $is_index
-    $file .= ".yatt";
+    $file .= ".$self->{cf_ext_public}";
   }
 
-  if ($file !~ /\.(yatt|ydo)$/) {
+  if ($file !~ $self->{re_handled_ext}) {
+    if ($self->{cf_debug_psgi} and $self->has_htdebug("static")) {
+      return $self->psgi_dump("Not handled since extension doesn't match"
+			      , $file, $self->{re_handled_ext});
+    }
     return $self->psgi_handle_static($env);
   }
 
@@ -342,7 +354,9 @@ sub split_path_info {
     # XXX: should have cut_depth option.
     #
     split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root}
-	       , $self->{cf_use_subpath});
+	       , $self->{cf_use_subpath}
+	       , $self->{cf_ext_public}
+	     );
     # or die.
 
   } elsif (nonempty($env->{PATH_INFO})) {
@@ -351,7 +365,7 @@ sub split_path_info {
     #
     lookup_path($env->{PATH_INFO}
 		, $self->{tmpldirs}
-		, $self->{cf_index_name}, ".yatt"
+		, $self->{cf_index_name}, ".$self->{cf_ext_public}"
 		, $self->{cf_use_subpath});
   } else {
     # or die
@@ -445,6 +459,19 @@ sub configure_allow_debug_from {
   (my MY $self, my $data) = @_;
   my $pat = join "|", map { quotemeta($_) } lexpand($data);
   $self->{allow_debug_from} = qr{^(?:$pat)};
+}
+
+sub has_htdebug {
+  (my MY $self, my $name) = @_;
+  defined $self->{cf_app_root}
+    and -e "$self->{cf_app_root}/.htdebug_$name"
+}
+
+sub psgi_dump {
+  my MY $self = shift;
+  [200
+   , [$self->secure_text_plain]
+   , [map {escape(terse_dump($_))} @_]];
 }
 
 #========================================

@@ -31,6 +31,12 @@ use YATT::Lite::MFields
  , [cf_index_name =>
     (doc => "Rootname of index template. (default: index)")]
 
+ , [cf_ext_public =>
+    (doc => "public file extension for yatt. (default: yatt)")]
+
+ , [cf_ext_private =>
+    (doc => "hidden file extension for yatt. (default: ytmpl)")]
+
  , [cf_header_charset =>
     (doc => "Charset for outgoing HTTP Content-Type. (default: utf-8)")]
 
@@ -241,6 +247,8 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
   $self->{cf_index_name} //= $self->default_index_name;
+  $self->{cf_ext_public} //= $self->default_ext_public;
+  $self->{cf_ext_private} //= $self->default_ext_private;
   $self->{cf_output_encoding} //= $self->default_output_encoding;
   $self->{cf_header_charset} //= (
     $self->{cf_output_encoding} || $self->default_header_charset
@@ -250,6 +258,8 @@ sub after_new {
 sub default_output_encoding { '' }
 sub default_header_charset  { 'utf-8' }
 sub default_index_name { 'index' }
+sub default_ext_public {'yatt'}
+sub default_ext_private {'ytmpl'}
 
 sub _after_after_new {
   (my MY $self) = @_;
@@ -551,6 +561,8 @@ sub _cf_delegates {
      app_root
      namespace
      index_name
+     ext_public
+     ext_private
      only_parse);
 }
 

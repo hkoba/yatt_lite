@@ -20,6 +20,8 @@ use YATT::Lite::MFields qw/YATT
 	      cf_output_encoding
 	      cf_tmpl_encoding
 	      cf_index_name
+	      cf_ext_public
+	      cf_ext_private
 	      cf_app_ns entns
 	      cf_app_name
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
@@ -59,6 +61,8 @@ sub default_app_ns {'MyApp'}
 sub default_trans {'YATT::Lite::Core'}
 sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
 sub default_index_name { '' }
+sub default_ext_public {'yatt'}
+sub default_ext_private {'ytmpl'}
 
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
@@ -69,6 +73,8 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
   $self->{cf_index_name} //= "";
+  $self->{cf_ext_public} //= $self->default_ext_public;
+  $self->{cf_ext_private} //= $self->default_ext_private;
   weaken($self->{cf_factory});
 }
 
@@ -123,9 +129,8 @@ sub render_into {
 
 sub find_handler {
   (my MY $self, my ($ext, $file)) = @_;
-  $ext //= $self->cut_ext($file) || 'yatt';
-  # XXX: There should be optional hash based (extension => handler) mapping.
-  # cf_ext_alias
+  $ext //= $self->cut_ext($file) || $self->{cf_ext_public};
+  $ext = "yatt" if $ext eq $self->{cf_ext_public};
   my $sub = $self->can("_handle_$ext")
     or die "Unsupported file type: $ext";
   $sub;
@@ -284,6 +289,8 @@ sub build_trans {
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
 				     index_name
+				     ext_public
+				     ext_private
 				     rc_script
 				     lcmsg_sink
 				     only_parse/));

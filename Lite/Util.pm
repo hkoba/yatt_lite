@@ -169,10 +169,11 @@ require Scalar::Util;
   }
 
   sub split_path {
-    my ($path, $startDir, $cut_depth) = @_;
+    my ($path, $startDir, $cut_depth, $default_ext) = @_;
     # $startDir is $app_root.
     # $doc_root should resides under $app_root.
     $cut_depth //= 1;
+    $default_ext //= "yatt";
     $startDir =~ s,/+$,,;
     unless ($path =~ m{^\Q$startDir\E}gxs) {
       die "Can't split_path: prefix mismatch: $startDir vs $path";
@@ -194,10 +195,10 @@ require Scalar::Util;
     $dir .= "/" if $dir !~ m{/$};
     my $subpath = substr($path, $pos);
     if (not defined $file) {
-      if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.yatt") {
+      if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.$default_ext") {
 	$subpath = substr($subpath, 1+length $1);
-	$file = "$1.yatt";
-      } elsif (-e "$dir/index.yatt") {
+	$file = "$1.$default_ext";
+      } elsif (-e "$dir/index.$default_ext") {
 	# index.yatt should subsume all subpath.
       } elsif ($subpath =~ s{^/([^/]+)$}{}) {
 	# Note: Actually, $file is not accesible in this case.
