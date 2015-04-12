@@ -48,7 +48,7 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
   $self->{cf_use_subpath} //= 1;
-  $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|$self->{cf_ext_private})$};
+  $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
 }
 
 sub _cf_delegates {
