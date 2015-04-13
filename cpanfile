@@ -41,6 +41,7 @@ on test => sub {
  recommends 'CGI::Session' => 0;
  recommends 'Pod::Simple::SimpleTree' => 0;
  recommends 'HTTP::Headers' => 0;
+ recommends 'HTTP::Cookies' => 0;
  recommends 'FCGI::Client' => 0;
  recommends 'Locale::PO' => 0;
  recommends 'Email::Simple' => 0;

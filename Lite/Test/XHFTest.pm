@@ -191,22 +191,6 @@ sub as_vfs_data {
   \%result;
 }
 
-sub as_real_files {
-  (my MY $self, my $basedir, my @opts) = @_;
-  require YATT::TestFiles;
-  my $builder = $self->{builder} = new YATT::TestFiles($basedir, @opts);
-  foreach my $fn (@{$self->{file_list}}) {
-    my Item $item = $self->{file_dict}{$fn};
-    $builder->add($fn, $item->{cf_IN});
-  }
-}
-
-sub convert_htyattrc {
-  (my MY $self, my $path_cursor, my Item $item) = @_;
-  # XXX: 未実装
-  # data =>, rc => '...'
-}
-
 sub path_cursor {
   my ($top, $path) = @_;
   # path を一個残して、vivify する。
