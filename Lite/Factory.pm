@@ -294,7 +294,7 @@ sub render {
   my ($tmpldir, $loc, $file, $trailer)
     = my @pi = lookup_path($path_info
 			   , $self->{tmpldirs}
-			   , $self->{cf_index_name}, ".yatt");
+			   , $self->{cf_index_name}, ".$self->{cf_ext_public}");
   unless (@pi) {
     die "No such location: $path_info";
   }
