@@ -18,6 +18,9 @@ requires 'URI::Escape' => 0;
 requires 'Tie::IxHash' => 0; # For nested_query
 requires 'Devel::StackTrace' => 0;
 
+# YATT::Lite::Partial::Gettext
+requires 'Locale::PO' => 0;
+
 # For perl 5.20. Actually, CGI is not required (I hope).
 requires CGI => 0;
 requires 'HTML::Entities' => 0;
@@ -43,7 +46,6 @@ on test => sub {
  recommends 'HTTP::Headers' => 0;
  recommends 'HTTP::Cookies' => 0;
  recommends 'FCGI::Client' => 0;
- recommends 'Locale::PO' => 0;
  recommends 'Email::Simple' => 0;
  recommends 'Email::Sender' => 0;
 };
