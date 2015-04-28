@@ -24,6 +24,7 @@ Lite/docs/readme.ja.pod
 Lite/docs/readme.pod
 Lite/docs/todo.ja.pod
 Lite/docs/whyfields.ja.pod
+Lite/docs/whyyatt.ja.pod
 Lite/docs/yatt_design_uml.xmi
 Lite/docs/yatt_guides_for_pm.ja.pod
 Lite/docs/yatt_lite.svg
@@ -37,6 +38,7 @@ Lite/Inc.pm
 Lite/LRXML.pm
 Lite/LRXML/ParseBody.pm
 Lite/LRXML/ParseEntpath.pm
+Lite/LRXML/Syntax.pod
 Lite/Macro.pm
 Lite/MFields.pm
 Lite/NSBuilder.pm
@@ -107,6 +109,15 @@ samples/basic/1/t/lntests.zsh
 samples/basic/1/t/offline.t
 samples/basic/1/t/psgi_offline.t
 samples/basic/1/t/t_lib.pl
+samples/basic/10/app.psgi
+samples/basic/10/app.xhf
+samples/basic/10/html/index.html
+samples/basic/10/t/.htaccess
+samples/basic/10/t/1-basic.xhf
+samples/basic/10/t/fcgi_offline.t
+samples/basic/10/t/http_localhost.t
+samples/basic/10/t/offline.t
+samples/basic/10/t/psgi_offline.t
 samples/basic/2/.symlinks
 samples/basic/2/app.psgi
 samples/basic/2/html/index.yatt

@@ -30,8 +30,8 @@
             "Email::Sender" : "0",
             "Email::Simple" : "0",
             "FCGI::Client" : "0",
+            "HTTP::Cookies" : "0",
             "HTTP::Headers" : "0",
-            "Locale::PO" : "0",
             "Pod::Simple::SimpleTree" : "0",
             "Sub::Inspector" : "0",
             "YAML::Tiny" : "0"
@@ -42,6 +42,7 @@
             "HTML::Entities" : "0",
             "List::MoreUtils" : "0",
             "List::Util" : "0",
+            "Locale::PO" : "0",
             "Plack" : "0",
             "Tie::IxHash" : "0",
             "URI::Escape" : "0",
@@ -52,11 +53,11 @@
          }
       }
    },
-   "release_status" : "testing",
+   "release_status" : "stable",
    "resources" : {
       "license" : [
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "v0.0.9_002"
+   "version" : "0.100"
 }
