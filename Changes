@@ -1,5 +1,13 @@
 Revision history for YATT::Lite
 
+0.100 2015-04-28
+    * Docs
+        - Better docs for YATT::Lite::LRXML::Syntax
+    * Enhanement
+        - [GH #43] - allow use of ".html" instead of ".yatt"
+    * Fixes
+        - Add Locale::PO to cpanfile
+
 0.0.9_002 2015-04-09
     * fixes
         - [GH #42] [RT#103406] Test suite fails if LANG environment variable is unset (0.0.9_001)
