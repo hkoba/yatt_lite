@@ -31,7 +31,8 @@ yatt のテンプレートは、通常の HTML に、
 B<名前空間 yatt:> で始まる yattの構文要素を加えたものです。
 (名前空間は設定で変更可能です)。
 yatt の構文は XML に似ていますが、XML よりも再帰性を改善した、
-よりテンプレート向きの独自構文 LRXML (Loose but Recursive XML)
+よりテンプレート向きの独自構文 
+L<LRXML|YATT::Lite::LRXML::Syntax> (Loose but Recursive XML)
 を採用しています。
 
 =over 4
@@ -364,7 +365,7 @@ X<:dict>
 
 HASH(辞書)変数 C<dict> の要素 C<key> を参照します。
 
-例えば変数 C<car> に辞書 C<<{model => "Pulse", maker => "Renault"}>> 
+例えば変数 C<car> に辞書 C<< {model => "Pulse", maker => "Renault"} >>
 が入っている場合、
 
    My car is &yatt:car{model};.
