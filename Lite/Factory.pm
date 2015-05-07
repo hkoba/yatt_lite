@@ -298,6 +298,8 @@ sub render_encoded {
   # [$path_info, $subpage, $action]
   my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
 
+  $path_info =~ s,^/*,/,;
+
   my ($tmpldir, $loc, $file, $trailer)
     = my @pi = lookup_path($path_info
 			   , $self->{tmpldirs}
