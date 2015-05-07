@@ -13,7 +13,6 @@ requires 'Plack' => 0;
 requires 'version' => 0.77;
 requires 'parent' => 0;
 requires 'autodie' => 0;
-requires 'encoding' => 0;
 
 requires 'URI::Escape' => 0;
 requires 'Tie::IxHash' => 0; # For nested_query

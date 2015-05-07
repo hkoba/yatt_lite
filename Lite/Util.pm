@@ -669,12 +669,6 @@ sub list_isa {
   } @$isa;
 }
 
-sub get_locale_encoding {
-  require Encode;
-  require encoding;
-  Encode::find_encoding(encoding::_get_locale_encoding())->name;
-}
-
 sub set_inc {
   my ($pkg, $val) = @_;
   $pkg =~ s|::|/|g;
