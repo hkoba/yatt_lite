@@ -1,6 +1,7 @@
 package YATT::Lite::Util;
 use strict;
 use warnings FATAL => qw(all);
+use constant DEBUG_LOOKUP_PATH => $ENV{DEBUG_YATT_UTIL_LOOKUP_PATH};
 
 use URI::Escape ();
 use Tie::IxHash;
@@ -238,12 +239,14 @@ require Scalar::Util;
     $want_ext //= '.yatt';
     my $ixfn = $index_name . $want_ext;
     my @dirlist = grep {defined $_ and -d $_} @$dirlist;
+    print STDERR "dirlist" => terse_dump(@dirlist), "\n" if DEBUG_LOOKUP_PATH;
     my $pi = $path_info;
     my ($loc, $cur, $ext) = ("", "");
   DIG:
     while ($pi =~ s{^/+([^/]+)}{}) {
       $cur = $1;
       $ext = ($cur =~ s/(\.[^\.]+)$// ? $1 : undef);
+      print STDERR terse_dump(cur => $cur, ext => $ext), "\n" if DEBUG_LOOKUP_PATH;
       foreach my $dir (@dirlist) {
 	my $base = "$dir$loc/$cur";
 	if (defined $ext and -r "$base$ext") {
@@ -265,8 +268,10 @@ require Scalar::Util;
       }
     } continue {
       $loc .= "/$cur";
+      print STDERR terse_dump(continuing => $loc), "\n" if DEBUG_LOOKUP_PATH;
       @dirlist = grep {defined} @dirlist;
     }
+      print STDERR terse_dump('end_of_loop'), "\n" if DEBUG_LOOKUP_PATH;
 
     return unless $pi =~ m{^/+$};
 
@@ -275,6 +280,7 @@ require Scalar::Util;
       return ($dir, "$loc/", "$ixfn", "", 1);
     }
 
+      print STDERR terse_dump('at_last'), "\n" if DEBUG_LOOKUP_PATH;
     return;
   }
 

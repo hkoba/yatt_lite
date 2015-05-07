@@ -7,6 +7,7 @@ sub MY () {__PACKAGE__}
 
 use 5.010;
 use Scalar::Util qw(weaken);
+use Encode qw/decode/;
 
 use parent qw/YATT::Lite::NSBuilder File::Spec/;
 use File::Path ();
@@ -287,6 +288,12 @@ sub _after_after_new {
 #========================================
 
 sub render {
+  my MY $self = shift;
+  my $raw_bytes = $self->render_encoded(@_);
+  decode(utf8 => $raw_bytes);
+}
+
+sub render_encoded {
   (my MY $self, my ($reqrec, $args, @opts)) = @_;
   # [$path_info, $subpage, $action]
   my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
