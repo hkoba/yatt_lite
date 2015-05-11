@@ -11,12 +11,6 @@ use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
 
 
-sub rootname {
-    my $fn = shift;
-    $fn =~ s/_conn_param//;
-    $fn =~ s/\.\w+$//; join "", $fn, @_;
-}
-
 BEGIN {
   foreach my $req (qw(Plack Plack::Test Plack::Response HTTP::Request::Common)) {
     unless (eval qq{require $req;}) {
@@ -26,18 +20,11 @@ BEGIN {
   }
 }
 
-my $rootname = untaint_any($FindBin::Bin."/".rootname($FindBin::RealScript));
+my $rootname = untaint_any($FindBin::Bin."/psgi");
 
 my $app = YATT::Lite::WebMVC0::SiteApp
   ->new(  app_root => $FindBin::Bin
         , doc_root => "$rootname.d"
-        , app_ns => 'MyApp'
-        , app_base => ['@psgi.ytmpl']
-        , namespace => ['yatt', 'perl', 'js']
-        , header_charset => 'utf-8'
-        , use_subpath => 1
-        , (psgi_fallback => YATT::Lite::WebMVC0::SiteApp
-           ->psgi_file_app("$rootname.d.fallback"))
        )->to_app;
 
 my $client = Plack::Test->create($app);

@@ -11,6 +11,7 @@ use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Breakpoint;
 use YATT::t::t_preload; # To make Devel::Cover happy.
 
+# A.K.A $fn:r, [file rootname] and file-name-sans-extension
 sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
 
 BEGIN {
