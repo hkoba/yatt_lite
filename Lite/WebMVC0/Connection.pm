@@ -25,20 +25,20 @@ use YATT::Lite::Util::CGICompat;
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
 
-  foreach my $name (qw(raw_body)) {
+  foreach my $name (qw(raw_body uploads upload)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
       unless ($prop->{cf_is_psgi}) {
 	croak "Connection method $name is PSGI mode only!"
       }
-      $prop->{cf_cgi}->$name;
+      $prop->{cf_cgi}->$name(@_);
     };
   }
 
   foreach my $name (qw(url_param)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
-      $prop->{cf_cgi}->$name;
+      $prop->{cf_cgi}->$name(@_);
     };
   }
 
@@ -158,14 +158,14 @@ sub is_form_content_type {
   my ($self, $real_ct) = @_;
   return 1 if ($real_ct // '') eq '';
   foreach my $check_ct ($self->form_content_types) {
-    return 1 if $check_ct eq $real_ct;
+    return 1 if $real_ct =~ $check_ct;
   }
   return 0;
 }
 
 sub form_content_types {
-  qw(multipart/form-data
-     application/x-www-form-urlencoded);
+  (qr(^multipart/form-data\s*(?:;|$))i
+   , qr(^application/x-www-form-urlencoded$)i);
 }
 
 sub convert_array_param_psgi {
@@ -174,7 +174,7 @@ sub convert_array_param_psgi {
   my Env $env = $prop->{cf_env};
   $prop->{params_hash} = do {
     if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
-      my $body = YATT::Lite::Util::parse_nested_query($req->raw_body);
+      my $body = YATT::Lite::Util::parse_nested_query($req->body_parameters);
       my $qs = YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
       foreach my $key (keys %$qs) {
 	if (exists $body->{$key}) {

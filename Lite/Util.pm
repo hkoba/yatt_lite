@@ -763,13 +763,26 @@ sub parse_nested_query {
   return {} unless defined $_[0] and $_[0] ne '';
   my ($enc) = $_[1];
   my $params = $_[2] // ixhash();
-  foreach my $p (split /[;&]/, $_[0]) {
-    my ($k, $v) = map {
-      s/\+/ /g;
-      my $raw = URI::Escape::uri_unescape($_);
-      $enc ? Encode::decode($enc, $raw) : $raw;
-    } split /=/, $p, 2;
-    normalize_params($params, $k, $v) if defined $k;
+  if (ref $_[0]) {
+    my @pairs = do {
+      if (my $sub = $_[0]->can("flatten")) {
+	$sub->($_[0])
+      } else {
+	%{$_[0]}
+      }
+    };
+    while (my ($k, $v) = splice @pairs, 0, 2) {
+      normalize_params($params, $k, $v);
+    }
+  } else {
+    foreach my $p (split /[;&]/, $_[0]) {
+      my ($k, $v) = map {
+	s/\+/ /g;
+	my $raw = URI::Escape::uri_unescape($_);
+	$enc ? Encode::decode($enc, $raw) : $raw;
+      } split /=/, $p, 2;
+      normalize_params($params, $k, $v) if defined $k;
+    }
   }
   $params;
 }

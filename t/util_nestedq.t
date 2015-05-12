@@ -10,6 +10,7 @@ use Test::More;
 
 BEGIN {
   use_ok('YATT::Lite::Util', qw(terse_dump parse_nested_query));
+  use_ok('Hash::MultiValue');
 }
 
 sub nil () {undef}
@@ -17,10 +18,19 @@ sub nil () {undef}
 {
   my $THEME = "nested_query";
 
+  my $qs2hmv = sub {
+    # Stolen from Plack::Request#_parse_query
+    Hash::MultiValue->new
+      (map { defined $_ ? do {s/\+/ /g; URI::Escape::uri_unescape($_) } : $_ }
+       map { /=/ ? split(/=/, $_, 2) : ($_ => undef)}
+       split(/[&;]/, $_[0]));
+  };
+
   my $ok = sub {
-    my ($qs, $data, $topic) = @_;
-    my $title = "[$THEME] " . ($topic || ($qs . " --> ". terse_dump($data)));
+    my ($qs, $data) = @_;
+    my $title = "[$THEME] " . ($qs . " --> ". terse_dump($data));
     is_deeply parse_nested_query($qs), $data, $title;
+    is_deeply parse_nested_query($qs2hmv->($qs)), $data, "HMV: $title";
   };
 
   $ok->("foo=" => +{"foo" => ""});
