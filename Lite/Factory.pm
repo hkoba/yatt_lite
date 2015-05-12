@@ -60,6 +60,9 @@ use YATT::Lite::MFields
        loc2yatt
        path2yatt
 
+       loc2psgi_re
+       loc2psgi_dict
+
        tmpl_cache
 
        cf_debug_cgen
@@ -327,6 +330,55 @@ sub render_encoded {
   );
 
   $con->buffer;
+}
+
+#========================================
+
+sub K_MOUNT_MATCH () { "__yatt" }
+
+sub lookup_psgi_mount {
+  (my MY $self, my $path_info) = @_;
+  $self->{loc2psgi_re} // $self->rebuild_psgi_mount;
+  $path_info =~ $self->{loc2psgi_re}
+    or return;
+  my @mount_match = grep {/^@{[K_MOUNT_MATCH()]}/o} keys %+
+    or return;
+  if (@mount_match >= 2) {
+    croak "Multiple match found for psgi_mount: \n"
+      . join("\n  ", map {$self->{loc2psgi_dict}{$_}[0]} @mount_match);
+  }
+
+  my $path_prefix = $+{$mount_match[0]};
+
+  my $item = $self->{loc2psgi_dict}{$path_prefix};
+
+  wantarray ? @$item : $item->[2];
+}
+
+sub mount_psgi {
+  (my MY $self, my ($path_prefix, $app, @opts)) = @_;
+  unless (defined $path_prefix) {
+    croak "path_prefix is empty! mount_psgi(path_prefix, psgi_app)";
+  }
+  if (not ref $path_prefix) {
+    $path_prefix =~ s,^/*,/,;
+  }
+  my $dict = $self->{loc2psgi_dict} //= +{};
+  my $key = K_MOUNT_MATCH() . (keys %$dict);
+  $dict->{$path_prefix} = [$key => $path_prefix => $app, @opts];
+
+  undef $self->{loc2psgi_re};
+}
+
+sub rebuild_psgi_mount {
+  (my MY $self) = @_;
+  my @re;
+  foreach my $path_prefix (keys %{$self->{loc2psgi_dict} //= +{}}) {
+    my ($key, undef, $app) = @{$self->{loc2psgi_dict}{$path_prefix}};
+    push @re, qr{(?<$key>$path_prefix)};
+  }
+  my $all = join("|", @re);
+  $self->{loc2psgi_re} = qr{^(?:$all)};
 }
 
 #========================================

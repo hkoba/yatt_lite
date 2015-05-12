@@ -163,6 +163,11 @@ sub call {
     return $self->psgi_error(403, "Forbidden $deny");
   }
 
+  if (my $psgi_app = $self->lookup_psgi_mount($env->{PATH_INFO})) {
+    require Plack::Util;
+    return Plack::Util::run_app($psgi_app, $env);
+  }
+
   # XXX: user_dir?
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->split_path_info($env);

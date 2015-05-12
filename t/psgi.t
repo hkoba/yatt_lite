@@ -77,6 +77,32 @@ sub is_or_like($$;$) {
       my ($this, $con) = @_;
       is $con->param('foo'), 'bar', "param('foo')";
     } GET "/virt?foo=bar";
+
+    sub test_psgi (&@) {
+      my ($subref, $request, %params) = @_;
+
+      my $path = $request->uri->path;
+
+      $site->mount_psgi($path => $subref);
+
+      $client->request($request, %params);
+    }
+
+    test_psgi {
+      (my Env $env) = @_;
+      is $env->{PATH_INFO}, "/mpsgi1", "mount psgi path_info";
+    } GET "/mpsgi1";
+
+    test_psgi {
+      (my Env $env) = @_;
+      is $env->{PATH_INFO}, "/mpsgi2", "mount psgi path_info, 2";
+    } GET "/mpsgi2";
+
+    test_psgi {
+      (my Env $env) = @_;
+      is $env->{PATH_INFO}, "/mpsgi1", "mount psgi path_info, overwritten";
+    } GET "/mpsgi1";
+
   }
 
   my $hello = sub {
