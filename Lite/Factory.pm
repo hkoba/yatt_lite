@@ -314,7 +314,7 @@ sub render_encoded {
 
   my $con = $self->make_simple_connection
   (
-    \@pi, yatt => $dh, noheader => 1
+    \@pi, yatt => $dh, noheader => 1, path_info => $path_info
     , $self->make_debug_params($reqrec, $args)
   );
 

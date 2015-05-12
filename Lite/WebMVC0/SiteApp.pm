@@ -223,6 +223,7 @@ sub call {
   my $req = Plack::Request->new($env);
 
   my @params = (env => $env
+		, path_info => $env->{PATH_INFO}
 		, $self->connection_quad([$virtdir, $loc, $file, $trailer])
 		, $is_index ? (is_index => 1) : ()
 		, is_psgi => 1, cgi => $req);

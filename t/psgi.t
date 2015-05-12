@@ -16,13 +16,14 @@ sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
 
 BEGIN {
   # Because use YATT::Lite::DBSchema::DBIC loads DBIx::Class::Schema.
-  foreach my $req (qw(Plack)) {
+  foreach my $req (qw(Plack Plack::Test Plack::Response HTTP::Request::Common)) {
     unless (eval qq{require $req}) {
       plan skip_all => "$req is not installed."; exit;
     }
   }
 }
 
+use File::Basename;
 use Plack::Response;
 use HTTP::Request::Common;
 use YATT::Lite::WebMVC0::SiteApp;
@@ -40,7 +41,7 @@ sub is_or_like($$;$) {
 }
 
 {
-  my $app = YATT::Lite::WebMVC0::SiteApp
+  my $site = YATT::Lite::WebMVC0::SiteApp
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
 	  , app_ns => 'MyApp'
@@ -50,8 +51,33 @@ sub is_or_like($$;$) {
 	  , use_subpath => 1
 	  , (psgi_fallback => YATT::Lite::WebMVC0::SiteApp
 	     ->psgi_file_app("$rootname.d.fallback"))
-	 )
-      ->to_app;
+	 );
+
+  my $app = $site->to_app;
+  {
+    my $client = Plack::Test->create($app);
+
+    sub test_action (&@) {
+      my ($subref, $request, %params) = @_;
+
+      my $path = $request->uri->path;
+
+      $site->get_lochandler(dirname($path))
+	->set_action_handler(basename($path) => $subref);
+
+      $client->request($request, %params);
+    }
+
+    test_action {
+      my ($this, $con) = @_;
+      isa_ok $con, "YATT::Lite::WebMVC0::Connection";
+    } GET "/virt";
+
+    test_action {
+      my ($this, $con) = @_;
+      is $con->param('foo'), 'bar', "param('foo')";
+    } GET "/virt?foo=bar";
+  }
 
   my $hello = sub {
     my ($id, $body, $rest) = @_;

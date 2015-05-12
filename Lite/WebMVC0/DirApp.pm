@@ -96,6 +96,22 @@ sub prepare_part_handler {
   ($part, $sub, $pkg, \@args);
 }
 
+#========================================
+# Action handling
+#========================================
+
+sub find_handler {
+  (my MY $self, my ($ext, $file, $con)) = @_;
+  my PROP $prop = $con->prop;
+  if ($prop->{cf_is_index}) {
+    my $sub_fn = substr($prop->{cf_path_info}, length($prop->{cf_location}));
+    if ($sub_fn ne '' and my $action = $self->get_action_handler($sub_fn, 1)) {
+      return $action
+    }
+  }
+  $self->SUPER::find_handler($ext, $file, $con);
+}
+
 sub _handle_ydo {
   (my MY $self, my ($con, $file, @rest)) = @_;
   my $action = $self->get_action_handler($file)
@@ -108,31 +124,55 @@ sub _handle_ydo {
 # XXX: cached_in 周りは面倒過ぎる。
 # XXX: package per dir で、本当に良いのか?
 # XXX: Should handle union mount!
+
+#
 sub get_action_handler {
-  (my MY $self, my $filename) = @_;
+  (my MY $self, my ($filename, $can_be_missing)) = @_;
   my $path = "$self->{cf_dir}/$filename";
+
+  # Each action item is stored as:
+  # [$action_sub, $is_virtual, @more_opts..., $age_from_mtime]
+  #
   my $item = $self->cached_in
     ($self->{Action} //= {}, $path, $self, undef, sub {
        # first time.
        my ($self, $sys, $path) = @_;
        my $age = -M $path;
+       return undef if not defined $age and $can_be_missing;
        my $sub = compile_file_in(ref $self, $path);
-       [$sub, $age];
+       # is not virtual.
+       [$sub, 0, $age];
      }, sub {
        # second time
        my ($item, $sys, $path) = @_;
        my ($sub, $age);
-       unless (defined ($age = -M $path)) {
+       if (not defined $item) {
+	 # XXX: (Accidental) negative cache. Is this ok?
+	 return;
+       } elsif ($item->[1]) {
+	 # return $action_sub without examining $path when item is virtual.
+	 return $item->[0];
+       } elsif (not defined ($age = -M $path)) {
 	 # item is removed from filesystem, so undef $sub.
        } elsif ($$item[-1] == $age) {
 	 return;
        } else {
 	 $sub = compile_file_in($self->{cf_app_ns}, $path);
        }
-       @{$item} = ($sub, $age);
+       @{$item}[0, -1] = ($sub, $age);
      });
   return unless defined $item and $item->[0];
   wantarray ? @$item : $item->[0];
+}
+
+sub set_action_handler {
+  (my MY $self, my ($filename, $sub)) = @_;
+
+  $filename =~ s,^/*,,;
+
+  my $path = "$self->{cf_dir}/$filename";
+
+  $self->{Action}{$path} = [$sub, 1, undef];
 }
 
 #========================================

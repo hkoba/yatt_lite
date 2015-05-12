@@ -345,6 +345,9 @@ sub dofile_in {
 
 sub compile_file_in {
   my ($pkg, $file) = @_;
+  if (-d $file) {
+    croak "file '$file' is a directory!";
+  }
   my $sub = dofile_in($pkg, $file);
   unless (defined $sub and ref $sub eq 'CODE') {
     die "file '$file' should return CODE (but not)!\n";

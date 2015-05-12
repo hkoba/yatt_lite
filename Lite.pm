@@ -102,7 +102,7 @@ sub handle {
       ." in $self->{cf_app_ns}.\n";
   }
 
-  my $sub = $YATT->find_handler($ext, $file);
+  my $sub = $YATT->find_handler($ext, $file, $CON);
   $sub->($YATT, $CON, $file);
 
   try_invoke($CON, 'flush_headers');
@@ -128,7 +128,7 @@ sub render_into {
 }
 
 sub find_handler {
-  (my MY $self, my ($ext, $file)) = @_;
+  (my MY $self, my ($ext, $file, $con)) = @_;
   $ext //= $self->cut_ext($file) || $self->{cf_ext_public};
   $ext = "yatt" if $ext eq $self->{cf_ext_public};
   my $sub = $self->can("_handle_$ext")

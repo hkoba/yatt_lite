@@ -38,6 +38,9 @@ use YATT::Lite::MFields
    # Invocation context
    , qw/cf_system cf_yatt cf_backend cf_dbh/
 
+   # Raw path_info. should match with env->{PATH_INFO}
+   , qw/cf_path_info/
+
    # Location quad and is_index flag
    , qw/cf_dir cf_location cf_file cf_subpath
 	cf_is_index/
