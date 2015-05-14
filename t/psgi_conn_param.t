@@ -22,46 +22,50 @@ BEGIN {
 
 my $rootname = untaint_any($FindBin::Bin."/psgi");
 
-my $site = YATT::Lite::WebMVC0::SiteApp
+my $app = YATT::Lite::WebMVC0::SiteApp
   ->new(  app_root => $FindBin::Bin
         , doc_root => "$rootname.d"
-       );
-my $app = $site->to_app;
+       )->to_app;
 
 my $client = Plack::Test->create($app);
+my $SUB;
 
-sub test_action (&$;@) {
+sub test_ydo (&$;@) {
     my ( $subref, $request, %params ) = @_;
-
-    $site->mount_action($request->uri->path, $subref);
-
+    $SUB = $subref;
     $client->request($request, %params);
 }
+
+sub TEST_IN_YDO { # called by xxx.ydo file.
+    my ( $con ) = @_;
+    $SUB->($con);
+}
+
 
 #
 # TESTS
 #
 
-test_action {
-    my ( $this, $con ) = @_;
+test_ydo {
+    my ( $con ) = @_;
     isa_ok ( $con, "YATT::Lite::WebMVC0::Connection" );
-} GET "/test?foo=bar";
+} GET "/test.ydo?foo=bar";
 
-test_action {
-    my ( $this, $con ) = @_;
+test_ydo {
+    my ( $con ) = @_;
     is ( $con->param('foo'), 'bar', "param('foo')" );
-} GET "/test?foo=bar";
+} GET "/test.ydo?foo=bar";
 
-test_action {
-    my ( $this, $con ) = @_;
+test_ydo {
+    my ( $con ) = @_;
     is( $con->raw_body, 'yatt ansin! utyuryokou', "raw_body" );
-} POST "/test", Content => 'yatt ansin! utyuryokou';
+} POST "/test.ydo", Content => 'yatt ansin! utyuryokou';
 
-test_action {
-    my ( $this, $con ) = @_;
+test_ydo {
+    my ( $con ) = @_;
     is( $con->param('foo'), 'bar', "param with query path" );
     is( $con->raw_body, 'yatt ansin! utyuryokou', "raw_body with query path" );
-} POST "/test?foo=bar", Content => 'yatt ansin! utyuryokou';
+} POST "/test.ydo?foo=bar", Content => 'yatt ansin! utyuryokou';
 
 
 done_testing();

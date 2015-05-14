@@ -25,6 +25,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_backend
 			   cf_site_config
 			   cf_logfile
+			   cf_use_subpath
 			   cf_debug_allowed_ip
 			   re_handled_ext
 			 /;
@@ -46,7 +47,13 @@ use File::Basename;
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
+  $self->{cf_use_subpath} //= 1;
   $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
+}
+
+sub _cf_delegates {
+  (shift->SUPER::_cf_delegates
+   , qw/use_subpath/);
 }
 
 #========================================

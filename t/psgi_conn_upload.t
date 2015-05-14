@@ -42,8 +42,9 @@ sub test_action (&$$;@) {
   push @TESTS, [$ntests, sub {
 		  my $path = $request->uri->path;
 
-		  $site->mount_action($path, $subref);
-
+		  $site->get_lochandler(dirname($path))
+		    ->set_action_handler(basename($path) => $subref);
+		  
 		  $client->request($request, %params);
 		}];
 }
