@@ -53,6 +53,9 @@ use YATT::Lite::MFields
  , [cf_binary_config   =>
     (doc => "(This may be changed in future release) Whether .htyattconfig.* should be read with encoding or not.")]
 
+ , [cf_use_subpath =>
+    (doc => "pass sub-path_info")]
+
  , qw/
        cf_allow_missing_dir
 
@@ -257,6 +260,7 @@ sub after_new {
   $self->{cf_header_charset} //= (
     $self->{cf_output_encoding} || $self->default_header_charset
   );
+  $self->{cf_use_subpath} //= 1;
 }
 
 sub default_output_encoding { '' }
@@ -303,10 +307,8 @@ sub render_encoded {
 
   $path_info =~ s,^/*,/,;
 
-  my ($tmpldir, $loc, $file, $trailer)
-    = my @pi = lookup_path($path_info
-			   , $self->{tmpldirs}
-			   , $self->{cf_index_name}, ".$self->{cf_ext_public}");
+  my ($tmpldir, $loc, $file, $trailer, $is_index)
+    = my @pi = $self->lookup_split_path_info($path_info);
   unless (@pi) {
     die "No such location: $path_info";
   }
@@ -330,6 +332,14 @@ sub render_encoded {
   );
 
   $con->buffer;
+}
+
+sub lookup_split_path_info {
+  (my MY $self, my $path_info) = @_;
+  lookup_path($path_info
+	      , $self->{tmpldirs}
+	      , $self->{cf_index_name}, ".$self->{cf_ext_public}"
+	      , $self->{cf_use_subpath});
 }
 
 #========================================
@@ -368,6 +378,9 @@ sub mount_psgi {
   $dict->{$path_prefix} = [$key => $path_prefix => $app, @opts];
 
   undef $self->{loc2psgi_re};
+
+  # For cascading call
+  $self;
 }
 
 sub rebuild_psgi_mount {
@@ -379,6 +392,29 @@ sub rebuild_psgi_mount {
   }
   my $all = join("|", @re);
   $self->{loc2psgi_re} = qr{^(?:$all)(?:/|$)};
+}
+
+#========================================
+
+sub mount_action {
+  (my MY $self, my ($path_info, $action)) = @_;
+  if (my $ref = ref $path_info) {
+    croak "mount_action doesn't support $ref path_info, sorry";
+  }
+  my ($tmpldir, $loc, $file, $trailer, $is_index)
+    = my @pi = $self->lookup_split_path_info($path_info);
+  unless (@pi) {
+    croak "Can't find acutal directory for $path_info";
+  }
+  unless ($is_index) {
+    croak "Conflicting mount_action($path_info) with file=$file\n";
+  }
+  my $realdir = $tmpldir.$loc;
+  my $dh = $self->get_dirhandler($realdir);
+  $dh->set_action_handler($trailer, $action);
+
+  # For cascading call.
+  $self;
 }
 
 #========================================
@@ -624,7 +660,9 @@ sub _cf_delegates {
      index_name
      ext_public
      ext_private
-     only_parse);
+     only_parse
+     use_subpath
+  );
 }
 
 sub configparams_for {
