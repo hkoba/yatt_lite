@@ -352,7 +352,7 @@ sub lookup_psgi_mount {
 
   my $item = $self->{loc2psgi_dict}{$path_prefix};
 
-  wantarray ? @$item : $item->[2];
+  wantarray ? @{$item}[1..$#$item] : $item->[2];
 }
 
 sub mount_psgi {
@@ -378,7 +378,7 @@ sub rebuild_psgi_mount {
     push @re, qr{(?<$key>$path_prefix)};
   }
   my $all = join("|", @re);
-  $self->{loc2psgi_re} = qr{^(?:$all)};
+  $self->{loc2psgi_re} = qr{^(?:$all)(?:/|$)};
 }
 
 #========================================

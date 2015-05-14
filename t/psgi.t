@@ -90,8 +90,8 @@ sub is_or_like($$;$) {
 
     test_psgi {
       (my Env $env) = @_;
-      is $env->{PATH_INFO}, "/mpsgi1", "mount psgi path_info";
-    } GET "/mpsgi1";
+      is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info";
+    } GET "/mpsgi";
 
     test_psgi {
       (my Env $env) = @_;
@@ -100,8 +100,8 @@ sub is_or_like($$;$) {
 
     test_psgi {
       (my Env $env) = @_;
-      is $env->{PATH_INFO}, "/mpsgi1", "mount psgi path_info, overwritten";
-    } GET "/mpsgi1";
+      is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info, overwritten";
+    } GET "/mpsgi";
 
   }
 

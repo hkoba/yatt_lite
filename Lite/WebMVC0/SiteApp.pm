@@ -163,7 +163,8 @@ sub call {
     return $self->psgi_error(403, "Forbidden $deny");
   }
 
-  if (my $psgi_app = $self->lookup_psgi_mount($env->{PATH_INFO})) {
+  if ($self->{loc2psgi_dict}
+      and my $psgi_app = $self->lookup_psgi_mount($env->{PATH_INFO})) {
     require Plack::Util;
     return Plack::Util::run_app($psgi_app, $env);
   }
