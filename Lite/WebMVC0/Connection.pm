@@ -174,7 +174,8 @@ sub convert_array_param_psgi {
   my Env $env = $prop->{cf_env};
   $prop->{params_hash} = do {
     if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
-      my $body = YATT::Lite::Util::parse_nested_query($req->body_parameters);
+      my $body = YATT::Lite::Util::parse_nested_query
+	([$req->body_parameters->flatten]);
       my $qs = YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
       foreach my $key (keys %$qs) {
 	if (exists $body->{$key}) {

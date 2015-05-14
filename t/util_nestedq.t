@@ -20,10 +20,10 @@ sub nil () {undef}
 
   my $qs2hmv = sub {
     # Stolen from Plack::Request#_parse_query
-    Hash::MultiValue->new
-      (map { defined $_ ? do {s/\+/ /g; URI::Escape::uri_unescape($_) } : $_ }
-       map { /=/ ? split(/=/, $_, 2) : ($_ => undef)}
-       split(/[&;]/, $_[0]));
+    [Hash::MultiValue->new
+     (map { defined $_ ? do {s/\+/ /g; URI::Escape::uri_unescape($_) } : $_ }
+      map { /=/ ? split(/=/, $_, 2) : ($_ => undef)}
+      split(/[&;]/, $_[0]))->flatten];
   };
 
   my $ok = sub {
