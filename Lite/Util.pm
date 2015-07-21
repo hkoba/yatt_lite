@@ -379,7 +379,7 @@ BEGIN {
 	  $copy;
 	} elsif (ref $str eq 'SCALAR') {
 	  # PASS Thru. (Already escaped)
-	  $$str;
+	  $$str // $ESCAPE_UNDEF; # fail safe
 	} elsif (_is_escapable($str)) {
 	  $str->as_escaped;
 	} elsif (my $sub = UNIVERSAL::can($str, 'cf_pairs')) {
