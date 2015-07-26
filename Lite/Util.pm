@@ -764,7 +764,8 @@ sub parse_nested_query {
   my ($enc) = $_[1];
   my $params = $_[2] // ixhash();
   if (ref $_[0]) {
-    my @pairs = ref $_[0] eq 'ARRAY' ? @{$_[0]} : %{$_[0]};
+    my @pairs = map {$enc ? map(Encode::decode($enc, $_), @$_) : @$_}
+      ref $_[0] eq 'ARRAY' ? $_[0] : [%{$_[0]}];
     while (my ($k, $v) = splice @pairs, 0, 2) {
       normalize_params($params, $k, $v);
     }

@@ -15,6 +15,7 @@ use parent qw(YATT::Lite::Factory);
 use YATT::Lite::MFields qw/cf_noheader
 			   cf_is_psgi
 			   cf_no_nested_query
+			   cf_no_unicode_params
 			   allow_debug_from
 			   cf_debug_cgi
 			   cf_debug_psgi
@@ -515,7 +516,9 @@ sub make_connection {
   }
   $self->SUPER::make_connection
   (@opts
-   , $self->cf_delegate_defined(qw(is_psgi no_nested_query))
+   , $self->cf_delegate_defined(qw(is_psgi no_nested_query
+				   no_unicode_params
+				))
    , @args);
 }
 

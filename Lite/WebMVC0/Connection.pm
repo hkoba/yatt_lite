@@ -13,6 +13,8 @@ use YATT::Lite::MFields
 
     cf_no_nested_query
 
+    cf_no_unicode_params
+
     current_user
    /);
 use YATT::Lite::Util qw(globref url_encode nonempty lexpand);
@@ -168,15 +170,23 @@ sub form_content_types {
    , qr(^application/x-www-form-urlencoded$)i);
 }
 
+sub parse_nested_query {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($obj_or_string) = @_;
+  YATT::Lite::Util::parse_nested_query
+    ($obj_or_string
+     , (!$prop->{cf_no_unicode_params} && $prop->{cf_encoding})
+   );
+}
+
 sub convert_array_param_psgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($req) = @_;
   my Env $env = $prop->{cf_env};
   $prop->{params_hash} = do {
     if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
-      my $body = YATT::Lite::Util::parse_nested_query
-	([$req->body_parameters->flatten]);
-      my $qs = YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
+      my $body = $glob->parse_nested_query([$req->body_parameters->flatten]);
+      my $qs = $glob->parse_nested_query($env->{QUERY_STRING});
       foreach my $key (keys %$qs) {
 	if (exists $body->{$key}) {
 	  die $glob->error("Attempt to overwrite post param '%s' by qs"
@@ -186,7 +196,7 @@ sub convert_array_param_psgi {
       }
       $body;
     } else {
-      YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
+      $glob->parse_nested_query($env->{QUERY_STRING});
     }
   };
 }
@@ -196,7 +206,7 @@ sub convert_array_param_cgi {
   my ($cgi) = @_;
   return if ($cgi->content_type // "") eq "application/json";
   $prop->{params_hash}
-    = YATT::Lite::Util::parse_nested_query($cgi->query_string);
+    = $glob->parse_nested_query($cgi->query_string);
 }
 
 # Location(path part of url) of overall SiteApp.
