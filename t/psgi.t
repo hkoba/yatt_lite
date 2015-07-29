@@ -47,11 +47,16 @@ sub is_or_like($$;$) {
 	  , app_ns => 'MyApp'
 	  , app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
-	  , header_charset => 'utf-8'
 	  , use_subpath => 1
 	  , (psgi_fallback => YATT::Lite::WebMVC0::SiteApp
 	     ->psgi_file_app("$rootname.d.fallback"))
 	 );
+
+  is $site->cget('no_unicode'), undef, "No no_unicode, by default";
+
+  foreach my $cf (qw/header_charset output_encoding tmpl_encoding/) {
+    is $site->cget($cf), 'utf-8', "$cf is utf8 by default";
+  }
 
   my $app = $site->to_app;
   {
