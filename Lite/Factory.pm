@@ -42,16 +42,24 @@ use YATT::Lite::MFields
     (doc => "Charset for outgoing HTTP Content-Type. (default: utf-8)")]
 
  , [cf_tmpl_encoding =>
-    (doc => "Perl encoding used while reading yatt templates. (default: '')")]
+    (doc => "Perl encoding used while reading yatt templates. (default: 'utf-8')")]
 
  , [cf_output_encoding =>
-    (doc => "Perl encoding used for outgoing response body. (default: '')")]
+    (doc => "Perl encoding used for outgoing response body."
+     ." Also this is used to decode incoming request parameters and PATH_INFO."
+     ." (default: 'utf-8')")]
 
  , [cf_offline =>
     (doc => "Whether header should be emitted or not.")]
 
  , [cf_binary_config   =>
     (doc => "(This may be changed in future release) Whether .htyattconfig.* should be read with encoding or not.")]
+
+ , [cf_no_unicode =>
+    (doc => "(Compatibility option) Avoid use of utf8.")]
+
+ , [cf_no_unicode_params =>
+    (doc => "(Compatibility option) Avoid encoding conversion of input params.")]
 
  , [cf_use_subpath =>
     (doc => "pass sub-path_info")]
@@ -256,15 +264,27 @@ sub after_new {
   $self->{cf_index_name} //= $self->default_index_name;
   $self->{cf_ext_public} //= $self->default_ext_public;
   $self->{cf_ext_private} //= $self->default_ext_private;
-  $self->{cf_output_encoding} //= $self->default_output_encoding;
-  $self->{cf_header_charset} //= (
-    $self->{cf_output_encoding} || $self->default_header_charset
-  );
+  if ($self->{cf_no_unicode}) {
+    $self->{cf_no_unicode_params} = 1;
+    $self->{cf_binary_config} = 1;
+    $self->{cf_header_charset}
+      //= ($self->{cf_output_encoding} || $self->default_header_charset);
+    $self->{cf_output_encoding}
+      //= $self->compat_default_output_encoding;
+  } else {
+    $self->{cf_header_charset}
+      //= ($self->{cf_output_encoding} // $self->default_header_charset);
+    $self->{cf_tmpl_encoding}
+      //= ($self->{cf_output_encoding} // $self->default_tmpl_encoding);
+    $self->{cf_output_encoding} //= $self->default_output_encoding;
+  }
   $self->{cf_use_subpath} //= 1;
 }
 
-sub default_output_encoding { '' }
+sub compat_default_output_encoding { '' }
+sub default_output_encoding { 'utf-8' }
 sub default_header_charset  { 'utf-8' }
+sub default_tmpl_encoding   { 'utf-8' }
 sub default_index_name { 'index' }
 sub default_ext_public {'yatt'}
 sub default_ext_private {'ytmpl'}
@@ -650,7 +670,9 @@ sub buildns {
 }
 
 sub _cf_delegates {
-  qw(output_encoding
+  qw(no_unicode
+     no_unicode_params
+     output_encoding
      header_charset
      tmpl_encoding
      debug_cgen

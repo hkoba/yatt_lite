@@ -114,8 +114,8 @@ use YATT::Lite::XHF qw(parse_xhf);
 use YATT::Lite::Util qw(terse_dump);
 
 sub output_file {
-  my ($fn) = @_;
-  open my $fh, '>', $fn or die "Can't open file '$fn': $!";
+  my ($fn, $enc) = @_;
+  open my $fh, '>'.($enc // ''), $fn or die "Can't open file '$fn': $!";
   $fh;
 }
 
@@ -130,8 +130,9 @@ sub sendmail {
   my $transport = $ENV{EMAIL_SENDER_TRANSPORT};
   my $is_debug = defined $transport && $transport eq 'YATT_TEST';
 
-  my $fh = $is_debug ? output_file("$self->{cf_datadir}/.htdebug.eml")
-    : ostream(my $buffer);
+  my $layer = $con->get_encoding_layer;
+  my $fh = $is_debug ? output_file("$self->{cf_datadir}/.htdebug.eml", $layer)
+    : ostream(my $buffer, $layer);
 
   $sub->($page, $fh, $to, @rest);
 

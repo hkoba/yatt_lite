@@ -4,6 +4,8 @@ use warnings FATAL => qw(all);
 
 use fields qw(cf_tmpdir cf_datadir cf_limit);
 
+use YATT::Lite qw/*CON/;
+
 #========================================
 use Fcntl qw(:DEFAULT :flock SEEK_SET);
 
@@ -21,7 +23,7 @@ sub mh_alloc_newfh {
   print $lockfh $fnum, "\n";
   truncate $lockfh, tell($lockfh);
 
-  open my $fh, '>', $fname
+  open my $fh, '>'.($CON->get_encoding_layer), $fname
     or die "Can't open newfile '$fname': $!";
 
   wantarray ? ($fh, $fname, $fnum) : $fh;
@@ -89,7 +91,7 @@ Entity mh_load => sub {
   unless (-r $fn) {
     die "Can't read '$fn'\n";
   }
-  $yatt->read_file_xhf($fn, bytes => 1);
+  $yatt->read_file_xhf($fn);
 };
 
 sub escape_nl {

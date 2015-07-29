@@ -118,6 +118,11 @@ sub configure_encoding {
   binmode $glob, ":encoding($enc)";
 }
 
+sub get_encoding_layer {
+  my PROP $prop = prop(my $glob = shift);
+  $$prop{cf_encoding} ? ":encoding($$prop{cf_encoding})" : '';
+}
+
 #========================================
 
 sub cget {

@@ -15,7 +15,6 @@ use parent qw(YATT::Lite::Factory);
 use YATT::Lite::MFields qw/cf_noheader
 			   cf_is_psgi
 			   cf_no_nested_query
-			   cf_no_unicode_params
 			   allow_debug_from
 			   cf_debug_cgi
 			   cf_debug_psgi
@@ -155,6 +154,12 @@ sub call {
   if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})
       // $self->has_forbidden_path($env->{PATH_TRANSLATED})) {
     return $self->psgi_error(403, "Forbidden $deny");
+  }
+
+  if (not $self->{cf_no_unicode_params}
+      and $self->{cf_output_encoding}) {
+    $env->{PATH_INFO} = Encode::decode($self->{cf_output_encoding}
+				       , $env->{PATH_INFO});
   }
 
   if ($self->{loc2psgi_dict}
@@ -516,9 +521,7 @@ sub make_connection {
   }
   $self->SUPER::make_connection
   (@opts
-   , $self->cf_delegate_defined(qw(is_psgi no_nested_query
-				   no_unicode_params
-				))
+   , $self->cf_delegate_defined(qw(is_psgi no_nested_query))
    , @args);
 }
 

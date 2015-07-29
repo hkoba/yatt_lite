@@ -17,6 +17,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dir
 	      cf_vfs cf_base
 	      cf_factory
+	      cf_header_charset
 	      cf_output_encoding
 	      cf_tmpl_encoding
 	      cf_index_name

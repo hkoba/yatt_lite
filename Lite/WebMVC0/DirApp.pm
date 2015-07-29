@@ -3,8 +3,7 @@ use strict;
 use warnings FATAL => qw(all);
 use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
-use YATT::Lite::MFields qw/cf_header_charset
-			   cf_dir_config
+use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
 
 			   Action/;
@@ -105,6 +104,7 @@ sub find_handler {
   my PROP $prop = $con->prop;
   if ($prop->{cf_is_index}) {
     my $sub_fn = substr($prop->{cf_path_info}, length($prop->{cf_location}));
+    $sub_fn =~ s,/.*,,;
     if ($sub_fn ne '' and my $action = $self->get_action_handler($sub_fn, 1)) {
       return $action
     }

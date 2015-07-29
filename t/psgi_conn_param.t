@@ -41,9 +41,16 @@ sub test_action (&$;@) {
 sub _test_action {
     my ( $subref, $request, %params ) = @_;
 
-    $site->mount_action($request->uri->path, $subref);
+    $site->mount_action("/test", $subref);
 
-    $client->request($request, %params);
+    {
+      local $@;
+      my $res;
+      eval {
+	$res = $client->request($request, %params);
+      };
+      BAIL_OUT($@) if $@;
+    }
 }
 
 
@@ -124,6 +131,15 @@ test_action {
 
   } POST "/test?hiragana_of平仮名=ひらがな"
     , Content => ['kanjiかんじ' => "漢字"];
+
+  my $breakpoint = 1; # just for breakpoint
+
+  test_action {
+    my ($this, $con) = @_;
+    my $pi = $con->cget('env')->{PATH_INFO};
+    is is_utf8($pi), 1, "PATH_INFO is decoded utf8";
+    is $pi, "/test/hiragana_of平仮名", "PATH_INFO is valid";
+  } GET "/test/hiragana_of平仮名";
 }
 
 done_testing();
