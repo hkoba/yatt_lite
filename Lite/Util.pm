@@ -1,6 +1,6 @@
 package YATT::Lite::Util;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use constant DEBUG_LOOKUP_PATH => $ENV{DEBUG_YATT_UTIL_LOOKUP_PATH};
 
 use URI::Escape ();

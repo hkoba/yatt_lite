@@ -1,6 +1,6 @@
 package YATT::Lite::Core; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use parent qw(YATT::Lite::VFS);
 use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno

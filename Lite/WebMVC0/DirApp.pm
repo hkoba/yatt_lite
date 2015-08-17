@@ -1,6 +1,6 @@
 package YATT::Lite::WebMVC0::DirApp; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
 use YATT::Lite::MFields qw/cf_dir_config

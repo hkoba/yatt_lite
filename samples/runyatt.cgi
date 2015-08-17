@@ -2,7 +2,7 @@
 #!/usr/bin/perl -w
 package main; # For do 'runyatt.cgi'.
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use sigtrap die => qw(normal-signals);
 use FindBin;
 

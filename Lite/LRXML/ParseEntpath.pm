@@ -1,6 +1,6 @@
 package YATT::Lite::LRXML::ParseEntpath;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 
 package YATT::Lite::LRXML; use YATT::Lite::LRXML;
 

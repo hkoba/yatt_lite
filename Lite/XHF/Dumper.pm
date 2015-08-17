@@ -1,6 +1,6 @@
 package YATT::Lite::XHF::Dumper;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 our $VERSION = "0.02";
 
 use Exporter qw(import);

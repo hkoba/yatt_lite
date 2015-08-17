@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # -*- coding: utf-8 -*-
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use utf8;
 #use encoding ':_get_locale_encoding';
 #BEGIN { binmode STDERR, ":encoding(@{[_get_locale_encoding()]})"; }

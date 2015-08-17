@@ -1,7 +1,7 @@
 package
   MyBuilder;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 
 use File::Find;
 use File::Basename ();

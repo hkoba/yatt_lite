@@ -1,7 +1,7 @@
 package YATT::Lite::WebMVC0::SiteApp::CGI;
 # -*- coding: utf-8 -*-
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 
 use YATT::Lite::WebMVC0::SiteApp; # To make lint happy, this is required.
 

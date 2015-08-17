@@ -1,6 +1,6 @@
 package YATT::Lite::XHF::StoreDir; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 
 use base qw(YATT::Lite::Object);
 use fields qw(cf_datadir

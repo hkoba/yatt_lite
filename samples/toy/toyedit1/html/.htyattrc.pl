@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 
 use fields qw(cf_tmpdir cf_datadir cf_limit);
 

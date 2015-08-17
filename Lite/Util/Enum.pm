@@ -1,6 +1,6 @@
 package YATT::Lite::Util::Enum;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use YATT::Lite::Util qw(globref define_const);
 
 sub import {

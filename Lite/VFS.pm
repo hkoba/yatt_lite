@@ -1,6 +1,6 @@
 package YATT::Lite::VFS;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 use Scalar::Util qw(weaken);
 use Carp;

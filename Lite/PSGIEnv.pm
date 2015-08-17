@@ -1,6 +1,6 @@
 package YATT::Lite::PSGIEnv; sub Env () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 my @PSGI_FIELDS;

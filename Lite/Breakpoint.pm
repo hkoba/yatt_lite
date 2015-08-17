@@ -1,6 +1,6 @@
 package YATT::Lite::Breakpoint;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 
 our @EXPORT_OK = qw(

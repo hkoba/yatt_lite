@@ -2,7 +2,7 @@ package
   YATT::Lite::Test::TestFiles;
 sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use base qw/File::Spec/;
 use fields qw(basedir Dict List cf_auto_clean cf_quiet);
 

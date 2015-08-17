@@ -1,6 +1,6 @@
 package YATT::Lite::Test::XHFTest;
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use parent qw(YATT::Lite::Object);
 use YATT::Lite::MFields qw/tests numtests yatt global file_list file_dict
 	      cf_filename cf_ext cf_parser cf_encoding

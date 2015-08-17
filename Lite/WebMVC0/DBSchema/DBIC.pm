@@ -1,6 +1,6 @@
 package YATT::Lite::WebMVC0::DBSchema::DBIC; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 use base qw(YATT::Lite::WebMVC0::DBSchema);

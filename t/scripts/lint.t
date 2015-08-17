@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw/FATAL all NONFATAL misc/;
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; my $dist; BEGIN { local @_ = "$FindBin::Bin/.."; ($dist) = do "$FindBin::Bin/../t_lib.pl" }
 #----------------------------------------
 
