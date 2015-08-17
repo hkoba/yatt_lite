@@ -1,6 +1,6 @@
 package YATT::Lite::Util::File;
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use YATT::Lite::Util ();
 use File::Basename qw(dirname);
 use File::Path qw(make_path);

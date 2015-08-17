@@ -2,7 +2,7 @@ package
   t_register;
 
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use utf8;
 use sigtrap die => qw(normal-signals);
 

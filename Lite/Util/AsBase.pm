@@ -1,6 +1,6 @@
 package YATT::Lite::Util::AsBase;
 use strict;
-use warnings FATAL => qw/all/;
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use Carp;
 
 require Exporter;

@@ -1,6 +1,6 @@
 package YATT::Lite::CGen::Perl;
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 
 require 5.010; # For named capture.
 

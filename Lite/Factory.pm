@@ -1,6 +1,6 @@
 package YATT::Lite::Factory;
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}

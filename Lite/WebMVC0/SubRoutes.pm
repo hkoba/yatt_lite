@@ -1,6 +1,6 @@
 package YATT::Lite::WebMVC0::SubRoutes;
 use strict;
-use warnings FATAL => qw/all/;
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use Carp;
 
 use YATT::Lite::Types ([Route =>

@@ -1,6 +1,6 @@
 package YATT::Lite::Types;
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use parent qw(YATT::Lite::Object);
 use Carp;
 require YATT::Lite::Inc;

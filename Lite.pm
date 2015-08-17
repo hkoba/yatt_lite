@@ -1,6 +1,6 @@
 package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 use Carp qw(carp croak confess);

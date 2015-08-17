@@ -1,6 +1,6 @@
 package YATT::Lite::Util::FindMethods;
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 
 use Exporter qw(import);
 our @EXPORT = qw(FindMethods);

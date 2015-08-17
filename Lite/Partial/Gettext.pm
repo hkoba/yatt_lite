@@ -1,6 +1,6 @@
 package YATT::Lite::Partial::Gettext; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/all/;
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use YATT::Lite::Partial
   (fields => [qw/locale_cache/]
    , requires => [qw/error use_encoded_config/]);

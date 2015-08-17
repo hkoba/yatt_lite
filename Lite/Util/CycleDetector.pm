@@ -12,7 +12,7 @@
 
 package YATT::Lite::Util::CycleDetector;
 use strict;
-use warnings FATAL => qw/all/;
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use Carp;
 
 use Exporter qw/import/;

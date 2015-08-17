@@ -296,7 +296,7 @@ if (($+opts[--myapp])); then
 #!/usr/bin/perl -w
 package $myapp; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use FindBin;
 use lib \$FindBin::RealBin;
 

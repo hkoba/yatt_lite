@@ -1,6 +1,6 @@
 package YATT::Lite::CGen; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use base qw(YATT::Lite::VarMaker);
 use fields qw/curtmpl curwidget curtoks
 	      altgen needs_escaping depth

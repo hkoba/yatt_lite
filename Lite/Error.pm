@@ -1,6 +1,6 @@
 package YATT::Lite::Error; sub Error () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use parent qw(YATT::Lite::Object);
 use constant DEBUG_VERBOSE => $ENV{YATT_DEBUG_VERBOSE};
 

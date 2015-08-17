@@ -1,7 +1,7 @@
 package
   ToyApp1;
 use strict;
-use warnings FATAL => qw/all/;
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 
 use YATT::Lite::WebMVC0::DirApp -as_base;
 use YATT::Lite qw/Entity *CON/;

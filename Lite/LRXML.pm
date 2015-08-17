@@ -2,7 +2,7 @@
 # Parsing and Building. part の型を確定させる所まで請け負うことに。
 package YATT::Lite::LRXML; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 use base qw(YATT::Lite::VarMaker);

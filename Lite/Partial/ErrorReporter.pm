@@ -1,7 +1,7 @@
 package YATT::Lite::Partial::ErrorReporter; sub MY () {__PACKAGE__}
 # -*- coding: utf-8 -*-
 use strict;
-use warnings FATAL => qw/all/;
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use YATT::Lite::Partial
   (fields => [qw/cf_at_done
 		 cf_error_handler

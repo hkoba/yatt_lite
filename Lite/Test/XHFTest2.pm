@@ -1,6 +1,6 @@
 package YATT::Lite::Test::XHFTest2; sub Tests () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings FATAL => qw/FATAL all NONFATAL misc/;
 use Exporter qw(import);
 
 use File::Basename qw(dirname);
