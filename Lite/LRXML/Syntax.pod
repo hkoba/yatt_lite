@@ -149,7 +149,7 @@ Some notes on current spec and future changes:
 
 =over 4
 
-=item NAME may allowed to contain unicode word.
+=item NAME may be allowed to contain unicode word.
 X<unicode-name>
 
 In current YATT::Lite, C<NAME> can cotain C<\w> in perl unicode semantics.
@@ -159,12 +159,18 @@ In current YATT::Lite, C<NAME> can cotain C<\w> in perl unicode semantics.
 =head2 BNF of LRXML template syntax
 X<LRXML-template>.
 
-  lrxml-template   = ?(template-payload) *( (lrxml-entref / template-tag)
+  lrxml-template   = ?(template-payload) *( (template-tag / lrxml-entref )
                                            ?(template-payload) )
 
-  template-payload = ¬( "<" (CNS ":" / "?" CNS)
-                      / "&" (CNS [:#| / special-entity)
-		      )
+  template-payload = ¬( tag-leader / ent-leader )
+
+  tag-leader       = "<" ( CNS ":"
+                         / "?" CNS
+                         )
+
+  ent-leader       = "&" ( CNS (":" / lcmsg )
+                         / special-entity
+                         )
 
   template-tag     = element / pi
 
