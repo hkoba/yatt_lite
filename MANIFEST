@@ -590,10 +590,10 @@ t/psgi.d/index.yatt
 t/psgi.d/no_subpath.yatt
 t/psgi.d/test.css
 t/psgi.d/test.lib/Foo.pm
-t/psgi.d/test.ydo
 t/psgi.t
 t/psgi.ytmpl/hello.ytmpl
 t/psgi_conn_param.t
+t/psgi_conn_upload.t
 t/runtests.zsh
 t/scripts/app.psgi
 t/scripts/lint.t

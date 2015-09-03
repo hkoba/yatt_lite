@@ -1,5 +1,17 @@
 Revision history for YATT::Lite
 
+0.100_001 2015-09-03
+    * Enhanement (API Change) for unicode handling:
+	- [GH #48] decode input params by default. Add new option `no_unicode` for backward compatibility.
+	- [GH #45] YATT::Lite::Factory->render now returns decoded string by default.
+    * Enhanement to help testing:
+	- [GH #47] $site->mount_action($location => $action_sub)) and $dir->set_action_handler($filename => sub ($this, $con))
+	- [GH #16] $site->mount_psgi($location => $psgi_app)
+    * Fixes
+        - [GH #50] [RT #106776] Test failure (caused by SQLite).
+	- [GH #49] use safer fatalized warnings.
+	- [GH #46] convert_array_param(parse_nested_query) conflicts with Plack::Request->upload.
+
 0.100 2015-04-28
     * Docs
         - Better docs for YATT::Lite::LRXML::Syntax
