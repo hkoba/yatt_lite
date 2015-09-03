@@ -298,7 +298,7 @@ sub dbi_connect {
 }
 
 sub default_dbi_attr {
-  (RaiseError => 1, PrintError => 0, AutoCommit => 0);
+  (RaiseError => 1, PrintError => 0, AutoCommit => 1);
 }
 
 #----------------------------------------
