@@ -22,6 +22,9 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_debug_backend
 			   cf_psgi_static
 			   cf_psgi_fallback
+			   cf_per_role_docroot
+			   cf_per_role_docroot_key
+			   cf_default_role
 			   cf_backend
 			   cf_site_config
 			   cf_logfile
@@ -47,7 +50,12 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
   $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
+  $self->{cf_per_role_docroot_key} ||= $self->default_per_role_docroot_key;
+  $self->{cf_default_role} ||= $self->default_default_role;
 }
+
+sub default_per_role_docroot_key { 'yatt.role' }
+sub default_default_role { 'nobody' }
 
 #========================================
 # runas($type, $fh, \%ENV, \@ARGV)  ... for CGI/FCGI support.
@@ -81,6 +89,17 @@ sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
   $dirPath =~ s,/*$,,;
   $self->{path2yatt}{$dirPath} ||= $self->load_yatt($dirPath);
+}
+
+sub get_lochandler {
+  (my MY $self, my ($location, $tmpldir)) = @_;
+  if ($self->{cf_per_role_docroot}) {
+    # When per_role_docroot is on, $tmpldir already points
+    # $per_role_docroot/$role. So just append $location.
+    $self->get_dirhandler($tmpldir.$location);
+  } else {
+    $self->SUPER::get_lochandler($location, $tmpldir);
+  }
 }
 
 #----------------------------------------
@@ -123,7 +142,8 @@ sub to_app {
 #  unless (defined $self->{cf_app_root}) {
 #    croak "app_root is undef!";
 #  }
-  unless (defined $self->{cf_doc_root}) {
+  unless (defined $self->{cf_doc_root}
+	  or defined $self->{cf_per_role_docroot}) {
     croak "document_root is undef!";
   }
   return $self->SUPER::to_app(@_);
@@ -172,11 +192,20 @@ sub call {
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->split_path_info($env);
 
+  my ($realdir, $virtdir);
+  if (@pi) {
+    $realdir = "$tmpldir$loc";
+    $virtdir = defined $self->{cf_doc_root}
+      ? "$self->{cf_doc_root}$loc" : $realdir;
+  }
+
   if ($self->has_htdebug("path_info")) {
     return $self->psgi_dump([tmpldir   => $tmpldir]
 			    , [loc     => $loc]
 			    , [file    => $file]
-			    , [trailer => $trailer]);
+			    , [trailer => $trailer]
+			    , [virtdir => $virtdir, realdir => $realdir]
+			  );
   }
 
   if ($self->{cf_debug_psgi}) {
@@ -198,10 +227,8 @@ sub call {
     return $self->psgi_handle_fallback($env);
   }
 
-  my $virtdir = "$self->{cf_doc_root}$loc";
-  my $realdir = "$tmpldir$loc";
   unless (-d $realdir) {
-    return $self->psgi_error(404, "Not found: $virtdir");
+    return $self->psgi_error(404, "Not found: $loc");
   }
 
   # Default index file.
@@ -312,7 +339,7 @@ sub psgi_handle_static {
 sub psgi_handle_fallback {
   (my MY $self, my Env $env) = @_;
   my $app = $self->{cf_psgi_fallback}
-    or return [404, [], ["Cannot understand:", $env->{PATH_INFO}]];
+    or return [404, [], ["Cannot understand: ", $env->{PATH_INFO}]];
 
   local $env->{PATH_INFO} = $self->trim_site_prefix($env->{PATH_INFO});
 
@@ -344,7 +371,8 @@ sub is_done {
 sub split_path_info {
   (my MY $self, my Env $env) = @_;
 
-  if (nonempty($env->{PATH_TRANSLATED})
+  if (! $self->{cf_per_role_docroot}
+      && nonempty($env->{PATH_TRANSLATED})
       && $self->is_path_translated_mode($env)) {
     #
     # [1] PATH_TRANSLATED mode.
@@ -369,8 +397,19 @@ sub split_path_info {
     #
     # [2] Template lookup mode.
     #
+
+    my $tmpldirs = do {
+      if ($self->{cf_per_role_docroot}) {
+        my $user = $env->{$self->{cf_per_role_docroot_key}};
+        $user ||= $self->{cf_default_role};
+        ["$self->{cf_per_role_docroot}/$user"]
+      } else {
+        $self->{tmpldirs}
+      }
+    };
+
     lookup_path($env->{PATH_INFO}
-		, $self->{tmpldirs}
+		, $tmpldirs
 		, $self->{cf_index_name}, ".$self->{cf_ext_public}"
 		, $self->{cf_use_subpath});
   } else {

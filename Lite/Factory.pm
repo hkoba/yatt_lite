@@ -193,6 +193,12 @@ sub load_factory_for_psgi {
       $sub;
     }
   }
+  sub wrapped_by {
+    my ($self, $builder) = @_;
+    my $outer_app = $builder->($self->to_app);
+    $sub2app{$outer_app} = $self; weaken($sub2app{$outer_app});
+    $outer_app;
+  }
   sub load_psgi_script {
     my ($pack, $fn) = @_;
     local $want_object = 1;
