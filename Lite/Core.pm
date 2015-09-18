@@ -309,7 +309,16 @@ sub create_file {
 	 , parser => $self->get_parser
 	 , sink => $opts{sink} || sub {
 	   my ($info, @script) = @_;
-	   print @script, "\n" if $self->{cf_debug_cgen};
+	   if (not $self->{cf_debug_cgen}) {
+	   } else {
+	     my Template $real = $info->{folder};
+	     print STDERR "# compiling $type code of $real->{cf_path}\n";
+	     if ($self->{cf_debug_cgen} >= 2) {
+	       print STDERR "#--BEGIN--\n";
+	       print STDERR @script, "\n";
+	       print STDERR "#--END--\n\n"
+	     }
+	   }
 	   ckeval(@script);
 	 });
       # 二重生成防止のため、代入自体は ensure_generated の中で行う。
