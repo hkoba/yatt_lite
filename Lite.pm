@@ -35,6 +35,8 @@ use YATT::Lite::MFields qw/YATT
 	      cf_lcmsg_sink
 
 	      cf_default_lang
+
+	      cf_path2entns
 	    /;
 
 MY->cf_mkaccessors(qw/app_name/);
