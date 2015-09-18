@@ -4,6 +4,7 @@ use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 use Scalar::Util qw(weaken);
 use Carp;
+use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
 
 #========================================
 # VFS 層. vfs_file (Template) のダミー実装を含む。
@@ -36,7 +37,7 @@ use Carp;
 		cf_entns
 		root extdict n_creates n_updates cf_mark
 		pkg2folder/;
-  use YATT::Lite::Util qw(lexpand rootname);
+  use YATT::Lite::Util qw(lexpand rootname terse_dump);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}
   sub new {
@@ -266,18 +267,21 @@ use Carp;
     (my VFS $vfs, my ($kind, $primary, %rest)) = @_;
     # XXX: $vfs は className の時も有る。
     if (my $sub = $vfs->can("create_$kind")) {
-      $vfs->fixup_created($sub->($vfs, $primary, %rest));
+      $vfs->fixup_created(\@_, $sub->($vfs, $primary, %rest));
     } else {
       $vfs->{cf_cache}{$primary} ||= do {
 	# XXX: Really??
 	$rest{entns} //= $vfs->{cf_entns};
 	$vfs->fixup_created
-	  ($vfs->can("vfs_$kind")->()->new(%rest, path => $primary));
+	  (\@_, $vfs->can("vfs_$kind")->()->new(%rest, path => $primary));
       };
     }
   }
   sub fixup_created {
-    (my VFS $vfs, my Folder $folder) = @_;
+    (my VFS $vfs, my $info, my Folder $folder) = @_;
+    printf STDERR "# VFS::create(%s) => %s(0x%x)\n"
+      , terse_dump(@{$info}[1..$#$info])
+      , ref $folder, ($folder+0) if DEBUG_VFS;
     # create の直後、 after_create より前に、mark を打つ。そうしないと、 delegate で困る。
     if (ref $vfs) {
       $vfs->{n_creates}++;

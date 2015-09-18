@@ -5,6 +5,8 @@ use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
+use constant DEBUG_FACTORY => $ENV{DEBUG_YATT_FACTORY};
+
 use 5.010;
 use Scalar::Util qw(weaken);
 use Encode qw/decode/;
@@ -90,6 +92,7 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			psgi_error
 			globref_default
 			define_const
+			terse_dump
 		       /;
 
 use YATT::Lite::XHF ();
@@ -574,7 +577,10 @@ sub build_yatt {
   $self->_list_base_spec_in($path, delete $opts{base}, $visits
 			    , \@basepkg, \@basevfs);
 
-  my $app_ns = $self->buildns(INST => \@basepkg, $path);
+  my $app_ns = $self->buildns(my @log = (INST => \@basepkg, $path));
+
+  print STDERR "# Factory::buildns("
+    , terse_dump(@log), ") => $app_ns\n" if DEBUG_FACTORY;
 
   if (-e (my $rc = "$path/.htyattrc.pl")) {
     # Note: This can do "use fields (...)"
@@ -605,6 +611,9 @@ sub build_yatt {
 
 sub _list_base_spec_in {
   (my MY $self, my ($in, $desc, $visits, $basepkg, $basevfs)) = @_;
+
+  print STDERR "# Factory::list_base_in("
+    , terse_dump($in, $desc, $self->{cf_app_base}), ")\n" if DEBUG_FACTORY;
 
   my $is_implicit = not defined $desc;
 
