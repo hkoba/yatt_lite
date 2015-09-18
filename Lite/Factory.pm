@@ -78,6 +78,8 @@ use YATT::Lite::MFields
 
        tmpl_cache
 
+       path2entns
+
        cf_debug_cgen
 
        cf_only_parse
@@ -590,7 +592,9 @@ sub build_yatt {
     dofile_in($app_ns, $rc);
   }
 
-  my @args = (vfs => [dir => $path, encoding => $self->{cf_tmpl_encoding}
+  my @args = (vfs => [dir => $path
+		      , entns => $self->{path2entns}{$path}
+		      , encoding => $self->{cf_tmpl_encoding}
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
@@ -600,7 +604,7 @@ sub build_yatt {
 	      # XXX: Design flaw! Use of tmpl_cache will cause problem.
 	      # because VFS->create for base do not respect Factory->get_yatt.
 	      # To solve this, I should redesign all Factory/VFS related stuffs.
-	      # , tmpl_cache => $self->{tmpl_cache} //= {}
+	      , tmpl_cache => $self->{tmpl_cache} //= {}
 
 	      , $self->configparams_for(fields_hash($app_ns)));
 
@@ -650,7 +654,8 @@ sub _list_base_spec_in {
     next unless $dir;
     my $yatt = $self->load_yatt($dir, undef, $visits, $in);
     $tuple->[1] = ref $yatt;
-    push @$basevfs, [dir => $yatt->cget('dir')];
+    my $realdir = $yatt->cget('dir');
+    push @$basevfs, [dir => $realdir, entns => $self->{path2entns}{$realdir}];
   }
 
   push @$basepkg, map {
@@ -683,6 +688,9 @@ sub buildns {
     push @{globref_default(globref($newns->EntNS, 'ISA')
 			   , [])}, $self->EntNS;
   }
+
+  # basevfs に entns を渡せるように。
+  $self->{path2entns}{$path} = $newns->EntNS;
 
   $newns;
 }
