@@ -474,6 +474,7 @@ END
   my $docroot = "$approot/docs";
   my $ytmpl   = "$approot/ytmpl";
 
+  # '..' causes error.
   MY->mkfile("$docroot/subapp/.htyattconfig.xhf" => <<'END'
 base[
 - ..

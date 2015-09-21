@@ -314,7 +314,15 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
   sub YATT::Lite::VFS::Dir::after_create {
     (my vfs_dir $dir, my VFS $vfs) = @_;
     foreach my Folder $desc (@{$dir->{cf_base}}) {
-      $desc = $vfs->create(@$desc) if ref $desc eq 'ARRAY';
+      if (ref $desc eq 'ARRAY') {
+	# XXX: Dirty workaround.
+	if ($desc->[0] eq 'dir') {
+	  # To create YATT::Lite with .htyattconfig.xhf, Factory should be involved.
+	  $desc = $vfs->{cf_facade}->create_neighbor($desc->[1]);
+	} else {
+	  $desc = $vfs->create(@$desc);
+	}
+      }
       # parent がある == parent から指されている。なので、 weaken する必要が有る。
       weaken($desc) if $desc->{cf_parent};
     }
