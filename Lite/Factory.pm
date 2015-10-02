@@ -15,6 +15,8 @@ use parent qw/YATT::Lite::NSBuilder File::Spec/;
 use File::Path ();
 use File::Basename qw/dirname/;
 
+use YATT::Lite::PSGIEnv;
+
 # Note: Definition of default values are not yet gathered here.
 # Some are in YATT::Lite, others are in YATT::Lite::Core, CGen.. and so on.
 
@@ -427,6 +429,29 @@ sub rebuild_psgi_mount {
   my $all = join("|", @re);
   $self->{loc2psgi_re} = qr{^(?:$all)(?:/|$)};
 }
+
+sub psgi_file_app {
+  my ($pack, $path) = @_;
+  require Plack::App::File;
+  Plack::App::File->new(root => $path)->to_app;
+}
+
+sub mount_static {
+  (my MY $self, my ($location, $realpath)) = @_;
+  my $app = ref $realpath eq 'CODE' ? $realpath
+    : $self->psgi_file_app($realpath);
+  $self->mount_psgi
+    ($location, sub {
+       (my Env $env) = @_;
+       local $env->{PATH_INFO} = _trim_prefix($env->{PATH_INFO}, $location);
+       $app->($env);
+     });
+}
+
+sub _trim_prefix {
+  substr($_[0], length($_[1]));
+}
+
 
 #========================================
 

@@ -318,12 +318,6 @@ sub make_debug_params {
 
 #========================================
 
-sub psgi_file_app {
-  my ($pack, $path) = @_;
-  require Plack::App::File;
-  Plack::App::File->new(root => $path)->to_app;
-}
-
 sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;
   my $app = $self->{cf_psgi_static}
