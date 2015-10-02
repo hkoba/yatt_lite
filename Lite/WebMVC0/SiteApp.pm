@@ -571,6 +571,22 @@ Entity is_debug_allowed_ip => sub {
 				    // ['127.0.0.1']);
 };
 
+foreach my $item (map([lc($_) => uc($_)]
+		      , qw/SCRIPT_NAME
+			   PATH_INFO
+			   REQUEST_URI
+
+			   SCRIPT_URI
+			   SCRIPT_URL
+			   SCRIPT_FILENAME
+			   /)) {
+  my ($method, $env_name) = @$item;
+  Entity $method => sub {
+    my Env $env = $CON->env;
+    $env->{$env_name};
+  };
+}
+
 #========================================
 
 YATT::Lite::Breakpoint::break_load_dispatcher();
