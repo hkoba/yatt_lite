@@ -88,7 +88,7 @@ sub is_or_like($$;$) {
 
       my $path = $request->uri->path;
 
-      $site->mount_psgi($path => $subref);
+      $site->mount_psgi($path => sub {$subref->(@_); [200, [], "OK"]});
 
       $client->request($request, %params);
     }
