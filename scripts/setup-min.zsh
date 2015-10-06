@@ -146,19 +146,24 @@ elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
 	(*Ubuntu*)
 
 	apache=/etc/apache2/sites-available/default
-	[[ -r $apache ]] || die "Can't find $apache!"
-	document_root=$(find_pat '^\s*DocumentRoot\s+"?([^"]*)"?' $apache)
+	if [[ -r $apache ]]; then
+	    document_root=$(find_pat '^\s*DocumentRoot\s+"?([^"]*)"?' $apache)
+	    # for APACHE_RUN_GROUP
+	    source /etc/apache2/envvars
+	    if [[ -z $APACHE_RUN_GROUP ]]; then
+		die "Can't find APACHE_RUN_GROUP!"
+	    fi
 
-	# for APACHE_RUN_GROUP
-	source /etc/apache2/envvars
-	if [[ -z $APACHE_RUN_GROUP ]]; then
-	    die "Can't find APACHE_RUN_GROUP!"
+	    curgroups=($(id -Gn))
+	    if (($curgroups[(ri)$APACHE_RUN_GROUP] >= $#curgroups)); then
+		die User $USER is not a member of $APACHE_RUN_GROUP, stopped.
+	    fi
+	else
+	    # Fake settings when apache2 is not installed.
+	    document_root=/var/www
+	    APACHE_RUN_GROUP=nobody
 	fi
 
-	curgroups=($(id -Gn))
-	if (($curgroups[(ri)$APACHE_RUN_GROUP] >= $#curgroups)); then
-	    die User $USER is not a member of $APACHE_RUN_GROUP, stopped.
-	fi
 	;;
 	(*)
 	die "Unsupported distribution! Please modify $0 for $DISTRIB_ID"
@@ -175,7 +180,7 @@ fi
 
 if [[ -n $APACHE_RUN_GROUP ]] && (($+commands[groups])); then
     mygroups=($(groups))
-    if (($mygroups[(ri)$APACHE_RUN_GROUP] > $#mygroups)); then
+    if ((UID != 0 && $mygroups[(ri)$APACHE_RUN_GROUP] > $#mygroups)); then
 	warn "You are not a member of $APACHE_RUN_GROUP. To change this, do \"sudo usermod -aG $APACHE_RUN_GROUP $USER\" and re-login this server."
     fi
 fi
