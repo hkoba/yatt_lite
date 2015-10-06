@@ -33,6 +33,8 @@ fi
 
 cd $distdir
 
+print distdir=$distdir
+
 optspec=(
     C=o_cover
     T=o_taint
