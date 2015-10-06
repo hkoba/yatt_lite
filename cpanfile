@@ -41,13 +41,14 @@ on test => sub {
  requires 'Plack::Test';
  requires 'CGI::Session';
  requires 'FCGI::Client';
+
  requires 'DBD::SQLite';
+ requires 'DBD::mysql';
  requires 'DBIx::Class';
 
- recommends 'DBD::mysql';
- recommends 'Pod::Simple::SimpleTree';
- recommends 'HTTP::Headers';
- recommends 'HTTP::Cookies';
- recommends 'Email::Simple';
- recommends 'Email::Sender';
+ requires 'Pod::Simple::SimpleTree';
+ requires 'HTTP::Headers';
+ requires 'HTTP::Cookies';
+ requires 'Email::Sender';
+ requires 'Email::Simple';
 };
