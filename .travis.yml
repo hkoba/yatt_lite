@@ -16,4 +16,4 @@ before_install:
   - "perl -le 'print for @ARGV' 'dbname: myapp_test' 'dbuser: root' 'dbpass: ' > samples/.htdbpass\n"
 script:
   mkdir ../lib && ln -vnsf ../yatt_lite ../lib/YATT && cd ../lib/YATT &&
-  samples/setup-all.zsh && t/runtests.zsh
+  t/runtests.zsh
