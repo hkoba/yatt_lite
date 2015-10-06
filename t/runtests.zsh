@@ -197,10 +197,14 @@ fi
 if [[ -n $HARNESS_PERL_SWITCHES ]]; then
     print -R HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
 fi
+
+integer rc=0
 if [[ -n $o_taint ]]; then
-    $plenv_exec ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
+    $plenv_exec ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv ||
+	rc=$?
 else
-    $plenv_exec ${PERL:-perl} =prove $o_lib $argv || true
+    $plenv_exec ${PERL:-perl} =prove $o_lib $argv ||
+	rc=$?	
 fi
 
 : ${docroot:=/var/www/html}
@@ -224,3 +228,4 @@ EOF
     fi
 fi
 
+exit $rc
