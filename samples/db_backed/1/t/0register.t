@@ -3,15 +3,16 @@
 #----------------------------------------
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
+use constant DEBUG => $ENV{DEBUG_YATT_TEST_REGISTER};
 use FindBin;
 BEGIN {
   if (-d (my $dir = "$FindBin::RealBin/../../../../t")) {
     local (@_, $@) = $dir;
     do "$dir/t_lib.pl";
     die $@ if $@;
-    print STDERR "# distdir=$dir\n";
+    print STDERR "# distdir=$dir\n" if DEBUG;
   } else {
-    die "Can't find dist t directory: realbin=$FindBin::RealBin";
+    die "Can't find dist t directory: realbin=$FindBin::RealBin" if DEBUG;
   }
 }
 use lib $FindBin::RealBin;
