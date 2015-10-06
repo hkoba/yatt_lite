@@ -162,7 +162,7 @@ elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
 	else
 	    # Fake settings when apache2 is not installed.
 	    document_root=/var/www
-	    APACHE_RUN_GROUP=nobody
+	    APACHE_RUN_GROUP=nogroup
 	    wo_apache=1
 	fi
 
