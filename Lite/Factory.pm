@@ -80,6 +80,9 @@ use YATT::Lite::MFields
 
        cf_only_parse
        cf_config_filetypes
+
+       cf_dont_map_args
+       cf_dont_debug_param
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -684,6 +687,8 @@ sub _cf_delegates {
      ext_private
      only_parse
      use_subpath
+     dont_map_args
+     dont_debug_param
   );
 }
 
