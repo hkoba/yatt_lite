@@ -14,4 +14,4 @@ before_install:
   - "cpanm -n Devel::Cover::Report::Coveralls\n"
 script:
   mkdir ../lib && ln -vnsf ../yatt_lite ../lib/YATT && cd ../lib/YATT &&
-  t/runtests.zsh
+  t/runtests.zsh -v
