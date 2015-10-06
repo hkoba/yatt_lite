@@ -57,7 +57,7 @@ elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     # To make relative path invocation happier.
     argv=(t/**/*.t(N))
     if (($+libdir)) && ((! $+opts[--nosamples])) && [[ -d samples ]]; then
-	argv+=(samples/**/t/*.t(*N,@N))
+	argv+=(samples/**/t/*.t(*nN,@N))
     fi
 fi
 
