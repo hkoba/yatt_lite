@@ -43,6 +43,7 @@ optspec=(
     'l+:=o_lib'
     -nosamples
     -samples
+    -samples-with-absdir
     -noplenv
     -brew::
 )
@@ -53,14 +54,22 @@ if (($+opts[--samples])); then
     # Test samples only.
     (($+libdir)) || die samples needs lib/YATT, sorry.
 
-    argv=(samples/**/t/*.t(*N,@N))
+    if (($+opts[--samples-with-absdir])); then
+	argv=($PWD/samples/**/t/*.t(*nN,@N))
+    else
+	argv=(samples/**/t/*.t(*nN,@N))
+    fi
 
 elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     # If no **/*.t is specified:
     # To make relative path invocation happier.
     argv=(t/**/*.t(N))
     if (($+libdir)) && ((! $+opts[--nosamples])) && [[ -d samples ]]; then
-	argv+=(samples/**/t/*.t(*nN,@N))
+	if (($+opts[--samples-with-absdir])); then
+	    argv+=($PWD/samples/**/t/*.t(*nN,@N))
+	else
+	    argv+=(samples/**/t/*.t(*nN,@N))
+	fi
     fi
 fi
 
