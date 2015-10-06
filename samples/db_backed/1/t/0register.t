@@ -9,6 +9,8 @@ BEGIN {
     local (@_, $@) = $dir;
     do "$dir/t_lib.pl";
     die $@ if $@;
+  } else {
+    die "Can't find dist t directory: realbin=$FindBin::RealBin";
   }
 }
 use lib $FindBin::RealBin;
