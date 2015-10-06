@@ -10,10 +10,10 @@ addons:
   apt:
     packages:
       - zsh
-before_install: 
-  - cpanm -n Devel::Cover::Report::Coveralls
-  - mysql -e 'create database myapp_test;'
-  - perl -le 'print for @ARGV' 'dbname: myapp_test' 'dbuser: root' 'dbpass: ' > samples/.htdbpass
+before_install:
+  - "cpanm -n Devel::Cover::Report::Coveralls\n"
+  - "mysql -e 'create database myapp_test;'\n"
+  - "perl -le 'print for @ARGV' 'dbname: myapp_test' 'dbuser: root' 'dbpass: ' > samples/.htdbpass\n"
 script:
   mkdir ../lib && ln -vnsf ../yatt_lite ../lib/YATT && cd ../lib/YATT &&
   samples/setup-all.zsh && t/runtests.zsh
