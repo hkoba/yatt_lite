@@ -29,8 +29,7 @@ BEGIN {
 }
 
 use YATT::Lite::Factory;
-
-plan 'no_plan';
+use YATT::Lite::Util qw/lexpand/;
 
 ok(my $SITE = YATT::Lite::Factory->find_load_factory_script
    (dir => dirname($FindBin::Bin))
@@ -44,6 +43,9 @@ $SITE->configure(debug_psgi => 0
                  , site_prefix => ""
 		);
 
+my $dirapp = $SITE->get_yatt('/');
+my @docpath = lexpand($dirapp->cget('docpath'));
+
 {
   my $mech = Test::WWW::Mechanize::PSGI->new(app => $SITE->to_app);
   $mech->add_header('Accept-Language', 'ja');
@@ -55,7 +57,10 @@ $SITE->configure(debug_psgi => 0
     my $homelink = $mech->find_link(text => 'ylpodview');
     is $homelink->url, "/", "home link url";
   }
-  {
+
+  SKIP: {
+    skip "No index.lst", 7 unless -r "$docpath[0]/index.lst";
+
     ok(my $readme = $mech->find_link(text => 'readme'), "found readme link");
     is $readme->url, "/mod/YATT::Lite::docs::readme", "readme link url";
     $mech->get_ok($readme);
@@ -89,3 +94,5 @@ $SITE->configure(debug_psgi => 0
 
 
 }
+
+done_testing();
