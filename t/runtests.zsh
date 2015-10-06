@@ -39,6 +39,7 @@ optspec=(
     C=o_cover
     T=o_taint
     y=o_yn
+    v=o_verbose
     'l+:=o_lib'
     -nosamples
     -samples
@@ -205,7 +206,7 @@ if [[ -n $o_taint ]]; then
     $plenv_exec ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv ||
 	rc=$?
 else
-    $plenv_exec ${PERL:-perl} =prove $o_lib $argv ||
+    $plenv_exec ${PERL:-perl} =prove $o_lib $o_verbose $argv ||
 	rc=$?	
 fi
 
