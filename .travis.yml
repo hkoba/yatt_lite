@@ -13,5 +13,5 @@ addons:
 before_install:
   - "cpanm -n Devel::Cover::Report::Coveralls\n"
 script:
-  mkdir ../lib && ln -vnsf ../yatt_lite ../lib/YATT && cd ../lib/YATT &&
-  t/runtests.zsh -v --samples-with-absdir
+  cd .. && mkdir lib && mv yatt_lite lib/YATT && cd lib/YATT &&
+  t/runtests.zsh -v
