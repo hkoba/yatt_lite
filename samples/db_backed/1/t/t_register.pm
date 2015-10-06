@@ -203,7 +203,13 @@ END
   unlink $email_fn if -e $email_fn;
 }
 
-sub skip_check {""}
+sub skip_check {
+  my ($pack, $app_root, %opts) = @_;
+  my $passfile = "$app_root/.htdbpass";
+  unless (-r $passfile) {
+    return ".htdbpass is not configured";
+  }
+}
 
 sub nocr {
   my ($res) = @_;
