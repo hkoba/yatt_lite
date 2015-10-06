@@ -1,3 +1,4 @@
+sudo: false
 language: perl
 perl:
   - "5.20"
@@ -5,9 +6,12 @@ perl:
   - "5.16"
   - "5.14"
   - "5.12"
+addons:
+  apt:
+    packages:
+      - zsh
 before_install: 
-  apt-get install zsh
-  cpanm -n Devel::Cover::Report::Coveralls
+  - cpanm -n Devel::Cover::Report::Coveralls
 script:
   mkdir ../lib && ln -vnsf ../yatt_lite ../lib/YATT && cd ../lib/YATT &&
   t/runtests.zsh -C
