@@ -39,15 +39,15 @@ on test => sub {
  requires 'Test::WWW::Mechanize::PSGI';
  requires 'HTML::Entities';
  requires 'Plack::Test';
+ requires 'CGI::Session';
+ requires 'FCGI::Client';
+ requires 'DBD::SQLite';
+ requires 'DBIx::Class';
 
- recommends 'DBD::SQLite';
  recommends 'DBD::mysql';
- recommends 'DBIx::Class';
- recommends 'CGI::Session';
  recommends 'Pod::Simple::SimpleTree';
  recommends 'HTTP::Headers';
  recommends 'HTTP::Cookies';
- recommends 'FCGI::Client';
  recommends 'Email::Simple';
  recommends 'Email::Sender';
 };
