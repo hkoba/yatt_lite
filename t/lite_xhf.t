@@ -118,7 +118,9 @@ foreach my MY $sect (@section) {
 	  and my @missing = $test->test_require($test->{cf_REQUIRE})) {
 	skip "Module @missing is not installed", $test->ntests;
       }
-      breakpoint() if $test->{cf_BREAK};
+      if ($test->{cf_BREAK}) {
+	breakpoint();
+      }
       if ($test->{cf_OUT}) {
 	my $error;
 	unless ($test->{realfile}) {
