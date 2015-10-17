@@ -26,6 +26,9 @@ use YATT::Lite::Constants;
     my %dup;
     map {
       my Folder $f = $_;
+      unless (defined $f->{cf_entns}) {
+	die "BUG: EntNS is empty for ".terse_dump($f->{cf_name})."!";
+      }
       if ($dup{$f->{cf_entns}}++) {
 	()
       } else {
