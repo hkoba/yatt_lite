@@ -473,12 +473,9 @@ sub build_data { shift->Data->new(@_) }
 # declare
 sub declare_base {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
-  my $att = YATT::Lite::Constants::cut_first_att(\@args) or do {
-    die $self->synerror_at($self->{startln}, q{No base arg});
-  };
-  # !yatt:base dir="..."
-  #            PATH BODY
-  push @{$tmpl->{cf_base}}, [@$att[NODE_PATH, NODE_BODY]]; # XXX: 定形？
+
+  $self->{cf_vfs}->declare_base($self, $tmpl, $ns, @args);
+
   undef;
 }
 

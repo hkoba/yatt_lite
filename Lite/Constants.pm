@@ -59,15 +59,9 @@ sub qqvalue ($) {
   'q'.qtext($_[0]);
 }
 
-sub node_path {
-  my ($self, $node) = @_;
-  $node->[NODE_PATH];
-}
-
-sub node_attlist {
-  my ($self, $node) = @_;
-  $node->[NODE_ATTLIST];
-}
+sub node_type    { $_[1]->[NODE_TYPE] }
+sub node_path    { $_[1]->[NODE_PATH] }
+sub node_attlist { $_[1]->[NODE_ATTLIST] }
 
 sub node_body {
   shift->node_value(@_);

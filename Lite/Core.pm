@@ -47,7 +47,12 @@ use YATT::Lite::Breakpoint ();
 			 cf_usage cf_constants
 			 cf_ignore_trailing_newlines
 			 cf_subroutes
-		       )]]
+		      )]]
+
+     , [ParsingState => -fields => [qw(startln endln
+				       startpos curpos
+				       cf_path
+				       )]]
     );
 
   # folder の weaken は parser がしてる。
@@ -135,6 +140,57 @@ sub configure_rc_script {
 sub create_file {
   (my MY $vfs, my $spec) = splice @_, 0, 2;
   $vfs->Template->new(path => $spec, @_);
+}
+
+#
+# called from <!yatt:base>
+#
+sub declare_base {
+  (my MY $vfs, my ParsingState $state, my Template $tmpl, my ($ns, @args)) = @_;
+
+  unless (@args) {
+    $vfs->synerror($state, q{No base arg});
+  }
+
+  my $base = $tmpl->{cf_base} //= [];
+  if (@$base) {
+    $vfs->synerror($state, "Duplicate base decl! was=%s, new=%s"
+		   , terse_dump($base), terse_dump(\@args));
+  }
+
+  foreach my $att (@args) {
+    my $type = $vfs->node_type($att);
+
+    $type == TYPE_ATT_TEXT
+      or $vfs->synerror($state, q{Not implemented base decl type: %s}, $att);
+
+    nonempty(my $fn = $vfs->node_value($att))
+      or $vfs->synerror($state, q{base spec is empty!});
+
+    my Folder $dirobj = $tmpl->dirobj;
+
+    if ($vfs->{on_memory}) {
+      my $o = $vfs->find_file($fn)
+	or $vfs->synerror($state, q{No such base path: %s}, $fn);
+      push @$base, $o;
+    } else {
+      defined(my $realfn = $vfs->resolve_path_from($dirobj, $fn))
+	or $vfs->synerror($state, q{Can't find object path for: %s}, $fn);
+
+      -e $realfn
+	or $vfs->synerror($state, q{No such base path: %s}, $realfn);
+      my $kind = -d $realfn ? 'dir' : 'file';
+      push @$base, $vfs->create($kind => $realfn, parent => $dirobj);
+    }
+  }
+}
+
+sub synerror {
+  (my MY $vfs, my ParsingState $state, my ($fmt, @opts)) = @_;
+  my $opts = {depth => 2};
+  $opts->{tmpl_file} = $state->{cf_path} if $state->{cf_path};
+  $opts->{tmpl_line} = $state->{startln} if $state->{startln};
+  die $vfs->error($opts, $fmt, @opts);
 }
 
 #========================================
@@ -413,6 +469,9 @@ sub create_file {
     } else {
       return;
     }
+
+    # $tmpl->YATT::Lite::VFS::Folder::vivify_base_descs($self);
+
     $tmpl;
   }
   sub YATT::Lite::Core::Widget::fixup {

@@ -668,3 +668,36 @@ IN:
  |foo|bar\|baz\&yatt:x;
 OUT:
  |foo|bar\|baz\qux
+
+
+FILE: base1.yatt
+IN:
+ <!yatt:widget foo xa xb>
+ <h2>foo: &yatt:xa;</h2>
+ &yatt:xb;
+
+FILE: base2/bar.yatt
+IN:
+ <!yatt:args xa xb>
+ <h2>bar: &yatt:xa;</h2>
+ &yatt:xb;
+
+
+TITLE: base "base1.yatt"
+IN:
+ <!yatt:base file="base1.yatt">
+ <yatt:foo xa="bar" xb="baz"/>
+OUT:
+ <h2>foo: bar</h2>
+ baz
+ 
+
+TITLE: base "base2"
+IN:
+ <!yatt:base dir="base2">
+ <yatt:bar xa="qux" xb="quux"/>
+OUT:
+ <h2>bar: qux</h2>
+ quux
+ 
+

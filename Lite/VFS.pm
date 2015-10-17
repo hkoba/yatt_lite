@@ -6,6 +6,9 @@ use Scalar::Util qw(weaken);
 use Carp;
 use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
 
+require File::Spec;
+require File::Basename;
+
 #========================================
 # VFS 層. vfs_file (Template) のダミー実装を含む。
 #========================================
@@ -35,6 +38,7 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
   use YATT::Lite::MFields qw/cf_ext_private cf_ext_public cf_cache cf_no_auto_create
 		cf_facade cf_base
 		cf_entns
+		on_memory
 		root extdict n_creates n_updates cf_mark
 		pkg2folder/;
   use YATT::Lite::Util qw(lexpand rootname terse_dump);
@@ -50,8 +54,14 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
       my ($value, @ext) = @$desc;
       $vfs->{extdict}{$_} = $value for @ext;
     }
-    $vfs->root_create(linsert($spec, 2, $vfs->cf_delegate(qw(entns))))
-      if $spec;
+
+    if ($spec) {
+      my Folder $root = $vfs->root_create
+	(linsert($spec, 2, $vfs->cf_delegate(qw(entns))));
+      # Mark [data => ..] vfs as on_memory
+      $vfs->{on_memory} = 1 if $spec->[0] eq 'data' or not $root->{cf_path};
+    }
+
     $$_[0]->($vfs, $$_[1]) for @task;
     $vfs->after_new;
     $vfs;
@@ -77,6 +87,12 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
     (my VFS $vfs) = @_;
     $vfs->{root}->list_items($vfs);
   }
+  sub resolve_path_from {
+    (my VFS $vfs, my Folder $folder, my $fn) = @_;
+    my $dirname = $folder->dirname
+      or return undef;
+    File::Spec->rel2abs($fn, $dirname)
+  }
 
   #========================================
   sub find_part {
@@ -97,6 +113,27 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
   sub reset_refresh_mark {
     (my VFS $vfs) = shift;
     $vfs->{cf_mark} = @_ ? shift : {};
+  }
+
+  sub YATT::Lite::VFS::Dir::dirobj { $_[0] }
+  sub YATT::Lite::VFS::File::dirobj {
+    (my vfs_file $file) = @_;
+    $file->{cf_parent};
+  }
+
+  sub YATT::Lite::VFS::Dir::dirname {
+    (my vfs_dir $dir) = @_;
+    $dir->{cf_path};
+  }
+  sub YATT::Lite::VFS::File::dirname {
+    (my vfs_file $file) = @_;
+    if (my $parent = $file->{cf_parent}) {
+      $parent->dirname;
+    } elsif (my $path = $file->{cf_path}) {
+      File::Basename::dirname(File::Spec->rel2abs($path));
+    } else {
+      undef;
+    }
   }
 
   use Scalar::Util qw(refaddr);
@@ -121,7 +158,8 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
     (my vfs_dir $dir, my VFS $vfs, my $name) = splice @_, 0, 3;
     if (my Item $item = $dir->cached_in
 	($dir->{Item} //= {}, $name, $vfs, $vfs->{cf_mark})) {
-      if (not ref $item and not $vfs->{cf_no_auto_create}) {
+      if ((not ref $item or not UNIVERSAL::isa($item, Item))
+	  and not $vfs->{cf_no_auto_create}) {
 	$item = $dir->{Item}{$name} = $vfs->create
 	  (data => $item, parent => $dir, name => $name);
       }
@@ -287,6 +325,13 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
       $vfs->{n_creates}++;
       $vfs->{cf_mark}{refaddr($folder)}++;
     }
+
+    if (my $path = $folder->{cf_path} and not defined $folder->{cf_name}) {
+      $path =~ s/\.\w+$//;
+      $path =~ s!.*/!!;
+      $folder->{cf_name} = $path;
+    }
+
     if (my Folder $parent = $folder->{cf_parent}) {
       if (defined $parent->{cf_entns}) {
 	$folder->{cf_entns} = join '::'
@@ -311,9 +356,9 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
       $vfs->vfs_file->new(public => 1, @_, string => $primary);
     }
   }
-  sub YATT::Lite::VFS::Dir::after_create {
-    (my vfs_dir $dir, my VFS $vfs) = @_;
-    foreach my Folder $desc (@{$dir->{cf_base}}) {
+  sub YATT::Lite::VFS::Folder::vivify_base_descs {
+    (my Folder $folder, my VFS $vfs) = @_;
+    foreach my Folder $desc (@{$folder->{cf_base}}) {
       if (ref $desc eq 'ARRAY') {
 	# XXX: Dirty workaround.
 	if ($desc->[0] eq 'dir') {
@@ -323,9 +368,14 @@ use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
 	  $desc = $vfs->create(@$desc);
 	}
       }
+      $desc = $vfs->create(@$desc) if ref $desc eq 'ARRAY';
       # parent がある == parent から指されている。なので、 weaken する必要が有る。
       weaken($desc) if $desc->{cf_parent};
     }
+  }
+  sub YATT::Lite::VFS::Dir::after_create {
+    (my vfs_dir $dir, my VFS $vfs) = @_;
+    $dir->YATT::Lite::VFS::Folder::vivify_base_descs($vfs);
     # $dir->refresh($vfs);
     $dir;
   }
