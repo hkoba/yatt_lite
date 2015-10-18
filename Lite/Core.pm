@@ -2,6 +2,9 @@ package YATT::Lite::Core; sub MY () {__PACKAGE__}
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use Carp;
+
+use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
+
 use parent qw(YATT::Lite::VFS);
 use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
 			   cf_index_name
@@ -12,6 +15,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_special_entities
 	      cf_lcmsg_sink
 
+	      n_compiles
 	      cgen_class
 	    /;
 use YATT::Lite::Util;
@@ -375,6 +379,9 @@ sub synerror {
 	       print STDERR "#--END--\n\n"
 	     }
 	   }
+	   #
+	   $self->{n_compiles}++;
+
 	   ckeval(@script);
 	 });
       # 二重生成防止のため、代入自体は ensure_generated の中で行う。
@@ -445,13 +452,21 @@ sub synerror {
   }
   sub YATT::Lite::Core::Template::refresh {
     (my Template $tmpl, my MY $self) = @_;
+
+    my $old_product = $tmpl->{product};
+
     if ($tmpl->{cf_path}) {
+      printf STDERR "template_refresh(%s)\n", $tmpl->{cf_path} if DEBUG_REBUILD;
       my $mtime = stat_mtime($tmpl->{cf_path});
       unless (defined $mtime) {
+	printf STDERR " => deleted\n" if DEBUG_REBUILD;
 	return; # XXX: ファイルが消された
       } elsif (defined $tmpl->{cf_mtime} and $tmpl->{cf_mtime} >= $mtime) {
+	printf STDERR " => not updated.\n" if DEBUG_REBUILD;
+	$self->refresh_deps_for($tmpl) if $self->{cf_always_refresh_deps};
 	return; # timestamp は、キャッシュと同じかむしろ古い
       }
+      printf STDERR " => found update\n" if DEBUG_REBUILD;
       $tmpl->{cf_mtime} = $mtime;
       my $parser = $self->get_parser;
       # decl のみ parse.
@@ -471,6 +486,11 @@ sub synerror {
     }
 
     # $tmpl->YATT::Lite::VFS::Folder::vivify_base_descs($self);
+
+    # If there was products, rebuild it too.
+    foreach my $type ($old_product ? keys %$old_product : ()) {
+      $self->find_product($type => $tmpl);
+    }
 
     $tmpl;
   }

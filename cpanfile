@@ -14,6 +14,7 @@ requires 'Hash::MultiValue';
 requires 'version' => 0.77;
 requires 'parent';
 requires 'autodie';
+requires 'File::Path';
 
 requires 'URI::Escape';
 requires 'Tie::IxHash'; # For nested_query
@@ -41,6 +42,9 @@ on test => sub {
  requires 'Plack::Test';
  requires 'CGI::Session';
  requires 'FCGI::Client';
+ requires 'Test::Kantan';
+ requires 'File::Temp';
+ requires 'File::stat';
 
  requires 'DBD::SQLite';
  requires 'DBD::mysql';

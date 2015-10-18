@@ -89,6 +89,7 @@ use YATT::Lite::MFields
 
        cf_dont_map_args
        cf_dont_debug_param
+       cf_always_refresh_deps
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -737,6 +738,7 @@ sub _cf_delegates {
      use_subpath
      dont_map_args
      dont_debug_param
+     always_refresh_deps
   );
 }
 

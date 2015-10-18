@@ -5,6 +5,7 @@ use Exporter qw(import);
 use Scalar::Util qw(weaken);
 use Carp;
 use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
+use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
 
 require File::Spec;
 require File::Basename;
@@ -19,7 +20,9 @@ require File::Basename;
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
-	 , [File => -fields => [qw(partlist cf_string cf_overlay)]
+	 , [File => -fields => [qw(partlist cf_string cf_overlay
+				   dependency
+				)]
 	    , -alias => 'vfs_file']
 	 , [Dir  => -fields => [qw(cf_encoding)]
 	    , -alias => 'vfs_dir']]]);
@@ -38,8 +41,11 @@ require File::Basename;
   use YATT::Lite::MFields qw/cf_ext_private cf_ext_public cf_cache cf_no_auto_create
 		cf_facade cf_base
 		cf_entns
+		cf_always_refresh_deps
 		on_memory
-		root extdict n_creates n_updates cf_mark
+		root extdict
+		cf_mark
+		n_creates
 		pkg2folder/;
   use YATT::Lite::Util qw(lexpand rootname terse_dump);
   sub default_ext_public {'yatt'}
@@ -250,13 +256,13 @@ require File::Basename;
     undef $file->{Item};
     undef $file->{cf_string};
     undef $file->{cf_base};
+    $file->{dependency} = +{};
   }
   sub YATT::Lite::VFS::Dir::refresh {}
   sub YATT::Lite::VFS::File::refresh {
     (my vfs_file $file, my VFS $vfs) = @_;
     return unless $$file{cf_path} || $$file{cf_string};
     # XXX: mtime!
-    $vfs->{n_updates}++;
     my @part = do {
       local $/; split /^!\s*(\w+)\s+(\S+)[^\n]*?\n/m, do {
 	if ($$file{cf_path}) {
@@ -277,6 +283,32 @@ require File::Basename;
       }
     }
   }
+
+  sub YATT::Lite::VFS::File::add_dependency {
+    (my File $file, my $wpath, my File $other) = @_;
+    Scalar::Util::weaken($file->{dependency}{$wpath} = $other);
+  }
+  sub YATT::Lite::VFS::File::list_dependency {
+    (my File $file, my $detail) = @_;
+    defined (my $deps = $file->{dependency})
+      or return;
+    if ($detail) {
+      wantarray ? map([$_ => $deps->{$_}], keys %$deps) : $deps;
+    } else {
+      values %$deps;
+    }
+  }
+  sub refresh_deps_for {
+    (my MY $self, my File $file) = @_;
+    print STDERR "refresh deps for: ", $file->{cf_path}, "\n" if DEBUG_REBUILD;
+    foreach my $dep ($file->list_dependency) {
+      unless ($self->{cf_mark}{refaddr($dep)}++) {
+	print STDERR " refreshing: ", $dep->{cf_path}, "\n" if DEBUG_REBUILD;
+	$dep->refresh($self);
+      }
+    }
+  }
+
   #========================================
   sub add_to {
     (my VFS $vfs, my ($path, $data)) = @_;

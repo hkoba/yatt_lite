@@ -33,6 +33,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dont_debug_param
 	      cf_info
 	      cf_lcmsg_sink
+	      cf_always_refresh_deps
 
 	      cf_default_lang
 
@@ -260,6 +261,7 @@ sub fconfigure_encoding {
 # Delayed loading of YATT::Lite::Core
 #========================================
 
+*open_vfs = *open_trans; *open_vfs = *open_trans;
 sub open_trans {
   (my MY $self) = @_;
   my $trans = $self->get_trans;
@@ -267,6 +269,7 @@ sub open_trans {
   $trans;
 }
 
+*get_vfs = *get_trans; *get_vfs = *get_trans;
 sub get_trans {
   (my MY $self) = @_;
   $self->{YATT} || $self->build_trans($self->{cf_tmpl_cache});
@@ -296,7 +299,9 @@ sub build_trans {
 				     ext_private
 				     rc_script
 				     lcmsg_sink
-				     only_parse/));
+				     only_parse
+				     always_refresh_deps
+				    /));
 }
 
 sub _before_after_new {

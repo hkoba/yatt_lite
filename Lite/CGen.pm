@@ -1,6 +1,10 @@
 package YATT::Lite::CGen; sub MY () {__PACKAGE__}
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
+use Carp;
+
+use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
+
 use base qw(YATT::Lite::VarMaker);
 use fields qw/curtmpl curwidget curtoks
 	      altgen needs_escaping depth
@@ -15,8 +19,6 @@ use fields qw/curtmpl curwidget curtoks
 use YATT::Lite::Core qw(Template Part);
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(callerinfo numLines);
-use Carp;
-use constant DEBUG => $ENV{DEBUG_YATT_CGEN};
 
 sub ensure_generated {
   (my MY $self, my $spec, my Template $tmpl) = @_;
@@ -29,7 +31,7 @@ sub ensure_generated {
     croak "package for product $type of $tmpl->{cf_path} is not defined!";
   } else {
     print STDERR "# generating $pkg for $type code of $tmpl->{cf_path}\n"
-      if DEBUG;
+      if DEBUG_REBUILD;
   }
   $self->{cf_parser}->parse_body($tmpl)
     if not $kind or not $self->{cf_only_parse}

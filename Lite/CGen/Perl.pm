@@ -307,8 +307,13 @@ use YATT::Lite::Constants;
       my $err = $self->generror(q{No such widget <%s>}, $wname);
       die $err;
     };
+
     $self->ensure_generated(perl => my Template $tmpl = $widget->{cf_folder});
-    my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_entns};
+    my $use_this = $tmpl == $self->{curtmpl};
+    unless ($use_this) {
+      $self->{curtmpl}->add_dependency($wname, $tmpl);
+    }
+    my $that = $use_this ? '$this' : $tmpl->{cf_entns};
     \ sprintf(q{%s->render_%s($CON, %s)}
 	      , $that, $widget->{cf_name}
 	      , $self->gen_putargs($widget, $node)
