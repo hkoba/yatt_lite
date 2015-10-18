@@ -45,6 +45,7 @@ on test => sub {
  requires 'Test::Kantan';
  requires 'File::Temp';
  requires 'File::stat';
+ requires 'Time::HiRes';
 
  requires 'DBD::SQLite';
  requires 'DBD::mysql';
