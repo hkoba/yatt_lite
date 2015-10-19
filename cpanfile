@@ -35,14 +35,18 @@ configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
 
 on test => sub {
+ requires 'Test::Kantan';
  requires 'Test::More';
  requires 'Test::Differences';
  requires 'Test::WWW::Mechanize::PSGI';
+
  requires 'HTML::Entities';
  requires 'Plack::Test';
+
  requires 'CGI::Session';
  requires 'FCGI::Client';
- requires 'Test::Kantan';
+ requires 'FCGI';
+
  requires 'File::Temp';
  requires 'File::stat';
  requires 'Time::HiRes';
