@@ -30,6 +30,7 @@ requires 'HTML::Entities';
 recommends 'YAML::Tiny';
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 recommends 'Sub::Inspector';
+recommends 'B::Utils' => '!= 0.26';
 
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
