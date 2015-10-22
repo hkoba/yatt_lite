@@ -11,7 +11,7 @@ use 5.010;
 use Scalar::Util qw(weaken);
 use Encode qw/decode/;
 
-use parent qw/YATT::Lite::NSBuilder File::Spec/;
+use parent qw/File::Spec YATT::Lite::NSBuilder/;
 use File::Path ();
 use File::Basename qw/dirname/;
 

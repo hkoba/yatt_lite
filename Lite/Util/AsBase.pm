@@ -9,6 +9,7 @@ our @EXPORT_OK = @EXPORT;
 
 use YATT::Lite::Util qw/ckeval globref/;
 
+require mro;
 require YATT::Lite::MFields;
 
 sub import {
@@ -45,8 +46,13 @@ sub _import_as_base {
     unless ($isa = *{$sym}{ARRAY}) {
       *$sym = $isa = [];
     }
+    my $using_c3 = mro::get_mro($callpack) eq 'c3';
     unless (grep {$_ eq $myPack} @$isa) {
-      push @$isa, $myPack;
+      if ($using_c3) {
+	unshift @$isa, $myPack;
+      } else {
+	push @$isa, $myPack;
+      }
     }
   }
 
