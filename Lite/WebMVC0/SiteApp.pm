@@ -332,7 +332,8 @@ sub psgi_handle_static {
 
 sub psgi_handle_fallback {
   (my MY $self, my Env $env) = @_;
-  my $app = $self->{cf_psgi_fallback}
+  (my $app = $self->{cf_psgi_fallback}
+   ||= $self->psgi_file_app($self->{cf_doc_root}))
     or return [404, [], ["Cannot understand: ", $env->{PATH_INFO}]];
 
   local $env->{PATH_INFO} = $self->trim_site_prefix($env->{PATH_INFO});
