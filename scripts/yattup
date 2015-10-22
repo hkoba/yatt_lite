@@ -7,6 +7,8 @@ use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
 
 use mro qw/c3/;
 use YATT::Lite::WebMVC0::SiteApp -as_base;
+
+use Plack::App::Directory;
 use Plack::Runner;
 use Cwd;
 
@@ -21,7 +23,10 @@ use Cwd;
 
   print "docpath=$docpath\n";
 
-  my $site = MY->new(doc_root => $docpath);
+  my $site = MY->new(doc_root => $docpath
+		     , psgi_fallback => Plack::App::Directory->new
+		     ({root => $docpath})->to_app
+		   );
 
   $runner->run($site->to_app);
 }
