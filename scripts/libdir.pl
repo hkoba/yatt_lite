@@ -1,14 +1,26 @@
 use strict;
 use warnings;
+use File::Spec;
+use File::Basename;
 
 my $dir = do {
-  my $d = $_[0] || $FindBin::Bin or die "bindir is empty!";
+  my $d = $_[0] ||
+    do {
+      if (-r $0 and -l $0) {
+	# Resolve symlink just once.
+	dirname(File::Spec->rel2abs(readlink($0), dirname($0)))
+      } else {
+	$FindBin::Bin
+      }
+    }
+    or die "bindir is empty!";
   $d //= $FindBin::Bin; # To suppress warning.
   untaint_any($d);
 };
 
+Carp::cluck("dir=$dir\n") if $ENV{DEBUG_INC};
+
 sub MY () {__PACKAGE__}
-use File::Basename;
 sub untaint_any {$_[0] =~ m{(.*)} and $1}
 use base qw/File::Spec/;
 
