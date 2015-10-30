@@ -47,6 +47,9 @@ sub reason {
 	  }
 	} $error->{cf_format}, lexpand($error->{cf_args})).")";
     }
+    BEGIN {
+      warnings->unimport(qw/redundant/) if $] >= 5.021002; # for sprintf
+    }
     sprintf $error->{cf_format}, map {
       defined $_ ? $_ : '(undef)'
     } lexpand($error->{cf_args});
