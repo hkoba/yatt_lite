@@ -185,6 +185,12 @@ sub as_error {
   $glob;
 }
 
+sub error_with_status {
+  my ($glob, $code) = splice @_, 0, 2;
+  $glob->configure(status => $code)
+    ->raise(error => incr_opt(depth => \@_), @_);
+}
+
 sub error {
   # XXX: as_error?
   shift->raise(error => incr_opt(depth => \@_), @_);

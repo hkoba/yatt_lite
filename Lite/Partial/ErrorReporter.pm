@@ -23,6 +23,14 @@ sub error {
   $self->raise(error => incr_opt(depth => \@_), @_);
 }
 
+sub error_with_status {
+  (my MY $self) = map {ref $_ ? $_ : MY} shift;
+  my ($code) = shift;
+  my $opts = incr_opt(depth => \@_);
+  $opts->{http_status_code} = $code;
+  $self->raise(error => $opts, @_);
+}
+
 sub make_error {
   my ($self, $depth, $opts) = splice @_, 0, 3;
   my ($fmt, @args) = @_;

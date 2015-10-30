@@ -5,6 +5,7 @@ use parent qw(YATT::Lite::Object);
 use constant DEBUG_VERBOSE => $ENV{YATT_DEBUG_VERBOSE};
 
 use YATT::Lite::MFields qw/cf_file cf_line cf_tmpl_file cf_tmpl_line
+			   cf_http_status_code
 	      cf_backtrace
 	      cf_reason cf_format cf_args/;
 use overload qw("" message

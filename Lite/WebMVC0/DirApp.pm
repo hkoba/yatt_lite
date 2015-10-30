@@ -216,6 +216,9 @@ sub error_handler {
       \*STDERR;
     }
   };
+  if (my $code = $err->{cf_http_status_code}) {
+    $errcon->configure(status => $code);
+  }
   # error.ytmpl を探し、あれば呼び出す。
   my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
     # print {*$errcon} $err, Carp::longmess(), "\n\n";
@@ -224,7 +227,8 @@ sub error_handler {
   };
   $sub->($pkg, $errcon, $err);
   try_invoke($errcon, 'flush_headers');
-  $self->raise_psgi_html(200, $errcon->buffer); # ->DONE was not ok.
+  $self->raise_psgi_html($errcon->cget('status') // 500
+			 , $errcon->buffer); # ->DONE was not ok.
 }
 
 Entity dir_config => sub {
