@@ -495,15 +495,18 @@ sub param_type {
   if (defined $value && $value =~ $pat) {
     return $&; # Also for taint check.
   } elsif ($diag) {
-    die $glob->error((ref $diag eq 'CODE' ? $diag->($value) : $diag)
-		     , $name, $value);
+    die $glob->error_with_status
+      (400, (ref $diag eq 'CODE' ? $diag->($value) : $diag)
+       , $name, $value);
   } elsif (not defined $value) {
     return undef if $opts->{allow_undef};
-    die $glob->error("Parameter '%s' is missing!", $name);
+    die $glob->error_with_status
+      (400, "Parameter '%s' is missing!", $name);
   } else {
     # Just for default message. Production code should provide $diag.
-    die $glob->error("Parameter '%s' must match %s!: '%s'"
-		     , $name, $type, $value);
+    die $glob->error_with_status
+      (400, "Parameter '%s' must match %s!: '%s'"
+       , $name, $type, $value);
   }
 }
 
