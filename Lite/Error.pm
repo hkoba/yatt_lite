@@ -4,6 +4,10 @@ use warnings qw(FATAL all NONFATAL misc);
 use parent qw(YATT::Lite::Object);
 use constant DEBUG_VERBOSE => $ENV{YATT_DEBUG_VERBOSE};
 
+use Exporter qw/import/;
+our @EXPORT_OK = qw/Error/;
+our @EXPORT = @EXPORT_OK;
+
 use YATT::Lite::MFields qw/cf_file cf_line cf_tmpl_file cf_tmpl_line
 			   cf_http_status_code
 	      cf_backtrace
