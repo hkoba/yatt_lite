@@ -1,5 +1,28 @@
 Revision history for YATT::Lite
 
+0.100_002 2015-10-31
+    * New features
+        - [GH #57] `yattup` - `plackup` alike command for `*.yatt` files.
+        - [GH #54] - !yatt:base "file_or_dir" to inherit templates.
+	
+    * Enhancement (Potentially breaking)
+        - [GH #51] Add experimental `per_role_docroot` feature.
+        - [GH #56] Install psgi_fallback by default (to make `yattup` useful).
+        - Add new option `always_refresh_deps` to fix [GH #1] partially.
+        - [GH #60] Set HTTP Status for "Not found" and "Bad request" errors.
+          To revert old behavior, set `overwrite_status_code_for_errors_as` to 200.
+        - YATT::Lite::Error now exports type alias 'Error' by default.
+        - New method: `($yatt|$con)->error_with_status($code, $msg, @args)`
+
+    * Misc changes:
+        - [GH #59] yatt, yattup should resolve symlink once and only once.
+        - [GH #58] c3 mro support in `use YATT::Lite::Factory -as_base`.
+    
+   * BUG fixes:
+        - [GH #61] no warnings 'redundant' for sprintf. (partially)
+        - [GH #55] *base* templates accidentally inherit their *user* directory bug 
+        - [GH #53] - Allow setting dont_map_args in SiteApp.
+
 0.100_001 2015-09-03
     * Enhanement (API Change) for unicode handling:
 	- [GH #48] decode input params by default. Add new option `no_unicode` for backward compatibility.
