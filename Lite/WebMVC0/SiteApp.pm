@@ -29,6 +29,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_site_config
 			   cf_logfile
 			   cf_debug_allowed_ip
+			   cf_overwrite_status_code_for_errors_as
 			   re_handled_ext
 			 /;
 
@@ -56,6 +57,11 @@ sub after_new {
 
 sub default_per_role_docroot_key { 'yatt.role' }
 sub default_default_role { 'nobody' }
+
+sub _cf_delegates {
+  (shift->SUPER::_cf_delegates
+   , qw(overwrite_status_code_for_errors_as));
+}
 
 #========================================
 # runas($type, $fh, \%ENV, \@ARGV)  ... for CGI/FCGI support.

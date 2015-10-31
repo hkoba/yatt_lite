@@ -7,6 +7,7 @@ use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
 use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
+			   cf_overwrite_status_code_for_errors_as
 
 			   Action/;
 
@@ -20,6 +21,8 @@ use YATT::Lite::Util qw/cached_in ckeval
 			psgi_error
 			terse_dump
 		      /;
+
+use YATT::Lite::Error;
 
 # sub handle_ydo, _do, _psgi...
 
@@ -206,7 +209,7 @@ sub fn_msgfile {
 
 #========================================
 sub error_handler {
-  (my MY $self, my ($type, $err)) = @_;
+  (my MY $self, my $type, my Error $err) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
   my $errcon = do {
     if (my $con = $self->CON) {
@@ -223,14 +226,23 @@ sub error_handler {
     $err->{cf_http_status_code} = $code;
   }
   # error.ytmpl を探し、あれば呼び出す。
-  my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
-    # print {*$errcon} $err, Carp::longmess(), "\n\n";
-    # Dispatcher の show_error に任せる
-    die $err;
+  my ($sub, $pkg);
+  ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
+    if ($err->{cf_http_status_code}
+	|| $self->{cf_overwrite_status_code_for_errors_as}) {
+       ($sub, $pkg) = (sub {
+			 my ($this, $errcon, $err) = @_;
+			 print {*$errcon} $err->reason;
+		       }, $self->EntNS);
+     } else {
+       die $err;
+     }
   };
   $sub->($pkg, $errcon, $err);
   try_invoke($errcon, 'flush_headers');
-  $self->raise_psgi_html($errcon->cget('status') // 500
+  $self->raise_psgi_html($self->{cf_overwrite_status_code_for_errors_as}
+			 // $errcon->cget('status')
+			 // 500
 			 , $errcon->buffer); # ->DONE was not ok.
 }
 
