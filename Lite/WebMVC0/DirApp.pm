@@ -1,6 +1,8 @@
 package YATT::Lite::WebMVC0::DirApp; sub MY () {__PACKAGE__}
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
+use Carp;
+
 use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
 use YATT::Lite::MFields qw/cf_dir_config
@@ -12,7 +14,6 @@ use YATT::Lite::WebMVC0::Connection;
 sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 sub PROP () {Connection}
 
-use Carp;
 use YATT::Lite::Util qw/cached_in ckeval
 			dofile_in compile_file_in
 			try_invoke
