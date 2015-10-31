@@ -10,7 +10,7 @@ use YATT::Lite::Partial
 		/]);
 require Devel::StackTrace;
 
-use YATT::Lite::Error; sub Error () {'YATT::Lite::Error'}
+use YATT::Lite::Error;
 use YATT::Lite::Util qw/incr_opt/;
 
 
@@ -80,7 +80,7 @@ sub raise {
   my $opts = shift if @_ and ref $_[0] eq 'HASH';
   # shift/splice しないのは、引数を stack trace に残したいから
   my $depth = (delete($opts->{depth}) // 0);
-  my $err = $self->make_error(2 + $depth, $opts, @_); # 2==raise+make_error
+  my Error $err = $self->make_error(2 + $depth, $opts, @_); # 2==raise+make_error
   if (ref $self and my $sub = deref($self->{cf_error_handler})) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
@@ -92,6 +92,11 @@ sub raise {
     $sub->($self, $type, $err);
   } elsif (not ref $self or $self->{cf_die_in_error}) {
     die $err->message;
+  } elsif ($err->{cf_http_status_code}) {
+    # If http_status_code is specified explicitly (from error_with_status),
+    # raise it immediately, with simple reason. (not full backtrace message).
+    $self->raise_psgi_html($err->{cf_http_status_code}
+			   , $err->reason);
   } else {
     # 即座に die しないモードは、デバッガから error 呼び出し箇所に step して戻れるようにするため。
     # ... でも、受け側を do {my $err = $con->error; die $err} にでもしなきゃダメかも?

@@ -218,6 +218,8 @@ sub error_handler {
   };
   if (my $code = $err->{cf_http_status_code}) {
     $errcon->configure(status => $code);
+  } elsif ($code = $errcon->cget('status')) {
+    $err->{cf_http_status_code} = $code;
   }
   # error.ytmpl を探し、あれば呼び出す。
   my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
