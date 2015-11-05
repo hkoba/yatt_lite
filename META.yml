@@ -2,7 +2,27 @@
 abstract: 'Template with "use strict"'
 author:
   - '"KOBAYASI, Hiroaki" <hkoba@cpan.org>'
-build_requires: {}
+build_requires:
+  CGI::Session: '0'
+  DBD::SQLite: '0'
+  DBD::mysql: '0'
+  DBIx::Class: '0'
+  Email::Sender: '0'
+  Email::Simple: '0'
+  FCGI: '0'
+  FCGI::Client: '0'
+  File::Temp: '0'
+  File::stat: '0'
+  HTML::Entities: '0'
+  HTTP::Cookies: '0'
+  HTTP::Headers: '0'
+  Plack::Test: '0'
+  Pod::Simple::SimpleTree: '0'
+  Test::Differences: '0'
+  Test::Kantan: '0'
+  Test::More: '0'
+  Test::WWW::Mechanize::PSGI: '0'
+  Time::HiRes: '0'
 configure_requires:
   Module::Build: '0'
   Module::CPANfile: '0'
