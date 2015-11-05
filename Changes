@@ -1,5 +1,8 @@
 Revision history for YATT::Lite
 
+0.100_003 2015-11-05
+    * Bug fix for [RT #108427] [GH #62] Undeclared dependency on Test::Kantan
+
 0.100_002 2015-10-31
     * New features
         - [GH #57] `yattup` - `plackup` alike command for `*.yatt` files.
