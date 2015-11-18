@@ -211,10 +211,8 @@ sub fn_msgfile {
 sub error_handler {
   (my MY $self, my $type, my Error $err) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
-  my $errcon = do {
-    if (my $con = $self->CON) {
-      $con->as_error;
-    } elsif ($SYS) {
+  my $errcon = try_invoke($self->CON, 'as_error') || do {
+    if ($SYS) {
       $SYS->make_connection(\*STDOUT, yatt => $self, noheader => 1);
     } else {
       \*STDERR;
@@ -222,7 +220,7 @@ sub error_handler {
   };
   if (my $code = $err->{cf_http_status_code}) {
     $errcon->configure(status => $code);
-  } elsif ($code = $errcon->cget('status')) {
+  } elsif ($code = try_invoke($errcon, [cget => 'status'])) {
     $err->{cf_http_status_code} = $code;
   }
   # error.ytmpl を探し、あれば呼び出す。

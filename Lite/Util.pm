@@ -684,7 +684,8 @@ sub try_invoke {
   my $obj = shift;
   my ($method, @args) = lexpand(shift);
   my $default = shift;
-  if (my $sub = UNIVERSAL::can($obj, $method)) {
+  if (defined $obj
+      and my $sub = UNIVERSAL::can($obj, $method)) {
     $sub->($obj, @args);
   } else {
     wantarray ? () : $default;
