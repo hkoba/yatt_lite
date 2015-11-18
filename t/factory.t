@@ -593,6 +593,76 @@ END
     , "$THEME /base/base";
 }
 
+++$i;
+{
+  my $THEME = "[complicated <!yatt:base >]";
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+
+  MY->mkfile("$docroot/base1.yatt" => <<'END'
+<!yatt:widget foo xa xb>
+<h2>foo: &yatt:xa;</h2>
+&yatt:xb;
+END
+
+	     , "$docroot/base2/bar.yatt" => <<'END'
+<!yatt:args xa xb>
+<h2>bar: &yatt:xa;</h2>
+&yatt:xb;
+END
+
+	     , "$docroot/base3/index.yatt" => <<'END'
+<!yatt:widget baz xa xb>
+<h2>base3: &yatt:xa;</h2>
+&yatt:xb;
+END
+	     
+	     , "$docroot/foo.yatt" => <<'END'
+<!yatt:base file="base1.yatt">
+<yatt:foo xa="bar" xb="baz"/>
+END
+	     
+	     , "$docroot/bar.yatt" => <<'END'
+<!yatt:base dir="base2">
+<yatt:bar xa="qux" xb="quux"/>
+END
+
+	     , "$docroot/baz.yatt" => <<'END'
+<!yatt:base file="base3/index.yatt">
+<yatt:baz xa="111" xb="222"/>
+END
+
+	     , "$docroot/base3/other.yatt" => <<'END'
+<yatt:index:baz xa="333" xb="444"/>
+END
+	     );
+
+  my $F = Factory->new(app_ns => $CLS
+		       , app_root => $approot
+		       , doc_root => $docroot
+		      );
+
+  my $base_ns = "MyTest_factory_13::INST3::EntNS::base";
+
+  is $F->get_yatt('/')->render('foo')
+    , qq{<h2>foo: bar</h2>\nbaz\n\n}
+    , "$THEME /foo";
+
+  is $F->get_yatt('/')->render('bar')
+    , qq{<h2>bar: qux</h2>\nquux\n\n}
+    , "$THEME /bar";
+
+  is $F->get_yatt('/')->render('baz')
+    , qq{<h2>base3: 111</h2>\n222\n\n}
+    , "$THEME /baz";
+
+  is $F->get_yatt('/base3')->render('other')
+    , qq{<h2>base3: 333</h2>\n444\n\n}
+    , "$THEME /base3/other";
+}
+
+
 #----------------------------------------
 # misc
 #----------------------------------------
