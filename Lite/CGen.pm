@@ -16,9 +16,18 @@ use fields qw/curtmpl curwidget curtoks
 	      cf_lcmsg_sink
 	     /;
 
-use YATT::Lite::Core qw(Template Part);
+use YATT::Lite::Core qw(Template Part Folder);
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(callerinfo numLines);
+
+sub ensure_generated_for_folders {
+  (my MY $self, my $spec) = splice @_, 0, 2;
+  foreach my Folder $folder (@_) {
+    if ($folder->can_generate_code) {
+      $self->ensure_generated($spec, $folder);
+    }
+  }
+}
 
 sub ensure_generated {
   (my MY $self, my $spec, my Template $tmpl) = @_;
@@ -36,7 +45,7 @@ sub ensure_generated {
   $self->{cf_parser}->parse_body($tmpl)
     if not $kind or not $self->{cf_only_parse}
       or $self->{cf_only_parse}{$kind};
-  $self->setup_inheritance($tmpl);
+  $self->setup_inheritance_for($spec, $tmpl);
   my @res = $self->generate($tmpl, $kind);
   if (my $sub = $self->{cf_sink}) {
     $sub->({folder => $tmpl, package => $pkg, kind => 'body'
@@ -67,7 +76,10 @@ sub generate {
   } @{$tmpl->{partlist}});
 }
 
-sub setup_inheritance {}
+sub setup_inheritance_for {
+  (my MY $self, my $spec, my Template $tmpl) = @_;
+  $self->ensure_generated_for_folders($spec, $tmpl->list_base);
+}
 
 #========================================
 sub altgen {

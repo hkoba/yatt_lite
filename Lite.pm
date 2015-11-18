@@ -83,10 +83,13 @@ sub after_new {
 }
 
 # XXX: kludge!
-sub create_neighbor {
+sub find_neighbor_vfs {
   (my MY $self, my ($dir)) = @_;
-  my MY $yatt = $self->{cf_factory}->load_yatt($dir);
-  $yatt->get_trans->root;
+  $self->{cf_factory}->load_yatt($dir)->get_trans;
+}
+sub find_neighbor {
+  (my MY $self, my ($dir)) = @_;
+  $self->find_neighbor_vfs($dir)->root;
 }
 
 #========================================

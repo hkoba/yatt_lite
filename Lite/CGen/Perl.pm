@@ -17,7 +17,7 @@ use YATT::Lite::Constants;
   #========================================
   package YATT::Lite::CGen::Perl; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::CGen);
-  use YATT::Lite::Util qw(lexpand numLines globref terse_dump);
+  use YATT::Lite::Util qw(lexpand numLines globref terse_dump catch);
   use Carp;
   #========================================
   sub list_inheritance {
@@ -36,8 +36,8 @@ use YATT::Lite::Constants;
       }
     } $tmpl->list_base
   }
-  sub setup_inheritance {
-    (my MY $self, my Template $tmpl) = @_;
+  sub setup_inheritance_for {
+    (my MY $self, my $spec, my Template $tmpl) = @_;
     unless (defined $tmpl->{cf_entns}) {
       die "BUG: EntNS is empty for '$tmpl->{cf_name}'!";
     }
@@ -46,11 +46,19 @@ use YATT::Lite::Constants;
     unless (defined $glob) {
       die "BUG: ISA glob for '$tmpl->{cf_name}' is empty!";
     }
+    $self->ensure_generated_for_folders($spec, $tmpl->list_base);
     my @isa = $self->list_inheritance($tmpl);
     if (grep {not defined} @isa) {
       die "BUG: ISA for '$tmpl->{cf_name}' contains undef!";
     }
-    *$glob = \@isa;
+    if (my $err = catch {
+      *$glob = \@isa;
+    }) {
+      die $self->generror("Can't set ISA for '%s' as [%s]"
+			  , $tmpl->{cf_name}
+			  , join(", ", @isa)
+			);
+    }
   }
   sub generate_inheritance {
     (my MY $self, my Template $tmpl) = @_;

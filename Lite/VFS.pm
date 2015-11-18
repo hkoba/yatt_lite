@@ -17,6 +17,7 @@ require File::Basename;
   sub MY () {__PACKAGE__}
   use YATT::Lite::Types
     ([Item => -fields => [qw(cf_name cf_public)]
+      , -constants => [[can_generate_code => 0]]
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
@@ -82,6 +83,22 @@ require File::Basename;
     $self->{cf_facade}->error(@_);
   }
   #========================================
+
+  sub find_neighbor_type {
+    (my VFS $vfs, my ($kind, $path)) = @_;
+    $kind //= -d $path ? 'dir' : 'file';
+    if ($kind eq 'file') {
+      my VFS $other_vfs = $vfs->{cf_facade}->find_neighbor_vfs
+	(File::Basename::dirname($path));
+      $other_vfs->find_file(File::Basename::basename($path));
+    } elsif ($kind eq 'dir') {
+      $vfs->{cf_facade}->find_neighbor($path);
+    } else {
+      croak "Unknown vfs type=$kind path=$path";
+    }
+  }
+
+  #========================================
   sub find_file {
     (my VFS $vfs, my $filename) = @_;
     # XXX: 拡張子をどうしたい？
@@ -94,10 +111,23 @@ require File::Basename;
     $vfs->{root}->list_items($vfs);
   }
   sub resolve_path_from {
-    (my VFS $vfs, my Folder $folder, my $fn) = @_;
+    (my VFS $vfs, my Folder $from, my $fn) = @_;
+    my Folder $folder = $from->dirobj;
     my $dirname = $folder->dirname
       or return undef;
-    File::Spec->rel2abs($fn, $dirname)
+    my $abs = do {
+      if ($fn =~ /^@/) {
+	croak "Not (yet) supported path type '$fn' in $folder->{cf_path}";
+      } elsif ($fn =~ s!^((?:\.\./)+)!!) {
+	# leading upward relpath is treated specially.
+	my $up = length($1) / 3;
+	my @dirs = File::Spec->splitdir($dirname);
+	File::Spec->catfile(@dirs[0.. $#dirs - $up], $fn);
+      } else {
+	File::Spec->rel2abs($fn, $dirname);
+      }
+    };
+    $abs;
   }
 
   #========================================
@@ -234,7 +264,7 @@ require File::Basename;
 	my $kind = -d $fn ? 'dir' : 'file';
 	($kind => $fn);
       } elsif (-d $vfsname) {
-	return $vfs->{cf_facade}->create_neighbor($vfsname);
+	return $vfs->{cf_facade}->find_neighbor($vfsname);
       } else {
 	return undef;
       }
@@ -395,7 +425,7 @@ require File::Basename;
 	# XXX: Dirty workaround.
 	if ($desc->[0] eq 'dir') {
 	  # To create YATT::Lite with .htyattconfig.xhf, Factory should be involved.
-	  $desc = $vfs->{cf_facade}->create_neighbor($desc->[1]);
+	  $desc = $vfs->{cf_facade}->find_neighbor($desc->[1]);
 	} else {
 	  $desc = $vfs->create(@$desc);
 	}
@@ -433,7 +463,7 @@ require File::Basename;
     $file->{cf_overlay} = do {
       my ($public, $path) = @{$found[0]};
       if ($public) {
-	$vfs->{cf_facade}->create_neighbor($path);
+	$vfs->{cf_facade}->find_neighbor($path);
       } else {
 	$vfs->create
 	  (dir => $path, parent => $file->{cf_parent});

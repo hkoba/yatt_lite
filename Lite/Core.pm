@@ -47,6 +47,7 @@ use YATT::Lite::Breakpoint ();
 
      , [Template => -base => MY->File
 	, -alias => 'vfs_file'
+	, -constants => [[can_generate_code => 1]]
 	, -fields => [qw(product parse_ok cf_mtime cf_utf8 cf_age
 			 cf_usage cf_constants
 			 cf_ignore_trailing_newlines
@@ -171,20 +172,18 @@ sub declare_base {
     nonempty(my $fn = $vfs->node_value($att))
       or $vfs->synerror($state, q{base spec is empty!});
 
-    my Folder $dirobj = $tmpl->dirobj;
-
     if ($vfs->{on_memory}) {
       my $o = $vfs->find_file($fn)
 	or $vfs->synerror($state, q{No such base path: %s}, $fn);
       push @$base, $o;
     } else {
-      defined(my $realfn = $vfs->resolve_path_from($dirobj, $fn))
+      defined(my $realfn = $vfs->resolve_path_from($tmpl, $fn))
 	or $vfs->synerror($state, q{Can't find object path for: %s}, $fn);
 
       -e $realfn
 	or $vfs->synerror($state, q{No such base path: %s}, $realfn);
-      my $kind = -d $realfn ? 'dir' : 'file';
-      push @$base, $vfs->create($kind => $realfn, parent => $dirobj);
+
+      push @$base, $vfs->find_neighbor_type(undef, $realfn);
     }
   }
 }
@@ -314,7 +313,7 @@ sub synerror {
       $tmpl = $self->find_file($partName)
 	or ($ignore_error and return)
 	  or croak "No such template file: $partName";
-      $part = $tmpl->{Item}{$itemKey}
+      $part = $tmpl->{Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
 	or ($ignore_error and return)
 	  or croak "No such $kind in file $partName: $pureName";
     }
@@ -462,11 +461,16 @@ sub synerror {
 	printf STDERR " => deleted\n" if DEBUG_REBUILD;
 	return; # XXX: ファイルが消された
       } elsif (defined $tmpl->{cf_mtime} and $tmpl->{cf_mtime} >= $mtime) {
-	printf STDERR " => not updated.\n" if DEBUG_REBUILD;
+	if (DEBUG_REBUILD) {
+	  printf STDERR " => use cached. mtime(was=$tmpl->{cf_mtime}"
+	    .", now=$mtime) for tmpl=$tmpl\n";
+	}
 	$self->refresh_deps_for($tmpl) if $self->{cf_always_refresh_deps};
 	return; # timestamp は、キャッシュと同じかむしろ古い
       }
-      printf STDERR " => found update\n" if DEBUG_REBUILD;
+      if (DEBUG_REBUILD) {
+	printf STDERR " => found update. mtime($mtime) for tmpl=$tmpl\n";
+      }
       $tmpl->{cf_mtime} = $mtime;
       my $parser = $self->get_parser;
       # decl のみ parse.
