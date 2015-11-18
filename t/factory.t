@@ -543,6 +543,56 @@ END
      , "Factory->load_factory_script(app.psgi)");
 }
 
+++$i;
+{
+  my $THEME = "[<!yatt:base file='../other/lib.yatt'>]";
+  my $CLS = myapp($i);
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/docs";
+
+  MY->mkfile("$docroot/foo/index.yatt" => <<'END'
+<!yatt:base file="../base/base.yatt">
+<h2>foo index</h2>
+<yatt:bazzzzzz/>
+&yatt:render(qux);
+END
+
+	     , "$docroot/bar/index.yatt" => <<'END'
+<!yatt:base file="../base/base.yatt">
+<h2>bar index</h2>
+<yatt:bazzzzzz/>
+&yatt:render(qux);
+END
+
+	     , "$docroot/base/base.yatt" => <<'END'
+<h2>base &yatt:this;</h2>
+<!yatt:widget bazzzzzz>
+<h3>&yatt:this;</h3>
+<!yatt:widget qux>
+Qux!
+END
+	     );
+
+  my $F = Factory->new(app_ns => $CLS
+		       , app_root => $approot
+		       , doc_root => $docroot
+		      );
+
+  my $base_ns = "MyTest_factory_13::INST3::EntNS::base";
+
+  is $F->get_yatt('/foo/')->render('')
+    , qq{<h2>foo index</h2>\n<h3>$base_ns</h3>\nQux!\n\n}
+    , "$THEME /foo/ index";
+
+  is $F->get_yatt('/bar/')->render('')
+    , qq{<h2>bar index</h2>\n<h3>$base_ns</h3>\nQux!\n\n}
+    , "$THEME /bar/ index";
+
+  is $F->get_yatt('/base/')->render('base')
+    , qq{<h2>base $base_ns</h2>\n}
+    , "$THEME /base/base";
+}
+
 #----------------------------------------
 # misc
 #----------------------------------------
