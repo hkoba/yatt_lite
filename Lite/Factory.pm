@@ -613,7 +613,8 @@ sub build_yatt {
   print STDERR "# Factory::buildns("
     , terse_dump(@log), ") => $app_ns\n" if DEBUG_FACTORY;
 
-  if (-e (my $rc = "$path/.htyattrc.pl")) {
+  my $has_rc;
+  if ($has_rc = (-e (my $rc = "$path/.htyattrc.pl"))) {
     # Note: This can do "use fields (...)"
     dofile_in($app_ns, $rc);
   }
@@ -639,7 +640,13 @@ sub build_yatt {
 		 , $path, join(", ", @unk));
   }
 
-  $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
+  my $yatt = $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
+
+  if ($has_rc) {
+    $yatt->setup_rc_actions;
+  }
+
+  $yatt;
 }
 
 sub _list_base_spec_in {

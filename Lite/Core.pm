@@ -60,7 +60,12 @@ use YATT::Lite::Breakpoint ();
 				       )]]
     );
 
-  # folder の weaken は parser がしてる。
+  sub YATT::Lite::Core::Part::configure_folder {
+    (my Part $part, my Folder $folder) = @_;
+    Scalar::Util::weaken($part->{cf_folder} = $folder);
+    # die "Can't weaken!" unless Scalar::Util::isweak($part->{cf_folder});
+  }
+
 #  sub YATT::Lite::Core::Part::source {
 #    (my Part $part) = @_;
 #    join "", map {ref $_ ? "\n" x $$_[0] : $_} @{$part->{source}};
@@ -332,6 +337,28 @@ sub synerror {
 
   sub _itemKey_page { shift; ($_[0], "render_$_[0]") }
   sub _itemKey_action { shift; ("do_$_[0]") x 2; }
+
+  #
+  # Action name => sub {}
+  #
+  sub add_root_action_handler {
+    (my MY $self, my ($name, $sub, $callinfo)) = @_;
+    my Folder $root = $self->{root};
+
+    my ($callpack, $filename, $lineno) = @$callinfo;
+
+    # XXX: This means do_$A.yatt will conflict with "Action $A" in .htyattrc.pl
+    my $action_name = "do_$name";
+
+    *{globref($root->{cf_entns}, $action_name)} = $sub;
+
+    $root->{Item}{$action_name}
+      = $self->Action->new(name => $action_name, kind => 'action'
+			   , folder => $root
+			   , startln => $lineno
+			 );
+
+  }
 
   sub find_renderer {
     my MY $self = shift;

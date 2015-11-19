@@ -406,6 +406,58 @@ sub define_Entity {
   return $destns;
 }
 
+#
+# Note about 'Action' registration mechanism in .htyattrc.pl
+#
+#  First, *globref() = $action is not enough. Because...
+#
+#  There are 2 places to hold actions.
+#    1. $YATT->{Action}      <= comes from *.ydo
+#    2. $vfs_folder->{Item}  <= comes from !yatt:action in templates
+#
+#  Action in .htyattrc.pl is, special case of 2.
+#  Since 2. is managed by yatt vfs, it must be wrapped by Action object
+#  so that $vfs->find_part_handler works well.
+#
+#
+#  This is bit complicated because .htyattrc.pl is loaded *BEFORE* $YATT
+#  is instantiated. This means "Action => name, $handler" can not touch $YATT
+#  at that time. So, I need to delay actual registration until $YATT is created.
+#
+#  To achieve this, $handler is registered first in %Actions of caller,
+#  then installed into actual vfs.
+#
+# Also note: loading of .htyattrc.pl is handled by Factory.
+#
+sub ACTION_DICT_SYM () {'Actions'}
+sub define_Action {
+  my ($myPack, $opts, $callpack) = @_;
+
+  *{globref($callpack, ACTION_DICT_SYM)} = my $action_dict = +{};
+
+  *{globref($callpack, 'Action')} = sub {
+    my ($name, $sub) = @_;
+    my @caller = my ($callpack, $filename, $lineno) = caller;
+    if (defined (my $old = $action_dict->{$name})) {
+      croak "Duplicate definition of Action '$name'! previously"
+	." at $old->[1][1] line $old->[1][2]\n new at $filename line $lineno\n";
+    }
+    $action_dict->{$name} = [$sub, \@caller];
+  };
+}
+
+sub setup_rc_actions {
+  (my $self) = @_;
+  my $glob = look_for_globref($self, ACTION_DICT_SYM)
+    or return;
+  my $dict = *{$glob}{HASH};
+
+  my $vfs = $self->get_vfs;
+  foreach my $name (keys %$dict) {
+    $vfs->add_root_action_handler($name, @{$dict->{$name}});
+  }
+}
+
 # ここで言う Object系とは、
 #   YATT::Lite::Object を継承してるか、
 #   又は既に %FIELDS が定義されている class

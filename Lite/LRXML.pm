@@ -457,6 +457,7 @@ sub build {
   (my MY $self, my ($ns, $kind, $partName)) = splice @_, 0, 4;
   $self->can("build_$kind")->
     ($self, name => $partName, kind => $kind
+     , folder => $self->{template}
      , startpos => $self->{startpos}, @_);
 }
 # 今度はこっちが今一ね。
@@ -578,8 +579,6 @@ sub add_part {
   if (defined $tmpl->{Item}{$part->{cf_name}}) {
     die $self->synerror_at($self->{startln}, q{Conflicting part name! '%s'}, $part->{cf_name});
   }
-  Scalar::Util::weaken($part->{cf_folder} = $tmpl);
-  # die "Can't weaken!" unless Scalar::Util::isweak($part->{cf_folder});
   if ($tmpl->{partlist} and my Part $prev = $tmpl->{partlist}[-1]) {
     $prev->{cf_endln} = $self->{endln};
   }
