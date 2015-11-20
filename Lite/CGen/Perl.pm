@@ -4,6 +4,8 @@ use warnings qw(FATAL all NONFATAL misc);
 
 require 5.010; # For named capture.
 
+use constant DEBUG_MRO => $ENV{DEBUG_YATT_MRO};
+
 use YATT::Lite::Core qw(Folder Template Part Widget Action);
 use YATT::Lite::Constants;
 
@@ -62,7 +64,11 @@ use YATT::Lite::Constants;
   }
   sub generate_inheritance {
     (my MY $self, my Template $tmpl) = @_;
-    sprintf q{use mro 'c3'; our @ISA = qw(%s); }, join " ", $self->list_inheritance($tmpl);
+    my @isa = $self->list_inheritance($tmpl);
+    my $mro = mro::get_mro($tmpl->{cf_entns});
+    print STDERR "($mro) [$tmpl->{cf_path}] $tmpl->{cf_entns}::ISA = @isa\n"
+      if DEBUG_MRO;
+    sprintf q{use mro '%s'; our @ISA = qw(%s); }, $mro, join " ", @isa;
   }
   #========================================
   sub generate_preamble {

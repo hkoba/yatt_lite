@@ -6,6 +6,7 @@ use Scalar::Util qw(weaken);
 use Carp;
 use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
 use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
+use constant DEBUG_MRO => $ENV{DEBUG_YATT_MRO};
 
 require File::Spec;
 require File::Basename;
@@ -251,10 +252,15 @@ require File::Basename;
     my @super = $file->YATT::Lite::VFS::Folder::list_base;
 
     # $dir ($dir's bases will be called in $dir->lookup),
-    push @super, $file->{cf_parent} if $file->{cf_parent};
-
-    # and then directory named $dir/$file.ytmpl (or "$dir/$file")
-    push @super, $file->{cf_overlay} if $file->{cf_overlay};
+    if (my @local = grep {$_} $file->{cf_parent}, $file->{cf_overlay}) {
+      if ($file->{cf_entns} and mro::get_mro($file->{cf_entns}) eq 'c3') {
+	print STDERR "use c3 for $file->{cf_entns}\n" if DEBUG_MRO;
+	unshift @super, @local
+      } else {
+	print STDERR "use dfs for $file->{cf_entns}\n" if DEBUG_MRO;
+	push @super, @local;
+      }
+    }
 
     @super;
   }
@@ -431,6 +437,9 @@ require File::Basename;
       }
     }
     if ($folder->{cf_entns}) {
+      if ($vfs->{cf_mro_c3}) {
+	mro::set_mro($folder->{cf_entns}, 'c3');
+      }
       if (defined (my Folder $old = $vfs->{cf_entns2vfs_item}{$folder->{cf_entns}})) {
 	croak "EntNS confliction for $folder->{cf_entns}! $old vs $folder";
       }
