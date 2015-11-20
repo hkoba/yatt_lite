@@ -62,7 +62,7 @@ use YATT::Lite::Constants;
   }
   sub generate_inheritance {
     (my MY $self, my Template $tmpl) = @_;
-    sprintf q{our @ISA = qw(%s); }, join " ", $self->list_inheritance($tmpl);
+    sprintf q{use mro 'c3'; our @ISA = qw(%s); }, join " ", $self->list_inheritance($tmpl);
   }
   #========================================
   sub generate_preamble {

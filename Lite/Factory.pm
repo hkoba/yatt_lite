@@ -4,6 +4,7 @@ use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
+use mro 'c3';
 
 use constant DEBUG_FACTORY => $ENV{DEBUG_YATT_FACTORY};
 
@@ -81,6 +82,7 @@ use YATT::Lite::MFields
        tmpl_cache
 
        path2entns
+       entns2vfs_item
 
        cf_debug_cgen
 
@@ -90,6 +92,7 @@ use YATT::Lite::MFields
        cf_dont_map_args
        cf_dont_debug_param
        cf_always_refresh_deps
+       cf_mro_c3
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -632,6 +635,7 @@ sub build_yatt {
 	      # because VFS->create for base do not respect Factory->get_yatt.
 	      # To solve this, I should redesign all Factory/VFS related stuffs.
 	      , tmpl_cache => $self->{tmpl_cache} //= {}
+	      , entns2vfs_item => $self->{entns2vfs_item} //= {}
 
 	      , $self->configparams_for(fields_hash($app_ns)));
 
@@ -746,6 +750,7 @@ sub _cf_delegates {
      dont_map_args
      dont_debug_param
      always_refresh_deps
+     mro_c3
   );
 }
 

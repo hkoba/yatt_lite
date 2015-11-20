@@ -43,11 +43,12 @@ require File::Basename;
 		cf_facade cf_base
 		cf_entns
 		cf_always_refresh_deps
+		cf_mro_c3
 		on_memory
 		root extdict
 		cf_mark
 		n_creates
-		pkg2folder/;
+		cf_entns2vfs_item/;
   use YATT::Lite::Util qw(lexpand rootname terse_dump);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}
@@ -145,10 +146,22 @@ require File::Basename;
     }
   }
 
+  sub find_part_from_entns {
+    (my VFS $vfs, my $entns) = splice @_, 0, 2;
+    my Folder $folder = $vfs->{cf_entns2vfs_item}{$entns}
+      or croak "Unknown entns $entns!";
+    $vfs->find_part_from($folder, @_);
+  }
+
   # To limit call of refresh atmost 1, use this.
   sub reset_refresh_mark {
     (my VFS $vfs) = shift;
     $vfs->{cf_mark} = @_ ? shift : {};
+  }
+
+  sub YATT::Lite::VFS::Folder::lookup {
+    $_[0]->lookup_1(@_[1..$#_])
+      // $_[0]->lookup_base(@_[1..$#_])
   }
 
   sub YATT::Lite::VFS::Dir::dirobj { $_[0] }
@@ -178,7 +191,7 @@ require File::Basename;
     $file->{cf_path} // $file->{cf_name};
   }
 
-  sub YATT::Lite::VFS::File::lookup {
+  sub YATT::Lite::VFS::File::lookup_1 {
     (my vfs_file $file, my VFS $vfs, my $name) = splice @_, 0, 3;
     unless (@_) {
       # ファイルの中には、深さ 1 の name しか無いはずだから。
@@ -187,30 +200,44 @@ require File::Basename;
       my Item $item = $file->{Item}{$name};
       return $item if $item;
     }
-    # 深さが 2 以上の (name, @_) については、継承先から探す。
-    $file->lookup_base($vfs, $name, @_);
+    undef;
   }
-  sub YATT::Lite::VFS::Dir::lookup {
+  sub YATT::Lite::VFS::Dir::lookup_1 {
     (my vfs_dir $dir, my VFS $vfs, my $name) = splice @_, 0, 3;
     if (my Item $item = $dir->cached_in
 	($dir->{Item} //= {}, $name, $vfs, $vfs->{cf_mark})) {
       if ((not ref $item or not UNIVERSAL::isa($item, Item))
 	  and not $vfs->{cf_no_auto_create}) {
+	# Special case (mostly for test)
+	# data vfs can contain vfs spec (string, array, hash).
 	$item = $dir->{Item}{$name} = $vfs->create
 	  (data => $item, parent => $dir, name => $name);
       }
       return $item unless @_;
-      $item = $item->lookup($vfs, @_);
+      if ($vfs->{cf_mro_c3}) {
+	$item = $item->lookup_1($vfs, @_);
+      } else {
+	$item = $item->lookup($vfs, @_);
+      }
       return $item if $item;
     }
-    $dir->lookup_base($vfs, $name, @_);
+    undef;
   }
   sub YATT::Lite::VFS::Folder::lookup_base {
     (my Folder $item, my VFS $vfs, my $name) = splice @_, 0, 3;
-    my @super = $item->list_base;
-    foreach my $super (@super) {
-      my $ans = $super->lookup($vfs, $name, @_) or next;
-      return $ans;
+    if ($vfs->{cf_mro_c3}) {
+      my @super_ns = @{mro::get_linear_isa($item->{cf_entns})};
+      foreach my $super (map {my $o = $vfs->{cf_entns2vfs_item}{$_}; $o ? $o : ()}
+			 @super_ns) {
+	my $ans = $super->lookup_1($vfs, $name, @_) or next;
+	return $ans;
+      }
+    } else {
+      my @super = $item->list_base;
+      foreach my $super (@super) {
+	my $ans = $super->lookup($vfs, $name, @_) or next;
+	return $ans;
+      }
     }
     undef;
   }
@@ -401,12 +428,24 @@ require File::Basename;
 	# XXX: base 指定だけで済むべきだが、Factory を呼んでないので出来ないorz...
 	YATT::Lite::MFields->add_isa_to
 	    ($folder->{cf_entns}, $parent->{cf_entns});
-	$vfs->{pkg2folder}{$folder->{cf_entns}} = $folder;
       }
+    }
+    if ($folder->{cf_entns}) {
+      if (defined (my Folder $old = $vfs->{cf_entns2vfs_item}{$folder->{cf_entns}})) {
+	croak "EntNS confliction for $folder->{cf_entns}! $old vs $folder";
+      }
+      $vfs->{cf_entns2vfs_item}{$folder->{cf_entns}} = $folder;
     }
     $folder->after_create($vfs);
     $folder;
   }
+
+  # XXX: <=> find_part_from_entns
+  sub find_template_from_package {
+    (my MY $self, my $pkg) = @_;
+    $self->{cf_entns2vfs_item}{$pkg};
+  }
+
   sub create_data {
     (my VFS $vfs, my ($primary)) = splice @_, 0, 2;
     if (ref $primary) {

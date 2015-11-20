@@ -3,7 +3,7 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
-#use mro 'c3';
+use mro 'c3';
 # XXX: 残念ながら、要整理。
 
 require YATT::Lite::MFields;

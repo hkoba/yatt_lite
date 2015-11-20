@@ -2,6 +2,7 @@ package YATT::Lite::WebMVC0::DirApp; sub MY () {__PACKAGE__}
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use Carp;
+use mro 'c3';
 
 use YATT::Lite -as_base, qw/*SYS
 			    Entity/;

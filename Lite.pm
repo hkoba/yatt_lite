@@ -5,7 +5,7 @@ use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 use Carp qw(carp croak confess);
 our $VERSION = '0.100_003';
-#use mro 'c3';
+use mro 'c3';
 
 use Scalar::Util qw/weaken/;
 
@@ -34,11 +34,15 @@ use YATT::Lite::MFields qw/YATT
 	      cf_info
 	      cf_lcmsg_sink
 	      cf_always_refresh_deps
+	      cf_mro_c3
 
 	      cf_default_lang
 
 	      cf_path2entns
+	      cf_entns2vfs_item
 	    /;
+
+use constant DEBUG => $ENV{DEBUG_YATT_LITE};
 
 MY->cf_mkaccessors(qw/app_name/);
 
@@ -290,6 +294,7 @@ sub build_trans {
     (\@vfsspec
      , facade => $self
      , cache => $vfscache
+     , entns2vfs_item => $self->{cf_entns2vfs_item}
      , entns => $self->{entns}
      , @rest
      # XXX: Should be more extensible.
@@ -304,6 +309,7 @@ sub build_trans {
 				     lcmsg_sink
 				     only_parse
 				     always_refresh_deps
+				     mro_c3
 				    /));
 }
 
@@ -323,6 +329,15 @@ sub root_EntNS { 'YATT::Lite::Entities' }
 # $app_ns に EntNS constant を追加する。
 # 複数回呼ばれた場合、既に定義済みの entns を返す
 
+sub should_use_mro_c3 {
+  (my MY $self_or_pack) = @_;
+  if (ref $self_or_pack) {
+     $self_or_pack->{cf_mro_c3}
+   } else {
+     mro::get_mro($self_or_pack) eq 'c3';
+   }
+}
+
 sub ensure_entns {
   my ($mypack, $app_ns, @baseclass) = @_;
   my $entns = "${app_ns}::EntNS";
@@ -333,7 +348,12 @@ sub ensure_entns {
     return $entns;
   }
 
-  # mro::set_mro($entns, 'c3'); # XXX: Should change to c3, but...
+  if ($mypack->should_use_mro_c3) {
+    print STDERR "set mro c3 for $entns\n" if DEBUG;
+    mro::set_mro($entns, 'c3')
+  } else {
+    print STDERR "keep mro dfs for $entns\n" if DEBUG;
+  }
 
   # $app_ns が %FIELDS 定義を持たない時(ex YLObjectでもPartialでもない)に限り、
   # YATT::Lite への継承を設定する
@@ -516,6 +536,7 @@ sub default_lang {
 #========================================
 foreach
   (qw/find_part
+      find_part_from_entns
       find_file
       find_product
       find_renderer

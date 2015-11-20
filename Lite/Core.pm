@@ -547,11 +547,6 @@ sub synerror {
   }
 }
 
-sub find_template_from_package {
-  (my MY $self, my $pkg) = @_;
-  $self->{pkg2folder}{$pkg};
-}
-
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_core();
 
