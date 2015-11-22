@@ -56,9 +56,10 @@ use YATT::Lite::Constants;
     if (my $err = catch {
       *$glob = \@isa;
     }) {
-      die $self->generror("Can't set ISA for '%s' as [%s]"
+      die $self->generror("Can't set ISA for '%s' as [%s]: %s"
 			  , $tmpl->{cf_name}
 			  , join(", ", @isa)
+			  , $err
 			);
     }
   }

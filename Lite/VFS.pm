@@ -1,6 +1,7 @@
 package YATT::Lite::VFS;
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
+use mro 'c3';
 use Exporter qw(import);
 use Scalar::Util qw(weaken);
 use Carp;
@@ -44,7 +45,7 @@ require File::Basename;
 		cf_facade cf_base
 		cf_entns
 		cf_always_refresh_deps
-		cf_mro_c3
+		cf_no_mro_c3
 		on_memory
 		root extdict
 		cf_mark
@@ -215,7 +216,7 @@ require File::Basename;
 	  (data => $item, parent => $dir, name => $name);
       }
       return $item unless @_;
-      if ($vfs->{cf_mro_c3}) {
+      if (not $vfs->{cf_no_mro_c3} and $dir->{cf_entns}) {
 	$item = $item->lookup_1($vfs, @_);
       } else {
 	$item = $item->lookup($vfs, @_);
@@ -226,7 +227,7 @@ require File::Basename;
   }
   sub YATT::Lite::VFS::Folder::lookup_base {
     (my Folder $item, my VFS $vfs, my $name) = splice @_, 0, 3;
-    if ($vfs->{cf_mro_c3}) {
+    if (not $vfs->{cf_no_mro_c3} and $item->{cf_entns}) {
       my @super_ns = @{mro::get_linear_isa($item->{cf_entns})};
       foreach my $super (map {my $o = $vfs->{cf_entns2vfs_item}{$_}; $o ? $o : ()}
 			 @super_ns) {
@@ -249,20 +250,33 @@ require File::Basename;
     my vfs_file $file = shift;
 
     # $dir/$file.yatt inherits its own base decl,
-    my @super = $file->YATT::Lite::VFS::Folder::list_base;
-
-    # $dir ($dir's bases will be called in $dir->lookup),
-    if (my @local = grep {$_} $file->{cf_parent}, $file->{cf_overlay}) {
-      if ($file->{cf_entns} and mro::get_mro($file->{cf_entns}) eq 'c3') {
-	print STDERR "use c3 for $file->{cf_entns}\n" if DEBUG_MRO;
-	unshift @super, @local
+    my (@local, @otherdir);
+    foreach my Folder $super ($file->YATT::Lite::VFS::Folder::list_base) {
+      if ($super->{cf_parent} and $file->{cf_parent} == $super->{cf_parent}) {
+	push @local, $super;
       } else {
-	print STDERR "use dfs for $file->{cf_entns}\n" if DEBUG_MRO;
-	push @super, @local;
+	push @otherdir, $super;
       }
     }
 
-    @super;
+    push @local, grep {$_} $file->{cf_parent}, $file->{cf_overlay};
+
+    if ($file->{cf_entns} and mro::get_mro($file->{cf_entns}) eq 'c3') {
+      print STDERR "use c3 for $file->{cf_entns}"
+	, "\n ".terse_dump([local => map {
+	  my Folder $f = $_;
+	  mro::get_linear_isa($f->{cf_entns})
+	} @local])
+	, "\n ".terse_dump([other => map {
+	  my Folder $f = $_;
+	  mro::get_linear_isa($f->{cf_entns})
+	} @otherdir])
+	, "\n" if DEBUG_MRO;
+      return (@local, @otherdir);
+    } else {
+      print STDERR "use dfs for $file->{cf_entns}\n" if DEBUG_MRO;
+      return (@otherdir, @local);
+    }
   }
   sub YATT::Lite::VFS::File::list_items {
     die "NIMPL";
@@ -437,7 +451,7 @@ require File::Basename;
       }
     }
     if ($folder->{cf_entns}) {
-      if ($vfs->{cf_mro_c3}) {
+      if (not $vfs->{cf_no_mro_c3}) {
 	mro::set_mro($folder->{cf_entns}, 'c3');
       }
       if (defined (my Folder $old = $vfs->{cf_entns2vfs_item}{$folder->{cf_entns}})) {

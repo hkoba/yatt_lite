@@ -618,17 +618,17 @@ END
 &yatt:xb;
 END
 	     
-	     , "$docroot/foo.yatt" => <<'END'
+	     , "$docroot/usefoo.yatt" => <<'END'
 <!yatt:base file="base1.yatt">
 <yatt:foo xa="bar" xb="baz"/>
 END
 	     
-	     , "$docroot/bar.yatt" => <<'END'
+	     , "$docroot/usebar.yatt" => <<'END'
 <!yatt:base dir="base2">
 <yatt:bar xa="qux" xb="quux"/>
 END
 
-	     , "$docroot/baz.yatt" => <<'END'
+	     , "$docroot/usebaz.yatt" => <<'END'
 <!yatt:base file="base3/index.yatt">
 <yatt:baz xa="111" xb="222"/>
 END
@@ -645,15 +645,15 @@ END
 
   my $base_ns = "MyTest_factory_13::INST3::EntNS::base";
 
-  is $F->get_yatt('/')->render('foo')
+  is $F->get_yatt('/')->render('usefoo')
     , qq{<h2>foo: bar</h2>\nbaz\n\n}
     , "$THEME /foo";
 
-  is $F->get_yatt('/')->render('bar')
+  is $F->get_yatt('/')->render('usebar')
     , qq{<h2>bar: qux</h2>\nquux\n\n}
     , "$THEME /bar";
 
-  is $F->get_yatt('/')->render('baz')
+  is $F->get_yatt('/')->render('usebaz')
     , qq{<h2>base3: 111</h2>\n222\n\n}
     , "$THEME /baz";
 

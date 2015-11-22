@@ -93,7 +93,7 @@ use YATT::Lite::MFields
        cf_dont_map_args
        cf_dont_debug_param
        cf_always_refresh_deps
-       cf_mro_c3
+       cf_no_mro_c3
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -691,39 +691,47 @@ sub _list_base_spec_in {
   my ($base, @mixin) = lexpand($desc)
     or return;
 
-  my @pkg_n_dir;
+  my (@primary_pair, @mixin_pair);
   foreach my $task ([1, $base], [0, @mixin]) {
     my ($is_primary, @spec) = @$task;
     foreach my $basespec (@spec) {
       my ($pkg, $yatt);
       if ($basespec =~ /^::(.*)/) {
 	ckrequire($1);
-	push @pkg_n_dir, [$is_primary, $1, undef];
+	push @{$is_primary ? \@primary_pair : \@mixin_pair}, [$1, undef];
       } elsif (my $realpath = $self->app_path_find_dir_in($in, $basespec)) {
 	if ($is_implicit) {
 	  next if $visits->has_node($realpath);
 	}
 	$visits->ensure_make_node($realpath);
-	push @pkg_n_dir, [$is_primary, undef, $realpath];
+	push @{$is_primary ? \@primary_pair : \@mixin_pair}, [undef, $realpath];
       } else {
 	$self->error("Invalid base spec: %s", $basespec);
       }
     }
   }
 
-  foreach my $tuple (@pkg_n_dir) {
-    my ($is_primary, $pkg, $dir) = @$tuple;
+  foreach my $pair (@primary_pair, @mixin_pair) {
+    my ($pkg, $dir) = @$pair;
     next unless $dir;
     my $yatt = $self->load_yatt($dir, undef, $visits, $in);
-    $tuple->[1] = ref $yatt;
+    $pair->[0] = ref $yatt;
     my $realdir = $yatt->cget('dir');
     push @$basevfs, [dir => $realdir, entns => $self->{path2entns}{$realdir}];
   }
 
-  push @$basepkg, map {
-    my ($is_primary, $pkg, $dir) = @$_;
-    ($is_primary && $pkg) ? ($pkg) : ()
-  } @pkg_n_dir;
+  push @$basepkg, map {defined $_->[0] ? $_->[0] : ()} do {
+    if (not $self->{cf_no_mro_c3}) {
+      my %known_pkg;
+      foreach my $pair (grep {defined $_->[0]} @primary_pair) {
+	$known_pkg{$_} = 1 for @{mro::get_linear_isa($pair->[0])};
+      }
+      (grep(!$_->[0] || !$known_pkg{$_->[0]}, @mixin_pair)
+       , @primary_pair);
+    } else {
+      @primary_pair;
+    }
+  };
 
   $visits->finish_node($in);
 }
@@ -775,7 +783,7 @@ sub _cf_delegates {
      dont_map_args
      dont_debug_param
      always_refresh_deps
-     mro_c3
+     no_mro_c3
   );
 }
 

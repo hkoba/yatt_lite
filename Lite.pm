@@ -34,7 +34,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_info
 	      cf_lcmsg_sink
 	      cf_always_refresh_deps
-	      cf_mro_c3
+	      cf_no_mro_c3
 
 	      cf_default_lang
 
@@ -330,7 +330,7 @@ sub build_trans {
 				     lcmsg_sink
 				     only_parse
 				     always_refresh_deps
-				     mro_c3
+				     no_mro_c3
 				    /));
 }
 
@@ -353,10 +353,10 @@ sub root_EntNS { 'YATT::Lite::Entities' }
 sub should_use_mro_c3 {
   (my MY $self_or_pack) = @_;
   if (ref $self_or_pack) {
-     $self_or_pack->{cf_mro_c3}
-   } else {
-     mro::get_mro($self_or_pack) eq 'c3';
-   }
+    not $self_or_pack->{cf_no_mro_c3}
+  } else {
+    mro::get_mro($self_or_pack) eq 'c3';
+  }
 }
 
 sub ensure_entns {
