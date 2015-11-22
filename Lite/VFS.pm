@@ -441,7 +441,7 @@ require File::Basename;
 	mro::set_mro($folder->{cf_entns}, 'c3');
       }
       if (defined (my Folder $old = $vfs->{cf_entns2vfs_item}{$folder->{cf_entns}})) {
-	croak "EntNS confliction for $folder->{cf_entns}! $old vs $folder";
+	croak "EntNS confliction for $folder->{cf_entns}! old=$old->{cf_path} vs new=$folder->{cf_path}";
       }
       $vfs->{cf_entns2vfs_item}{$folder->{cf_entns}} = $folder;
     }

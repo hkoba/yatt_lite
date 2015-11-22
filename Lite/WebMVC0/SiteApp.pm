@@ -93,6 +93,7 @@ sub runas_fcgi {
 
 sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
+  # XXX: load_yatt already has path2yatt caching.
   $dirPath =~ s,/*$,,;
   $self->{path2yatt}{$dirPath} ||= $self->load_yatt($dirPath);
 }

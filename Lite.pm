@@ -87,13 +87,34 @@ sub after_new {
 }
 
 # XXX: kludge!
+sub find_neighbor_yatt {
+  (my MY $self, my ($dir)) = @_;
+  $self->{cf_factory}->load_yatt($dir);
+}
 sub find_neighbor_vfs {
   (my MY $self, my ($dir)) = @_;
-  $self->{cf_factory}->load_yatt($dir)->get_trans;
+  $self->find_neighbor_yatt($dir)->get_trans;
 }
 sub find_neighbor {
   (my MY $self, my ($dir)) = @_;
   $self->find_neighbor_vfs($dir)->root;
+}
+
+#
+# list all configs (named $name). (base first, then local one)
+# (useful to avoid config repeation)
+#
+sub cget_all {
+  (my MY $self, my $name) = @_;
+  (map($_->cget_all($name), $self->list_base)
+   , lexpand($self->{"cf_$name"}));
+}
+
+sub list_base {
+  (my MY $self) = @_;
+  map {
+    $self->find_neighbor_yatt($self->app_path_normalize($_));
+  } lexpand($self->{cf_base});
 }
 
 #========================================

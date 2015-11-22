@@ -71,6 +71,7 @@ use YATT::Lite::MFields
 
  , qw/
        cf_allow_missing_dir
+       cf_no_preload_app_base
 
        tmpldirs
        loc2yatt
@@ -271,6 +272,25 @@ sub find_factory_script {
 }
 
 #========================================
+
+sub new {
+  my ($class) = shift;
+  my MY $self = $class->SUPER::new(@_);
+  $self->preload_app_base unless $self->{cf_no_preload_app_base};
+  $self;
+}
+
+#
+# preload app_base (to avoid potential double-loading bug for base loading)
+#
+sub preload_app_base {
+  (my MY $self) = @_;
+
+  foreach my $dir (lexpand($self->{cf_app_base})) {
+    next if $dir =~ m{^::};
+    $self->load_yatt($self->app_path_expand($dir));
+  }
+}
 
 sub init_app_ns {
   (my MY $self) = @_;
@@ -571,6 +591,11 @@ sub get_yatt {
 
 sub load_yatt {
   (my MY $self, my ($path, $basedir, $visits, $from)) = @_;
+
+  unless (defined $path and $path ne '') {
+    croak "empty path for load_yatt!"
+  }
+
   $path = $self->rel2abs($path, $self->{cf_app_root});
   if (my $yatt = $self->{path2yatt}{$path}) {
     return $yatt;

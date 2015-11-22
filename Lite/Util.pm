@@ -78,6 +78,7 @@ require Scalar::Util;
       or return undef;
     *{$sym}{HASH};
   }
+  # XXX: should be renamed to lhexpand
   sub lexpand {
     # lexpand can be used to counting.
     unless (defined $_[0]) {
