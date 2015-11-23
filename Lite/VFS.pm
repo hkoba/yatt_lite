@@ -18,7 +18,7 @@ require File::Basename;
 {
   sub MY () {__PACKAGE__}
   use YATT::Lite::Types
-    ([Item => -fields => [qw(cf_name cf_public)]
+    ([Item => -fields => [qw(cf_name cf_public cf_type)]
       , -constants => [[can_generate_code => 0]]
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
@@ -415,20 +415,28 @@ require File::Basename;
     (my VFS $vfs, my ($kind, $primary, %rest)) = @_;
     # XXX: $vfs は className の時も有る。
     if (my $sub = $vfs->can("create_$kind")) {
-      $vfs->fixup_created(\@_, $sub->($vfs, $primary, %rest));
+      $vfs->fixup_created(\@_, $sub->($vfs, $primary, %rest, type => $kind));
     } else {
       $vfs->{cf_cache}{$primary} ||= do {
 	# XXX: Really??
 	$rest{entns} //= $vfs->{cf_entns};
 	$vfs->fixup_created
-	  (\@_, $vfs->can("vfs_$kind")->()->new(%rest, path => $primary));
+	  (\@_, $vfs->can("vfs_$kind")->()->new(%rest, path => $primary
+						, type => $kind
+					      ));
       };
     }
+  }
+  sub terse_dump2 {
+    require Data::Dumper;
+    join ", ", map {
+      Data::Dumper->new([$_])->Maxdepth(2)->Terse(1)->Indent(0)->Dump;
+    } @_;
   }
   sub fixup_created {
     (my VFS $vfs, my $info, my Folder $folder) = @_;
     printf STDERR "# VFS::create(%s) => %s(0x%x)\n"
-      , terse_dump(@{$info}[1..$#$info])
+      , terse_dump2(@{$info}[1..$#$info])
       , ref $folder, ($folder+0) if DEBUG_VFS;
     # create の直後、 after_create より前に、mark を打つ。そうしないと、 delegate で困る。
     if (ref $vfs) {
