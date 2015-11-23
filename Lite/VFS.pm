@@ -283,6 +283,7 @@ require File::Basename;
   }
   sub YATT::Lite::VFS::Dir::list_items {
     (my vfs_dir $in, my VFS $vfs) = @_;
+    croak "BUG: vfs is undef!" unless defined $vfs;
     return unless defined $in->{cf_path};
     my %dup;
     my @exts = map {
@@ -480,11 +481,17 @@ require File::Basename;
       $vfs->vfs_file->new(public => 1, @_, string => $primary);
     }
   }
+
+  #
+  # This converts all descriptors in Folder->base into real item objects.
+  #
   sub YATT::Lite::VFS::Folder::vivify_base_descs {
     (my Folder $folder, my VFS $vfs) = @_;
     foreach my Folder $desc (@{$folder->{cf_base}}) {
       if (ref $desc eq 'ARRAY') {
-	# XXX: Dirty workaround.
+	#
+	# This $desc structure *may* come from Factory->_list_base_spec_in
+	#
 	if ($desc->[0] eq 'dir') {
 	  # To create YATT::Lite with .htyattconfig.xhf, Factory should be involved.
 	  $desc = $vfs->{cf_facade}->find_neighbor($desc->[1]);
