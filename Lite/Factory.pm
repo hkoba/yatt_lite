@@ -589,6 +589,8 @@ sub get_yatt {
 
 # phys-path => yatt
 
+*get_dirhandler = *load_yatt; *get_dirhandler = *load_yatt;
+
 sub load_yatt {
   (my MY $self, my ($path, $basedir, $visits, $from)) = @_;
 
@@ -684,13 +686,28 @@ sub _list_base_spec_in {
   print STDERR "# Factory::list_base_in("
     , terse_dump($in, $desc, $self->{cf_app_base}), ")\n" if DEBUG_FACTORY;
 
+  #
+  # YATT::Lite->base can be either specified explicitly
+  # or implicitly copied from YATT::Lite::Factory->app_base.
+  #
+  # Later case can lead circular inheritance for app_base itself.
+  # To avoid this, $is_implicit flag is used.
+  #
   my $is_implicit = not defined $desc;
 
   $desc //= $self->{cf_app_base};
 
+  #
+  # First item in base is treated *primary* base.
+  # Rest of them are treated mixin.
+  #
   my ($base, @mixin) = lexpand($desc)
     or return;
 
+  #
+  # This builds [$package => $path] pairs and separately store
+  # as primary and mixin.
+  #
   my (@primary_pair, @mixin_pair);
   foreach my $task ([1, $base], [0, @mixin]) {
     my ($is_primary, @spec) = @$task;
@@ -700,10 +717,15 @@ sub _list_base_spec_in {
 	ckrequire($1);
 	push @{$is_primary ? \@primary_pair : \@mixin_pair}, [$1, undef];
       } elsif (my $realpath = $self->app_path_find_dir_in($in, $basespec)) {
+
 	if ($is_implicit) {
+	  #
+	  # Simply drop circular inheritance for implicit case.
+	  #
 	  next if $visits->has_node($realpath);
 	}
 	$visits->ensure_make_node($realpath);
+
 	push @{$is_primary ? \@primary_pair : \@mixin_pair}, [undef, $realpath];
       } else {
 	$self->error("Invalid base spec: %s", $basespec);
@@ -711,6 +733,10 @@ sub _list_base_spec_in {
     }
   }
 
+  #
+  # This builds $basevfs for YATT::Lite::VFS::Folder::vivify_base_descs()
+  # This preallocates YATT::Lite and its entns for each realpath.
+  #
   foreach my $pair (@primary_pair, @mixin_pair) {
     my ($pkg, $dir) = @$pair;
     next unless $dir;
@@ -720,6 +746,9 @@ sub _list_base_spec_in {
     push @$basevfs, [dir => $realdir, entns => $self->{path2entns}{$realdir}];
   }
 
+  #
+  # This builds $basepkg for buildns()
+  #
   push @$basepkg, map {defined $_->[0] ? $_->[0] : ()} do {
     if (not $self->{cf_no_mro_c3}) {
       my %known_pkg;

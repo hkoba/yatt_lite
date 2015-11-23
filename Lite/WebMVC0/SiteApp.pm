@@ -91,13 +91,6 @@ sub runas_fcgi {
 # -> Factory::load
 # -> Factory::buildspec
 
-sub get_dirhandler {
-  (my MY $self, my $dirPath) = @_;
-  # XXX: load_yatt already has path2yatt caching.
-  $dirPath =~ s,/*$,,;
-  $self->{path2yatt}{$dirPath} ||= $self->load_yatt($dirPath);
-}
-
 sub get_lochandler {
   (my MY $self, my ($location, $tmpldir)) = @_;
   if ($self->{cf_per_role_docroot}) {

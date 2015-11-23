@@ -492,7 +492,6 @@ require File::Basename;
 	  $desc = $vfs->create(@$desc);
 	}
       }
-      $desc = $vfs->create(@$desc) if ref $desc eq 'ARRAY';
       # parent がある == parent から指されている。なので、 weaken する必要が有る。
       weaken($desc) if $desc->{cf_parent};
     }
