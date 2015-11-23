@@ -23,7 +23,7 @@ require File::Basename;
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
-	 , [File => -fields => [qw(partlist cf_string cf_overlay
+	 , [File => -fields => [qw(partlist cf_string cf_overlay cf_imported
 				   dependency
 				)]
 	    , -alias => 'vfs_file']
@@ -43,6 +43,7 @@ require File::Basename;
   use parent qw(YATT::Lite::Object);
   use YATT::Lite::MFields qw/cf_ext_private cf_ext_public cf_cache cf_no_auto_create
 		cf_facade cf_base
+		cf_import
 		cf_entns
 		cf_always_refresh_deps
 		cf_no_mro_c3
@@ -51,7 +52,7 @@ require File::Basename;
 		cf_mark
 		n_creates
 		cf_entns2vfs_item/;
-  use YATT::Lite::Util qw(lexpand rootname terse_dump);
+  use YATT::Lite::Util qw(lexpand rootname terse_dump extname);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}
   sub new {
@@ -80,6 +81,8 @@ require File::Basename;
     my MY $self = shift;
     confess __PACKAGE__ . ": facade is empty!" unless $self->{cf_facade};
     weaken($self->{cf_facade});
+
+    $self->refresh_import;
   }
   sub error {
     my MY $self = shift;
@@ -87,17 +90,47 @@ require File::Basename;
   }
   #========================================
 
+  sub find_neighbor_file {
+    (my VFS $vfs, my ($path)) = @_;
+    my VFS $other_vfs = $vfs->{cf_facade}->find_neighbor_vfs
+      (File::Basename::dirname($path));
+    $other_vfs->find_file(File::Basename::basename($path));
+  }
   sub find_neighbor_type {
     (my VFS $vfs, my ($kind, $path)) = @_;
     $kind //= -d $path ? 'dir' : 'file';
     if ($kind eq 'file') {
-      my VFS $other_vfs = $vfs->{cf_facade}->find_neighbor_vfs
-	(File::Basename::dirname($path));
-      $other_vfs->find_file(File::Basename::basename($path));
+      $vfs->find_neighbor_file($path);
     } elsif ($kind eq 'dir') {
       $vfs->{cf_facade}->find_neighbor($path);
     } else {
       croak "Unknown vfs type=$kind path=$path";
+    }
+  }
+
+  sub refresh_import {
+    (my VFS $vfs) = @_;
+    my Folder $root = $vfs->{root};
+
+    my @files = grep {
+      -f $_ && $vfs->{extdict}{extname($_)}
+    } map {
+      my $fn = "$root->{cf_path}/$_";
+      $fn =~ s,/[^/\.]+/\.\./,/,g;
+      glob($fn);
+    } lexpand($vfs->{cf_import});
+
+    foreach my $fn (@files) {
+      my Folder $file = $vfs->find_neighbor_file($fn);
+
+      # Skip if it exists.
+      next if $root->lookup_1($vfs, $file->{cf_name});
+
+      # 
+      $root->{Item}{$file->{cf_name}}
+	= $vfs->create(file => $file->{cf_path}, parent => $root
+		       , imported => 1
+		     );
     }
   }
 

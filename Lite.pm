@@ -40,6 +40,7 @@ use YATT::Lite::MFields qw/YATT
 
 	      cf_path2entns
 	      cf_entns2vfs_item
+	      cf_import
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -331,6 +332,7 @@ sub build_trans {
 				     only_parse
 				     always_refresh_deps
 				     no_mro_c3
+				     import
 				    /));
 }
 
