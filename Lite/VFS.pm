@@ -82,7 +82,7 @@ require File::Basename;
     confess __PACKAGE__ . ": facade is empty!" unless $self->{cf_facade};
     weaken($self->{cf_facade});
 
-    $self->refresh_import;
+    $self->refresh_import if $self->{cf_import};
   }
   sub error {
     my MY $self = shift;
@@ -113,12 +113,16 @@ require File::Basename;
     my Folder $root = $vfs->{root};
 
     my @files = grep {
-      -f $_ && $vfs->{extdict}{extname($_)}
+      -f $_ && defined $vfs->{extdict}{extname($_)}
     } map {
       my $fn = "$root->{cf_path}/$_";
-      $fn =~ s,/[^/\.]+/\.\./,/,g;
+      1 while $fn =~ s,/[^/\.]+/\.\./,/,g;
       glob($fn);
     } lexpand($vfs->{cf_import});
+
+    printf STDERR "# vfs-import to %s from %s (actually: %s)\n"
+      , $root->{cf_path}, terse_dump($vfs->{cf_import}), terse_dump(\@files)
+      if DEBUG_VFS;
 
     foreach my $fn (@files) {
       my Folder $file = $vfs->find_neighbor_file($fn);
