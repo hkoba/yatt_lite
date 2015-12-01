@@ -893,9 +893,14 @@ sub feed_arg_spec {
 
   sub macro_block {
     (my MY $self, my $node) = @_;
-    local $self->{scope} = $self->mkscope({}, $self->{scope});
     my ($path, $body, $primary, $head, $foot) = nx($node);
-    local $self->{curtoks} = [@{argValue($body)}];
+    $self->macro_scoped_block_of_tokens(+{}, @{argValue($body)});
+  }
+
+  sub macro_scoped_block_of_tokens {
+    (my MY $self, my ($scope, @tokens)) = @_;
+    local $self->{scope} = $self->mkscope($scope, $self->{scope});
+    local $self->{curtoks} = \@tokens;
     \ ('{'.$self->as_print('}'));
   }
 }
