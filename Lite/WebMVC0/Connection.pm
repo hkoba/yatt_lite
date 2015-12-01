@@ -284,16 +284,33 @@ sub mkurl {
 
 sub mkprefix {
   my PROP $prop = (my $glob = shift)->prop;
-  my $scheme = $prop->{cf_env}{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
+  my Env $env = $prop->{cf_env};
+  my $scheme = $env->{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
   my $host = $glob->mkhost($scheme);
   $scheme . '://' . $host . join("", @_);
+}
+
+sub http_host_domain {
+  my PROP $prop = (my $glob = shift)->prop;
+  my Env $env = $prop->{cf_env};
+  my $host = $env->{HTTP_HOST}
+    or return undef;
+  $host =~ s/:\d+$//;
+  $host;
+}
+
+sub server_name_or_localhost {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($default) = @_;
+  my Env $env = $prop->{cf_env};
+  $env->{SERVER_NAME} || ($default // 'localhost');
 }
 
 sub mkhost {
   my PROP $prop = (my $glob = shift)->prop;
   my ($scheme) = @_;
   $scheme ||= 'http';
-  my $env = $prop->{cf_env};
+  my Env $env = $prop->{cf_env};
 
   # XXX? Is this secure?
   return $env->{HTTP_HOST} if nonempty($env->{HTTP_HOST});
@@ -380,8 +397,8 @@ sub request_path {
 
 sub request_uri {
   my PROP $prop = (my $glob = shift)->prop;
-  if ($prop->{cf_env}) {
-    $prop->{cf_env}{REQUEST_URI};
+  if (my Env $env = $prop->{cf_env}) {
+    $env->{REQUEST_URI};
   } elsif ($prop->{cf_cgi}
       and my $sub = $prop->{cf_cgi}->can('request_uri')) {
     $sub->($prop->{cf_cgi});
