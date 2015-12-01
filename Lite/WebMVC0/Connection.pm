@@ -336,6 +336,9 @@ sub mkquery {
 	for $fgetall->($param, $key);
     }
   } elsif (ref $param eq 'ARRAY') {
+    if (grep {not defined} @$param) {
+      croak "Undef found in mkquery()! " . YATT::Lite::Util::terse_dump($param);
+    }
     my @list = @$param;
     while (my ($key, $value) = splice @list, 0, 2) {
       push @enc_param, $self->url_encode($key).'='.$self->url_encode($value);
