@@ -672,8 +672,11 @@ sub add_arg_of_type_delegate {
   # XXX: 既に有ったらエラーにしないと。
   $widget->{var_dict}{$name} = $var;
   my ($type, @subtype) = @{$var->type};
+  my @wpath = @subtype ? @subtype : $name;
   my Widget $delegate = $self->{cf_vfs}->find_part_from
-    ($widget->{cf_folder}, @subtype ? @subtype : $name);
+    ($widget->{cf_folder}, @wpath) or do {
+      $self->synerror_at($self->{startln}, "Can't find delegate widget for argument %s=[%s]", $name, join(":", $type, @subtype));
+    };
   $var->weakened_set_widget($delegate);
   unless (Scalar::Util::isweak($var->[YATT::Lite::VarTypes::t_delegate::VSLOT_WIDGET])) {
     die "Can't weaken!";

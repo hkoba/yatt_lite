@@ -73,7 +73,8 @@ sub prepare_part_handler {
     ($part, my ($formal, $actual)) = $tmpl->match_subroutes($subpath) or do {
       # XXX: Is this secure against XSS? <- how about URI encoding?
       # die $self->psgi_error(404, "No such subpath: ". $subpath);
-      die $self->psgi_error(404, "No such subpath");
+      die $self->psgi_error(404, "No such subpath:: ". $subpath
+			    . " in file " . $tmpl->{cf_path});
     };
     $pkg = $trans->find_product(perl => $tmpl) or do {
       croak $self->error("Can't compile template file: %s", $file);
