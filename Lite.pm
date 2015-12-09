@@ -107,15 +107,38 @@ sub find_neighbor {
 #
 sub cget_all {
   (my MY $self, my $name) = @_;
-  (map($_->cget_all($name), $self->list_base)
+  (map($_->cget_all($name)
+       , $self->list_base_obj)
    , lexpand($self->{"cf_$name"}));
 }
 
-sub list_base {
+sub list_base_obj {
   (my MY $self) = @_;
   map {
-    $self->find_neighbor_yatt($self->app_path_normalize($_));
-  } lexpand($self->{cf_base});
+    $self->find_neighbor_yatt($self->app_path_normalize($_))
+  } $self->list_base_dir;
+}
+
+sub list_base_dir {
+  (my MY $self) = @_;
+
+  my $base = $self->{cf_base} // do {
+    my %vfs = lexpand($self->{cf_vfs});
+    [map {
+      #
+      # Each element of $vfs{base} is either ARRAY (of vfs spec)
+      # or YATT::Lite::VFS::Dir object (instantiated from spec).
+      #
+      if (ref $_ eq 'ARRAY') {
+	my %vfs_base = @$_;
+	$vfs_base{dir};
+      } else {
+	$_->{cf_path};
+      }
+    } lexpand($vfs{base})];
+  };
+
+  lexpand($base);
 }
 
 #========================================

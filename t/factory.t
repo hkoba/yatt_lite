@@ -196,7 +196,7 @@ END
   {
     package MyAppBaz;
     use parent qw(YATT::Lite); use YATT::Lite::Inc;
-    use YATT::Lite::MFields qw(cf_other_config);
+    use YATT::Lite::MFields qw(cf_other_config cf_other_config_list);
     sub baz {$baz_res}
   }
   
@@ -207,6 +207,11 @@ END
   MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
 base: @ytmpl
 other_config: in docroot
+other_config_list[
+foo: 1
+bar: 2
+baz: 3
+]
 END
 
 	     , "$docroot/yamltest/.htyattconfig.yml" => <<'END'
@@ -231,8 +236,17 @@ END
 	     , "$approot/ytmpl/bar.ytmpl"
 	     => q|BAR|
 	     , "$approot/ytmpl/.htyattrc.pl"
-	     => q|sub bar {"my bar result"}|);
-  
+	     => q|sub bar {"my bar result"}|
+
+	     , "$approot/ytmpl/.htyattconfig.xhf" => <<'END'
+other_config_list[
+A: 1
+B: 2
+C: 3
+]
+END
+);
+
   #----------------------------------------
   my $F = Factory->new(app_ns => $CLS
 		       , app_root => $approot
@@ -243,6 +257,9 @@ END
   
   my $yatt = $F->get_yatt('/');
   $root_sanity->($THEME, $CLS, $yatt, 2);
+
+  is_deeply([$yatt->cget_all('other_config_list')]
+      , [A => 1, B => 2, C => 3, foo => 1, bar => 2, baz => 3]);
   
   is $yatt->bar, "my bar result", "$THEME root inherits ytmpl bar";
   ok($yatt->find_part('bar'), "$THEME inst part bar is visible");
