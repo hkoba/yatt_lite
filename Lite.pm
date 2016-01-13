@@ -636,13 +636,27 @@ sub YATT::Lite::EntNS::entity_mkhidden {
   my ($this) = shift;
   \ join "\n", map {
     my $name = $_;
-    my $esc = escape($name);
     map {
-      sprintf(qq|<input type="hidden" name="%s" value="%s"/>|
-	      , $esc, escape($_));
-    } $CON->param($name);
+      my $v = $_;
+      if (ref $v eq 'HASH') {
+        map {
+          _hidden_input(escape($name."[$_]"), $v->{$_});
+        } keys %$v;
+      } elsif (ref $v eq 'ARRAY') {
+        map {
+          _hidden_input(escape($name."[]"), $_);
+        } @$v;
+      } else {
+        _hidden_input(escape($name), $v);
+      }
+    } $CON->multi_param($name);
   } @_;
 };
+
+sub _hidden_input {
+  sprintf(qq|<input type="hidden" name="%s" value="%s">|
+          , $_[0], escape($_[1]));
+}
 
 sub YATT::Lite::EntNS::entity_file_rootname {
   my ($this, $fn) = @_;
