@@ -134,7 +134,10 @@ sub new_cgi {
   my (@params) = do {
     unless (@_) {
       ()
+    } elsif (@_ == 1 and defined $_[0] and not ref $_[0] and $_[0] =~ /[&;]/) {
+      $_[0]; # Raw query string
     } elsif (@_ > 1 or defined $_[0] and not ref $_[0]) {
+      # k=v list
       $self->parse_params(\@_, {})
     } elsif (not defined $_[0]) {
       ();
