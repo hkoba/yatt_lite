@@ -114,7 +114,8 @@ use YATT::Lite::Breakpoint ();
       push @params, delete $params->{$name};
     }
     if (keys %$params) {
-      die "Unknown args for $widget->{cf_name}: " . join(", ", keys %$params);
+      die "Unknown args for $widget->{cf_name}: " . join(", ", keys %$params)
+	. "\n";
     }
     wantarray ? @params : \@params;
   }
@@ -124,8 +125,9 @@ use YATT::Lite::Breakpoint ();
     $list ||= [];
     foreach my $name ($cgi->param) {
       next unless $name =~ /^[a-z]\w*$/i;
+      my $wname = $widget->{cf_name} ? " for widget '$widget->{cf_name}'" : "";
       my $argdecl = $widget->{arg_dict}{$name}
-	or die "Unknown args for widget '$widget->{cf_name}': $name";
+	or die "Unknown args$wname: $name\n";
       my @value = $cgi->multi_param($name);
       $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
 	? \@value : $value[0];
