@@ -22,7 +22,6 @@ sub do_test {
   # XXX: Should directly read 1-basic.xhf first paragraph.
   foreach my $mod (qw(Plack
 		      DBIx::Class::Schema
-		      DBD::mysql
 		      CGI::Session
 		      Email::Simple
 		      Email::Sender
