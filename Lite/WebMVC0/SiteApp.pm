@@ -31,6 +31,8 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_debug_allowed_ip
 			   cf_overwrite_status_code_for_errors_as
 			   re_handled_ext
+
+                           cf_progname
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -83,6 +85,26 @@ sub runas_fcgi {
   require YATT::Lite::WebMVC0::SiteApp::FCGI;
   shift->_runas_fcgi(@_);
 }
+
+# callas($type, $app, $fh, \%ENV, \@ARGV, %opts)
+
+sub callas {
+  (my $this, my $type) = splice @_, 0, 2;
+  my MY $self = ref $this ? $this : $this->new;
+  my $sub = $self->can("callas_$type")
+    or die "\n\nUnknown callas type: $type";
+  $sub->($self, @_);
+}
+
+# sub callas_cgi {
+#   require YATT::Lite::WebMVC0::SiteApp::CGI;
+#   shift->_callas_cgi(@_);
+# }
+sub callas_fcgi {
+  require YATT::Lite::WebMVC0::SiteApp::FCGI;
+  shift->_callas_fcgi(@_);
+}
+
 
 #========================================
 
