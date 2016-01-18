@@ -141,9 +141,9 @@ sub _runas_fcgi {
   # This will be called again in _callas_fcgi, but it will not harm.
   $self->_prepare_config_for_fcgi(\%opts);
 
-  my $app = $self->prepare_app;
+  $self->prepare_app;
 
-  $self->_callas_fcgi($app, $fhset, $init_env, $args, %opts);
+  $self->_callas_fcgi($self->to_app, $fhset, $init_env, $args, %opts);
 }
 
 sub psgi_fcgi_newenv {
