@@ -7,6 +7,40 @@ use YATT::Lite::WebMVC0::SiteApp; # To make lint happy, this is required.
 
 package YATT::Lite::WebMVC0::SiteApp;
 
+#
+# For debugging only (at least for now).
+#
+sub _callas_cgi {
+  (my MY $self, my $app, my $fh, my Env $init_env, my ($args, %opts)) = @_;
+
+  my Env $env = $self->psgi_cgi_newenv($init_env, $fh);
+
+  my $res;
+  if ($self->{cf_noheader}) {
+    require Cwd;
+    local $env->{GATEWAY_INTERFACE} = 'CGI/YATT';
+    local $env->{REQUEST_METHOD} //= 'GET';
+    local @{$env}{qw(PATH_TRANSLATED REDIRECT_STATUS)}
+      = (Cwd::abs_path(shift @$args), 200)
+      if @_;
+
+    if (my $err = catch { $res = $app->($env) }) {
+      # XXX: Should I do error specific things?
+      $res = $err;
+    }
+
+  } elsif ($env->{GATEWAY_INTERFACE}) {
+    if (my $err = catch { $res = $app->($env) }) {
+      $res = $err;
+    }
+  } else {
+    $res = $app->($env);
+    print terse_dump($res);
+  }
+
+  print terse_dump($res);
+}
+
 sub _runas_cgi {
   (my MY $self, my $fh, my Env $env, my ($args, %opts)) = @_;
   if (-e ".htdebug_env") {
@@ -223,6 +257,26 @@ sub show_error {
     print $fh "\n";
   }
   print $fh "\n". ($error // "");
+}
+
+sub psgi_cgi_newenv {
+  (my MY $self, my Env $init_env, my ($stdin, $stderr)) = @_;
+  require Plack::Util;
+  require Plack::Request;
+  my Env $env = +{ %$init_env };
+  $env->{'psgi.version'} = [1,1];
+  $env->{'psgi.url_scheme'}
+    = ($init_env->{HTTPS}||'off') =~ /^(?:on|1)$/i ? 'https' : 'http';
+  $env->{'psgi.input'}        = $stdin  || *STDIN;
+  $env->{'psgi.errors'}       = $stderr || *STDERR;
+  $env->{'psgi.multithread'}  = &Plack::Util::FALSE;
+  $env->{'psgi.multiprocess'} = &Plack::Util::FALSE; # XXX:
+  $env->{'psgi.run_once'}     = &Plack::Util::FALSE;
+  $env->{'psgi.streaming'}    = &Plack::Util::FALSE; # XXX: Todo.
+  $env->{'psgi.nonblocking'}  = &Plack::Util::FALSE;
+  # delete $env->{HTTP_CONTENT_TYPE};
+  # delete $env->{HTTP_CONTENT_LENGTH};
+  $env;
 }
 
 &YATT::Lite::Breakpoint::break_load_dispatcher_cgi;

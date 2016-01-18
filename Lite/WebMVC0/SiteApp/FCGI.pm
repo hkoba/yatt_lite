@@ -146,25 +146,8 @@ sub _runas_fcgi {
   $self->_callas_fcgi($self->to_app, $fhset, $init_env, $args, %opts);
 }
 
-sub psgi_fcgi_newenv {
-  (my MY $self, my Env $init_env, my ($stdin, $stderr)) = @_;
-  require Plack::Util;
-  require Plack::Request;
-  my Env $env = +{ %$init_env };
-  $env->{'psgi.version'} = [1,1];
-  $env->{'psgi.url_scheme'}
-    = ($init_env->{HTTPS}||'off') =~ /^(?:on|1)$/i ? 'https' : 'http';
-  $env->{'psgi.input'}        = $stdin  || *STDIN;
-  $env->{'psgi.errors'}       = $stderr || *STDERR;
-  $env->{'psgi.multithread'}  = &Plack::Util::FALSE;
-  $env->{'psgi.multiprocess'} = &Plack::Util::FALSE; # XXX:
-  $env->{'psgi.run_once'}     = &Plack::Util::FALSE;
-  $env->{'psgi.streaming'}    = &Plack::Util::FALSE; # XXX: Todo.
-  $env->{'psgi.nonblocking'}  = &Plack::Util::FALSE;
-  # delete $env->{HTTP_CONTENT_TYPE};
-  # delete $env->{HTTP_CONTENT_LENGTH};
-  $env;
-}
+*psgi_fcgi_newenv = *psgi_cgi_newenv;
+*psgi_fcgi_newenv = *psgi_cgi_newenv;
 
 sub fcgi_handle_response {
     my ($self, $res) = @_;

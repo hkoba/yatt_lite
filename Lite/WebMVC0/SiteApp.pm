@@ -96,10 +96,10 @@ sub callas {
   $sub->($self, @_);
 }
 
-# sub callas_cgi {
-#   require YATT::Lite::WebMVC0::SiteApp::CGI;
-#   shift->_callas_cgi(@_);
-# }
+sub callas_cgi {
+  require YATT::Lite::WebMVC0::SiteApp::CGI;
+  shift->_callas_cgi(@_);
+}
 sub callas_fcgi {
   require YATT::Lite::WebMVC0::SiteApp::FCGI;
   shift->_callas_fcgi(@_);
