@@ -275,7 +275,20 @@ END
     , "backend startup is called";
 }
 
-is_deeply [YATT::Lite::Factory->n_created, YATT::Lite::Factory->n_destroyed]
-  , [2, 2], "Site apps are destroyed correctly.";
+{
+  my $t = sub {
+    is_deeply [YATT::Lite::Factory->n_created, YATT::Lite::Factory->n_destroyed]
+      , [2, 2], "Site apps are destroyed correctly.";
+  };
+
+  # XXX: Perl before 5.018 has problem about this.
+  if ($] >= 5.018) {
+    $t->();
+  } else {
+    TODO: {
+      $t->();
+    }
+  }
+}
 
 done_testing();
