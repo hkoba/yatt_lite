@@ -281,11 +281,11 @@ END
       , [2, 2], "Site apps are destroyed correctly.";
   };
 
-  # XXX: Perl before 5.018 has problem about this.
   if ($] >= 5.018) {
     $t->();
   } else {
     TODO: {
+      local $TODO = "Perl before 5.018 has problem about this test.";
       $t->();
     }
   }
