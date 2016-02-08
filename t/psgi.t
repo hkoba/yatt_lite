@@ -83,6 +83,8 @@ sub is_or_like($$;$) {
       is $con->param('foo'), 'bar', "param('foo')";
     } GET "/virt?foo=bar";
 
+    undef *test_action; # To free $site ref
+
     sub test_psgi (&@) {
       my ($subref, $request, %params) = @_;
 
@@ -108,6 +110,7 @@ sub is_or_like($$;$) {
       is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info, overwritten";
     } GET "/mpsgi";
 
+    undef *test_psgi; # To free $site ref.
   }
 
   my $hello = sub {
@@ -271,5 +274,8 @@ END
     , ['', qw|/beta /test.lib|]
     , "backend startup is called";
 }
+
+is_deeply [YATT::Lite::Factory->n_created, YATT::Lite::Factory->n_destroyed]
+  , [2, 2], "Site apps are destroyed correctly.";
 
 done_testing();

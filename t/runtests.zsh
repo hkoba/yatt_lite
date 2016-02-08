@@ -172,6 +172,8 @@ fi
 typeset -T HARNESS_PERL_SWITCHES harness ' '
 export HARNESS_PERL_SWITCHES
 
+(($+DEBUG_YATT_REFCNT)) || export DEBUG_YATT_REFCNT=1
+
 if [[ -n $o_taint ]]; then
     echo "[with taint check]"
     harness+=($o_taint)

@@ -43,6 +43,7 @@ on test => sub {
 
  requires 'HTML::Entities';
  requires 'Plack::Test';
+ requires 'Test::Refcount';
 
  requires 'CGI::Session';
  requires 'FCGI::Client';

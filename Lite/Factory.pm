@@ -7,6 +7,8 @@ sub MY () {__PACKAGE__}
 use mro 'c3';
 
 use constant DEBUG_FACTORY => $ENV{DEBUG_YATT_FACTORY};
+use constant DEBUG_REFCNT => $ENV{DEBUG_YATT_REFCNT};
+use if DEBUG_REFCNT, B => qw/svref_2object/;
 
 use 5.010;
 use Scalar::Util qw(weaken);
@@ -94,6 +96,9 @@ use YATT::Lite::MFields
        cf_dont_debug_param
        cf_always_refresh_deps
        cf_no_mro_c3
+
+       _outer_psgi_app
+       _my_psgi_app
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -190,25 +195,56 @@ sub load_factory_for_psgi {
 
 #========================================
 
+my ($_n_created, $_n_destroyed);
+sub n_created {$_n_created}
+sub n_destroyed {$_n_destroyed}
 {
-  my %sub2app;
-  sub to_app {
-    my ($self, $cascade, @fallback) = @_;
-    $self->prepare_app;
-    my $sub = sub { $self->call(@_) };
-    $sub2app{$sub} = $self; weaken($sub2app{$sub});
-    if ($cascade) {
-      $sub2app{$cascade} = $self; weaken($sub2app{$cascade});
-      $cascade->add($sub, @fallback);
-      $cascade->to_app;
-    } else {
-      $sub;
+  our %sub2self;
+  DESTROY {
+    (my MY $self) = @_;
+    print STDERR "DESTROY $self\n" if DEBUG_FACTORY;
+    delete $self->{_my_psgi_app};
+    if (my $outer = delete $self->{_outer_psgi_app}) {
+      delete $sub2self{$outer};
     }
+    ++$_n_destroyed;
+  };
+  sub to_app_and_forget {
+    (my MY $self) = @_;
+    my $sub = $self->to_app;
+    delete $self->{_my_psgi_app};
+    delete $self->{_outer_psgi_app};
+    delete $sub2self{$sub};
+    $sub;
+  }
+  sub to_app {
+    (my MY $self) = @_;
+    if (@_ >= 2) {
+      croak "cascade support is dropped.Use wrapped_by(builder {}) instead.";
+    }
+    $self->{_outer_psgi_app} // do {
+      if (my $old = delete $self->{_my_psgi_app}) {
+        delete $sub2self{$old};
+      }
+      $self->prepare_app;
+      my $sub = sub { $self->call(@_) };
+      $self->{_my_psgi_app} = $sub;
+      weaken($self->{_my_psgi_app}) if not $want_object;
+      weaken($sub2self{$sub} = $self);
+      print STDERR "to_app($self) returned $sub\n" if DEBUG_FACTORY;
+      $sub;
+    };
   }
   sub wrapped_by {
-    my ($self, $builder) = @_;
-    my $outer_app = $builder->($self->to_app);
-    $sub2app{$outer_app} = $self; weaken($sub2app{$outer_app});
+    my ($self, $outer_app) = @_;
+    unless ($self->{_my_psgi_app}) {
+      croak "wrapped_by is called without calling Site->to_app";
+    }
+    delete $sub2self{$self->{_my_psgi_app}};
+    $self->{_outer_psgi_app} = $outer_app;
+    $sub2self{$outer_app} = $self;
+    weaken($self->{_outer_psgi_app}) if not $want_object;
+    weaken($sub2self{$outer_app});
     $outer_app;
   }
   sub load_psgi_script {
@@ -217,7 +253,7 @@ sub load_factory_for_psgi {
     local $0 = $fn;
     my $sub = $pack->sandbox_dofile($fn);
     if (ref $sub eq 'CODE') {
-      $sub2app{$sub};
+      $sub2self{$sub};
     } elsif ($sub->isa($pack) or $sub->isa(MY)) {
       $sub;
     } else {
@@ -277,6 +313,7 @@ sub new {
   my ($class) = shift;
   my MY $self = $class->SUPER::new(@_);
   $self->preload_app_base unless $self->{cf_no_preload_app_base};
+  ++$_n_created;
   $self;
 }
 
@@ -348,8 +385,19 @@ sub _after_after_new {
   $self->{tmpldirs} = [];
   if (my $dir = $self->{cf_doc_root}) {
     push @{$self->{tmpldirs}}, $dir;
+    my $refcnt;
+    if (DEBUG_REFCNT) {
+      $refcnt = svref_2object($self)->REFCNT;
+    }
     $self->get_yatt('/');
+    if (DEBUG_REFCNT) {
+      if (svref_2object($self)->REFCNT != $refcnt) {
+        croak "Reference count of $self is increased from $refcnt to "
+          . svref_2object($self)->REFCNT . "!";
+      }
+    }
   }
+  $self;
 }
 
 #========================================

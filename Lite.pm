@@ -84,6 +84,10 @@ sub after_new {
   $self->{cf_index_name} //= "";
   $self->{cf_ext_public} //= $self->default_ext_public;
   $self->{cf_ext_private} //= $self->default_ext_private;
+}
+
+sub _after_after_new {
+  (my MY $self) = @_;
   weaken($self->{cf_factory});
 }
 
