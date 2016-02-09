@@ -51,7 +51,7 @@ instead of single template. In other words,
 YATT::Lite works like Virtual File System(VFS) of templates.  
 Users of YATT::Lite will invoke ``$yatt->render($path,$args)``
 with virtual template path + arguments
-and get its output. Here is a minimum psgi app example of YATT::Lite:
+and get its output. Here is a minimum psgi app example of YATT::Lite (Actually via YATT::Lite::Factory):
 
 ```perl
 use strict;
@@ -89,11 +89,9 @@ use strict;
 use FindBin;
 
 use YATT::Lite::WebMVC0::SiteApp -as_base;
-my $yatt = MY->new(doc_root => "$FindBin::Bin/html");
+my $site = MY->new(doc_root => "$FindBin::Bin/html");
 
-return $yatt if MY->want_object; # To help yatt lint
-
-return $yatt->to_app;
+return $site->to_app; # to_app is enough for yatt lint
 ```
 
 
@@ -121,8 +119,9 @@ so designers can easily identify special tags.
 
 One more example: Session
 --------------------
-You can wrap ``$yatt->to_app`` with other PSGI Middlewares, as usual.
-To support session, here is how to wrap yatt by Plack::Middleware::Session.
+You can use YATT with other PSGI Middlewares as usual.
+However, if you want to get `yatt lint` support too, you must tell
+$yatt to know your actual psgi app (sub), by calling `$site->wrapped_by($sub)`.
 
 
 ```perl
@@ -134,7 +133,7 @@ use YATT::Lite qw/Entity *CON/;
 use YATT::Lite::PSGIEnv;
 
 {
-  my $yatt = MY->new(doc_root => "$FindBin::Bin/html");
+  my $site = MY->new(doc_root => "$FindBin::Bin/html");
 
   Entity session => sub {
     my ($this, $name, $default) = @_;
@@ -149,13 +148,11 @@ use YATT::Lite::PSGIEnv;
     '';
   };
 
-  return $yatt if MY->want_object;
-
   use Plack::Builder;
-  return builder {
+  return $site->wrapped_by(builder {
     enable 'Session';
-    $yatt->to_app;
-  };
+    $site->to_app;
+  });
 }
 ```
 
