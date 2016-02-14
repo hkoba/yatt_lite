@@ -6,7 +6,7 @@ use Carp;
 use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
 
 use base qw(YATT::Lite::VarMaker);
-use fields qw/curtmpl curwidget curtoks
+use YATT::Lite::MFields qw/curtmpl curwidget curtoks
 	      altgen needs_escaping depth
 	      cf_cgen_loader
 	      cf_only_parse

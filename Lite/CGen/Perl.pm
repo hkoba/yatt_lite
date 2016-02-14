@@ -19,6 +19,7 @@ use YATT::Lite::Constants;
   #========================================
   package YATT::Lite::CGen::Perl; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::CGen);
+  use YATT::Lite::MFields;
   use YATT::Lite::Util qw(lexpand numLines globref terse_dump catch);
   use Carp;
   #========================================
