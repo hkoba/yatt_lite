@@ -23,7 +23,10 @@ use YATT::Lite::MFields qw/YATT
 	      cf_index_name
 	      cf_ext_public
 	      cf_ext_private
-	      cf_app_ns entns
+	      cf_app_ns
+	      entns
+	      cgen_class
+
 	      cf_app_name
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
 	      cf_special_entities cf_no_lineinfo cf_check_lineno
@@ -60,7 +63,7 @@ use YATT::Lite::Partial::AppPath;
 use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			set_inc ostream try_invoke list_isa symtab
 			look_for_globref
-			subname ckeval
+			subname ckeval ckrequire
 			secure_text_plain
 			define_const
 		       /;
@@ -370,6 +373,26 @@ sub _before_after_new {
 }
 
 #========================================
+# Code generator class
+#========================================
+
+sub root_CGEN_perl () { 'YATT::Lite::CGen::Perl' }
+*CGEN_perl = *root_CGEN_perl; *CGEN_perl = *root_CGEN_perl;
+sub ensure_cgen_for {
+  my ($mypack, $type, $app_ns) = @_;
+  $mypack->ensure_supplns("CGEN_$type" => $app_ns);
+}
+
+sub get_cgen_class {
+  (my MY $self, my $type) = @_;
+  my $name = "CGEN_$type";
+  my $sub = $self->can("root_$name")
+    or croak "Unknown cgen class: $type";
+  $self->{cgen_class}{$type}
+    ||= $self->ensure_cgen_for($type, $self->{cf_app_ns});
+}
+
+#========================================
 # Entity
 #========================================
 
@@ -388,50 +411,90 @@ sub should_use_mro_c3 {
   }
 }
 
-sub ensure_entns {
-  my ($mypack, $app_ns, @baseclass) = @_;
-  my $entns = "${app_ns}::EntNS";
+#========================================
 
-  my $sym = do {no strict 'refs'; \*{$entns}};
+# These ns-related methods (ensure_...) are called as Class Methods.
+# This means you can't touch instance fields.
+
+# Old interface.
+# ensure_entns($app_ns, @base_entns)
+# returns EntNS for $app_ns with correct inheritance settings.
+#
+sub ensure_entns {
+  my ($mypack, $app_ns, @base_entns) = @_;
+  my $entns = $mypack->ensure_supplns(EntNS => $app_ns, \@base_entns
+				      , undef, +{no_fields => 1});
+  $entns;
+}
+
+# New interface.
+# ensure_supplns($kind, $app_ns, [@base_suppls], [@base_mains], {%opts})
+# returns ${app_ns}::${kind} with correct inheritance.
+#
+# [@base_suppls] gives base supplemental classes for this supplns.
+# [@base_mains] gives (not supplemental but) main classes for this.
+#
+# If both base_suppls and base_mains is empty, base_mains is derived
+# from current @ISA of $app_ns.
+#
+sub ensure_supplns {
+  my ($mypack, $kind, $app_ns, $base_suppls, $base_mains, $opts) = @_;
+
+  if (not $base_suppls and not $base_mains) {
+    $base_mains = [list_isa($app_ns)];
+  }
+
+  my @baseclass = (lexpand($base_suppls)
+		   , map {$_->$kind()} lexpand($base_mains));
+
+  my $supplns = join("::", $app_ns, $kind);
+
+  my $sym = do {no strict 'refs'; \*{$supplns}};
   if (*{$sym}{CODE}) {
-    # croak "EntNS for $app_ns is already defined!";
-    return $entns;
+    # croak "$kind for $app_ns is already defined!";
+    return $supplns;
   }
 
   if ($mypack->should_use_mro_c3) {
-    print STDERR "set mro c3 for $entns\n" if DEBUG;
-    mro::set_mro($entns, 'c3')
+    print STDERR "# Set mro c3 for $supplns since $mypack uses c3\n" if DEBUG;
+    mro::set_mro($supplns, 'c3')
   } else {
-    print STDERR "keep mro dfs for $entns\n" if DEBUG;
+    print STDERR "# Keep mro dfs for $supplns since $mypack uses dfs\n" if DEBUG;
   }
 
   # $app_ns が %FIELDS 定義を持たない時(ex YLObjectでもPartialでもない)に限り、
   # YATT::Lite への継承を設定する
   unless (YATT::Lite::MFields->has_fields($app_ns)) {
     # XXX: $mypack への継承にすると、あちこち動かなくなるぜ？なんで？
+    print STDERR "# Add ISA(",MY,") to app_ns='$app_ns', with fields.\n"
+      if DEBUG;
     YATT::Lite::MFields->add_isa_to($app_ns, MY)->define_fields($app_ns);
   }
 
-  unless (grep {$_->can("EntNS")} @baseclass) {
-    my $base = try_invoke($app_ns, 'EntNS') // $mypack->root_EntNS;
-    # print "insert base '$base' for entns $entns\n";
+  unless (grep {$_->can($kind)} @baseclass) {
+    my $base = try_invoke($app_ns, $kind) // $mypack->can("root_$kind")->();
+    ckrequire($base);
+    print STDERR "# Use default $base for $supplns\n" if DEBUG;
     unshift @baseclass, $base;
   }
 
-  # print "entns $entns should inherits: @baseclass\n";
-  YATT::Lite::MFields->add_isa_to($entns, @baseclass);
+  print STDERR "# Add ISA(@baseclass) to $kind $supplns\n" if DEBUG;
+  YATT::Lite::MFields->add_isa_to($supplns, @baseclass);
+  if (not $opts->{no_fields}) {
+    YATT::Lite::MFields->define_fields($supplns);
+  }
 
-  set_inc($entns, 1);
+  set_inc($supplns, 1);
 
-  # EntNS() を足すのは最後にしないと、再帰継承に陥る
+  # $kind() を足すのは最後にしないと、再帰継承に陥る
   unless (my $code = *{$sym}{CODE}) {
-    define_const($sym, $entns);
-  } elsif ((my $old = $code->()) ne $entns) {
-    croak "Can't add EntNS() to '$app_ns'. Already has EntNS as $old!";
+    define_const($sym, $supplns);
+  } elsif ((my $old = $code->()) ne $supplns) {
+    croak "Can't add $kind() to '$app_ns'. Already has $kind as $old!";
   } else {
     # ok.
   }
-  $entns
+  $supplns
 }
 
 sub list_entns {
@@ -460,7 +523,7 @@ sub define_Entity {
       my ($name, $sub) = @_;
       my $longname = join "::", $destns, "entity_$name";
       subname($longname, $sub);
-      print "defining entity_$name in $destns\n" if $ENV{DEBUG_ENTNS};
+      print STDERR "defining entity_$name in $destns\n" if DEBUG;
       *{globref($destns, "entity_$name")} = $sub;
     };
   }

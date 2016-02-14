@@ -16,7 +16,6 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_lcmsg_sink
 
 	      n_compiles
-	      cgen_class
 	    /;
 use YATT::Lite::Util;
 use YATT::Lite::Constants;
@@ -372,15 +371,7 @@ sub synerror {
   # DirHandler INST 固有 CGEN_perl の生成
   sub get_cgen_class {
     (my MY $self, my $type) = @_;
-    my $sub = $self->can("cgen_$type")
-      || carp "Unknown product type: $type";
-    $self->{cgen_class}{$type} ||= do {
-      my $cg_base = $sub->();
-      # XXX: ref($facade) が INST 固有に成ってなかったら？
-      my $instpkg = ref($self->{cf_facade})."::CGEN_$type";
-      ckeval(qq|package $instpkg; use base qw($cg_base)|);
-      $instpkg;
-    };
+    $self->{cf_facade}->get_cgen_class($type);
   }
 
   # XXX: Action only コンパイルは？

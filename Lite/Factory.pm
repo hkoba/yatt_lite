@@ -332,6 +332,10 @@ sub preload_app_base {
 sub init_app_ns {
   (my MY $self) = @_;
   $self->SUPER::init_app_ns;
+
+  # EntNS is initialized here.
+  # Note: CGEN_perl is not initialized here and delayed until it is required.
+  # This helps to avoid loading CGen::Perl for *.ydo in CGI.
   $self->{default_app}->ensure_entns($self->{app_ns});
 }
 
