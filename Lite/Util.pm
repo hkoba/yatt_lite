@@ -471,7 +471,7 @@ sub named_attr {
 		     , radio => [1, 0]
 		     , checkbox => [2, 1]);
   sub att_value_in {
-    my ($in, $type, $name, $formal_value, $as_value) = @_;
+    my ($in, $type, $name, $formal_value, $as_value, $is_default) = @_;
     defined (my $spec = $input_spec{$type})
       or croak "Unknown type: $type";
 
@@ -504,7 +504,7 @@ sub named_attr {
       push @res, qq|value="@{[escape($as_value)]}"|;
     }
 
-    if (find_value_in($in, $name, $formal_value)) {
+    if (find_value_in($in, $name, $formal_value, $is_default)) {
       push @res, $typeid ? "checked" : "selected";
     }
 
@@ -512,7 +512,7 @@ sub named_attr {
   }
 
   sub find_value_in {
-    my ($in, $name, $formal_value) = @_;
+    my ($in, $name, $formal_value, $is_default) = @_;
 
     my $actual_value = do {
       if (my $sub = $in->can("param")) {
@@ -520,12 +520,12 @@ sub named_attr {
       } elsif (ref $in eq 'HASH') {
 	$in->{$name};
       } else {
-	croak "Can't extract parameter from $in";
+	undef;
       }
     };
 
     if (not defined $actual_value) {
-      0
+      $is_default ? 1 : 0
     } elsif (not ref $actual_value) {
       $actual_value eq $formal_value
     } elsif (ref $actual_value eq 'HASH') {
