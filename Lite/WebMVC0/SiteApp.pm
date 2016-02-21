@@ -627,6 +627,19 @@ Entity is_debug_allowed_ip => sub {
 				    // ['127.0.0.1']);
 };
 
+foreach my $name (qw/
+		      file_location
+		      is_current_file
+		      is_current_page
+		    /
+		) {
+  my $method = $name;
+  Entity $method => sub {
+    shift;
+    $CON->$method(@_);
+  };
+}
+
 foreach my $item (map([lc($_) => uc($_)]
 		      , qw/SCRIPT_NAME
 			   PATH_INFO

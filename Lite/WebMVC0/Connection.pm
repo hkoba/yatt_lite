@@ -17,7 +17,7 @@ use YATT::Lite::MFields
 
     current_user
    /);
-use YATT::Lite::Util qw(globref url_encode nonempty lexpand);
+use YATT::Lite::Util qw(globref url_encode nonempty empty rootname lexpand);
 use YATT::Lite::PSGIEnv;
 
 use YATT::Lite::Util::CGICompat;
@@ -226,6 +226,7 @@ sub location {
   (my $loc = ($prop->{cf_location} // '')) =~ s,/*$,/,;
   $loc;
 }
+*dir_location = *location; *dir_location = *location;
 
 sub _invoke_or {
   my ($default, $obj, $method, @args) = @_;
@@ -366,6 +367,46 @@ sub mkquery {
     wantarray ? () : '';
   } else {
     wantarray ? @enc_param : '?'.join($sep, @enc_param);
+  }
+}
+
+
+# script_name + path_info - subpage
+# (script_name == location of this dir (DirApp))
+#
+sub file_location {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $loc = $prop->{cf_location} // "/";
+  if (not $prop->{cf_is_index}
+      and my $fn = $prop->{cf_file}) {
+    $fn =~ s/\..*//;
+    $loc .= $fn;
+  }
+  $loc;
+}
+
+# XXX: not yet tested.
+sub is_current_file {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($fn) = @_;
+  $glob->file_location eq $fn
+}
+
+sub is_current_page {
+  &YATT::Lite::Breakpoint::breakpoint;
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($file, $page) = do {
+    @_ <= 1 ? (rootname($prop->{cf_file}), $_[0]) : @_;
+  };
+  rootname($prop->{cf_file}) eq $file
+    or return 0;
+  $page //= '';
+  if (empty(my $subpath = $prop->{cf_subpath})) {
+    $page eq '';
+  } elsif ($page eq '') {
+    0
+  } else {
+    $subpath =~ m{^/$page};
   }
 }
 

@@ -17,6 +17,7 @@ require Scalar::Util;
 		     untaint_any ckeval ckrequire untaint_unless_tainted
 		     dict_sort terse_dump catch
 		     nonempty
+		     empty
 		     subname
 		     pkg2pm
 		     globref_default
@@ -37,6 +38,9 @@ require Scalar::Util;
 
   sub nonempty {
     defined $_[0] && $_[0] ne '';
+  }
+  sub empty {
+    not defined $_[0] or $_[0] eq '';
   }
 
   sub define_const {
