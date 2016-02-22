@@ -376,7 +376,14 @@ sub mkquery {
 #
 sub file_location {
   my PROP $prop = (my $glob = shift)->prop;
-  my $loc = $prop->{cf_location} // "/";
+  my Env $env = $prop->{cf_env};
+  my $loc = do {
+    if (my $sn = $env->{SCRIPT_NAME}) {
+      "$sn/"
+    } else {
+      $prop->{cf_location} // "/";
+    }
+  };
   if (not $prop->{cf_is_index}
       and my $fn = $prop->{cf_file}) {
     $fn =~ s/\..*//;
