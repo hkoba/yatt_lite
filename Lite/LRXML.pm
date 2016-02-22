@@ -599,9 +599,29 @@ sub add_lineinfo {
   # push @$sink, [TYPE_LINEINFO, $self->{endln}];
 }
 
+sub parse_arg_spec_for_part {
+  (my MY $self, my Part $part, my $attNode) = @_;
+    my ($node_type, $lno, $argName, $desc, @rest)
+      = @{$attNode}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY
+		    , NODE_BODY+1 .. $#$attNode];
+  my ($type, $dflag, $default);
+  if ($node_type == TYPE_ATT_NESTED) {
+    $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
+    # primary of [primary key=val key=val] # delegate:foo の時は BODY に入る？
+  } else {
+    ($type, $dflag, $default) = split m{([|/?!])}, $desc || '', 2;
+  };
+  ($type, $argName, nextArgNo($part)
+   , $lno, $node_type, $dflag
+   , defined $default
+   ? $self->_parse_text_entities($default) : undef);
+}
+
 sub add_args {
   (my MY $self, my Part $part) = splice @_, 0, 2;
   foreach my $argSpec (@_) {
+    # XXX: Rewrite this with parse_arg_spec_for_part!
+
     # XXX: text もあるし、 %yatt:argmacro; もある。
     my ($node_type, $lno, $argName, $desc, @rest)
       = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY
@@ -654,7 +674,6 @@ sub add_url_params {
   }
 }
 
-
 # code 型は仮想的な Widget を作る。
 sub add_arg_of_type_code {
   (my MY $self, my Part $part, my ($var, $attlist)) = @_;
@@ -682,14 +701,56 @@ sub add_arg_of_type_delegate {
     die "Can't weaken!";
   }
   $var->delegate_vars(\ my %delegate_vars);
+
+  my ($attDict, $excludeDict) = do {
+    my (%attDict, %exclDict);
+    foreach my $argSpec (@$attlist) {
+      if (my $attName = $argSpec->[NODE_PATH]) {
+	defined $attDict{$attName}
+	  and die $self->synerror_at
+	  ($argSpec->[NODE_LNO]
+	   , "Duplicate argname '%s' in delegate var %s"
+	   , $attName, $name);
+	$attDict{$attName} = $argSpec;
+      } elsif ($argSpec->[NODE_TYPE] == TYPE_ATT_TEXT
+	       and ($attName) = $argSpec->[NODE_BODY] =~ /^-(\w+)$/) {
+	if (not $delegate->{arg_dict}{$attName}) {
+	  die $self->synerror_at
+	    ($argSpec->[NODE_LNO]
+	     , "No such argument '%s' in delegate to '%s'"
+	     , $attName, $name);
+	}
+	$exclDict{$attName} = $argSpec;
+      } else {
+	die $self->synerror_at
+	  ($argSpec->[NODE_LNO]
+	   , "Invalid decl spec for delegate var %s", $name);
+      }
+    }
+    (\%attDict, \%exclDict);
+  };
+
   foreach my $argName (@{$delegate->{arg_order}}) {
     # 既に宣言されている名前は、足さない。
     next if $widget->{arg_dict}{$argName};
+
+    # Ignore [delegate -excluded_var]
+    next if $excludeDict->{$argName};
+
     $delegate_vars{$argName} = my $orig = $delegate->{arg_dict}{$argName};
-    # clone して argno と lineno を変える。
-    $widget->{arg_dict}{$argName} = my $clone
-      = $self->mkvar_at($widget->{cf_startln}, @$orig)
-	->argno(nextArgNo($widget))->lineno($widget->{cf_startln});
+
+    my $actual = do {
+      if (my $att = $attDict->{$argName}) {
+	my @new = $self->parse_arg_spec_for_part($widget, $att);
+	$new[0] ||= $orig->[0];
+	$self->mkvar_at($self->{startln}, @new);
+      } else {
+	# clone して argno と lineno を変える。
+	$self->mkvar_at($widget->{cf_startln}, @$orig)
+	  ->argno(nextArgNo($widget))->lineno($widget->{cf_startln});
+      }
+    };
+    $widget->{arg_dict}{$argName} = $actual;
     # XXX: lineno を widget の startln にするのは手抜き。本来は直前の arg のものを使うべき。
     push @{$widget->{arg_order}}, $argName;
   }
