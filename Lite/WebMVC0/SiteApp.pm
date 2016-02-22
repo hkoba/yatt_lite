@@ -629,6 +629,7 @@ Entity is_debug_allowed_ip => sub {
 
 foreach my $name (qw/
 		      file_location
+		      dir_location
 		      is_current_file
 		      is_current_page
 		    /
