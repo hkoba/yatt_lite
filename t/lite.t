@@ -40,11 +40,11 @@ sub err_like (@) {
 }
 
 {
-  my $theme = "infra";
+  my $theme = "[infra]";
   is(YATT::Lite->EntNS, "YATT::Lite::EntNS", "[$theme] YL->EntNS");
   is_deeply [list_isa("YATT::Lite::EntNS", 1)]
       , [['YATT::Lite::Entities']]
-	, "[$theme] YL EntNS isa tree";
+	, "$theme YL EntNS isa tree";
 }
 
 {
@@ -96,12 +96,12 @@ END
     err_like sub {
       $yatt->find_part_handler([foo => page => 'qux']);
     }, qr{^No such page in file foo: qux}
-      , "Error diag for misspelled widget";
+      , "$theme Error diag for misspelled widget";
 
     err_like sub {
       $yatt->find_part_handler([foo => action => 'hoe']);
     }, qr{^No such action in file foo: hoe}
-      , "Error diag for misspelled action";
+      , "$theme Error diag for misspelled action";
   }
 
   {
@@ -143,6 +143,7 @@ END
 
   {
     my $SUB = 'pos';
+    $theme = "[positional arguments]";
     ok(my $pos_t = $yatt->add_to(pos => <<'END'), "$theme add_to $SUB");
 <!yatt:args>
 <yatt:posargs c="foo" "bar" 'baz'/>
@@ -162,6 +163,7 @@ END
 
   {
     my $SUB = 'dobody';
+    $theme = "[$SUB]";
     ok(my $pos_t = $yatt->add_to(dobody => <<'END'), "$theme add_to $SUB");
 <!yatt:args>
 <yatt:dobody "AAA" 'bbb'>
@@ -182,6 +184,7 @@ END
 
   {
     my $SUB = 'elematt';
+    $theme = "[$SUB]";
     ok(my $pos_t = $yatt->add_to($SUB => <<'END'), "$theme add_to $SUB");
 <yatt:elematt>
 <:yatt:title>TITLE</:yatt:title>
@@ -229,6 +232,7 @@ END
   }
 
   {
+    $theme = "[delegate]";
     my $SUB = 'dodelegate';
     ok(my $pos_t = $yatt->add_to(dodelegate => <<'END'), "$theme add_to $SUB");
 <!yatt:args foo bar>
@@ -280,6 +284,7 @@ END
 
   {
     my $SUB = 'error';
+    $theme = "[$SUB]";
     ok($yatt->add_to(error => <<'END'), "$theme add_to $SUB");
 <!yatt:args error>
 <h2>&yatt:error:reason();</h2>
@@ -347,7 +352,7 @@ END
     }
 
     my $SUB = 'l10nmsg';
-
+    $theme = "[$SUB]";
     my $mkmsg = sub {
       my ($msgid, $msgstr, @rest) = @_;
       Locale::PO->new(-msgid => $msgid, -msgstr => $msgstr, @rest);
