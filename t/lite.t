@@ -257,6 +257,28 @@ END
   }
 
   {
+    $theme = "[delegate attlist]";
+    my $SUB = 'delegate_except';
+    ok(my $pos_t = $yatt->add_to($SUB => <<'END'), "$theme add_to $SUB");
+<!yatt:widget base1 x y=! z="?foo" w>
+z=&yatt:z;
+
+<!yatt:widget main base1=[delegate -y z="?bar"]>
+<yatt:base1 y="ignore"/>
+END
+
+    ok my $part = $yatt->find_part($SUB => "main")
+      , "$theme find_part <yatt:${SUB}:main>";
+
+    is_deeply $part->{arg_order}, [qw/x z w body/]
+      , "$theme Argument list of <yatt:${SUB}:main>, synthesized from delegate type";
+
+    my $pos_p = $yatt->find_product(perl => $pos_t);
+    eq_or_diff captured($pos_p => render_main => ())
+      , "z=bar\n\n", "$theme $SUB render_main. (default value is overridden)";
+  }
+
+  {
     my $SUB = 'error';
     ok($yatt->add_to(error => <<'END'), "$theme add_to $SUB");
 <!yatt:args error>
