@@ -400,7 +400,6 @@ sub is_current_file {
 }
 
 sub is_current_page {
-  &YATT::Lite::Breakpoint::breakpoint;
   my PROP $prop = (my $glob = shift)->prop;
   my ($file, $page) = do {
     @_ <= 1 ? (rootname($prop->{cf_file}), $_[0]) : @_;
@@ -408,6 +407,7 @@ sub is_current_page {
   rootname($prop->{cf_file}) eq $file
     or return 0;
   $page //= '';
+  $page =~ s{^/}{}; # Treat /foo as foo.
   if (empty(my $subpath = $prop->{cf_subpath})) {
     $page eq '';
   } elsif ($page eq '') {

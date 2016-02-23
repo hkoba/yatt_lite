@@ -68,6 +68,71 @@ my $cwd = cwd();
 	  };
 	};
       }
+
+      {
+	my $wname = "test" . ++$item;
+	my $url = "$script_name/$wname";
+	MY->mkfile("$dir/html$script_name/$wname.yatt", <<'END');
+<yatt:tab/>
+<!yatt:page "/foo">
+<yatt:tab/>
+<!yatt:page "/bar">
+<yatt:tab/>
+<!yatt:widget tab>
+&yatt:if(:is_current_page(),yes,no);
+&yatt:if(:is_current_page(foo),yes,no);
+&yatt:if(:is_current_page(bar),yes,no);
+END
+
+	my $test = sub {
+	  my ($arg, $page, $to_be) = @_;
+	  describe ":is_current_page($arg) for subpage='$page'", sub {
+	    my $psgi = (GET "$script_name/$wname$page")->to_psgi;
+	    $psgi->{SCRIPT_NAME} = $script_name;
+
+	    it "should return (@$to_be)", sub {
+	      expect([split " ", $site->call($psgi)->[2][0]])->to_be($to_be);
+	    };
+	  };
+	};
+
+	$test->("" => "" => [qw(yes no no)]);
+	$test->(foo => "/foo" => [qw(no yes no)]);
+	$test->(bar => "/bar" => [qw(no no yes)]);
+      }
+
+      {
+	my $wname = "test" . ++$item;
+	my $url = "$script_name/$wname";
+	MY->mkfile("$dir/html$script_name/$wname.yatt", <<'END');
+<yatt:tab/>
+<!yatt:page "/foo">
+<yatt:tab/>
+<!yatt:page "/bar">
+<yatt:tab/>
+<!yatt:widget tab>
+&yatt:if(:is_current_page(/),yes,no);
+&yatt:if(:is_current_page(/foo),yes,no);
+&yatt:if(:is_current_page(/bar),yes,no);
+END
+
+	my $test = sub {
+	  my ($arg, $page, $to_be) = @_;
+	  describe ":is_current_page($arg) for subpage='$page'", sub {
+	    my $psgi = (GET "$script_name/$wname$page")->to_psgi;
+	    $psgi->{SCRIPT_NAME} = $script_name;
+
+	    it "should return (@$to_be)", sub {
+	      expect([split " ", $site->call($psgi)->[2][0]])->to_be($to_be);
+	    };
+	  };
+	};
+
+	$test->("/" => "" => [qw(yes no no)]);
+	$test->("/foo" => "/foo" => [qw(no yes no)]);
+	$test->("/bar" => "/bar" => [qw(no no yes)]);
+      }
+
     };
   }
 }
