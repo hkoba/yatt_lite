@@ -583,7 +583,7 @@ sub encode_query {
       my @res;
       while (my ($k, $v) = splice @param, 0, 2) {
 	my $ek = url_encode($self, $k);
-	push @res, $ek . '='. url_encode($self, $_)
+	push @res, $ek . '='. (url_encode($self, $_) // '')
 	  for ref $v ? @$v : $v;
       }
       @res;
