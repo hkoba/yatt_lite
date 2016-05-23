@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; my $dist; BEGIN { local @_ = "$FindBin::Bin/.."; ($dist) = do "$FindBin::Bin/../t_lib.pl" }
 #----------------------------------------
 
@@ -83,17 +83,25 @@ sub test_err {
   }
 }
 
+#
+# substitute varing parts, then compare.
+# subst patterns are embeded in $expect_pat with
+#
+#   [[[<TYPE> PATTERN]]]
+#
+#  where TYPE can be one of
+#     "?" - omissible
+#     "!" - must exist
+#
 sub eq_or_diff_subst {
   my ($got, $expect_pat, $title) = @_;
-  my (@patlist, %dup_pat);
-  my $fill = "___";
-  $expect_pat =~ s{\[\[(.*?)\]\]}{
-    do {
-      unless ($dup_pat{$1}++) {
-	push @patlist, $1;
-      }
-      $fill;
-    }
+  my (%subst);
+  $expect_pat =~ s{\[\[\[\s*<([?!])>(.*?)\]\]\]}{
+    my $is_omissible = $1 eq "?";
+    $subst{$2} ||= do {
+      my $fill = sprintf "___<%d>___", scalar keys %subst;
+      $is_omissible ? "" : $fill;
+    };
   }eg;
 
   unless (defined $got) {
@@ -102,9 +110,10 @@ sub eq_or_diff_subst {
     return;
   }
 
-  if (@patlist) {
-    my $subst = join "|", @patlist;
-    $got =~ s/$subst/$fill/g;
+  if (%subst) {
+    foreach my $subst (keys %subst) {
+      $got =~ s{$subst}{$subst{$subst}}g;
+    }
   }
 
   eq_or_diff($got, $expect_pat, $title);

@@ -1,6 +1,6 @@
 package YATT::Lite::Connection; sub PROP () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 use Hash::Util qw/lock_keys/;
@@ -37,6 +37,9 @@ use YATT::Lite::MFields
 
    # Invocation context
    , qw/cf_system cf_yatt cf_backend cf_dbh/
+
+   # Raw path_info. should match with env->{PATH_INFO}
+   , qw/cf_path_info/
 
    # Location quad and is_index flag
    , qw/cf_dir cf_location cf_file cf_subpath
@@ -115,6 +118,11 @@ sub configure_encoding {
   binmode $glob, ":encoding($enc)";
 }
 
+sub get_encoding_layer {
+  my PROP $prop = prop(my $glob = shift);
+  $$prop{cf_encoding} ? ":encoding($$prop{cf_encoding})" : '';
+}
+
 #========================================
 
 sub cget {
@@ -175,6 +183,12 @@ sub as_error {
   }
   $glob->configure(@_) if @_;
   $glob;
+}
+
+sub error_with_status {
+  my ($glob, $code) = splice @_, 0, 2;
+  $glob->configure(status => $code)
+    ->raise(error => incr_opt(depth => \@_), @_);
 }
 
 sub error {

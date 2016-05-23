@@ -26,6 +26,29 @@ IN:
  </yatt:foreach>
 ERROR: TAG Mismatch! <yatt:my> closed by </yatt:foreach> line 3,
 
+TITLE: mis-closed attribute element(name mismatch)
+IN:
+  <!yatt:widget foo x y>
+  <yatt:foo x="foo">
+    <:yatt:y>bar</:yatt:z>
+  </yatt:foo>
+  
+  <!yatt:widget bar x y>
+  barrr
+ERROR: TAG Mismatch! <:yatt:y> closed by </:yatt:z> line 3,
+
+
+TITLE: mis-closed attribute element(':' mismatch)
+IN:
+  <!yatt:widget foo x y>
+  <yatt:foo x="foo">
+    <:yatt:y>bar</yatt:y>
+  </yatt:foo>
+  
+  <!yatt:widget bar x y>
+  barrr
+ERROR: TAG Mismatch! <:yatt:y> closed by </yatt:y> line 3,
+
 
 TITLE: var in toplevel
 IN:
@@ -64,6 +87,10 @@ IN:
  moe
 ERROR: ^No such variable 'z' at file \S+ line 10,
 
+TITLE: Unknown entity function name
+IN:
+ &yatt:unknown_entity();
+ERROR: ^No such entity in namespace "\w+::EntNS::\w+": unknown_entity
 
 TITLE: Unknown type
 IN:

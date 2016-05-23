@@ -1,9 +1,13 @@
 package YATT::Lite::Core; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
+
+use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
+
 use parent qw(YATT::Lite::VFS);
 use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
+			   cf_index_name
 	      cf_tmpl_encoding
 	      cf_debug_parser
 	      cf_parse_while_loading cf_only_parse
@@ -11,6 +15,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_special_entities
 	      cf_lcmsg_sink
 
+	      n_compiles
 	      cgen_class
 	    /;
 use YATT::Lite::Util;
@@ -46,7 +51,12 @@ use YATT::Lite::Breakpoint ();
 			 cf_usage cf_constants
 			 cf_ignore_trailing_newlines
 			 cf_subroutes
-		       )]]
+		      )]]
+
+     , [ParsingState => -fields => [qw(startln endln
+				       startpos curpos
+				       cf_path
+				       )]]
     );
 
   # folder の weaken は parser がしてる。
@@ -110,7 +120,7 @@ use YATT::Lite::Breakpoint ();
       next unless $name =~ /^[a-z]\w*$/i;
       my $argdecl = $widget->{arg_dict}{$name}
 	or die "Unknown args for widget '$widget->{cf_name}': $name";
-      my @value = $cgi->param($name);
+      my @value = $cgi->multi_param($name);
       $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
 	? \@value : $value[0];
     }
@@ -134,6 +144,57 @@ sub configure_rc_script {
 sub create_file {
   (my MY $vfs, my $spec) = splice @_, 0, 2;
   $vfs->Template->new(path => $spec, @_);
+}
+
+#
+# called from <!yatt:base>
+#
+sub declare_base {
+  (my MY $vfs, my ParsingState $state, my Template $tmpl, my ($ns, @args)) = @_;
+
+  unless (@args) {
+    $vfs->synerror($state, q{No base arg});
+  }
+
+  my $base = $tmpl->{cf_base} //= [];
+  if (@$base) {
+    $vfs->synerror($state, "Duplicate base decl! was=%s, new=%s"
+		   , terse_dump($base), terse_dump(\@args));
+  }
+
+  foreach my $att (@args) {
+    my $type = $vfs->node_type($att);
+
+    $type == TYPE_ATT_TEXT
+      or $vfs->synerror($state, q{Not implemented base decl type: %s}, $att);
+
+    nonempty(my $fn = $vfs->node_value($att))
+      or $vfs->synerror($state, q{base spec is empty!});
+
+    my Folder $dirobj = $tmpl->dirobj;
+
+    if ($vfs->{on_memory}) {
+      my $o = $vfs->find_file($fn)
+	or $vfs->synerror($state, q{No such base path: %s}, $fn);
+      push @$base, $o;
+    } else {
+      defined(my $realfn = $vfs->resolve_path_from($dirobj, $fn))
+	or $vfs->synerror($state, q{Can't find object path for: %s}, $fn);
+
+      -e $realfn
+	or $vfs->synerror($state, q{No such base path: %s}, $realfn);
+      my $kind = -d $realfn ? 'dir' : 'file';
+      push @$base, $vfs->create($kind => $realfn, parent => $dirobj);
+    }
+  }
+}
+
+sub synerror {
+  (my MY $vfs, my ParsingState $state, my ($fmt, @opts)) = @_;
+  my $opts = {depth => 2};
+  $opts->{tmpl_file} = $state->{cf_path} if $state->{cf_path};
+  $opts->{tmpl_line} = $state->{startln} if $state->{startln};
+  die $vfs->error($opts, $fmt, @opts);
 }
 
 #========================================
@@ -230,6 +291,7 @@ sub create_file {
     my ($partName, $kind, $pureName, @rest)
       = ref $nameSpec ? @$nameSpec : $nameSpec;
 
+    $partName ||= $self->{cf_index_name};
     $kind //= 'page';
     $pureName //= '';
 
@@ -307,7 +369,19 @@ sub create_file {
 	 , parser => $self->get_parser
 	 , sink => $opts{sink} || sub {
 	   my ($info, @script) = @_;
-	   print @script, "\n" if $self->{cf_debug_cgen};
+	   if (not $self->{cf_debug_cgen}) {
+	   } else {
+	     my Template $real = $info->{folder};
+	     print STDERR "# compiling $type code of $real->{cf_path}\n";
+	     if ($self->{cf_debug_cgen} >= 2) {
+	       print STDERR "#--BEGIN--\n";
+	       print STDERR @script, "\n";
+	       print STDERR "#--END--\n\n"
+	     }
+	   }
+	   #
+	   $self->{n_compiles}++;
+
 	   ckeval(@script);
 	 });
       # 二重生成防止のため、代入自体は ensure_generated の中で行う。
@@ -378,13 +452,21 @@ sub create_file {
   }
   sub YATT::Lite::Core::Template::refresh {
     (my Template $tmpl, my MY $self) = @_;
+
+    my $old_product = $tmpl->{product};
+
     if ($tmpl->{cf_path}) {
+      printf STDERR "template_refresh(%s)\n", $tmpl->{cf_path} if DEBUG_REBUILD;
       my $mtime = stat_mtime($tmpl->{cf_path});
       unless (defined $mtime) {
+	printf STDERR " => deleted\n" if DEBUG_REBUILD;
 	return; # XXX: ファイルが消された
       } elsif (defined $tmpl->{cf_mtime} and $tmpl->{cf_mtime} >= $mtime) {
+	printf STDERR " => not updated.\n" if DEBUG_REBUILD;
+	$self->refresh_deps_for($tmpl) if $self->{cf_always_refresh_deps};
 	return; # timestamp は、キャッシュと同じかむしろ古い
       }
+      printf STDERR " => found update\n" if DEBUG_REBUILD;
       $tmpl->{cf_mtime} = $mtime;
       my $parser = $self->get_parser;
       # decl のみ parse.
@@ -402,6 +484,14 @@ sub create_file {
     } else {
       return;
     }
+
+    # $tmpl->YATT::Lite::VFS::Folder::vivify_base_descs($self);
+
+    # If there was products, rebuild it too.
+    foreach my $type ($old_product ? keys %$old_product : ()) {
+      $self->find_product($type => $tmpl);
+    }
+
     $tmpl;
   }
   sub YATT::Lite::Core::Widget::fixup {

@@ -1,6 +1,7 @@
 package YATT::Lite::Util;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
+use constant DEBUG_LOOKUP_PATH => $ENV{DEBUG_YATT_UTIL_LOOKUP_PATH};
 
 use URI::Escape ();
 use Tie::IxHash;
@@ -18,6 +19,7 @@ require Scalar::Util;
 		     nonempty
 		     subname
 		     pkg2pm
+		     globref_default
 		   /;
   }
   use Carp;
@@ -37,11 +39,29 @@ require Scalar::Util;
     defined $_[0] && $_[0] ne '';
   }
 
+  sub define_const {
+    my ($name_or_glob, $value) = @_;
+    my $glob = ref $name_or_glob ? $name_or_glob : globref($name_or_glob);
+    *$glob = my $const_sub = sub () { $value };
+    $const_sub;
+  }
+
   sub globref {
-    my ($thing, $name) = @_;
+    my ($thing, @name) = @_;
     my $class = ref $thing || $thing;
     no strict 'refs';
-    \*{join("::", $class, defined $name ? $name : ())};
+    \*{join("::", $class, grep {defined} @name)};
+  }
+  sub globref_default {
+    unless (@_ == 2) {
+      croak "Too few arguments";
+    }
+    my ($globref, $default) = @_;
+    my $kind = ref $default;
+    *{$globref}{$kind} || do {
+      *{$globref} = $default;
+      $default;
+    };
   }
   sub symtab {
     *{globref(shift, '')}{HASH}
@@ -150,10 +170,11 @@ require Scalar::Util;
   }
 
   sub split_path {
-    my ($path, $startDir, $cut_depth) = @_;
+    my ($path, $startDir, $cut_depth, $default_ext) = @_;
     # $startDir is $app_root.
     # $doc_root should resides under $app_root.
     $cut_depth //= 1;
+    $default_ext //= "yatt";
     $startDir =~ s,/+$,,;
     unless ($path =~ m{^\Q$startDir\E}gxs) {
       die "Can't split_path: prefix mismatch: $startDir vs $path";
@@ -175,10 +196,10 @@ require Scalar::Util;
     $dir .= "/" if $dir !~ m{/$};
     my $subpath = substr($path, $pos);
     if (not defined $file) {
-      if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.yatt") {
+      if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.$default_ext") {
 	$subpath = substr($subpath, 1+length $1);
-	$file = "$1.yatt";
-      } elsif (-e "$dir/index.yatt") {
+	$file = "$1.$default_ext";
+      } elsif (-e "$dir/index.$default_ext") {
 	# index.yatt should subsume all subpath.
       } elsif ($subpath =~ s{^/([^/]+)$}{}) {
 	# Note: Actually, $file is not accesible in this case.
@@ -218,12 +239,14 @@ require Scalar::Util;
     $want_ext //= '.yatt';
     my $ixfn = $index_name . $want_ext;
     my @dirlist = grep {defined $_ and -d $_} @$dirlist;
+    print STDERR "dirlist" => terse_dump(@dirlist), "\n" if DEBUG_LOOKUP_PATH;
     my $pi = $path_info;
     my ($loc, $cur, $ext) = ("", "");
   DIG:
     while ($pi =~ s{^/+([^/]+)}{}) {
       $cur = $1;
       $ext = ($cur =~ s/(\.[^\.]+)$// ? $1 : undef);
+      print STDERR terse_dump(cur => $cur, ext => $ext), "\n" if DEBUG_LOOKUP_PATH;
       foreach my $dir (@dirlist) {
 	my $base = "$dir$loc/$cur";
 	if (defined $ext and -r "$base$ext") {
@@ -245,8 +268,10 @@ require Scalar::Util;
       }
     } continue {
       $loc .= "/$cur";
+      print STDERR terse_dump(continuing => $loc), "\n" if DEBUG_LOOKUP_PATH;
       @dirlist = grep {defined} @dirlist;
     }
+      print STDERR terse_dump('end_of_loop'), "\n" if DEBUG_LOOKUP_PATH;
 
     return unless $pi =~ m{^/+$};
 
@@ -255,6 +280,7 @@ require Scalar::Util;
       return ($dir, "$loc/", "$ixfn", "", 1);
     }
 
+      print STDERR terse_dump('at_last'), "\n" if DEBUG_LOOKUP_PATH;
     return;
   }
 
@@ -319,6 +345,9 @@ sub dofile_in {
 
 sub compile_file_in {
   my ($pkg, $file) = @_;
+  if (-d $file) {
+    croak "file '$file' is a directory!";
+  }
   my $sub = dofile_in($pkg, $file);
   unless (defined $sub and ref $sub eq 'CODE') {
     die "file '$file' should return CODE (but not)!\n";
@@ -350,7 +379,7 @@ BEGIN {
 	  $copy;
 	} elsif (ref $str eq 'SCALAR') {
 	  # PASS Thru. (Already escaped)
-	  $$str;
+	  $$str // $ESCAPE_UNDEF; # fail safe
 	} elsif (_is_escapable($str)) {
 	  $str->as_escaped;
 	} elsif (my $sub = UNIVERSAL::can($str, 'cf_pairs')) {
@@ -437,11 +466,15 @@ sub named_attr {
 }
 
 {
-  our %input_types = qw!select 0 radio 1 checkbox 2!;
+  our %input_spec = (select => [0, 0]
+		     , radio => [1, 0]
+		     , checkbox => [2, 1]);
   sub att_value_in {
     my ($in, $type, $name, $formal_value, $as_value) = @_;
-    defined (my $typeid = $input_types{$type})
+    defined (my $spec = $input_spec{$type})
       or croak "Unknown type: $type";
+
+    my ($typeid, $has_sfx) = @$spec;
 
     unless (defined $name and $name ne '') {
       croak "name is empty";
@@ -458,11 +491,11 @@ sub named_attr {
     }
 
     if ($typeid) {
-      my $sfx = $typeid ? '['.escape($formal_value).']' : '';
+      my $sfx = $has_sfx ? '['.escape($formal_value).']' : '';
       push @res, qq|name="@{[escape($name)]}$sfx"|;
     }
 
-    if (not $typeid) {
+    if (not $has_sfx) {
       # select
       push @res, qq|value="@{[escape($formal_value)]}"|;
     } elsif ($as_value) {
@@ -639,12 +672,6 @@ sub list_isa {
   } @$isa;
 }
 
-sub get_locale_encoding {
-  require Encode;
-  require encoding;
-  Encode::find_encoding(encoding::_get_locale_encoding())->name;
-}
-
 sub set_inc {
   my ($pkg, $val) = @_;
   $pkg =~ s|::|/|g;
@@ -684,7 +711,7 @@ sub shallow_copy {
   }
 }
 
-if (catch {require Sub::Name}) {
+if (not is_debugging() or catch {require Sub::Name}) {
   *subname = sub { my ($name, $sub) = @_; $sub }
 } else {
   *subname = *Sub::Name::subname;
@@ -736,13 +763,21 @@ sub parse_nested_query {
   return {} unless defined $_[0] and $_[0] ne '';
   my ($enc) = $_[1];
   my $params = $_[2] // ixhash();
-  foreach my $p (split /[;&]/, $_[0]) {
-    my ($k, $v) = map {
-      s/\+/ /g;
-      my $raw = URI::Escape::uri_unescape($_);
-      $enc ? Encode::decode($enc, $raw) : $raw;
-    } split /=/, $p, 2;
-    normalize_params($params, $k, $v) if defined $k;
+  if (ref $_[0]) {
+    my @pairs = map {$enc ? map(Encode::decode($enc, $_), @$_) : @$_}
+      ref $_[0] eq 'ARRAY' ? $_[0] : [%{$_[0]}];
+    while (my ($k, $v) = splice @pairs, 0, 2) {
+      normalize_params($params, $k, $v);
+    }
+  } else {
+    foreach my $p (split /[;&]/, $_[0]) {
+      my ($k, $v) = map {
+	s/\+/ /g;
+	my $raw = URI::Escape::uri_unescape($_);
+	$enc ? Encode::decode($enc, $raw) : $raw;
+      } split /=/, $p, 2;
+      normalize_params($params, $k, $v) if defined $k;
+    }
   }
   $params;
 }
@@ -792,7 +827,7 @@ sub pkg2pm {
 # to put all functions into @EXPORT_OK.
 #
 {
-  our @EXPORT_OK;
+  our @EXPORT_OK = qw(define_const);
   my $symtab = symtab(__PACKAGE__);
   foreach my $name (grep {/^[a-z]/} keys %$symtab) {
     my $glob = $symtab->{$name};

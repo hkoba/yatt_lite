@@ -1,6 +1,6 @@
 package YATT::Lite::WebMVC0::SiteApp;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
@@ -22,11 +22,15 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_debug_backend
 			   cf_psgi_static
 			   cf_psgi_fallback
+			   cf_per_role_docroot
+			   cf_per_role_docroot_key
+			   cf_default_role
 			   cf_backend
 			   cf_site_config
 			   cf_logfile
-			   cf_use_subpath
 			   cf_debug_allowed_ip
+			   cf_overwrite_status_code_for_errors_as
+			   re_handled_ext
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -40,20 +44,23 @@ use YATT::Lite qw/Entity *SYS *CON/;
 use YATT::Lite::WebMVC0::DirApp ();
 sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}
-sub default_index_name { 'index' }
 
 use File::Basename;
 
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
-  $self->{cf_index_name} //= $self->default_index_name;
-  $self->{cf_use_subpath} //= 1;
+  $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
+  $self->{cf_per_role_docroot_key} ||= $self->default_per_role_docroot_key;
+  $self->{cf_default_role} ||= $self->default_default_role;
 }
+
+sub default_per_role_docroot_key { 'yatt.role' }
+sub default_default_role { 'nobody' }
 
 sub _cf_delegates {
   (shift->SUPER::_cf_delegates
-   , qw/use_subpath/);
+   , qw(overwrite_status_code_for_errors_as));
 }
 
 #========================================
@@ -88,6 +95,17 @@ sub get_dirhandler {
   (my MY $self, my $dirPath) = @_;
   $dirPath =~ s,/*$,,;
   $self->{path2yatt}{$dirPath} ||= $self->load_yatt($dirPath);
+}
+
+sub get_lochandler {
+  (my MY $self, my ($location, $tmpldir)) = @_;
+  if ($self->{cf_per_role_docroot}) {
+    # When per_role_docroot is on, $tmpldir already points
+    # $per_role_docroot/$role. So just append $location.
+    $self->get_dirhandler($tmpldir.$location);
+  } else {
+    $self->SUPER::get_lochandler($location, $tmpldir);
+  }
 }
 
 #----------------------------------------
@@ -130,7 +148,8 @@ sub to_app {
 #  unless (defined $self->{cf_app_root}) {
 #    croak "app_root is undef!";
 #  }
-  unless (defined $self->{cf_doc_root}) {
+  unless (defined $self->{cf_doc_root}
+	  or defined $self->{cf_per_role_docroot}) {
     croak "document_root is undef!";
   }
   return $self->SUPER::to_app(@_);
@@ -153,10 +172,9 @@ sub call {
 
   YATT::Lite::Breakpoint::break_psgi_call();
 
-  if (defined $self->{cf_app_root} and -e "$self->{cf_app_root}/.htdebug_env") {
-    return [200
-	    , [$self->secure_text_plain]
-	    , [map {escape("$_\t".($env->{$_}//"(undef)")."\n")} sort keys %$env]];
+  if ($self->has_htdebug("env")) {
+    return $self->psgi_dump(map {"$_\t".($env->{$_}//"(undef)")."\n"}
+			    sort keys %$env);
   }
 
   if (my $deny = $self->has_forbidden_path($env->{PATH_INFO})
@@ -164,9 +182,37 @@ sub call {
     return $self->psgi_error(403, "Forbidden $deny");
   }
 
+  if (not $self->{cf_no_unicode_params}
+      and $self->{cf_output_encoding}) {
+    $env->{PATH_INFO} = Encode::decode($self->{cf_output_encoding}
+				       , $env->{PATH_INFO});
+  }
+
+  if ($self->{loc2psgi_dict}
+      and my $psgi_app = $self->lookup_psgi_mount($env->{PATH_INFO})) {
+    require Plack::Util;
+    return Plack::Util::run_app($psgi_app, $env);
+  }
+
   # XXX: user_dir?
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->split_path_info($env);
+
+  my ($realdir, $virtdir);
+  if (@pi) {
+    $realdir = "$tmpldir$loc";
+    $virtdir = defined $self->{cf_doc_root}
+      ? "$self->{cf_doc_root}$loc" : $realdir;
+  }
+
+  if ($self->has_htdebug("path_info")) {
+    return $self->psgi_dump([tmpldir   => $tmpldir]
+			    , [loc     => $loc]
+			    , [file    => $file]
+			    , [trailer => $trailer]
+			    , [virtdir => $virtdir, realdir => $realdir]
+			  );
+  }
 
   if ($self->{cf_debug_psgi}) {
     # XXX: should be configurable.
@@ -187,21 +233,23 @@ sub call {
     return $self->psgi_handle_fallback($env);
   }
 
-  my $virtdir = "$self->{cf_doc_root}$loc";
-  my $realdir = "$tmpldir$loc";
   unless (-d $realdir) {
-    return $self->psgi_error(404, "Not found: $virtdir");
+    return $self->psgi_error(404, "Not found: $loc");
   }
 
   # Default index file.
   # Note: Files may placed under (one of) tmpldirs instead of docroot.
   if ($file eq '') {
-    $file = "$self->{cf_index_name}.yatt";
+    $file = "$self->{cf_index_name}.$self->{cf_ext_public}";
   } elsif ($file eq $self->{cf_index_name}) { #XXX: $is_index
-    $file .= ".yatt";
+    $file .= ".$self->{cf_ext_public}";
   }
 
-  if ($file !~ /\.(yatt|ydo)$/) {
+  if ($file !~ $self->{re_handled_ext}) {
+    if ($self->{cf_debug_psgi} and $self->has_htdebug("static")) {
+      return $self->psgi_dump("Not handled since extension doesn't match"
+			      , $file, $self->{re_handled_ext});
+    }
     return $self->psgi_handle_static($env);
   }
 
@@ -213,6 +261,7 @@ sub call {
   my $req = Plack::Request->new($env);
 
   my @params = (env => $env
+		, path_info => $env->{PATH_INFO}
 		, $self->connection_quad([$virtdir, $loc, $file, $trailer])
 		, $is_index ? (is_index => 1) : ()
 		, is_psgi => 1, cgi => $req);
@@ -246,7 +295,7 @@ sub call {
     return $error;
   } else {
     # system_error. Should be treated by PSGI Server.
-    die $error
+    die $error;
   }
 }
 
@@ -275,12 +324,6 @@ sub make_debug_params {
 
 #========================================
 
-sub psgi_file_app {
-  my ($pack, $path) = @_;
-  require Plack::App::File;
-  Plack::App::File->new(root => $path)->to_app;
-}
-
 sub psgi_handle_static {
   (my MY $self, my Env $env) = @_;
   my $app = $self->{cf_psgi_static}
@@ -295,8 +338,9 @@ sub psgi_handle_static {
 
 sub psgi_handle_fallback {
   (my MY $self, my Env $env) = @_;
-  my $app = $self->{cf_psgi_fallback}
-    or return [404, [], ["Cannot understand:", $env->{PATH_INFO}]];
+  (my $app = $self->{cf_psgi_fallback}
+   ||= $self->psgi_file_app($self->{cf_doc_root}))
+    or return [404, [], ["Cannot understand: ", $env->{PATH_INFO}]];
 
   local $env->{PATH_INFO} = $self->trim_site_prefix($env->{PATH_INFO});
 
@@ -328,7 +372,8 @@ sub is_done {
 sub split_path_info {
   (my MY $self, my Env $env) = @_;
 
-  if (nonempty($env->{PATH_TRANSLATED})
+  if (! $self->{cf_per_role_docroot}
+      && nonempty($env->{PATH_TRANSLATED})
       && $self->is_path_translated_mode($env)) {
     #
     # [1] PATH_TRANSLATED mode.
@@ -344,16 +389,29 @@ sub split_path_info {
     # XXX: should have cut_depth option.
     #
     split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root}
-	       , $self->{cf_use_subpath});
+	       , $self->{cf_use_subpath}
+	       , $self->{cf_ext_public}
+	     );
     # or die.
 
   } elsif (nonempty($env->{PATH_INFO})) {
     #
     # [2] Template lookup mode.
     #
+
+    my $tmpldirs = do {
+      if ($self->{cf_per_role_docroot}) {
+        my $user = $env->{$self->{cf_per_role_docroot_key}};
+        $user ||= $self->{cf_default_role};
+        ["$self->{cf_per_role_docroot}/$user"]
+      } else {
+        $self->{tmpldirs}
+      }
+    };
+
     lookup_path($env->{PATH_INFO}
-		, $self->{tmpldirs}
-		, $self->{cf_index_name}, ".yatt"
+		, $tmpldirs
+		, $self->{cf_index_name}, ".$self->{cf_ext_public}"
 		, $self->{cf_use_subpath});
   } else {
     # or die
@@ -449,6 +507,19 @@ sub configure_allow_debug_from {
   $self->{allow_debug_from} = qr{^(?:$pat)};
 }
 
+sub has_htdebug {
+  (my MY $self, my $name) = @_;
+  defined $self->{cf_app_root}
+    and -e "$self->{cf_app_root}/.htdebug_$name"
+}
+
+sub psgi_dump {
+  my MY $self = shift;
+  [200
+   , [$self->secure_text_plain]
+   , [map {escape(terse_dump($_))} @_]];
+}
+
 #========================================
 
 #========================================
@@ -539,6 +610,22 @@ Entity is_debug_allowed_ip => sub {
   grep {$remote_addr ~~ $_} lexpand($self->{cf_debug_allowed_ip}
 				    // ['127.0.0.1']);
 };
+
+foreach my $item (map([lc($_) => uc($_)]
+		      , qw/SCRIPT_NAME
+			   PATH_INFO
+			   REQUEST_URI
+
+			   SCRIPT_URI
+			   SCRIPT_URL
+			   SCRIPT_FILENAME
+			   /)) {
+  my ($method, $env_name) = @$item;
+  Entity $method => sub {
+    my Env $env = $CON->env;
+    $env->{$env_name};
+  };
+}
 
 #========================================
 

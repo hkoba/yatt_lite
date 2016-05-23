@@ -1,10 +1,10 @@
 package YATT::Lite::VarTypes; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 
 sub Base () {'YATT::Lite::VarTypes::Base'}
-use YATT::Lite::Util qw(globref);
+use YATT::Lite::Util qw(globref define_const);
 require Scalar::Util;
 our @EXPORT_OK;
 our %EXPORT_TAGS;
@@ -16,7 +16,7 @@ sub add_slot_to {
     if (@_) { $self->[$i] = shift; $self; } else { $self->[$i] }
   };
   my $constName = 'VSLOT_'.uc($name);
-  *{globref($pkg, $constName)} = my $sub = sub () { $i };
+  my $sub = define_const(globref($pkg, $constName), $i);
   ($constName => $sub);
 }
 
@@ -74,14 +74,18 @@ BEGIN {
     my $shortName = "t_$type";
     my $fullName = join '::', MY, $shortName;
     *{globref($fullName, 'ISA')} = [Base];
-    *{globref(MY, $shortName)} = sub () { $fullName };
+    define_const(globref(MY, $shortName), $fullName);
     push @EXPORT_OK, $shortName;
     push @{$EXPORT_TAGS{type}}, $shortName;
     if ($consts) {
       foreach my $key (keys %$consts) {
 	my $val = $consts->{$key};
-	*{globref($fullName, $key)}
-	  = ref $val eq 'CODE' ? $val : sub () { $val };
+	my $glob = *{globref($fullName, $key)};
+	if (ref $val eq 'CODE') {
+	  *glob = $val
+	} else {
+	  define_const($glob, $val);
+	}
       }
     }
     if (@slots) {

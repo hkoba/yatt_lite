@@ -1,6 +1,6 @@
 # -*- mode: perl; coding: utf-8 -*-
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { local @_ = "$FindBin::Bin/.."; do "$FindBin::Bin/../t_lib.pl" }
 
 my $app_root = ::dirname(::untaint_any(__FILE__));

@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -49,10 +49,13 @@ $theme = "(mem) plain";
 
 {
   my $vfs = VFS->new
-    ([data => {foo => 'mytext'}, base => [[data => {'bar' => 'BARRR'}]]]
+    ([data => {foo => 'mytext'
+	       , baz => {item => 'nested'}
+	     }, base => [[data => {'bar' => 'BARRR'}]]]
      , no_auto_create => 1, @CF);
   is $vfs->find_part('foo'), 'mytext', "$theme - foo";
   is $vfs->find_part('bar'), 'BARRR', "$theme - bar";
+  is_deeply $vfs->find_part('baz'), {item => 'nested'}, "$theme - nested item";
 }
 
 #========================================
@@ -70,6 +73,22 @@ $theme = "(mem) from nested Dir";
   is $vfs->find_part('foo', 'bar'), 'BARRR', "$theme - foo bar";
   is $vfs->find_part('foo', 'baz'), 'ZZZ', "$theme - foo baz";
 }
+
+# ========================================
+# * data => {name => {name => string}}
+
+$theme = "(mem) auto create for nested data";
+{
+  my $vfs = VFS->new
+    ([data => {foo => 'mytext'
+	       , baz => {item => 'nested'}
+	     }, base => [[data => {'bar' => 'BARRR'}]]]
+     , @CF);
+  is $vfs->find_part('foo')->cget('string'), 'mytext', "$theme - foo";
+  is $vfs->find_part('bar')->cget('string'), 'BARRR', "$theme - bar";
+  is $vfs->find_part('baz', 'item')->cget('string'), 'nested', "$theme - nested item";
+}
+
 
 #========================================
 # * [dir => $dir]

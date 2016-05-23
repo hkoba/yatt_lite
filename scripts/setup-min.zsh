@@ -121,6 +121,7 @@ fi
 o_chmod_c=(-c)
 CGI_BIN=cgi-bin
 USER_DIR=public_html
+integer wo_apache=0
 
 if [[ $OSTYPE == darwin* ]]; then
     CGI_BIN=CGI-Executables
@@ -128,6 +129,8 @@ if [[ $OSTYPE == darwin* ]]; then
     o_chmod_c=()
 
     apache=/etc/apache2/httpd.conf
+    [[ -r $apache ]] || die "Can't find $apache!"
+
     document_root=$(find_pat '^DocumentRoot\s+"([^"]*)"' $apache) ||
     document_root=/Library/WebServer/Documents
 
@@ -136,6 +139,7 @@ if [[ $OSTYPE == darwin* ]]; then
 
 elif [[ -r /etc/redhat-release ]]; then
     apache=/etc/httpd/conf/httpd.conf
+    [[ -r $apache ]] || die "Can't find $apache!"
     document_root=$(find_pat '^DocumentRoot\s+"([^"]*)"' $apache)
     APACHE_RUN_GROUP=$(find_pat '^Group\s+(\S+)' $apache)
 elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
@@ -143,18 +147,25 @@ elif [[ -r /etc/lsb-release ]] && source /etc/lsb-release; then
 	(*Ubuntu*)
 
 	apache=/etc/apache2/sites-available/default
-	document_root=$(find_pat '^\s*DocumentRoot\s+"?([^"]*)"?' $apache)
+	if [[ -r $apache ]]; then
+	    document_root=$(find_pat '^\s*DocumentRoot\s+"?([^"]*)"?' $apache)
+	    # for APACHE_RUN_GROUP
+	    source /etc/apache2/envvars
+	    if [[ -z $APACHE_RUN_GROUP ]]; then
+		die "Can't find APACHE_RUN_GROUP!"
+	    fi
 
-	# for APACHE_RUN_GROUP
-	source /etc/apache2/envvars
-	if [[ -z $APACHE_RUN_GROUP ]]; then
-	    die "Can't find APACHE_RUN_GROUP!"
+	    curgroups=($(id -Gn))
+	    if (($curgroups[(ri)$APACHE_RUN_GROUP] >= $#curgroups)); then
+		die User $USER is not a member of $APACHE_RUN_GROUP, stopped.
+	    fi
+	else
+	    # Fake settings when apache2 is not installed.
+	    document_root=/var/www
+	    APACHE_RUN_GROUP=nogroup
+	    wo_apache=1
 	fi
 
-	curgroups=($(id -Gn))
-	if (($curgroups[(ri)$APACHE_RUN_GROUP] >= $#curgroups)); then
-	    die User $USER is not a member of $APACHE_RUN_GROUP, stopped.
-	fi
 	;;
 	(*)
 	die "Unsupported distribution! Please modify $0 for $DISTRIB_ID"
@@ -171,21 +182,29 @@ fi
 
 if [[ -n $APACHE_RUN_GROUP ]] && (($+commands[groups])); then
     mygroups=($(groups))
-    if (($mygroups[(ri)$APACHE_RUN_GROUP] > $#mygroups)); then
+    if ((!wo_apache && UID != 0 && $mygroups[(ri)$APACHE_RUN_GROUP] > $#mygroups)); then
 	warn "You are not a member of $APACHE_RUN_GROUP. To change this, do \"sudo usermod -aG $APACHE_RUN_GROUP $USER\" and re-login this server."
     fi
 fi
 
-if [[ $destdir = $document_root(|/*) ]]; then
+if ((wo_apache)); then
+    location=/
+    cgi_bin_perm=755
+    install_type=sys
+    cgi_bin=$destdir/$CGI_BIN
+
+elif [[ $destdir = $document_root(|/*) ]]; then
     location=${destdir#$document_root}
     cgi_bin_perm=775
     install_type=sys
     cgi_bin=$destdir/$CGI_BIN
+
 elif [[ $destdir = $HOME/$USER_DIR(|/*) ]]; then
     location=/~$USER${destdir#$HOME/$USER_DIR}
     cgi_bin_perm=755; # for suexec
     install_type=user
     cgi_bin=$destdir/cgi-bin
+
 else
     die Can\'t extract URL from destdir=$destdir.
 fi
@@ -220,7 +239,7 @@ fi
 
 x ln $o_verbose -nsf $driver_name.cgi $cgi_bin/$driver_name.fcgi
 
-mkfile $cgi_bin/.htaccess <<EOF
+((!wo_apache)) || mkfile $cgi_bin/.htaccess <<EOF
 Options +ExecCGI
 EOF
 
@@ -248,7 +267,10 @@ if (($#o_try_setup)); then
 fi
 
 # Then activate it!
-if [[ -r $destdir/dot.htaccess ]]; then
+if ((wo_apache)); then
+    ; #nop
+
+elif [[ -r $destdir/dot.htaccess ]]; then
     x cp $o_verbose $destdir/dot.htaccess $destdir/.htaccess
     x sed -i -e "s|@DRIVER@|$cgi_loc/$driver_name.cgi|" $destdir/.htaccess
 else

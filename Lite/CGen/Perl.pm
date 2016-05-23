@@ -1,6 +1,6 @@
 package YATT::Lite::CGen::Perl;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 
 require 5.010; # For named capture.
 
@@ -26,6 +26,9 @@ use YATT::Lite::Constants;
     my %dup;
     map {
       my Folder $f = $_;
+      unless (defined $f->{cf_entns}) {
+	die "BUG: EntNS is empty for ".terse_dump($f->{cf_name})."!";
+      }
       if ($dup{$f->{cf_entns}}++) {
 	()
       } else {
@@ -304,8 +307,13 @@ use YATT::Lite::Constants;
       my $err = $self->generror(q{No such widget <%s>}, $wname);
       die $err;
     };
+
     $self->ensure_generated(perl => my Template $tmpl = $widget->{cf_folder});
-    my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_entns};
+    my $use_this = $tmpl == $self->{curtmpl};
+    unless ($use_this) {
+      $self->{curtmpl}->add_dependency($wname, $tmpl);
+    }
+    my $that = $use_this ? '$this' : $tmpl->{cf_entns};
     \ sprintf(q{%s->render_%s($CON, %s)}
 	      , $that, $widget->{cf_name}
 	      , $self->gen_putargs($widget, $node)
@@ -671,7 +679,8 @@ use YATT::Lite::Constants;
 
     my Template $tmpl = $self->{curtmpl};
     unless ($tmpl->{cf_entns}->can("entity_$name")) {
-      die $self->generror("No such entity: %s", $name);
+      die $self->generror(q!No such entity in namespace "%s": %s!
+			  , $tmpl->{cf_entns}, $name);
     }
     my $call = sprintf '$this->entity_%s(%s)', $name
       , scalar $self->gen_entlist(undef, @_);

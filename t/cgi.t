@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 
@@ -62,7 +62,9 @@ $i = 1;
   my $mux = Base->new
     (app_ns => myapp($i), output_encoding => 'shiftjis'
      , app_root => $BASE
-     , doc_root => "$BASE/$docs");
+     , doc_root => "$BASE/$docs"
+     , debug_cgen => $ENV{DEBUG_CGEN}
+   );
 
   my $text_html_sjis = qr{Content-Type: text/html; charset=shiftjis};
 
@@ -110,7 +112,6 @@ END
 okok
 END
 
-	      , 'BREAK'
 	      , ['foo.yatt', '3rd', <<END, <<END, $text_html_sjis]
 XXX<yatt:foobar/>ZZZ
 <!yatt:widget foobar>
@@ -118,6 +119,13 @@ yyy
 END
 XXXyyy
 ZZZ
+END
+
+	      , ['foo.yatt', '4th', <<END, <<END, $text_html_sjis]
+<yatt:if "&yatt:is_debug_allowed_ip();">
+debug allowed<:yatt:else/>prohibited</yatt:if>
+END
+debug allowed
 END
 
 	      # XXX: session cookie 周りは?
@@ -151,11 +159,15 @@ END
     }
     my ($fn, $title, $in, $result, $header_re) = @$test;
     $dig->add("$docs/$fn", $in);
+    my @common_env
+      = (REMOTE_ADDR => '127.0.0.1');
     {
       my %env = (GATEWAY_INTERFACE => $gateway_interface
 		 , REDIRECT_STATUS => 200
 		 , PATH_TRANSLATED => "$BASE/$docs/$fn"
-		 , REQUEST_URI => "/$fn");
+		 , REQUEST_URI => "/$fn"
+		 , @common_env
+	       );
       is captured_runas($mux, \ (my $header), cgi => \%env, ()), $result
 	, "$theme $fn $title - redirected";
       like $header, $header_re
@@ -167,6 +179,7 @@ END
 		 , SCRIPT_NAME => "/t$i.cgi"
 		 , PATH_INFO => "/$fn"
 		 , REQUEST_URI => "/$fn"
+		 , @common_env
 		 , #XXX "$ENV{SCRIPT_NAME}$ENV{PATH_INFO}"
 		 );
       is captured_runas($mux, \ (my $header), cgi => \%env, ()), $result

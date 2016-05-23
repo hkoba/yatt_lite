@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -318,9 +318,33 @@ where\tuid = ?),:uid);}
 	   , [var => 'list']]]];
 }
 
+my @error
+  = ([":foo", qr/^Entity has no terminator: ':foo'[^\n]*\n?$/]
+     , [":bar\n\n", qr/^Entity has no terminator: ':bar'[^\n]*\n?$/]
+     , [":baz()\n\n", qr/^Entity has no terminator: \Q':baz()'\E[^\n]*\n?$/]
+
+     , ["::foo", qr/^Syntax error in entity: '::foo'[^\n]*\n?$/]
+     , ["::bar\n\n", qr/^Syntax error in entity: '::bar'[^\n]*\n?$/]
+     , ["::baz()\n\n", qr/^Syntax error in entity: \Q'::baz()'\E[^\n]*\n?$/]
+
+     , [":foo(bar];\n\n", qr/^Paren mismatch: expect \) got \][^\n]*\n?$/]
+     , [":foo[bar);\n\n", qr/^Paren mismatch: expect \] got \)[^\n]*\n?$/]
+     , [":foo{bar];\n\n", qr/^Paren mismatch: expect \} got \][^\n]*\n?$/]
+
+     , [":baz(\n\n", qr/^Syntax error in entity: \Q':baz('\E[^\n]*\n?$/]
+   );
+
+sub detect_entpath_error {
+  my ($in, $error) = @_;
+  local $_ = $in;
+  eval {$parser->_parse_entpath};
+  $in =~ s/\n/\\n/g;
+  like $@, $error, "detect_entpath_error: $in";
+}
+
 my $class = 'YATT::Lite::LRXML';
 
-plan tests => 2 + grep {defined} @test;
+plan tests => 2 + grep(defined $_, @test) + @error;
 
 require_ok($class);
 ok($parser = $class->new, "new $class");
@@ -340,6 +364,10 @@ foreach my $test (@test) {
   } else {
     is_entpath @$test;
   }
+}
+
+foreach my $test (@error) {
+  detect_entpath_error(@$test);
 }
 
 done_testing();

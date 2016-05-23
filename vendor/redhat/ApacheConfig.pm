@@ -1,7 +1,7 @@
 package
 ApacheConfig;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 
 our $context = "";

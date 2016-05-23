@@ -33,13 +33,17 @@ fi
 
 cd $distdir
 
+print distdir=$distdir
+
 optspec=(
     C=o_cover
     T=o_taint
     y=o_yn
+    v=o_verbose
     'l+:=o_lib'
     -nosamples
     -samples
+    -samples-with-absdir
     -noplenv
     -brew::
 )
@@ -50,14 +54,22 @@ if (($+opts[--samples])); then
     # Test samples only.
     (($+libdir)) || die samples needs lib/YATT, sorry.
 
-    argv=(samples/**/t/*.t(*N,@N))
+    if (($+opts[--samples-with-absdir])); then
+	argv=($PWD/samples/**/t/*.t(*nN,@N))
+    else
+	argv=(samples/**/t/*.t(*nN,@N))
+    fi
 
 elif [[ -z $argv[(r)(*/)#*.t] ]]; then
     # If no **/*.t is specified:
     # To make relative path invocation happier.
     argv=(t/**/*.t(N))
     if (($+libdir)) && ((! $+opts[--nosamples])) && [[ -d samples ]]; then
-	argv+=(samples/**/t/*.t(*N,@N))
+	if (($+opts[--samples-with-absdir])); then
+	    argv+=($PWD/samples/**/t/*.t(*nN,@N))
+	else
+	    argv+=(samples/**/t/*.t(*nN,@N))
+	fi
     fi
 fi
 
@@ -116,23 +128,28 @@ function plenv_install_minimum {
 }
 
 function plenv_install_missings {
-    local cpanfile=$1 missings
+    local cpanfile=$1 missings wants
     missings=()
+    wants=($(cpanfile_modules $cpanfile))
+    if (($+o_cover)); then
+	wants+=(Devel::Cover)
+    fi
     local m
-    for m in $(cpanfile_modules $cpanfile); do
+    for m in $wants; do
 	plenv exec perl -M$m -e0 >&/dev/null || missings+=($m)
     done
     if (($#missings)); then
         confirm "Following modules are not yet installed for plenv:\n----\n${(F)missings}\n----\n$c_em[1]Install (with plenv exec cpanm) now? "\
                "Can't use $m"
 
-	plenv exec cpanm $missings
+	plenv exec cpanm -n -f $missings
     fi
 }
 
 if ((! $+opts[--noplenv])) && (($+commands[plenv])) &&
     plenv which perl | grep plenv >/dev/null &&
-    [[ -n $o_yn || -t 0 ]]; then
+    [[ -n $o_yn || -t 0 ]]
+then
     # If you enabled plenv and either -y or has tty input
     plenv_exec=(plenv exec)
     unset PERL5LIB
@@ -192,10 +209,14 @@ fi
 if [[ -n $HARNESS_PERL_SWITCHES ]]; then
     print -R HARNESS_PERL_SWITCHES=$HARNESS_PERL_SWITCHES
 fi
+
+integer rc=0
 if [[ -n $o_taint ]]; then
-    $plenv_exec ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv || true
+    $plenv_exec ${PERL:-perl} -MTest::Harness -e 'runtests(@ARGV)' $argv ||
+	rc=$?
 else
-    $plenv_exec ${PERL:-perl} =prove $o_lib $argv || true
+    $plenv_exec ${PERL:-perl} =prove $o_lib $o_verbose $argv ||
+	rc=$?	
 fi
 
 : ${docroot:=/var/www/html}
@@ -219,3 +240,4 @@ EOF
     fi
 fi
 
+exit $rc

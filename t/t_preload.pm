@@ -1,7 +1,7 @@
 package
   YATT::t::t_preload;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin;
 BEGIN { do "$FindBin::Bin/t_lib.pl" }
 

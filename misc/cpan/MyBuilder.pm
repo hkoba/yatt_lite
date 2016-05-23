@@ -1,7 +1,7 @@
 package
   MyBuilder;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 
 use File::Find;
 use File::Basename ();
@@ -21,7 +21,7 @@ sub my_cpanfile_specs {
   my $prereq = $file->prereq_specs;
   my %args;
   %{$args{requires}} = lexpand($prereq->{runtime}{requires});
-  foreach my $phase (qw/configure build/) {
+  foreach my $phase (qw/configure runtime build test/) {
     %{$args{$phase . "_requires"}} = lexpand($prereq->{$phase}{requires});
   }
   %{$args{recommends}} = (map {lexpand($prereq->{$_}{recommends})}

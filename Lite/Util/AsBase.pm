@@ -1,6 +1,6 @@
 package YATT::Lite::Util::AsBase;
 use strict;
-use warnings FATAL => qw/all/;
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 require Exporter;
@@ -9,6 +9,7 @@ our @EXPORT_OK = @EXPORT;
 
 use YATT::Lite::Util qw/ckeval globref/;
 
+require mro;
 require YATT::Lite::MFields;
 
 sub import {
@@ -45,8 +46,13 @@ sub _import_as_base {
     unless ($isa = *{$sym}{ARRAY}) {
       *$sym = $isa = [];
     }
+    my $using_c3 = mro::get_mro($callpack) eq 'c3';
     unless (grep {$_ eq $myPack} @$isa) {
-      push @$isa, $myPack;
+      if ($using_c3) {
+	unshift @$isa, $myPack;
+      } else {
+	push @$isa, $myPack;
+      }
     }
   }
 
@@ -54,7 +60,7 @@ sub _import_as_base {
   YATT::Lite::MFields->define_fields($callpack);
 
   my $sym = globref($callpack, 'MY');
-  *$sym = sub () { $callpack } unless *{$sym}{CODE};
+  YATT::Lite::Util::define_const($sym, $callpack) unless *{$sym}{CODE};
 }
 
 1;

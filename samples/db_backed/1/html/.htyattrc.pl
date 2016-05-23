@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 
 use fields qw(dbic
 	      cf_tmpdir cf_datadir cf_dbname);
@@ -208,8 +208,8 @@ use YATT::Lite::Util qw(terse_dump);
 use YATT::Lite::Util qw(ostream);
 
 sub output_file {
-  my ($fn) = @_;
-  open my $fh, '>', $fn or die "Can't open file '$fn': $!";
+  my ($fn, $enc) = @_;
+  open my $fh, '>'.($enc // ''), $fn or die "Can't open file '$fn': $!";
   $fh;
 }
 
@@ -224,8 +224,9 @@ sub sendmail {
   my $transport = $ENV{EMAIL_SENDER_TRANSPORT};
   my $is_debug = defined $transport && $transport eq 'YATT_TEST';
 
-  my $fh = $is_debug ? output_file("$self->{cf_datadir}/.htdebug.eml")
-    : ostream(my $buffer);
+  my $layer = $con->get_encoding_layer;
+  my $fh = $is_debug ? output_file("$self->{cf_datadir}/.htdebug.eml", $layer)
+    : ostream(my $buffer, $layer);
 
   $sub->($page, $fh, $to, @rest);
 

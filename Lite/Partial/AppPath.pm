@@ -1,6 +1,6 @@
 package YATT::Lite::Partial::AppPath; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/all/;
+use warnings qw(FATAL all NONFATAL misc);
 
 use File::Path ();
 
@@ -46,7 +46,7 @@ sub app_path {
   my $path = $self->{cf_app_root};
   $path =~ s|/*$|/$fn|;
   if (not $nocheck and not -e $path) {
-    $self->error("Can't find app_path: %s", $path);
+    $self->error_with_status(404, "Can't find app_path: %s", $path);
   }
   $path;
 }

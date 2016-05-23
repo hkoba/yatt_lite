@@ -1,6 +1,6 @@
 package YATT::Lite::Test::XHFTest2; sub Tests () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 
 use File::Basename qw(dirname);
@@ -152,7 +152,7 @@ sub load_file_into {
   _with_loading_file {$pack} $fn, sub {
     my File $file = $pack->File->new(file => $fn);
     my $parser = $pack->Parser->new(file => $fn);
-    if (my @global = $parser->read) {
+    if (my @global = $parser->read(skip_comment => 0)) {
       $file->configure(@global);
     }
     while (my @config = $parser->read) {

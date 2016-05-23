@@ -2,7 +2,7 @@ package
   t_register;
 
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use utf8;
 use sigtrap die => qw(normal-signals);
 
@@ -203,7 +203,7 @@ END
   unlink $email_fn if -e $email_fn;
 }
 
-sub skip_check {""}
+sub skip_check { '' }
 
 sub nocr {
   my ($res) = @_;

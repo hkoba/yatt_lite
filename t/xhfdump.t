@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -28,8 +28,10 @@ END
 - foo
 END
      #
+     , undef
      , [<<END, '' => 'bar']
-: bar
+- 
+- bar
 END
      , [<<END, undef, 'bar']
 = #null
@@ -122,7 +124,8 @@ END
 
      , [<<END, {foo => 'bar', '' => 'baz', bang => undef}]
 {
-: baz
+- 
+- baz
 bang= #null
 foo: bar
 }

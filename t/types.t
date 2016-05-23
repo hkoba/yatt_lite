@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -30,7 +30,7 @@ my $tn = 1;
 {
   my $PKG = "Test$tn";
   my $PFX = $PKG . "::";
-  my $strict = qq!use strict; use warnings FATAL => qw/all/;\n!;
+  my $strict = qq!use strict; use warnings FATAL => qw/FATAL all NONFATAL misc/;\n!;
   is eval_error(qq{package TestBase; \$INC{"TestBase.pm"} = 1; $strict}
 		. <<'END')
 sub new {

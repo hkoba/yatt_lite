@@ -1,4 +1,5 @@
 # -*- perl -*-
+use strict;
 sub MY () {__PACKAGE__}; # omissible
 use FindBin;
 use lib "$FindBin::Bin/lib";

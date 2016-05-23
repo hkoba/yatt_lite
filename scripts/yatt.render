@@ -2,26 +2,15 @@
 # -*- coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
 #----------------------------------------
-# use encoding qw(:locale);
-BEGIN {
-  require encoding;
-  my $locale = encoding::_get_locale_encoding() || 'utf-8';
-  my $enc = encoding::find_encoding($locale);
-  ${^ENCODING} = $enc; # XXX: Why do I need to do this??
-  my $encName = $enc->name;
-  foreach my $fh (\*STDERR, \*STDOUT, \*STDIN) {
-    binmode $fh, ":raw :encoding($encName)";
-  }
-}
 
 use CGI;
 use YATT::Lite::Factory;
 use YATT::Lite::Entities qw(*YATT *CON *SYS);
 use YATT::Lite::Util::CmdLine qw(parse_opts parse_params);
-use YATT::Lite::Util qw(rootname get_locale_encoding
+use YATT::Lite::Util qw(rootname
 			catch try_invoke);
 use YATT::Lite::CGen::Perl; # Just for debugging aid.
 use YATT::Lite::Breakpoint;
@@ -56,7 +45,7 @@ my @command;
     my %param = %common;
     MY->parse_params(\@ARGV, \%param);
 
-    my $dir = dirname($file);
+    my $dir = dirname($dispatcher->rel2abs($file));
     $dir =~ s,/*$,/,;
     my $dirhandler = $dispatcher->get_dirhandler($dir)
       or die "Can't find dirhandler for $dir";

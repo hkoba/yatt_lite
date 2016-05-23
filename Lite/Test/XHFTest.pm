@@ -1,6 +1,6 @@
 package YATT::Lite::Test::XHFTest;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use parent qw(YATT::Lite::Object);
 use YATT::Lite::MFields qw/tests numtests yatt global file_list file_dict
 	      cf_filename cf_ext cf_parser cf_encoding
@@ -28,6 +28,7 @@ use Encode;
 		cf_TITLE
 		cf_BREAK
 		cf_SKIP
+		cf_TODO
 		cf_PERL_MINVER
 
 		cf_WIDGET
@@ -82,11 +83,10 @@ sub load {
   my Parser $parser = $pack->Parser->new(@_);
   my MY $self = $pack->new($parser->cf_delegate(qw(filename))
 			   , parser => $parser);
-  if (my @global = $parser->read) {
+  if (my @global = $parser->read(skip_comment => 0)) {
     $self->configure(@global);
     $parser->configure($self->cf_delegate_defined(qw(encoding)));
   }
-  $parser->configure(skip_comment => 1);
   while (my @config = $parser->read) {
     $self->add_item($self->Item->new(@config));
   }
@@ -131,9 +131,14 @@ sub fixup_item {
     }
   };
 
-  $test->{realfile} = $test->{cf_IN}
-    ? sprintf($test->{cf_FILE}, 1+@{$self->{file_list} //= []})
-      : $prev->{realfile};
+  $test->{realfile} = do {
+    if ($test->{cf_IN}) {
+      no if $] >= 5.021002, warnings => qw/redundant/;
+      sprintf($test->{cf_FILE}, 1+@{$self->{file_list} //= []})
+    } else {
+      $prev->{realfile}
+    }
+  };
 
   $test->{cf_WIDGET} ||= do {
     my $widget = $test->{realfile};
@@ -184,22 +189,6 @@ sub as_vfs_data {
     }
   }
   \%result;
-}
-
-sub as_real_files {
-  (my MY $self, my $basedir, my @opts) = @_;
-  require YATT::TestFiles;
-  my $builder = $self->{builder} = new YATT::TestFiles($basedir, @opts);
-  foreach my $fn (@{$self->{file_list}}) {
-    my Item $item = $self->{file_dict}{$fn};
-    $builder->add($fn, $item->{cf_IN});
-  }
-}
-
-sub convert_htyattrc {
-  (my MY $self, my $path_cursor, my Item $item) = @_;
-  # XXX: 未実装
-  # data =>, rc => '...'
 }
 
 sub path_cursor {

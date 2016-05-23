@@ -61,61 +61,61 @@ BODY:
        <tr>
  	<th class="left">Apple</th>
  	<td class="center"><input type="checkbox" name="fruits[1]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[1]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="1" /></td>
        </tr>
        
        <tr>
  	<th class="left">Banana</th>
  	<td class="center"><input type="checkbox" name="fruits[2]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[2]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="2" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grape</th>
  	<td class="center"><input type="checkbox" name="fruits[3]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[3]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="3" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grapefruit</th>
  	<td class="center"><input type="checkbox" name="fruits[4]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[4]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="4" /></td>
        </tr>
        
        <tr>
  	<th class="left">Kiwifruit</th>
  	<td class="center"><input type="checkbox" name="fruits[5]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[5]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="5" /></td>
        </tr>
        
        <tr>
  	<th class="left">Lemon</th>
  	<td class="center"><input type="checkbox" name="fruits[6]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[6]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="6" /></td>
        </tr>
        
        <tr>
  	<th class="left">Mango</th>
  	<td class="center"><input type="checkbox" name="fruits[7]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[7]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="7" /></td>
        </tr>
        
        <tr>
  	<th class="left">Orange</th>
  	<td class="center"><input type="checkbox" name="fruits[8]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[8]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="8" /></td>
        </tr>
        
        <tr>
  	<th class="left">Pineapple</th>
  	<td class="center"><input type="checkbox" name="fruits[9]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[9]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="9" /></td>
        </tr>
        
        <tr>
  	<th class="left">Strawberry</th>
  	<td class="center"><input type="checkbox" name="fruits[10]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[10]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="10" /></td>
        </tr>
            </table>
    
@@ -235,61 +235,61 @@ BODY:
        <tr>
  	<th class="left">Apple</th>
  	<td class="center"><input type="checkbox" name="fruits[1]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[1]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="1" /></td>
        </tr>
        
        <tr>
  	<th class="left">Banana</th>
  	<td class="center"><input type="checkbox" name="fruits[2]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[2]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="2" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grape</th>
  	<td class="center"><input type="checkbox" name="fruits[3]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[3]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="3" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grapefruit</th>
  	<td class="center"><input type="checkbox" name="fruits[4]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[4]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="4" /></td>
        </tr>
        
        <tr>
  	<th class="left">Kiwifruit</th>
  	<td class="center"><input type="checkbox" name="fruits[5]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[5]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="5" /></td>
        </tr>
        
        <tr>
  	<th class="left">Lemon</th>
  	<td class="center"><input type="checkbox" name="fruits[6]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[6]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="6" /></td>
        </tr>
        
        <tr>
  	<th class="left">Mango</th>
  	<td class="center"><input type="checkbox" name="fruits[7]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[7]" checked /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="7" checked /></td>
        </tr>
        
        <tr>
  	<th class="left">Orange</th>
  	<td class="center"><input type="checkbox" name="fruits[8]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[8]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="8" /></td>
        </tr>
        
        <tr>
  	<th class="left">Pineapple</th>
  	<td class="center"><input type="checkbox" name="fruits[9]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[9]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="9" /></td>
        </tr>
        
        <tr>
  	<th class="left">Strawberry</th>
  	<td class="center"><input type="checkbox" name="fruits[10]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[10]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="10" /></td>
        </tr>
            </table>
    
@@ -391,61 +391,61 @@ BODY:
        <tr>
  	<th class="left">Apple</th>
  	<td class="center"><input type="checkbox" name="fruits[1]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[1]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="1" /></td>
        </tr>
        
        <tr>
  	<th class="left">Banana</th>
  	<td class="center"><input type="checkbox" name="fruits[2]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[2]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="2" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grape</th>
  	<td class="center"><input type="checkbox" name="fruits[3]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[3]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="3" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grapefruit</th>
  	<td class="center"><input type="checkbox" name="fruits[4]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[4]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="4" /></td>
        </tr>
        
        <tr>
  	<th class="left">Kiwifruit</th>
  	<td class="center"><input type="checkbox" name="fruits[5]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[5]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="5" /></td>
        </tr>
        
        <tr>
  	<th class="left">Lemon</th>
  	<td class="center"><input type="checkbox" name="fruits[6]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[6]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="6" /></td>
        </tr>
        
        <tr>
  	<th class="left">Mango</th>
  	<td class="center"><input type="checkbox" name="fruits[7]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[7]" checked /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="7" checked /></td>
        </tr>
        
        <tr>
  	<th class="left">Orange</th>
  	<td class="center"><input type="checkbox" name="fruits[8]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[8]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="8" /></td>
        </tr>
        
        <tr>
  	<th class="left">Pineapple</th>
  	<td class="center"><input type="checkbox" name="fruits[9]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[9]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="9" /></td>
        </tr>
        
        <tr>
  	<th class="left">Strawberry</th>
  	<td class="center"><input type="checkbox" name="fruits[10]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[10]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="10" /></td>
        </tr>
            </table>
    
@@ -567,61 +567,61 @@ BODY:
        <tr>
  	<th class="left">Apple</th>
  	<td class="center"><input type="checkbox" name="fruits[1]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[1]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="1" /></td>
        </tr>
        
        <tr>
  	<th class="left">Banana</th>
  	<td class="center"><input type="checkbox" name="fruits[2]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[2]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="2" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grape</th>
  	<td class="center"><input type="checkbox" name="fruits[3]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[3]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="3" /></td>
        </tr>
        
        <tr>
  	<th class="left">Grapefruit</th>
  	<td class="center"><input type="checkbox" name="fruits[4]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[4]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="4" /></td>
        </tr>
        
        <tr>
  	<th class="left">Kiwifruit</th>
  	<td class="center"><input type="checkbox" name="fruits[5]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[5]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="5" /></td>
        </tr>
        
        <tr>
  	<th class="left">Lemon</th>
  	<td class="center"><input type="checkbox" name="fruits[6]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[6]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="6" /></td>
        </tr>
        
        <tr>
  	<th class="left">Mango</th>
  	<td class="center"><input type="checkbox" name="fruits[7]" checked /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[7]" checked /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="7" checked /></td>
        </tr>
        
        <tr>
  	<th class="left">Orange</th>
  	<td class="center"><input type="checkbox" name="fruits[8]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[8]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="8" /></td>
        </tr>
        
        <tr>
  	<th class="left">Pineapple</th>
  	<td class="center"><input type="checkbox" name="fruits[9]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[9]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="9" /></td>
        </tr>
        
        <tr>
  	<th class="left">Strawberry</th>
  	<td class="center"><input type="checkbox" name="fruits[10]" /></td>
- 	<td class="center"><input type="radio" name="fond_fruits[10]" /></td>
+ 	<td class="center"><input type="radio" name="fond_fruits" value="10" /></td>
        </tr>
            </table>
    

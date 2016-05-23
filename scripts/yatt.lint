@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
 #----------------------------------------
 
@@ -10,7 +10,9 @@ use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;
 use YATT::Lite::Util qw(default rootname catch);
 use YATT::Lite::Error;
+
 use YATT::Lite::CGen::Perl; # Just for debugging aid.
+use YATT::Lite::LRXML;
 
 use YATT::Lite::Util::CmdLine qw/parse_opts/;
 use YATT::Lite::Types

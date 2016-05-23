@@ -1,6 +1,6 @@
 package YATT::Lite::MFields; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw/all/;
+use warnings qw(FATAL all NONFATAL misc);
 use 5.009; # For real hash only. (not works for pseudo-hash)
 
 use parent qw/YATT::Lite::Object/;

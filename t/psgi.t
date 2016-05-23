@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -11,17 +11,19 @@ use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Breakpoint;
 use YATT::t::t_preload; # To make Devel::Cover happy.
 
+# A.K.A $fn:r, [file rootname] and file-name-sans-extension
 sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
 
 BEGIN {
   # Because use YATT::Lite::DBSchema::DBIC loads DBIx::Class::Schema.
-  foreach my $req (qw(Plack)) {
+  foreach my $req (qw(Plack Plack::Test Plack::Response HTTP::Request::Common)) {
     unless (eval qq{require $req}) {
       plan skip_all => "$req is not installed."; exit;
     }
   }
 }
 
+use File::Basename;
 use Plack::Response;
 use HTTP::Request::Common;
 use YATT::Lite::WebMVC0::SiteApp;
@@ -39,18 +41,74 @@ sub is_or_like($$;$) {
 }
 
 {
-  my $app = YATT::Lite::WebMVC0::SiteApp
+  my $site = YATT::Lite::WebMVC0::SiteApp
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
 	  , app_ns => 'MyApp'
 	  , app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
-	  , header_charset => 'utf-8'
 	  , use_subpath => 1
 	  , (psgi_fallback => YATT::Lite::WebMVC0::SiteApp
 	     ->psgi_file_app("$rootname.d.fallback"))
-	 )
-      ->to_app;
+	 );
+
+  is $site->cget('no_unicode'), undef, "No no_unicode, by default";
+
+  foreach my $cf (qw/header_charset output_encoding tmpl_encoding/) {
+    is $site->cget($cf), 'utf-8', "$cf is utf8 by default";
+  }
+
+  my $app = $site->to_app;
+  {
+    my $client = Plack::Test->create($app);
+
+    sub test_action (&@) {
+      my ($subref, $request, %params) = @_;
+
+      my $path = $request->uri->path;
+
+      $site->get_lochandler(dirname($path))
+	->set_action_handler(basename($path) => $subref);
+
+      $client->request($request, %params);
+    }
+
+    test_action {
+      my ($this, $con) = @_;
+      isa_ok $con, "YATT::Lite::WebMVC0::Connection";
+    } GET "/virt";
+
+    test_action {
+      my ($this, $con) = @_;
+      is $con->param('foo'), 'bar', "param('foo')";
+    } GET "/virt?foo=bar";
+
+    sub test_psgi (&@) {
+      my ($subref, $request, %params) = @_;
+
+      my $path = $request->uri->path;
+
+      $site->mount_psgi($path => sub {$subref->(@_); [200, [], "OK"]});
+
+      $client->request($request, %params);
+    }
+
+    test_psgi {
+      (my Env $env) = @_;
+      is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info";
+    } GET "/mpsgi";
+
+    test_psgi {
+      (my Env $env) = @_;
+      is $env->{PATH_INFO}, "/mpsgi2", "mount psgi path_info, 2";
+    } GET "/mpsgi2";
+
+    test_psgi {
+      (my Env $env) = @_;
+      is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info, overwritten";
+    } GET "/mpsgi";
+
+  }
 
   my $hello = sub {
     my ($id, $body, $rest) = @_;

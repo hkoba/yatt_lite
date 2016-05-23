@@ -22,7 +22,7 @@ before it actually run. For example, YATT can detect
 misspellings of template parameters and (so-called) widget names.
 Following is an example of valid yatt template:
 
-```html
+```xml
 <!yatt:args who content>
 <h2>Hello &yatt:who;!</h2>
 <p>&yatt:content;</p>
@@ -163,7 +163,7 @@ use YATT::Lite::PSGIEnv;
 Now you can use two entity functions: 
 ``&yatt:session(name,default);`` and ``&yatt:set_session(name,value);``.
 
-```html
+```xml
 <!yatt:args user>
 <yatt:if "&yatt:user;">
 
@@ -227,25 +227,52 @@ which helps access restriction.
 INSTALLATION
 --------------------
 
-YATT::Lite is now on CPAN, so you can install YATT::Lite like
-other CPAN modules.
+You have several options to install YATT::Lite.
+
+### Minimum setup one-liner
+
+    $ mkdir myapp1
+    $ cd myapp1
+    $ curl https://raw.githubusercontent.com/hkoba/yatt_lite/dev/scripts/skels/min/install.sh | bash
+    $ ls
+    app.psgi  html  lib
+    $ git status -su
+    A  .gitmodules
+    A  lib/YATT
+    ?? app.psgi
+    ?? html/index.yatt
+    $ plackup
+
+Above script also works from locally installed repo, like following:
+
+    $ mkdir ../myapp2
+    $ cd  ../myapp2
+    $ ../myapp1/lib/YATT/scripts/skels/min/install.sh -l
+    $ ls
+    app.psgi  html  lib
+    $
+
+(with -l, lib/YATT is symlinked. without -l, uses git submodule)
+
+### cpanm
+
+If you simply want to use YATT::Lite only as a Perl module,
+You can install YATT::Lite like other CPAN modules.
 
     $ cpanm YATT::Lite
 
 Also, if you want to use latest version of YATT::Lite,
-and if you already have Plack and other modules,
 you can install YATT::Lite just through git command.
 (But see [NON-STANDARD DIRECTORY STRUCTURE](#non-standard-directory-structure))
 
-Alternatively, you can clone YATT::Lite from github:
-
     $ git clone git://github.com/hkoba/yatt_lite.git lib/YATT
+    $ (cd lib/YATT && cpanm --installdeps .)
 
     # or If your project is managed in git, clone as submodule like this:
 
     $ git submodule add git://github.com/hkoba/yatt_lite.git lib/YATT
-    $ git submodule init
-    $ git submodule update
+    $ git submodule update --init
+    $ (cd lib/YATT && cpanm --installdeps .)
 
 To create a yatt-enabled webapp, just copy sample app.psgi and run plackup:
 
@@ -257,7 +284,7 @@ Now you are ready to write your first yatt app.
 Open your favorite editor and create a yatt template ``html/index.yatt``
 like this:
 
-```html
+```xml
 <!yatt:args x y>
 <h2>Hello &yatt:x; world!</h2>
 &yatt:y;
@@ -270,7 +297,8 @@ Then try to access:
      http://0:5000/?x=foo
      http://0:5000/?x=foo&y=bar
 
-### Emacs integration (yatt-mode.el and yatt-lint-any-mode.el)
+
+## Emacs integration (yatt-mode.el and yatt-lint-any-mode.el)
 
 Currently, there is no installer for yatt-mode.el yet.
 It depends on ``mmm-mode.el`` and ``cperl-mode.el``,
@@ -296,9 +324,12 @@ You can look for Source Code Repository at:
 
     https://github.com/hkoba/yatt_lite
 
+
+### Document viewer (ylpodview)
+
 In source distribution, 
 basic documents are placed under ``YATT/Lite/docs``. You can read them via:
-http://ylpodview-hkoba.dotcloud.com/
+https://yl-podview.herokuapp.com/
 (But for now, most pods are not yet finished and written only in Japanese.)
 
 Also, you can run ylpodview (POD viewer) locally by:
@@ -331,14 +362,14 @@ but intentional. Because:
 COPYRIGHT AND LICENCE
 --------------------
 
-Copyright (C) 2007..2013 "KOBAYASI, Hiroaki"
+Copyright (C) 2007..2014 "KOBAYASI, Hiroaki"
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-[YATT::Lite]: http://ylpodview-hkoba.dotcloud.com/mod/YATT::Lite
+[YATT::Lite]: https://yl-podview.herokuapp.com/mod/YATT::Lite
 [PSGI]: http://plackperl.org/
-[WebMVC0]: http://ylpodview-hkoba.dotcloud.com/mod/YATT::Lite::WebMVC0::SiteApp
-[DBIx::Class]: http://ylpodview-hkoba.dotcloud.com/mod/DBIx::Class
+[WebMVC0]: https://yl-podview.herokuapp.com/mod/YATT::Lite::WebMVC0::SiteApp
+[DBIx::Class]: https://yl-podview.herokuapp.com/mod/DBIx::Class
 [Emacs]: http://www.gnu.org/software/emacs/
 [cpanminus]: http://search.cpan.org/perldoc?App::cpanminus#INSTALL

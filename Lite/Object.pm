@@ -1,6 +1,6 @@
 package YATT::Lite::Object; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use mro 'c3';
 

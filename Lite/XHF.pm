@@ -1,11 +1,15 @@
 package YATT::Lite::XHF; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
+use utf8;
+
+our $VERSION = "0.03";
 
 use base qw(YATT::Lite::Object);
 use fields qw(cf_FH cf_filename cf_string cf_tokens
 	      fh_configured
+	      cf_allow_empty_name
 	      cf_encoding cf_crlf
 	      cf_nocr cf_subst
 	      cf_skip_comment cf_bytes);
@@ -14,16 +18,10 @@ use Exporter qw(import);
 our @EXPORT = qw(read_file_xhf);
 our @EXPORT_OK = (@EXPORT, qw(parse_xhf $cc_name));
 
-=head1 NAME
-
-YATT::Lite::XHF - Extended Header Fields format.
-
-=cut
-
 use YATT::Lite::Util;
 use YATT::Lite::Util::Enum _ => [qw(NAME SIGIL VALUE)];
 
-our $cc_name  = qr{\w|[\.\-/~!]};
+our $cc_name  = qr{[0-9A-Za-z_\.\-/~!]};
 our $re_suffix= qr{\[$cc_name*\]};
 our $cc_sigil = qr{[:\#,\-=\[\]\{\}]};
 our $cc_tabsp = qr{[\ \t]};
@@ -33,6 +31,11 @@ our %OPN = ('[' => \&organize_array, '{' => \&organize_hash
 our %CLO = (']' => '[', '}' => '{');
 our %NAME_LESS = (%CLO, '-' => 1);
 our %ALLOW_EMPTY_NAME = (':' => 1);
+
+sub after_new {
+  (my MY $self) = @_;
+  $self->{cf_skip_comment} //= 1;
+}
 
 sub read_file_xhf {
   my ($pack, $fn, @rest) = @_;
@@ -77,11 +80,15 @@ sub configure_string {
   $self;
 }
 
-# XXX: Is this should renamed to read_all?
+# XXX: Should I rename this to read_one()?
 sub read {
   my MY $self = shift;
   $self->cf_let(\@_, sub {
-		    $self->organize($self->tokenize);
+		  if (my @tokens = $self->tokenize) {
+		    $self->organize(@tokens);
+		  } else {
+		    return;
+		  }
 		});
 }
 
@@ -134,12 +141,15 @@ sub tokenize_1 {
     }
     my ($name, $sigil, $tabsp, $eol) = ($1, $2, $3, $4);
 
+    if ($name eq '') {
+      croak "Invalid XHF token(name is empty for '$token')"
+	if $sigil eq ':' and not $reader->{cf_allow_empty_name};
+    } elsif ($NAME_LESS{$sigil}) {
+      croak "Invalid XHF token('$sigil' should not be prefixed by name '$name')"
+    }
+
     # Comment fields are ignored.
     $ncomments++, next if $sigil eq "#";
-
-    if ($NAME_LESS{$sigil} and $name ne '') {
-      croak "Invalid XHF token('$sigil' should not have name '$name')"
-    }
 
     if ($CLO{$sigil}) {
       undef $name;
@@ -173,7 +183,7 @@ sub tokenize_1 {
 sub token_lineno {
   my ($tokens, $pos) = @_;
   my $lineno = 1;
-  $lineno += tr|\n|| for @$tokens[0 .. $pos];
+  $lineno += tr|\n|| for grep {defined} @$tokens[0 .. $pos];
   $lineno;
 }
 
@@ -304,3 +314,100 @@ use YATT::Lite::Breakpoint;
 YATT::Lite::Breakpoint::break_load_xhf();
 
 1;
+
+__END__
+
+=head1 NAME
+
+YATT::Lite::XHF - Loader for XHF format
+
+=for code perl
+
+=head1 SYNOPSIS
+
+  require YATT::Lite::XHF;
+
+  my $parser1 = YATT::Lite::XHF->new(FH => \*STDIN);
+
+  # or
+  my $parser2 = YATT::Lite::XHF->new(filename => $filename);
+
+  # or
+  my $parser = YATT::Lite::XHF->new(string => <<'END');
+  foo: 1
+  bar: 2
+
+  foo{
+  wibble: wobble
+  }
+  bar[
+  - foo
+  - bar
+  - baz
+  ]
+
+  END
+  
+  # read() returns one set of parsed result by one paragraph, separated by \n\n+.
+  # In array context, you will get a flattened list of items in one paragraph.
+  # (It may usually be a list of key-value pairs, but you can write other types)
+  # In scalar context, you will get a hash struct.
+  while (my %hash = $parser->read) {
+    print Dumper(\%hash), "\n";
+  }
+
+  {
+    # You can use YATT::Lite::XHF as mixin for read_file_xhf() and parse_xhf()
+    package MyPackage {
+      use YATT::Lite::XHF;
+      ...
+    }
+    # XXX: currently, both only reads first paragraph. This may be confusing.
+    my %hash2 = MyPackage->read_file_xhf($filename);
+    my %hash3 = MyPackage->parse_xhf($string);
+  }
+
+=head1 DESCRIPTION
+
+This is a parser/loader for B<Extended Header Fields format (XHF)>.
+For XHF definition, see L<YATT::Lite::XHF::Syntax>.
+
+=head1 METHODS
+
+=head2 new(@OPTS)
+
+=head2 configure(@OPTS)
+
+=head2 read(@OPTS)
+
+=head1 EXPORTED FUNCTIONS
+
+=head2 ->read_file_xhf($filename)
+
+=head2 ->parse_xhf($string)
+
+
+=head1 OPTIONS
+
+=over 4
+
+=item FH => $filehandle
+
+=item filename => $filename
+
+=item string => $xh_string
+
+=item skip_comment => $bool
+
+=item bytes => $bool
+
+=back
+
+=head1 AUTHOR
+
+"KOBAYASI, Hiroaki" <hkoba@cpan.org>
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+

@@ -1,6 +1,6 @@
 package YATT::Lite::Types;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use parent qw(YATT::Lite::Object);
 use Carp;
 require YATT::Lite::Inc;
@@ -22,7 +22,9 @@ sub Desc () {'YATT::Lite::Types::TypeDesc'}
   }
 }
 
-use YATT::Lite::Util qw(globref look_for_globref lexpand ckeval pkg2pm);
+use YATT::Lite::Util qw(globref look_for_globref lexpand ckeval pkg2pm
+			define_const
+		     );
 
 sub import {
   my $pack = shift;
@@ -124,7 +126,7 @@ sub add_alias {
 
 sub add_const {
   my ($pack, $alias, $const) = @_;
-  *{globref($pack, $alias)} = sub () { $const };
+  define_const(globref($pack, $alias), $const);
 }
 
 sub safe_invoke {

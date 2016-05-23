@@ -1,6 +1,6 @@
 package YATT::Lite::Entities;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 #use mro 'c3';
@@ -17,11 +17,13 @@ sub default_export { qw(*YATT) }
 our $YATT;
 sub symbol_YATT { return *YATT }
 sub YATT { $YATT }
+sub DIR { $YATT }
 
 # Factory/Dispatcher/Logger/... を template に見せる
 our $SYS;
 sub symbol_SYS { return *SYS }
 sub SYS { $SYS }
+sub SITE { $SYS }
 
 # Connection
 our $CON;
@@ -85,7 +87,7 @@ sub define_MY {
   my ($myPack, $opts, $callpack) = @_;
   my $my = globref($callpack, 'MY');
   unless (*{$my}{CODE}) {
-    *$my = sub () { $callpack };
+    YATT::Lite::Util::define_const($my, $callpack);
   }
 }
 
@@ -142,7 +144,13 @@ sub entity_url_encode {
 
 sub entity_alternative {
   my ($this, $value, $list) = @_;
-  my @alt = grep {$value ne $_} @$list;
+  my @alt = do {
+    if (defined $value) {
+      grep {$value ne $_} @$list;
+    } else {
+      grep {defined $_} @$list;
+    }
+  };
   $alt[0]
 }
 
@@ -203,6 +211,24 @@ sub entity_datetime {
 sub entity_redirect {
   my ($this) = shift;
   $CON->redirect(@_);
+}
+
+# &yatt:code_of_entity(redirect);
+#
+sub entity_code_of_entity {
+  shift->entity_code_of(entity => @_);
+}
+
+sub entity_code_of {
+  my ($this, $prefix, $name) = @_;
+  $this->can(join("_", $prefix, $name));
+}
+
+sub entity_inspector {
+  require Sub::Inspector;
+  my ($this, $code) = @_;
+  croak "Not a code ref" unless ref $code;
+  Sub::Inspector->new($code);
 }
 
 use YATT::Lite::Breakpoint ();

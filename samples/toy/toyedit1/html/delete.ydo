@@ -1,5 +1,5 @@
 # -*- perl -*-
-use strict; use warnings FATAL => qw(all);
+use strict; use warnings FATAL => qw/FATAL all NONFATAL misc/;
 
 sub {
   my ($this, $con) = @_;

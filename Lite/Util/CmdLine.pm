@@ -1,6 +1,6 @@
 package YATT::Lite::Util::CmdLine;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 
 BEGIN {require Exporter; *import = \&Exporter::import}
 

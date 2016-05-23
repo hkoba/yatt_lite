@@ -1,7 +1,7 @@
 package YATT::Lite::Partial::ErrorReporter; sub MY () {__PACKAGE__}
 # -*- coding: utf-8 -*-
 use strict;
-use warnings FATAL => qw/all/;
+use warnings qw(FATAL all NONFATAL misc);
 use YATT::Lite::Partial
   (fields => [qw/cf_at_done
 		 cf_error_handler
@@ -10,7 +10,7 @@ use YATT::Lite::Partial
 		/]);
 require Devel::StackTrace;
 
-use YATT::Lite::Error; sub Error () {'YATT::Lite::Error'}
+use YATT::Lite::Error;
 use YATT::Lite::Util qw/incr_opt/;
 
 
@@ -23,9 +23,17 @@ sub error {
   $self->raise(error => incr_opt(depth => \@_), @_);
 }
 
+sub error_with_status {
+  (my MY $self) = map {ref $_ ? $_ : MY} shift;
+  my ($code) = shift;
+  my $opts = incr_opt(depth => \@_);
+  $opts->{http_status_code} = $code;
+  $self->raise(error => $opts, @_);
+}
+
 sub make_error {
   my ($self, $depth, $opts) = splice @_, 0, 3;
-  my $fmt = $_[0];
+  my ($fmt, @args) = @_;
   my ($pkg, $file, $line) = caller($depth);
   my $bt = do {
     my @bt_opts = (ignore_package => [__PACKAGE__]);
@@ -58,7 +66,9 @@ sub make_error {
   $self->Error->new
     (file => $opts->{file} // $file, line => $opts->{line} // $line
      , @tmplinfo
-     , format => $fmt, args => [@_[1..$#_]]
+     , (@args
+	? (format => $fmt, args => \@args)
+	: (reason => $fmt))
      , backtrace => $bt
      , $opts ? %$opts : ());
 }
@@ -70,7 +80,7 @@ sub raise {
   my $opts = shift if @_ and ref $_[0] eq 'HASH';
   # shift/splice しないのは、引数を stack trace に残したいから
   my $depth = (delete($opts->{depth}) // 0);
-  my $err = $self->make_error(2 + $depth, $opts, @_); # 2==raise+make_error
+  my Error $err = $self->make_error(2 + $depth, $opts, @_); # 2==raise+make_error
   if (ref $self and my $sub = deref($self->{cf_error_handler})) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
@@ -82,6 +92,11 @@ sub raise {
     $sub->($self, $type, $err);
   } elsif (not ref $self or $self->{cf_die_in_error}) {
     die $err->message;
+  } elsif ($err->{cf_http_status_code}) {
+    # If http_status_code is specified explicitly (from error_with_status),
+    # raise it immediately, with simple reason. (not full backtrace message).
+    $self->raise_psgi_html($err->{cf_http_status_code}
+			   , $err->reason);
   } else {
     # 即座に die しないモードは、デバッガから error 呼び出し箇所に step して戻れるようにするため。
     # ... でも、受け側を do {my $err = $con->error; die $err} にでもしなきゃダメかも?

@@ -1,6 +1,6 @@
 package YATT::Lite::LRXML::ParseBody; # dummy package, for lint.
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 
 package YATT::Lite::LRXML; use YATT::Lite::LRXML;
 
@@ -34,13 +34,14 @@ sub _parse_body {
       $self->accept_entity($sink, $parent, $par_ln, \$has_nonspace);
 
     } elsif (my $path = $+{elem}) {
+      my $formal_path = ($+{opt} // '') . $+{elem};
       if ($+{clo}) {
 	$parent->[NODE_BODY_END] = $self->{startpos};
 	if (defined $parent->[NODE_BODY_BEGIN]
 	    and $self->{template}->node_body_source($parent) =~ /(\r?\n)\Z/) {
 	  $parent->[NODE_BODY_END] -= length $1;
 	}
-	$self->verify_tag($path, $close);
+	$self->verify_tag($formal_path, $close);
 	if (@$sink and not ref $sink->[-1] and $sink->[-1] =~ s/(\r?\n)\Z//) {
 	  push @$sink, "\n";
 	}
@@ -61,7 +62,9 @@ sub _parse_body {
 
       # タグの直後の改行は、独立したトークンにしておく
       s{^(?<empty_elem>/)? >(\r?\n)?}{}xs
-	or die $self->synerror_at($self->{startln}, q{Missing CLO(>) for: <%s}, $path);
+	or die $self->synerror_at($self->{startln}
+				  , q{Missing CLO(>) for: <%s, rest: '%s'}
+				  , $path, trimmed($_));
 
       # body slot の初期化
       # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
@@ -113,7 +116,7 @@ sub _parse_body {
 	# expects </yatt:call> or </:yatt:opt>
 	# $self->{startln} = $self->{endln}; # No!
 	$self->_parse_body($widget, $body
-			   , $+{empty_elem} ? $close : $path
+			   , $+{empty_elem} ? $close : $formal_path
 			   , $elem, $bodyStartRef);
 	$$bodyStartRef //= $bodystartln;
       } elsif ($is_opt) {
@@ -259,6 +262,12 @@ sub _undef_if_empty {
   unless (@{$_[0]}) {
     undef $_[0];
   }
+}
+
+sub trimmed {
+  my ($str) = @_;
+  $str =~ s/\n.*\z//s;
+  $str;
 }
 
 use YATT::Lite::Breakpoint qw(break_load_parsebody);

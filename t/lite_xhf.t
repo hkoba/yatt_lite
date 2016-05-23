@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -15,12 +15,13 @@ BEGIN {
   require encoding;
   my $locale = encoding::_get_locale_encoding() || 'utf-8';
   my $enc = encoding::find_encoding($locale);
-  ${^ENCODING} = $enc; # XXX: Why do I need to do this??
   my $encName = $enc->name;
   foreach my $fh (\*STDERR, \*STDOUT, \*STDIN) {
     binmode $fh, ":raw :encoding($encName)";
   }
 }
+
+use Encode;
 
 use YATT::Lite::Test::TestUtil;
 #========================================
@@ -53,14 +54,25 @@ foreach my $fn (@files) {
   die "Error while loading $fn: $@" if $@;
 }
 
+my ($test_lang) = grep {defined $ENV{$_}} qw/LC_ALL LANG/;
+my $skip_test_lang = !$test_lang || ($ENV{$test_lang} !~ /\.UTF-?8$/i);
+
 my $ntests = (@section * 2) + sum(map {$_->ntests} @section);
-plan tests => $ntests;
+plan tests => $ntests + ($skip_test_lang ? 0 : 1);
+
+if (not $skip_test_lang) {
+  my $got = captured(undef, sub {
+		       my ($this, $fh) = @_;
+		       # 世界！
+		       print $fh "\x{4e16}\x{754c}\x{ff01}";
+		     });
+  $skip_test_lang = $got ne "\xe4\xb8\x96\xe7\x95\x8c\xef\xbc\x81";
+  ok !$skip_test_lang, "Sanity check for captured. $test_lang=$ENV{$test_lang}.";
+}
 
 my $i = 1;
 foreach my MY $sect (@section) {
-  my $skip_no_utf8 =
-    $sect->{cf_ONLY_UTF8} && $ENV{LANG}
-      && $ENV{LANG} !~ /\.UTF-?8$/i;
+  my $skip_no_utf8 = $sect->{cf_ONLY_UTF8} && $skip_test_lang;
 
   my $fn = path_tail($sect->{cf_filename}, 2);
   # XXX: as_vfs_spec => data => {}, rc => '...';
@@ -80,11 +92,13 @@ foreach my MY $sect (@section) {
   is ref $yatt, 'YATT::Lite', 'new YATT::Lite package';
   local $YATT::Lite::YATT = $yatt; # XXX: runyatt に切り替えられないか？
   my $last_title;
+  TODO:
   foreach my Item $test (@{$sect->{tests}}) {
     next unless $test->is_runnable;
     my $title = "[$fn] " . ($test->{cf_TITLE} // $last_title
 			    // $test->{cf_ERROR} // "(undef)");
     $title .= " ($test->{num})" if $test->{num};
+    local $TODO = $test->{cf_TODO};
   SKIP: {
       if (($test->{cf_SKIP} or $test->{cf_PERL_MINVER} or $skip_no_utf8)
 	  and my $skip = $test->ntests) {
@@ -93,14 +107,20 @@ foreach my MY $sect (@section) {
 	} elsif ($test->{cf_SKIP}) {
 	  skip "by SKIP: $title", $skip;
 	} elsif ($skip_no_utf8) {
-	  skip "by LANG=$ENV{LANG}, which is not UTF8", $skip;
+	  if ($test_lang) {
+	    skip "by $test_lang=$ENV{$test_lang}, which is not UTF8", $skip;
+	  } else {
+	    skip "by empty LC_ALL/LANG", $skip;
+	  }
 	}
       }
       if ($test->{cf_REQUIRE}
 	  and my @missing = $test->test_require($test->{cf_REQUIRE})) {
 	skip "Module @missing is not installed", $test->ntests;
       }
-      breakpoint() if $test->{cf_BREAK};
+      if ($test->{cf_BREAK}) {
+	breakpoint();
+      }
       if ($test->{cf_OUT}) {
 	my $error;
 	unless ($test->{realfile}) {
@@ -128,7 +148,7 @@ foreach my MY $sect (@section) {
 	} else {
 	  eval {
 	    eq_or_diff captured($pkg => render_ => lexpand($test->{cf_PARAM}))
-	      , $test->{cf_OUT}, "$title";
+	      , encode(utf8 => $test->{cf_OUT}), "$title";
 	  };
 	  if ($@) {
 	    fail "$title: runtime error: $@";
@@ -152,7 +172,11 @@ sub captured {
   open my $fh, ">", \ (my $buf = "") or die $!;
   binmode $fh, ":encoding(utf8)"; #XXX: 常に、で大丈夫なのか?
   # XXX: locale と一致しなかったらどうすんの?
-  $obj->$method($fh, @args);
+  if (ref $method) {
+    $method->($obj, $fh, @args);
+  } else {
+    $obj->$method($fh, @args);
+  }
   close $fh;
   $buf;
 }

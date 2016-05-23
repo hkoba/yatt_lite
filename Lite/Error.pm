@@ -1,19 +1,40 @@
 package YATT::Lite::Error; sub Error () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use parent qw(YATT::Lite::Object);
+use constant DEBUG_VERBOSE => $ENV{YATT_DEBUG_VERBOSE};
+
+use Exporter qw/import/;
+our @EXPORT_OK = qw/Error/;
+our @EXPORT = @EXPORT_OK;
 
 use YATT::Lite::MFields qw/cf_file cf_line cf_tmpl_file cf_tmpl_line
+			   cf_http_status_code
 	      cf_backtrace
 	      cf_reason cf_format cf_args/;
-use overload qw("" message);
+use overload qw("" message
+		eq streq
+		bool has_error
+	      );
 use YATT::Lite::Util qw(lexpand untaint_any);
 use Carp;
 require Scalar::Util;
 
+sub has_error {
+  defined $_[0];
+}
+
+sub streq {
+  my ($obj, $other, $inv) = @_;
+  ($obj, $other) = ($other, $obj) if $inv;
+  $obj->message eq $other;
+}
+
 sub message {
   my Error $error = shift;
-  $error->reason . $error->place;
+  my $msg = $error->reason . $error->place;
+  $msg .= $error->{cf_backtrace} // '' if DEBUG_VERBOSE;
+  $msg;
 }
 
 sub reason {
@@ -30,6 +51,9 @@ sub reason {
 	    '(undef)'
 	  }
 	} $error->{cf_format}, lexpand($error->{cf_args})).")";
+    }
+    BEGIN {
+      warnings->unimport(qw/redundant/) if $] >= 5.021002; # for sprintf
     }
     sprintf $error->{cf_format}, map {
       defined $_ ? $_ : '(undef)'

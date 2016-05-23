@@ -1,16 +1,21 @@
 package YATT::Lite::Factory;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
+use constant DEBUG_FACTORY => $ENV{DEBUG_YATT_FACTORY};
+
 use 5.010;
 use Scalar::Util qw(weaken);
+use Encode qw/decode/;
 
-use parent qw/YATT::Lite::NSBuilder File::Spec/;
+use parent qw/File::Spec YATT::Lite::NSBuilder/;
 use File::Path ();
 use File::Basename qw/dirname/;
+
+use YATT::Lite::PSGIEnv;
 
 # Note: Definition of default values are not yet gathered here.
 # Some are in YATT::Lite, others are in YATT::Lite::Core, CGen.. and so on.
@@ -31,20 +36,37 @@ use YATT::Lite::MFields
  , [cf_index_name =>
     (doc => "Rootname of index template. (default: index)")]
 
+ , [cf_ext_public =>
+    (doc => "public file extension for yatt. (default: yatt)")]
+
+ , [cf_ext_private =>
+    (doc => "hidden file extension for yatt. (default: ytmpl)")]
+
  , [cf_header_charset =>
     (doc => "Charset for outgoing HTTP Content-Type. (default: utf-8)")]
 
  , [cf_tmpl_encoding =>
-    (doc => "Perl encoding used while reading yatt templates. (default: '')")]
+    (doc => "Perl encoding used while reading yatt templates. (default: 'utf-8')")]
 
  , [cf_output_encoding =>
-    (doc => "Perl encoding used for outgoing response body. (default: '')")]
+    (doc => "Perl encoding used for outgoing response body."
+     ." Also this is used to decode incoming request parameters and PATH_INFO."
+     ." (default: 'utf-8')")]
 
  , [cf_offline =>
     (doc => "Whether header should be emitted or not.")]
 
  , [cf_binary_config   =>
     (doc => "(This may be changed in future release) Whether .htyattconfig.* should be read with encoding or not.")]
+
+ , [cf_no_unicode =>
+    (doc => "(Compatibility option) Avoid use of utf8.")]
+
+ , [cf_no_unicode_params =>
+    (doc => "(Compatibility option) Avoid encoding conversion of input params.")]
+
+ , [cf_use_subpath =>
+    (doc => "pass sub-path_info")]
 
  , qw/
        cf_allow_missing_dir
@@ -53,12 +75,21 @@ use YATT::Lite::MFields
        loc2yatt
        path2yatt
 
+       loc2psgi_re
+       loc2psgi_dict
+
        tmpl_cache
+
+       path2entns
 
        cf_debug_cgen
 
        cf_only_parse
        cf_config_filetypes
+
+       cf_dont_map_args
+       cf_dont_debug_param
+       cf_always_refresh_deps
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -67,6 +98,9 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_path
 			secure_text_plain
 			psgi_error
+			globref_default
+			define_const
+			terse_dump
 		       /;
 
 use YATT::Lite::XHF ();
@@ -167,6 +201,12 @@ sub load_factory_for_psgi {
       $sub;
     }
   }
+  sub wrapped_by {
+    my ($self, $builder) = @_;
+    my $outer_app = $builder->($self->to_app);
+    $sub2app{$outer_app} = $self; weaken($sub2app{$outer_app});
+    $outer_app;
+  }
   sub load_psgi_script {
     my ($pack, $fn) = @_;
     local $want_object = 1;
@@ -238,14 +278,33 @@ sub init_app_ns {
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
-  $self->{cf_output_encoding} //= $self->default_output_encoding;
-  $self->{cf_header_charset} //= (
-    $self->{cf_output_encoding} || $self->default_header_charset
-  );
+  $self->{cf_index_name} //= $self->default_index_name;
+  $self->{cf_ext_public} //= $self->default_ext_public;
+  $self->{cf_ext_private} //= $self->default_ext_private;
+  if ($self->{cf_no_unicode}) {
+    $self->{cf_no_unicode_params} = 1;
+    $self->{cf_binary_config} = 1;
+    $self->{cf_header_charset}
+      //= ($self->{cf_output_encoding} || $self->default_header_charset);
+    $self->{cf_output_encoding}
+      //= $self->compat_default_output_encoding;
+  } else {
+    $self->{cf_header_charset}
+      //= ($self->{cf_output_encoding} // $self->default_header_charset);
+    $self->{cf_tmpl_encoding}
+      //= ($self->{cf_output_encoding} // $self->default_tmpl_encoding);
+    $self->{cf_output_encoding} //= $self->default_output_encoding;
+  }
+  $self->{cf_use_subpath} //= 1;
 }
 
-sub default_output_encoding { '' }
+sub compat_default_output_encoding { '' }
+sub default_output_encoding { 'utf-8' }
 sub default_header_charset  { 'utf-8' }
+sub default_tmpl_encoding   { 'utf-8' }
+sub default_index_name { 'index' }
+sub default_ext_public {'yatt'}
+sub default_ext_private {'ytmpl'}
 
 sub _after_after_new {
   (my MY $self) = @_;
@@ -273,14 +332,20 @@ sub _after_after_new {
 #========================================
 
 sub render {
+  my MY $self = shift;
+  my $raw_bytes = $self->render_encoded(@_);
+  decode(utf8 => $raw_bytes);
+}
+
+sub render_encoded {
   (my MY $self, my ($reqrec, $args, @opts)) = @_;
   # [$path_info, $subpage, $action]
   my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
 
-  my ($tmpldir, $loc, $file, $trailer)
-    = my @pi = lookup_path($path_info
-			   , $self->{tmpldirs}
-			   , $self->{cf_index_name}, ".yatt");
+  $path_info =~ s,^/*,/,;
+
+  my ($tmpldir, $loc, $file, $trailer, $is_index)
+    = my @pi = $self->lookup_split_path_info($path_info);
   unless (@pi) {
     die "No such location: $path_info";
   }
@@ -291,7 +356,7 @@ sub render {
 
   my $con = $self->make_simple_connection
   (
-    \@pi, yatt => $dh, noheader => 1
+    \@pi, yatt => $dh, noheader => 1, path_info => $path_info
     , $self->make_debug_params($reqrec, $args)
   );
 
@@ -304,6 +369,112 @@ sub render {
   );
 
   $con->buffer;
+}
+
+sub lookup_split_path_info {
+  (my MY $self, my $path_info) = @_;
+  lookup_path($path_info
+	      , $self->{tmpldirs}
+	      , $self->{cf_index_name}, ".$self->{cf_ext_public}"
+	      , $self->{cf_use_subpath});
+}
+
+#========================================
+
+sub K_MOUNT_MATCH () { "__yatt" }
+
+sub lookup_psgi_mount {
+  (my MY $self, my $path_info) = @_;
+  $self->{loc2psgi_re} // $self->rebuild_psgi_mount;
+  $path_info =~ $self->{loc2psgi_re}
+    or return;
+  my @mount_match = grep {/^@{[K_MOUNT_MATCH()]}/o} keys %+
+    or return;
+  if (@mount_match >= 2) {
+    croak "Multiple match found for psgi_mount: \n"
+      . join("\n  ", map {$self->{loc2psgi_dict}{$_}[0]} @mount_match);
+  }
+
+  my $path_prefix = $+{$mount_match[0]};
+
+  my $item = $self->{loc2psgi_dict}{$path_prefix};
+
+  wantarray ? @{$item}[1..$#$item] : $item->[2];
+}
+
+sub mount_psgi {
+  (my MY $self, my ($path_prefix, $app, @opts)) = @_;
+  unless (defined $path_prefix) {
+    croak "path_prefix is empty! mount_psgi(path_prefix, psgi_app)";
+  }
+  if (not ref $path_prefix) {
+    $path_prefix =~ s,^/*,/,;
+  }
+  my $dict = $self->{loc2psgi_dict} //= +{};
+  my $key = K_MOUNT_MATCH() . (keys %$dict);
+  $dict->{$path_prefix} = [$key => $path_prefix => $app, @opts];
+
+  undef $self->{loc2psgi_re};
+
+  # For cascading call
+  $self;
+}
+
+sub rebuild_psgi_mount {
+  (my MY $self) = @_;
+  my @re;
+  foreach my $path_prefix (keys %{$self->{loc2psgi_dict} //= +{}}) {
+    my ($key, undef, $app) = @{$self->{loc2psgi_dict}{$path_prefix}};
+    push @re, qr{(?<$key>$path_prefix)};
+  }
+  my $all = join("|", @re);
+  $self->{loc2psgi_re} = qr{^(?:$all)(?:/|$)};
+}
+
+sub psgi_file_app {
+  my ($pack, $path) = @_;
+  require Plack::App::File;
+  Plack::App::File->new(root => $path)->to_app;
+}
+
+sub mount_static {
+  (my MY $self, my ($location, $realpath)) = @_;
+  my $app = ref $realpath eq 'CODE' ? $realpath
+    : $self->psgi_file_app($realpath);
+  $self->mount_psgi
+    ($location, sub {
+       (my Env $env) = @_;
+       local $env->{PATH_INFO} = _trim_prefix($env->{PATH_INFO}, $location);
+       $app->($env);
+     });
+}
+
+sub _trim_prefix {
+  substr($_[0], length($_[1]));
+}
+
+
+#========================================
+
+sub mount_action {
+  (my MY $self, my ($path_info, $action)) = @_;
+  if (my $ref = ref $path_info) {
+    croak "mount_action doesn't support $ref path_info, sorry";
+  }
+  my ($tmpldir, $loc, $file, $trailer, $is_index)
+    = my @pi = $self->lookup_split_path_info($path_info);
+  unless (@pi) {
+    croak "Can't find acutal directory for $path_info";
+  }
+  unless ($is_index) {
+    croak "Conflicting mount_action($path_info) with file=$file\n";
+  }
+  my $realdir = $tmpldir.$loc;
+  my $dh = $self->get_dirhandler($realdir);
+  $dh->set_action_handler($trailer, $action);
+
+  # For cascading call.
+  $self;
 }
 
 #========================================
@@ -437,14 +608,19 @@ sub build_yatt {
   $self->_list_base_spec_in($path, delete $opts{base}, $visits
 			    , \@basepkg, \@basevfs);
 
-  my $app_ns = $self->buildns(INST => \@basepkg, $path);
+  my $app_ns = $self->buildns(my @log = (INST => \@basepkg, $path));
+
+  print STDERR "# Factory::buildns("
+    , terse_dump(@log), ") => $app_ns\n" if DEBUG_FACTORY;
 
   if (-e (my $rc = "$path/.htyattrc.pl")) {
     # Note: This can do "use fields (...)"
     dofile_in($app_ns, $rc);
   }
 
-  my @args = (vfs => [dir => $path, encoding => $self->{cf_tmpl_encoding}
+  my @args = (vfs => [dir => $path
+		      , entns => $self->{path2entns}{$path}
+		      , encoding => $self->{cf_tmpl_encoding}
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
@@ -454,7 +630,7 @@ sub build_yatt {
 	      # XXX: Design flaw! Use of tmpl_cache will cause problem.
 	      # because VFS->create for base do not respect Factory->get_yatt.
 	      # To solve this, I should redesign all Factory/VFS related stuffs.
-	      # , tmpl_cache => $self->{tmpl_cache} //= {}
+	      , tmpl_cache => $self->{tmpl_cache} //= {}
 
 	      , $self->configparams_for(fields_hash($app_ns)));
 
@@ -468,6 +644,9 @@ sub build_yatt {
 
 sub _list_base_spec_in {
   (my MY $self, my ($in, $desc, $visits, $basepkg, $basevfs)) = @_;
+
+  print STDERR "# Factory::list_base_in("
+    , terse_dump($in, $desc, $self->{cf_app_base}), ")\n" if DEBUG_FACTORY;
 
   my $is_implicit = not defined $desc;
 
@@ -501,7 +680,8 @@ sub _list_base_spec_in {
     next unless $dir;
     my $yatt = $self->load_yatt($dir, undef, $visits, $in);
     $tuple->[1] = ref $yatt;
-    push @$basevfs, [dir => $yatt->cget('dir')];
+    my $realdir = $yatt->cget('dir');
+    push @$basevfs, [dir => $realdir, entns => $self->{path2entns}{$realdir}];
   }
 
   push @$basepkg, map {
@@ -525,21 +705,41 @@ sub buildns {
   # instns には MY を定義しておく。
   my $my = globref($newns, 'MY');
   unless (*{$my}{CODE}) {
-    *$my = sub () { $newns };
+    define_const($my, $newns);
   }
+
+  # もし $newns の EntNS が Factory(SiteApp, app.psgi) の EntNS を継承していない
+  # なら、継承する
+  unless ($newns->EntNS->isa($self->EntNS)) {
+    push @{globref_default(globref($newns->EntNS, 'ISA')
+			   , [])}, $self->EntNS;
+  }
+
+  # basevfs に entns を渡せるように。
+  $self->{path2entns}{$path} = $newns->EntNS;
 
   $newns;
 }
 
 sub _cf_delegates {
-  qw(output_encoding
+  qw(no_unicode
+     no_unicode_params
+     output_encoding
      header_charset
      tmpl_encoding
      debug_cgen
      at_done
      app_root
      namespace
-     only_parse);
+     index_name
+     ext_public
+     ext_private
+     only_parse
+     use_subpath
+     dont_map_args
+     dont_debug_param
+     always_refresh_deps
+  );
 }
 
 sub configparams_for {

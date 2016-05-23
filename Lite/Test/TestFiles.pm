@@ -2,7 +2,7 @@ package
   YATT::Lite::Test::TestFiles;
 sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use base qw/File::Spec/;
 use fields qw(basedir Dict List cf_auto_clean cf_quiet);
 
@@ -32,13 +32,18 @@ sub mkdir {
 sub add {
   (my MY $self, my ($fn, $content)) = @_;
   my $real = "$self->{basedir}/$fn";
-  if (-e $real and (stat($real))[9] == time) {
-    # mtime が確実に変化するように。
+  my $old_mtime;
+  while (-e $real and ($old_mtime = (stat($real))[9]) == time) {
+    # wait until mtime is changed.
     sleep 1;
   }
   open my $fh, '>', $real or die "Can't create $real: $!";
   print $fh $content;
   close $fh;
+  if (defined $old_mtime and (stat($real))[9] <= $old_mtime) {
+    sleep 1;
+    utime(undef, undef, $real) || warn "Can't touch $real: $!";
+  }
   unless ($self->{Dict}{$real}++) {
     push @{$self->{List}}, [unlink => $real];
   }

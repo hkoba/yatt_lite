@@ -1,10 +1,10 @@
 package YATT::Lite; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 use Carp qw(carp croak confess);
-our $VERSION = '0.0.9'; # ShipIt do not understand qv().
+our $VERSION = '0.100_003';
 #use mro 'c3';
 
 use Scalar::Util qw/weaken/;
@@ -17,8 +17,12 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dir
 	      cf_vfs cf_base
 	      cf_factory
+	      cf_header_charset
 	      cf_output_encoding
 	      cf_tmpl_encoding
+	      cf_index_name
+	      cf_ext_public
+	      cf_ext_private
 	      cf_app_ns entns
 	      cf_app_name
 	      cf_debug_cgen cf_debug_parser cf_namespace cf_only_parse
@@ -29,8 +33,11 @@ use YATT::Lite::MFields qw/YATT
 	      cf_dont_debug_param
 	      cf_info
 	      cf_lcmsg_sink
+	      cf_always_refresh_deps
 
 	      cf_default_lang
+
+	      cf_path2entns
 	    /;
 
 MY->cf_mkaccessors(qw/app_name/);
@@ -50,12 +57,16 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			look_for_globref
 			subname ckeval
 			secure_text_plain
+			define_const
 		       /;
 
 sub Facade () {__PACKAGE__}
 sub default_app_ns {'MyApp'}
 sub default_trans {'YATT::Lite::Core'}
 sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
+sub default_index_name { '' }
+sub default_ext_public {'yatt'}
+sub default_ext_private {'ytmpl'}
 
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
@@ -65,6 +76,9 @@ sub with_system {
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
+  $self->{cf_index_name} //= "";
+  $self->{cf_ext_public} //= $self->default_ext_public;
+  $self->{cf_ext_private} //= $self->default_ext_private;
   weaken($self->{cf_factory});
 }
 
@@ -92,7 +106,7 @@ sub handle {
       ." in $self->{cf_app_ns}.\n";
   }
 
-  my $sub = $YATT->find_handler($ext, $file);
+  my $sub = $YATT->find_handler($ext, $file, $CON);
   $sub->($YATT, $CON, $file);
 
   try_invoke($CON, 'flush_headers');
@@ -118,10 +132,9 @@ sub render_into {
 }
 
 sub find_handler {
-  (my MY $self, my ($ext, $file)) = @_;
-  $ext //= $self->cut_ext($file) || 'yatt';
-  # XXX: There should be optional hash based (extension => handler) mapping.
-  # cf_ext_alias
+  (my MY $self, my ($ext, $file, $con)) = @_;
+  $ext //= $self->cut_ext($file) || $self->{cf_ext_public};
+  $ext = "yatt" if $ext eq $self->{cf_ext_public};
   my $sub = $self->can("_handle_$ext")
     or die "Unsupported file type: $ext";
   $sub;
@@ -248,6 +261,7 @@ sub fconfigure_encoding {
 # Delayed loading of YATT::Lite::Core
 #========================================
 
+*open_vfs = *open_trans; *open_vfs = *open_trans;
 sub open_trans {
   (my MY $self) = @_;
   my $trans = $self->get_trans;
@@ -255,6 +269,7 @@ sub open_trans {
   $trans;
 }
 
+*get_vfs = *get_trans; *get_vfs = *get_trans;
 sub get_trans {
   (my MY $self) = @_;
   $self->{YATT} || $self->build_trans($self->{cf_tmpl_cache});
@@ -279,9 +294,14 @@ sub build_trans {
 				     die_in_error tmpl_encoding
 				     debug_cgen debug_parser
 				     special_entities no_lineinfo check_lineno
+				     index_name
+				     ext_public
+				     ext_private
 				     rc_script
 				     lcmsg_sink
-				     only_parse/));
+				     only_parse
+				     always_refresh_deps
+				    /));
 }
 
 sub _before_after_new {
@@ -332,7 +352,7 @@ sub ensure_entns {
 
   # EntNS() を足すのは最後にしないと、再帰継承に陥る
   unless (my $code = *{$sym}{CODE}) {
-    *$sym = sub () { $entns };
+    define_const($sym, $entns);
   } elsif ((my $old = $code->()) ne $entns) {
     croak "Can't add EntNS() to '$app_ns'. Already has EntNS as $old!";
   } else {

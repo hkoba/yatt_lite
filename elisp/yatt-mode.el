@@ -33,11 +33,15 @@
   "Where YATT is installed. This is used to locate ``yatt.lint''.")
 
 (defvar yatt-mode-default-mmm-classes
-  '(yatt-declaration 
-    yatt-pi-perl-raw-output
-    yatt-pi-perl-escaped-output
-    yatt-pi-perl-code
-    html-js embedded-css)
+  (let ((css-class (find-if
+                    (lambda (k) 
+                      (assoc k mmm-classes-alist))
+                    '(html-css embedded-css))))
+    `(yatt-declaration
+      yatt-pi-perl-raw-output
+      yatt-pi-perl-escaped-output
+      yatt-pi-perl-code
+      html-js ,css-class))
   "Default mmm-classes for *.yatt files.")
 
 ;;========================================

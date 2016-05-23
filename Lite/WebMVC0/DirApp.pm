@@ -1,11 +1,13 @@
 package YATT::Lite::WebMVC0::DirApp; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
+use Carp;
+
 use YATT::Lite -as_base, qw/*SYS
 			    Entity/;
-use YATT::Lite::MFields qw/cf_header_charset
-			   cf_dir_config
+use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
+			   cf_overwrite_status_code_for_errors_as
 
 			   Action/;
 
@@ -13,13 +15,14 @@ use YATT::Lite::WebMVC0::Connection;
 sub Connection () {'YATT::Lite::WebMVC0::Connection'}
 sub PROP () {Connection}
 
-use Carp;
 use YATT::Lite::Util qw/cached_in ckeval
 			dofile_in compile_file_in
 			try_invoke
 			psgi_error
 			terse_dump
 		      /;
+
+use YATT::Lite::Error;
 
 # sub handle_ydo, _do, _psgi...
 
@@ -96,6 +99,23 @@ sub prepare_part_handler {
   ($part, $sub, $pkg, \@args);
 }
 
+#========================================
+# Action handling
+#========================================
+
+sub find_handler {
+  (my MY $self, my ($ext, $file, $con)) = @_;
+  my PROP $prop = $con->prop;
+  if ($prop->{cf_is_index}) {
+    my $sub_fn = substr($prop->{cf_path_info}, length($prop->{cf_location}));
+    $sub_fn =~ s,/.*,,;
+    if ($sub_fn ne '' and my $action = $self->get_action_handler($sub_fn, 1)) {
+      return $action
+    }
+  }
+  $self->SUPER::find_handler($ext, $file, $con);
+}
+
 sub _handle_ydo {
   (my MY $self, my ($con, $file, @rest)) = @_;
   my $action = $self->get_action_handler($file)
@@ -108,31 +128,55 @@ sub _handle_ydo {
 # XXX: cached_in 周りは面倒過ぎる。
 # XXX: package per dir で、本当に良いのか?
 # XXX: Should handle union mount!
+
+#
 sub get_action_handler {
-  (my MY $self, my $filename) = @_;
+  (my MY $self, my ($filename, $can_be_missing)) = @_;
   my $path = "$self->{cf_dir}/$filename";
+
+  # Each action item is stored as:
+  # [$action_sub, $is_virtual, @more_opts..., $age_from_mtime]
+  #
   my $item = $self->cached_in
     ($self->{Action} //= {}, $path, $self, undef, sub {
        # first time.
        my ($self, $sys, $path) = @_;
        my $age = -M $path;
+       return undef if not defined $age and $can_be_missing;
        my $sub = compile_file_in(ref $self, $path);
-       [$sub, $age];
+       # is not virtual.
+       [$sub, 0, $age];
      }, sub {
        # second time
        my ($item, $sys, $path) = @_;
        my ($sub, $age);
-       unless (defined ($age = -M $path)) {
+       if (not defined $item) {
+	 # XXX: (Accidental) negative cache. Is this ok?
+	 return;
+       } elsif ($item->[1]) {
+	 # return $action_sub without examining $path when item is virtual.
+	 return $item->[0];
+       } elsif (not defined ($age = -M $path)) {
 	 # item is removed from filesystem, so undef $sub.
        } elsif ($$item[-1] == $age) {
 	 return;
        } else {
 	 $sub = compile_file_in($self->{cf_app_ns}, $path);
        }
-       @{$item} = ($sub, $age);
+       @{$item}[0, -1] = ($sub, $age);
      });
   return unless defined $item and $item->[0];
   wantarray ? @$item : $item->[0];
+}
+
+sub set_action_handler {
+  (my MY $self, my ($filename, $sub)) = @_;
+
+  $filename =~ s,^/*,,;
+
+  my $path = "$self->{cf_dir}/$filename";
+
+  $self->{Action}{$path} = [$sub, 1, undef];
 }
 
 #========================================
@@ -165,7 +209,7 @@ sub fn_msgfile {
 
 #========================================
 sub error_handler {
-  (my MY $self, my ($type, $err)) = @_;
+  (my MY $self, my $type, my Error $err) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
   my $errcon = do {
     if (my $con = $self->CON) {
@@ -176,15 +220,30 @@ sub error_handler {
       \*STDERR;
     }
   };
+  if (my $code = $err->{cf_http_status_code}) {
+    $errcon->configure(status => $code);
+  } elsif ($code = $errcon->cget('status')) {
+    $err->{cf_http_status_code} = $code;
+  }
   # error.ytmpl を探し、あれば呼び出す。
-  my ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
-    # print {*$errcon} $err, Carp::longmess(), "\n\n";
-    # Dispatcher の show_error に任せる
-    die $err;
+  my ($sub, $pkg);
+  ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
+    if ($err->{cf_http_status_code}
+	|| $self->{cf_overwrite_status_code_for_errors_as}) {
+       ($sub, $pkg) = (sub {
+			 my ($this, $errcon, $err) = @_;
+			 print {*$errcon} $err->reason;
+		       }, $self->EntNS);
+     } else {
+       die $err;
+     }
   };
   $sub->($pkg, $errcon, $err);
   try_invoke($errcon, 'flush_headers');
-  $self->raise_psgi_html(200, $errcon->buffer); # ->DONE was not ok.
+  $self->raise_psgi_html($self->{cf_overwrite_status_code_for_errors_as}
+			 // $errcon->cget('status')
+			 // 500
+			 , $errcon->buffer); # ->DONE was not ok.
 }
 
 Entity dir_config => sub {

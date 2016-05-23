@@ -1,6 +1,6 @@
 package YATT::Lite::WebMVC0::DBSchema; sub MY () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use File::Basename;
 use version;
@@ -298,7 +298,7 @@ sub dbi_connect {
 }
 
 sub default_dbi_attr {
-  (RaiseError => 1, PrintError => 0, AutoCommit => 0);
+  (RaiseError => 1, PrintError => 0, AutoCommit => 1);
 }
 
 #----------------------------------------

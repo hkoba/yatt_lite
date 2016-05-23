@@ -1,6 +1,6 @@
 package YATT::Lite::LRXML::ParseEntpath;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 
 package YATT::Lite::LRXML; use YATT::Lite::LRXML;
 
@@ -67,11 +67,21 @@ BEGIN {
 }
 sub _parse_entpath {
   my MY $self = shift;
+  local $self->{_original_entpath} = $_;
   my $how = shift || '_parse_pipeline';
   my $prevlen = length $_;
   my @pipe = $self->$how(@_);
   unless (s{^;}{}xs) {
-    die $self->synerror_at($self->{startln}, q{Syntax error in entity: '%s'}, $_);
+    if (/^\s|^$/) {
+      die $self->synerror_at($self->{startln}
+			     , q{Entity has no terminator: '%s'}
+			     , $self->shortened_original_entpath);
+
+    } else {
+      die $self->synerror_at($self->{startln}
+			     , q{Syntax error in entity: '%s'}
+			     , $self->shortened_original_entpath);
+    }
   }
   $self->{curpos} += $prevlen - length $_;
   @pipe;
@@ -110,7 +120,9 @@ sub _parse_entgroup {
   do {
     push @pipe, $self->_parse_entterm($for_expr);
     if (length $_ == $prevlen and $emptycnt++) {
-      die $self->synerror_at($self->{startln}, q{Can't parse!: %s}, $_);
+      die $self->synerror_at($self->{startln}
+			     , q{Syntax error in entity: '%s'}
+			     , $self->shortened_original_entpath);
     }
     $prevlen = length $_;
   } until (s{^ ($$self{re_eclose})}{}xs);
@@ -188,7 +200,8 @@ sub _parse_hash {
     push @hash, $self->_parse_entterm;
     s{^,}{};
   }
-  die $self->synerror_at($self->{startln}, q{Paren mismatch: expect \} got %s}, $_);
+  die $self->synerror_at($self->{startln}, q{Paren mismatch: expect \} got %s}
+			 , $self->shortened_original_entpath);
 }
 
 use YATT::Lite::Breakpoint qw(break_load_parseentpath);

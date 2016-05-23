@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -218,7 +218,7 @@ END
 
 	     , "$docroot/.htyattrc.pl" => <<'END'
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 sub root_method {
   (my MY $self) = @_;
   $self->{cf_other_config}
@@ -285,7 +285,7 @@ other_config2: in @ytmpl
 END
 	     , "$approot/ytmpl/.htyattrc.pl" => <<'END'
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 sub root_method {
   (my MY $self) = @_;
   $self->{cf_other_config2}
@@ -474,6 +474,7 @@ END
   my $docroot = "$approot/docs";
   my $ytmpl   = "$approot/ytmpl";
 
+  # '..' causes error.
   MY->mkfile("$docroot/subapp/.htyattconfig.xhf" => <<'END'
 base[
 - ..

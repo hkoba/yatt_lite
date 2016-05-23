@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; my $libdir; BEGIN {($libdir) = do "$FindBin::RealBin/libdir.pl"}
 #----------------------------------------
 use 5.010;

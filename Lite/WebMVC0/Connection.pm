@@ -1,6 +1,6 @@
 package YATT::Lite::WebMVC0::Connection; sub PROP () {__PACKAGE__}
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 use base qw(YATT::Lite::Connection);
@@ -13,19 +13,34 @@ use YATT::Lite::MFields
 
     cf_no_nested_query
 
+    cf_no_unicode_params
+
     current_user
    /);
 use YATT::Lite::Util qw(globref url_encode nonempty lexpand);
 use YATT::Lite::PSGIEnv;
 
+use YATT::Lite::Util::CGICompat;
+
 #----------------------------------------
 
 BEGIN {
   # print STDERR join("\n", sort(keys our %FIELDS)), "\n";
+
+  foreach my $name (qw(raw_body uploads upload)) {
+    *{globref(PROP, $name)} = sub {
+      my PROP $prop = (my $glob = shift)->prop;
+      unless ($prop->{cf_is_psgi}) {
+	croak "Connection method $name is PSGI mode only!"
+      }
+      $prop->{cf_cgi}->$name(@_);
+    };
+  }
+
   foreach my $name (qw(url_param)) {
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
-      $prop->{cf_cgi}->$name;
+      $prop->{cf_cgi}->$name(@_);
     };
   }
 
@@ -99,6 +114,28 @@ sub param {
   }
 }
 
+# Annoying multi_param support.
+sub multi_param {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (my $ixh = $prop->{params_hash}) {
+    return keys %$ixh unless @_;
+    defined (my $key = shift)
+      or croak "undefined key!";
+    # If params_hash is enabled, value is returned AS-IS.
+    $ixh->{$key};
+
+  } elsif (my $hmv = ($prop->{cf_hmv} // do {
+    $prop->{cf_is_psgi} && $prop->{cf_cgi}->parameters
+  })) {
+    return $hmv->keys unless @_;
+    return wantarray ? $hmv->get_all($_[0]) : $hmv->get($_[0]);
+  } elsif (my $cgi = $prop->{cf_cgi}) {
+    return $cgi->multi_param(@_);
+  } else {
+    croak "Neither Hash::MultiValue nor CGI is found in connection!";
+  }
+}
+
 sub queryobj {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{params_hash} || $prop->{cf_hmv} || $prop->{cf_cgi};
@@ -109,6 +146,7 @@ sub queryobj {
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_cgi} = my $cgi = shift;
+  return unless $glob->is_form_content_type($cgi->content_type);
   unless ($prop->{cf_no_nested_query}) {
     if ($prop->{cf_is_psgi}) {
       $glob->convert_array_param_psgi($cgi);
@@ -118,14 +156,37 @@ sub configure_cgi {
   }
 }
 
+sub is_form_content_type {
+  my ($self, $real_ct) = @_;
+  return 1 if ($real_ct // '') eq '';
+  foreach my $check_ct ($self->form_content_types) {
+    return 1 if $real_ct =~ $check_ct;
+  }
+  return 0;
+}
+
+sub form_content_types {
+  (qr(^multipart/form-data\s*(?:;|$))i
+   , qr(^application/x-www-form-urlencoded$)i);
+}
+
+sub parse_nested_query {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($obj_or_string) = @_;
+  YATT::Lite::Util::parse_nested_query
+    ($obj_or_string
+     , (!$prop->{cf_no_unicode_params} && $prop->{cf_encoding})
+   );
+}
+
 sub convert_array_param_psgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($req) = @_;
   my Env $env = $prop->{cf_env};
   $prop->{params_hash} = do {
     if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
-      my $body = YATT::Lite::Util::parse_nested_query($req->raw_body);
-      my $qs = YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
+      my $body = $glob->parse_nested_query([$req->body_parameters->flatten]);
+      my $qs = $glob->parse_nested_query($env->{QUERY_STRING});
       foreach my $key (keys %$qs) {
 	if (exists $body->{$key}) {
 	  die $glob->error("Attempt to overwrite post param '%s' by qs"
@@ -135,7 +196,7 @@ sub convert_array_param_psgi {
       }
       $body;
     } else {
-      YATT::Lite::Util::parse_nested_query($env->{QUERY_STRING});
+      $glob->parse_nested_query($env->{QUERY_STRING});
     }
   };
 }
@@ -143,8 +204,9 @@ sub convert_array_param_psgi {
 sub convert_array_param_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($cgi) = @_;
+  return if ($cgi->content_type // "") eq "application/json";
   $prop->{params_hash}
-    = YATT::Lite::Util::parse_nested_query($cgi->query_string);
+    = $glob->parse_nested_query($cgi->query_string);
 }
 
 # Location(path part of url) of overall SiteApp.
@@ -433,15 +495,18 @@ sub param_type {
   if (defined $value && $value =~ $pat) {
     return $&; # Also for taint check.
   } elsif ($diag) {
-    die $glob->error((ref $diag eq 'CODE' ? $diag->($value) : $diag)
-		     , $name, $value);
+    die $glob->error_with_status
+      (400, (ref $diag eq 'CODE' ? $diag->($value) : $diag)
+       , $name, $value);
   } elsif (not defined $value) {
     return undef if $opts->{allow_undef};
-    die $glob->error("Parameter '%s' is missing!", $name);
+    die $glob->error_with_status
+      (400, "Parameter '%s' is missing!", $name);
   } else {
     # Just for default message. Production code should provide $diag.
-    die $glob->error("Parameter '%s' must match %s!: '%s'"
-		     , $name, $type, $value);
+    die $glob->error_with_status
+      (400, "Parameter '%s' must match %s!: '%s'"
+       , $name, $type, $value);
   }
 }
 

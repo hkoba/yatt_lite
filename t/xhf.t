@@ -2,7 +2,7 @@
 # -*- mode: perl; coding: utf-8 -*-
 #----------------------------------------
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
@@ -43,6 +43,21 @@ sub read_times {
 require_ok($CLASS);
 
 {
+  test_parser [parser("")->read], [];
+  test_parser [do {my $p = parser(""); ([$p->read], [$p->read])}]
+  , [[], []];
+  test_parser [do {my $p = parser("foo: bar"); ([$p->read], [$p->read])}]
+  , [[foo => "bar"], []];
+  test_parser [do {my $p = parser("foo: bar"); (scalar $p->read, scalar $p->read)}]
+  , [{foo => "bar"}, undef];
+  test_parser [do {my $p = parser("foo: bar\n\n"); ([$p->read], [$p->read])}]
+  , [[foo => "bar"], []];
+  test_parser [do {my $p = parser("foo: bar\n\n"); (scalar $p->read, scalar $p->read)}]
+  , [{foo => "bar"}, undef];
+
+  test_parser [do {my $p = parser("- foo\n\n- bar"); ([$p->read], [$p->read])}]
+  , [["foo"], ["bar"]];
+
   test_parser [parser(<<END)->read]
 foo: 1
 bar: 2
@@ -142,7 +157,6 @@ END
 {
 foo: 1
 bar: 2
-: 3
 - ba z
 = #null
 }
@@ -156,7 +170,7 @@ bar: 2
 - bang
 ]
 END
-    , [{foo => 1, bar => 2, '' => 3, 'ba z' => undef}
+    , [{foo => 1, bar => 2, 'ba z' => undef}
        , {'' => undef}
        , [undef, 'baz', 'bang']];
 
@@ -173,7 +187,7 @@ END
   test_parser [parser(<<END)->read]
 foo: 1
 bar[
-: 2.1
+- 2.1
 , 2.2
 - 2.3
 ]
@@ -184,13 +198,13 @@ END
   test_parser [parser(<<END)->read]
 foo: 1
 bar[
-: 2.1
+- 2.1
 {
 hoe:
  2.1.1
 moe:   2.1.2
 }
-: 2.3
+- 2.3
 ]
 baz: 3
 END

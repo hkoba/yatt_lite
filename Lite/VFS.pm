@@ -1,9 +1,14 @@
 package YATT::Lite::VFS;
 use strict;
-use warnings FATAL => qw(all);
+use warnings qw(FATAL all NONFATAL misc);
 use Exporter qw(import);
 use Scalar::Util qw(weaken);
 use Carp;
+use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
+use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
+
+require File::Spec;
+require File::Basename;
 
 #========================================
 # VFS 層. vfs_file (Template) のダミー実装を含む。
@@ -15,7 +20,9 @@ use Carp;
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
-	 , [File => -fields => [qw(partlist cf_string cf_overlay)]
+	 , [File => -fields => [qw(partlist cf_string cf_overlay
+				   dependency
+				)]
 	    , -alias => 'vfs_file']
 	 , [Dir  => -fields => [qw(cf_encoding)]
 	    , -alias => 'vfs_dir']]]);
@@ -34,9 +41,13 @@ use Carp;
   use YATT::Lite::MFields qw/cf_ext_private cf_ext_public cf_cache cf_no_auto_create
 		cf_facade cf_base
 		cf_entns
-		root extdict n_creates n_updates cf_mark
+		cf_always_refresh_deps
+		on_memory
+		root extdict
+		cf_mark
+		n_creates
 		pkg2folder/;
-  use YATT::Lite::Util qw(lexpand rootname);
+  use YATT::Lite::Util qw(lexpand rootname terse_dump);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}
   sub new {
@@ -49,8 +60,14 @@ use Carp;
       my ($value, @ext) = @$desc;
       $vfs->{extdict}{$_} = $value for @ext;
     }
-    $vfs->root_create(linsert($spec, 2, $vfs->cf_delegate(qw(entns))))
-      if $spec;
+
+    if ($spec) {
+      my Folder $root = $vfs->root_create
+	(linsert($spec, 2, $vfs->cf_delegate(qw(entns))));
+      # Mark [data => ..] vfs as on_memory
+      $vfs->{on_memory} = 1 if $spec->[0] eq 'data' or not $root->{cf_path};
+    }
+
     $$_[0]->($vfs, $$_[1]) for @task;
     $vfs->after_new;
     $vfs;
@@ -76,6 +93,12 @@ use Carp;
     (my VFS $vfs) = @_;
     $vfs->{root}->list_items($vfs);
   }
+  sub resolve_path_from {
+    (my VFS $vfs, my Folder $folder, my $fn) = @_;
+    my $dirname = $folder->dirname
+      or return undef;
+    File::Spec->rel2abs($fn, $dirname)
+  }
 
   #========================================
   sub find_part {
@@ -96,6 +119,27 @@ use Carp;
   sub reset_refresh_mark {
     (my VFS $vfs) = shift;
     $vfs->{cf_mark} = @_ ? shift : {};
+  }
+
+  sub YATT::Lite::VFS::Dir::dirobj { $_[0] }
+  sub YATT::Lite::VFS::File::dirobj {
+    (my vfs_file $file) = @_;
+    $file->{cf_parent};
+  }
+
+  sub YATT::Lite::VFS::Dir::dirname {
+    (my vfs_dir $dir) = @_;
+    $dir->{cf_path};
+  }
+  sub YATT::Lite::VFS::File::dirname {
+    (my vfs_file $file) = @_;
+    if (my $parent = $file->{cf_parent}) {
+      $parent->dirname;
+    } elsif (my $path = $file->{cf_path}) {
+      File::Basename::dirname(File::Spec->rel2abs($path));
+    } else {
+      undef;
+    }
   }
 
   use Scalar::Util qw(refaddr);
@@ -120,7 +164,8 @@ use Carp;
     (my vfs_dir $dir, my VFS $vfs, my $name) = splice @_, 0, 3;
     if (my Item $item = $dir->cached_in
 	($dir->{Item} //= {}, $name, $vfs, $vfs->{cf_mark})) {
-      if (not ref $item and not $vfs->{cf_no_auto_create}) {
+      if ((not ref $item or not UNIVERSAL::isa($item, Item))
+	  and not $vfs->{cf_no_auto_create}) {
 	$item = $dir->{Item}{$name} = $vfs->create
 	  (data => $item, parent => $dir, name => $name);
       }
@@ -211,13 +256,13 @@ use Carp;
     undef $file->{Item};
     undef $file->{cf_string};
     undef $file->{cf_base};
+    $file->{dependency} = +{};
   }
   sub YATT::Lite::VFS::Dir::refresh {}
   sub YATT::Lite::VFS::File::refresh {
     (my vfs_file $file, my VFS $vfs) = @_;
     return unless $$file{cf_path} || $$file{cf_string};
     # XXX: mtime!
-    $vfs->{n_updates}++;
     my @part = do {
       local $/; split /^!\s*(\w+)\s+(\S+)[^\n]*?\n/m, do {
 	if ($$file{cf_path}) {
@@ -238,6 +283,32 @@ use Carp;
       }
     }
   }
+
+  sub YATT::Lite::VFS::File::add_dependency {
+    (my File $file, my $wpath, my File $other) = @_;
+    Scalar::Util::weaken($file->{dependency}{$wpath} = $other);
+  }
+  sub YATT::Lite::VFS::File::list_dependency {
+    (my File $file, my $detail) = @_;
+    defined (my $deps = $file->{dependency})
+      or return;
+    if ($detail) {
+      wantarray ? map([$_ => $deps->{$_}], keys %$deps) : $deps;
+    } else {
+      values %$deps;
+    }
+  }
+  sub refresh_deps_for {
+    (my MY $self, my File $file) = @_;
+    print STDERR "refresh deps for: ", $file->{cf_path}, "\n" if DEBUG_REBUILD;
+    foreach my $dep ($file->list_dependency) {
+      unless ($self->{cf_mark}{refaddr($dep)}++) {
+	print STDERR " refreshing: ", $dep->{cf_path}, "\n" if DEBUG_REBUILD;
+	$dep->refresh($self);
+      }
+    }
+  }
+
   #========================================
   sub add_to {
     (my VFS $vfs, my ($path, $data)) = @_;
@@ -266,23 +337,33 @@ use Carp;
     (my VFS $vfs, my ($kind, $primary, %rest)) = @_;
     # XXX: $vfs は className の時も有る。
     if (my $sub = $vfs->can("create_$kind")) {
-      $vfs->fixup_created($sub->($vfs, $primary, %rest));
+      $vfs->fixup_created(\@_, $sub->($vfs, $primary, %rest));
     } else {
       $vfs->{cf_cache}{$primary} ||= do {
 	# XXX: Really??
 	$rest{entns} //= $vfs->{cf_entns};
 	$vfs->fixup_created
-	  ($vfs->can("vfs_$kind")->()->new(%rest, path => $primary));
+	  (\@_, $vfs->can("vfs_$kind")->()->new(%rest, path => $primary));
       };
     }
   }
   sub fixup_created {
-    (my VFS $vfs, my Folder $folder) = @_;
+    (my VFS $vfs, my $info, my Folder $folder) = @_;
+    printf STDERR "# VFS::create(%s) => %s(0x%x)\n"
+      , terse_dump(@{$info}[1..$#$info])
+      , ref $folder, ($folder+0) if DEBUG_VFS;
     # create の直後、 after_create より前に、mark を打つ。そうしないと、 delegate で困る。
     if (ref $vfs) {
       $vfs->{n_creates}++;
       $vfs->{cf_mark}{refaddr($folder)}++;
     }
+
+    if (my $path = $folder->{cf_path} and not defined $folder->{cf_name}) {
+      $path =~ s/\.\w+$//;
+      $path =~ s!.*/!!;
+      $folder->{cf_name} = $path;
+    }
+
     if (my Folder $parent = $folder->{cf_parent}) {
       if (defined $parent->{cf_entns}) {
 	$folder->{cf_entns} = join '::'
@@ -307,13 +388,26 @@ use Carp;
       $vfs->vfs_file->new(public => 1, @_, string => $primary);
     }
   }
-  sub YATT::Lite::VFS::Dir::after_create {
-    (my vfs_dir $dir, my VFS $vfs) = @_;
-    foreach my Folder $desc (@{$dir->{cf_base}}) {
+  sub YATT::Lite::VFS::Folder::vivify_base_descs {
+    (my Folder $folder, my VFS $vfs) = @_;
+    foreach my Folder $desc (@{$folder->{cf_base}}) {
+      if (ref $desc eq 'ARRAY') {
+	# XXX: Dirty workaround.
+	if ($desc->[0] eq 'dir') {
+	  # To create YATT::Lite with .htyattconfig.xhf, Factory should be involved.
+	  $desc = $vfs->{cf_facade}->create_neighbor($desc->[1]);
+	} else {
+	  $desc = $vfs->create(@$desc);
+	}
+      }
       $desc = $vfs->create(@$desc) if ref $desc eq 'ARRAY';
       # parent がある == parent から指されている。なので、 weaken する必要が有る。
       weaken($desc) if $desc->{cf_parent};
     }
+  }
+  sub YATT::Lite::VFS::Dir::after_create {
+    (my vfs_dir $dir, my VFS $vfs) = @_;
+    $dir->YATT::Lite::VFS::Folder::vivify_base_descs($vfs);
     # $dir->refresh($vfs);
     $dir;
   }
