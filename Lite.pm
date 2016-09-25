@@ -455,18 +455,26 @@ sub ensure_supplns {
     return $supplns;
   }
 
+  my $app_ns_filename = do {
+    my $sub = $app_ns->can("filename");
+    $sub ? ("(For path '".($sub->() // '')."')") : "";
+  };
+
+  print STDERR "# First ensure_supplns $kind for $app_ns $app_ns_filename: "
+    , terse_dump($base_suppls, $base_mains, $opts), "\n" if DEBUG;
+
   if ($mypack->should_use_mro_c3) {
-    print STDERR "# Set mro c3 for $supplns since $mypack uses c3\n" if DEBUG;
+    print STDERR "# $kind - Set mro c3 for $supplns $app_ns_filename since $mypack uses c3\n" if DEBUG;
     mro::set_mro($supplns, 'c3')
   } else {
-    print STDERR "# Keep mro dfs for $supplns since $mypack uses dfs\n" if DEBUG;
+    print STDERR "# $kind - Keep mro dfs for $supplns $app_ns_filename since $mypack uses dfs\n" if DEBUG;
   }
 
   # $app_ns が %FIELDS 定義を持たない時(ex YLObjectでもPartialでもない)に限り、
   # YATT::Lite への継承を設定する
   unless (YATT::Lite::MFields->has_fields($app_ns)) {
     # XXX: $mypack への継承にすると、あちこち動かなくなるぜ？なんで？
-    print STDERR "# Add ISA(",MY,") to app_ns='$app_ns', with fields.\n"
+    print STDERR "# app_ns - Add ISA for '$app_ns' with fields: ",MY,"\n"
       if DEBUG;
     YATT::Lite::MFields->add_isa_to($app_ns, MY)->define_fields($app_ns);
   }
@@ -474,11 +482,11 @@ sub ensure_supplns {
   unless (grep {$_->can($kind)} @baseclass) {
     my $base = try_invoke($app_ns, $kind) // $mypack->can("root_$kind")->();
     ckrequire($base);
-    print STDERR "# Use default $base for $supplns\n" if DEBUG;
+    print STDERR "# $kind - Set default base for $supplns <- ($base)\n" if DEBUG;
     unshift @baseclass, $base;
   }
 
-  print STDERR "# Add ISA(@baseclass) to $kind $supplns\n" if DEBUG;
+  print STDERR "# $kind - Add ISA for $supplns <- (@baseclass)\n" if DEBUG;
   YATT::Lite::MFields->add_isa_to($supplns, @baseclass);
   if (not $opts->{no_fields}) {
     YATT::Lite::MFields->define_fields($supplns);
