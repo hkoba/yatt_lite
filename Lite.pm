@@ -440,13 +440,6 @@ sub ensure_entns {
 sub ensure_supplns {
   my ($mypack, $kind, $app_ns, $base_suppls, $base_mains, $opts) = @_;
 
-  if (not $base_suppls and not $base_mains) {
-    $base_mains = [list_isa($app_ns)];
-  }
-
-  my @baseclass = (lexpand($base_suppls)
-		   , map {$_->$kind()} lexpand($base_mains));
-
   my $supplns = join("::", $app_ns, $kind);
 
   my $sym = do {no strict 'refs'; \*{$supplns}};
@@ -462,6 +455,13 @@ sub ensure_supplns {
 
   print STDERR "# First ensure_supplns $kind for $app_ns $app_ns_filename: "
     , terse_dump($base_suppls, $base_mains, $opts), "\n" if DEBUG;
+
+  if (not $base_suppls and not $base_mains) {
+    $base_mains = [list_isa($app_ns)];
+  }
+
+  my @baseclass = (lexpand($base_suppls)
+		   , map {$_->$kind()} lexpand($base_mains));
 
   if ($mypack->should_use_mro_c3) {
     print STDERR "# $kind - Set mro c3 for $supplns $app_ns_filename since $mypack uses c3\n" if DEBUG;
