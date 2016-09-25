@@ -1,6 +1,7 @@
 package YATT::Lite::CGen::Perl;
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
+use mro 'c3';
 
 require 5.010; # For named capture.
 
