@@ -28,29 +28,31 @@ use YATT::Lite::Factory;
 }
 
 sub cmd_isa {
-  (my MY $self, my ($path)) = @_;
+  (my MY $self, my (@path)) = @_;
 
   my $disp = $self->{dispatcher};
 
-  unless (defined $path) {
+  if (not @path) {
     $self->show_isa(dispatcher => ref $disp);
   } else {
-    my ($dir, $file) = do {
-      if (-d $path) {
-	($path)
-      } else {
-	(dirname($path), basename($path));
-      }
-    };
-    my $dh = $disp->get_dirhandler($dir);
+    foreach my $path (@path) {
+      my ($dir, $file) = do {
+	if (-d $path) {
+	  ($path)
+	} else {
+	  (dirname($path), basename($path));
+	}
+      };
+      my $dh = $disp->get_dirhandler($dir);
 
-    if (defined $file) {
-      my ($part, $sub, $pkg) = $dh->open_trans->find_part_handler($file);
-      $self->show_isa(File => $pkg);
-#      my ($tmpl) = $dh->open_trans->find_file($file);
-#      $self->show_isa(File => $tmpl->cget('entns'));
-    } else {
-      $self->show_isa(DirApp => ref $dh);
+      if (defined $file) {
+	my ($part, $sub, $pkg) = $dh->open_trans->find_part_handler($file);
+	$self->show_isa(File => $pkg);
+	#      my ($tmpl) = $dh->open_trans->find_file($file);
+	#      $self->show_isa(File => $tmpl->cget('entns'));
+      } else {
+	$self->show_isa(DirApp => ref $dh);
+      }
     }
   }
 }
@@ -60,7 +62,8 @@ sub show_isa {
   if ($self->{cf_linear}) {
     print "$title=$class\n";
     foreach my $super (@{mro::get_linear_isa($class)}) {
-      print "  $super\n";
+      my $fn = $self->get_class_filename($super);
+      print "  ", $super, "\t", $fn ? "[$fn]" : "", "\n";
     }
   } else {
     print $class;
