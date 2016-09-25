@@ -8,6 +8,7 @@ our $VERSION = '0.100_003';
 use mro 'c3';
 
 use Scalar::Util qw/weaken/;
+use List::MoreUtils qw/uniq/;
 
 #
 # YATT Internalへの Facade. YATT の初期化パラメータの保持者でもある。
@@ -457,7 +458,9 @@ sub ensure_supplns {
     , terse_dump($base_suppls, $base_mains, $opts), "\n" if DEBUG;
 
   if (not $base_suppls and not $base_mains) {
-    $base_mains = [list_isa($app_ns)];
+    my @isa = list_isa($app_ns);
+    $base_mains = $mypack->should_use_mro_c3
+      ? [reverse @isa] : \@isa;
   }
 
   my @baseclass = (lexpand($base_suppls)
@@ -483,11 +486,18 @@ sub ensure_supplns {
     my $base = try_invoke($app_ns, $kind) // $mypack->can("root_$kind")->();
     ckrequire($base);
     print STDERR "# $kind - Set default base for $supplns <- ($base)\n" if DEBUG;
-    unshift @baseclass, $base;
+    if ($mypack->should_use_mro_c3) {
+      push @baseclass, $base;
+    } else {
+      unshift @baseclass, $base;
+    }
   }
 
-  print STDERR "# $kind - Add ISA for $supplns <- (@baseclass)\n" if DEBUG;
-  YATT::Lite::MFields->add_isa_to($supplns, @baseclass);
+  do {
+    my @cls = uniq @baseclass;
+    print STDERR "# $kind - Add ISA for $supplns <- (@cls)\n" if DEBUG;
+    YATT::Lite::MFields->add_isa_to($supplns, @cls);
+  };
   if (not $opts->{no_fields}) {
     YATT::Lite::MFields->define_fields($supplns);
   }
