@@ -310,6 +310,12 @@ require Scalar::Util;
   sub dict_sort (@) {
     map {$_->[0]} sort {dict_order($a,$b)} map {[$_, split /(\d+)/]} @_;
   }
+  sub dict_sort_by_nth ($@) {
+    my $nth = shift;
+    map {$_->[0]}
+    sort {dict_order($a,$b)}
+    map {[$_, split /(\d+)/, $$_[$nth]]} @_;
+  }
 
   sub captured (&) {
     my ($code) = @_;
