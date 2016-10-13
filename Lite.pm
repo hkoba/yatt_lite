@@ -393,6 +393,11 @@ sub get_cgen_class {
     ||= $self->ensure_cgen_for($type, $self->{cf_app_ns});
 }
 
+sub is_default_cgen_ready {
+  (my MY $self) = @_;
+  $self->{cgen_class}{perl};
+}
+
 #========================================
 # Entity
 #========================================

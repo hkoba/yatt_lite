@@ -48,6 +48,18 @@ sub action_response (&;@) {
   $client->request(GET $URL.$params);
 }
 
+describe 'To preload CGen class', sub {
+  my $res = $client->request(GET "/empty");
+
+  it "should has code == 200", sub {
+    expect($res->code)->to_be(200);
+  };
+
+  it "should contain Hello World", sub {
+    expect($res->content)->to_match(qr/Hello World/);
+  };
+};
+
 describe '$CON->error_with_status($code, $msg, @args...)', sub {
 
   describe "200 with reason as content", sub {

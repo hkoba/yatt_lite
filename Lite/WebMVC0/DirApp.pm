@@ -225,6 +225,14 @@ sub error_handler {
   } elsif ($code = try_invoke($errcon, [cget => 'status'])) {
     $err->{cf_http_status_code} = $code;
   }
+
+  # yatt/ytmpl 用の Code generator がまだ無いので、素直に raise.
+  # XXX: 本当は正しくロードできる可能性もあるが,
+  #  そこで更に fail すると真のエラーが隠されてしまうため、頑張らない。
+  unless ($self->is_default_cgen_ready) {
+    die $err;
+  }
+
   # error.ytmpl を探し、あれば呼び出す。
   my ($sub, $pkg);
   ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
