@@ -468,8 +468,9 @@ sub ensure_supplns {
       ? [reverse @isa] : \@isa;
   }
 
-  my @baseclass = (lexpand($base_suppls)
-		   , map {$_->$kind()} lexpand($base_mains));
+  my @baseclass = (lexpand($base_suppls), map {
+    $mypack->ensure_supplns($kind => $_, undef, undef, $opts);
+  } lexpand($base_mains));
 
   if ($mypack->should_use_mro_c3) {
     print STDERR "# $kind - Set mro c3 for $supplns $app_ns_filename since $mypack uses c3\n" if DEBUG;
