@@ -464,6 +464,9 @@ sub ensure_supplns {
 
   if (not $base_suppls and not $base_mains) {
     my @isa = list_isa($app_ns);
+    print STDERR "# app_ns $app_ns isa: "
+      , terse_dump(@isa), "\n" if DEBUG;
+
     $base_mains = $mypack->should_use_mro_c3
       ? [reverse @isa] : \@isa;
   }

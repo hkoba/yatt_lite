@@ -89,16 +89,16 @@ use YATT::Lite::Util qw(lexpand);
     my $newns = sprintf q{%s::%s%d}, $self->{app_ns}, $subns
       , ++$self->{subns}{$subns};
     $self->define_base_of($newns, @base ? @base : $self->{app_ns});
+
+    YATT::Lite::Util::globref_default(globref($newns, 'filename')
+                                      , sub { $path });
+
     my $entns = $self->{default_app}->ensure_entns($newns, map {
       $_->EntNS
     } @base ? @base : $self->{app_ns});
 
-    foreach my $ns ($entns, $newns) {
-      my $sym = globref($ns, 'filename');
-      unless (*{$sym}{CODE}) {
-	*$sym = sub { $path };
-      }
-    }
+    YATT::Lite::Util::globref_default(globref($entns, 'filename')
+                                      , sub { $path });
 
     set_inc($newns, 1);
     $newns;
