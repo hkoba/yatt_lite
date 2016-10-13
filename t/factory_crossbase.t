@@ -99,7 +99,7 @@ END
 
   foreach my $dn (qw(jp2015/ us2016/)) {
     is $F->get_yatt("/$dn")->render('' => [])
-      , "OK - $dn\n\n", "$THEME /$dn";
+      , "OK - $dn\n", "$THEME /$dn";
   }
 
 
