@@ -58,6 +58,9 @@ my $i = 0;
 	     , "$docroot/us2014/.htyattconfig.xhf"
 	     => $BASE->(qw(@html/us2012 @html/jp2015_en @html/jp2015))
 
+	     , "$docroot/us2016/.htyattconfig.xhf"
+	     => $BASE->(qw(@html/us2012 @html/jp2015_en @html/jp2015))
+
 	     , "$docroot/jp2015_en/.htyattconfig.xhf"
 	     => $BASE->(qw(../jp2011))
 
@@ -83,6 +86,8 @@ END
 - FROM jp2015_en
 END
 
+             , map(("$docroot/$_/index.yatt" => "OK - $_/\n")
+                   , qw(jp2015 us2016))
 	    );
 
 
@@ -91,6 +96,12 @@ END
 		       , doc_root => $docroot
 		       , app_base => '@ytmpl'
 		      );
+
+  foreach my $dn (qw(jp2015/ us2016/)) {
+    is $F->get_yatt("/$dn")->render('' => [])
+      , "OK - $dn\n\n", "$THEME /$dn";
+  }
+
 
   is $F->get_yatt('/us2012/')->render('' => [])
     , "OK - FROM jp2011\n\n", "$THEME /us2012/";
