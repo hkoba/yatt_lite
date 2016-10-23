@@ -314,3 +314,57 @@ x: Y
 ]
 OUT:
  http://0:5000/baz?x=Y
+
+
+TITLE: :default(,,none) => none
+PARAM[
+]
+IN:
+ <!yatt:args x y z="?none">
+ &yatt:default(:x,:y,:z);
+OUT:
+ none
+
+
+TITLE: :default(,0,none) => 0
+PARAM[
+- 
+- 0
+]
+OUT:
+ 0
+
+TITLE: :default(ok,0,none) => ok
+PARAM[
+- ok
+- 0
+]
+OUT:
+ ok
+
+
+TITLE: :coalesce(=undef,=undef,none) => none
+PARAM[
+]
+IN:
+ <!yatt:args x y z="?none">
+ &yatt:coalesce(:x,:y,:z);
+OUT:
+ none
+
+
+TITLE: :coalesce(=undef,,none) => (empty)
+PARAM[
+- 
+- 
+]
+OUT:
+ 
+
+TITLE: :coalesce(ok,0,none) => ok
+PARAM[
+- ok
+- 0
+]
+OUT:
+ ok
