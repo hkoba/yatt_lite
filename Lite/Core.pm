@@ -107,7 +107,8 @@ use YATT::Lite::Breakpoint ();
   }
 
   sub YATT::Lite::Core::Part::reorder_hash_params {
-    (my Widget $widget, my ($params)) = @_;
+    (my Widget $widget, my ($orig_params)) = @_;
+    my $params = +{%$orig_params};
     my @params;
     foreach my $name (map($_ ? @$_ : (), $widget->{arg_order})) {
       push @params, delete $params->{$name};
