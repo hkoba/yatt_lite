@@ -30,6 +30,13 @@ use Test::More;
 }
 
 {
+  use utf8;
+  my $enc = sub {YATT::Lite::Util->url_encode($_[0])};
+  is $enc->("\x{6f22}\x{5b57}"), q{%E6%BC%A2%E5%AD%97}
+    , q{url_encode(\x{6f22}\x{5b57}) => %E6%BC%A2%E5%AD%97};
+}
+
+{
   package
     t_test1;
   sub render_q1 {

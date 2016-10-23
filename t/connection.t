@@ -198,7 +198,15 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 			 , [foo => 'a', foo => 'b', bar => 'baz']);
       $con->mkquery($con);
     }, "?foo=a&foo=b&bar=baz"
-      , "mkcon";
+      , "mkquery";
+
+    is do {
+      my $con = $mkcon->(hmv => 'Hash::MultiValue'
+			 , ["\x{86d9}\x{306e}\x{6b4c}\x{304c}" => "\x{805e}\x{3053}\x{3048}\x{3066}\x{304f}\x{308b}\x{3088}"]);
+      $con->mkquery($con);
+    }, '?%E8%9B%99%E3%81%AE%E6%AD%8C%E3%81%8C='
+      . '%E8%81%9E%E3%81%93%E3%81%88%E3%81%A6%E3%81%8F%E3%82%8B%E3%82%88'
+      , "mkquery() with utf8";
 
     is do {
       my $con = $mkcon->(hmv => 'Hash::MultiValue'

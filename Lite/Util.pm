@@ -3,6 +3,8 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use constant DEBUG_LOOKUP_PATH => $ENV{DEBUG_YATT_UTIL_LOOKUP_PATH};
 
+use Encode ();
+
 use URI::Escape ();
 use Tie::IxHash;
 
@@ -549,17 +551,24 @@ sub named_attr {
 }
 
 # Verbatimly stolen from CGI::Simple
+# XXX: not used?
 sub url_decode {
   my ( $self, $decode ) = @_;
   return () unless defined $decode;
   $decode =~ tr/+/ /;
   $decode =~ s/%([a-fA-F0-9]{2})/ pack "C", hex $1 /eg;
+  # XXX: should set utf8 flag too?
   return $decode;
 }
 
 sub url_encode {
   my ( $self, $encode ) = @_;
   return () unless defined $encode;
+
+  if (Encode::is_utf8($encode)) {
+    $encode = Encode::encode_utf8($encode);
+  }
+
   # XXX: Forward slash (and ':') is allowed, for cleaner url. This may break...
   $encode
     =~ s{([^A-Za-z0-9\-_.!~*'() /:])}{ uc sprintf "%%%02x",ord $1 }eg;
