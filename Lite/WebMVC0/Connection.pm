@@ -7,7 +7,7 @@ use base qw(YATT::Lite::Connection);
 use YATT::Lite::MFields
 (qw/cf_cgi
     cf_is_psgi cf_hmv
-    params_hash
+    cf_parameters
 
     cf_site_prefix
 
@@ -85,7 +85,7 @@ BEGIN {
 
 sub param {
   my PROP $prop = (my $glob = shift)->prop;
-  if (my $ixh = $prop->{params_hash}) {
+  if (my $ixh = $prop->{cf_parameters}) {
     return keys %$ixh unless @_;
     defined (my $key = shift)
       or croak "undefined key!";
@@ -96,7 +96,7 @@ sub param {
 	$ixh->{$key} = shift;
       }
     } else {
-      # If params_hash is enabled, value is returned AS-IS.
+      # If cf_parameters is enabled, value is returned AS-IS.
       $ixh->{$key};
     }
   } elsif (my $hmv = $prop->{cf_hmv}) {
@@ -117,11 +117,11 @@ sub param {
 # Annoying multi_param support.
 sub multi_param {
   my PROP $prop = (my $glob = shift)->prop;
-  if (my $ixh = $prop->{params_hash}) {
+  if (my $ixh = $prop->{cf_parameters}) {
     return keys %$ixh unless @_;
     defined (my $key = shift)
       or croak "undefined key!";
-    # If params_hash is enabled, value is returned AS-IS.
+    # If cf_parameters is enabled, value is returned AS-IS.
     $ixh->{$key};
 
   } elsif (my $hmv = ($prop->{cf_hmv} // do {
@@ -138,7 +138,7 @@ sub multi_param {
 
 sub queryobj {
   my PROP $prop = (my $glob = shift)->prop;
-  $prop->{params_hash} || $prop->{cf_hmv} || $prop->{cf_cgi};
+  $prop->{cf_parameters} || $prop->{cf_hmv} || $prop->{cf_cgi};
 }
 
 #========================================
@@ -147,6 +147,7 @@ sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_cgi} = my $cgi = shift;
   return unless $glob->is_form_content_type($cgi->content_type);
+  return if $prop->{cf_parameters};
   unless ($prop->{cf_no_nested_query}) {
     if ($prop->{cf_is_psgi}) {
       $glob->convert_array_param_psgi($cgi);
@@ -183,7 +184,7 @@ sub convert_array_param_psgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($req) = @_;
   my Env $env = $prop->{cf_env};
-  $prop->{params_hash} = do {
+  $prop->{cf_parameters} = do {
     if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
       my $body = $glob->parse_nested_query([$req->body_parameters->flatten]);
       my $qs = $glob->parse_nested_query($env->{QUERY_STRING});
@@ -205,7 +206,7 @@ sub convert_array_param_cgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($cgi) = @_;
   return if ($cgi->content_type // "") eq "application/json";
-  $prop->{params_hash}
+  $prop->{cf_parameters}
     = $glob->parse_nested_query($cgi->query_string);
 }
 
