@@ -110,8 +110,14 @@ sub entity_concat {
   join '', @_;
 }
 
-# coalesce
-*entity_coalesce = *entity_default; *entity_coalesce = *entity_default;
+sub entity_coalesce {
+  my $this = shift;
+  foreach my $str (@_) {
+    return $str if defined $str;
+  }
+  '';
+}
+
 sub entity_default {
   my $this = shift;
   foreach my $str (@_) {
