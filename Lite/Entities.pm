@@ -100,6 +100,11 @@ sub entity_breakpoint {
   &YATT::Lite::Breakpoint::breakpoint();
 }
 
+sub entity_param {
+  shift;
+  $CON->param(@_);
+}
+
 sub entity_concat {
   my $this = shift;
   join '', @_;
