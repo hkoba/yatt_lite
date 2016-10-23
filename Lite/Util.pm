@@ -321,7 +321,7 @@ require Scalar::Util;
 
   sub captured (&) {
     my ($code) = @_;
-    open my $fh, '>', \ (my $buffer = "") or die "Can't create capture buf:$!";
+    open my $fh, '>:utf8', \ (my $buffer = "") or die "Can't create capture buf:$!";
     $code->($fh);
     $buffer;
   }
