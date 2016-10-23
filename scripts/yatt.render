@@ -59,8 +59,7 @@ my @command;
 
     my ($part, $sub, $pkg) = $trans->find_part_handler(basename($file));
     # XXX: cgi mode.
-    push @command, [$dirhandler, $file, $sub, $pkg
-		    , $part->reorder_hash_params(\%param)];
+    push @command, [$dirhandler, $file, $sub, $pkg, $part, \%param];
   }
 }
 
@@ -68,12 +67,16 @@ my @command;
 
 my $nerror;
 foreach my $cmd (@command) {
-  my ($dirhandler, $file, $sub, $this, @args) = @$cmd;
+  my ($dirhandler, $file, $sub, $this, $part, $params) = @$cmd;
+  my @args = $part->reorder_hash_params($params);
   local $YATT = $dirhandler;
   local $dirhandler->{cf_at_done} = sub {};
   # $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $CON = $dispatcher->make_connection
-    (\*STDOUT, cgi => CGI->new({}), file => $file, noheader => 1
+    (\*STDOUT
+     , parameters => +{%$params}
+     , cgi => CGI->new(+{%$params})
+     , file => $file, noheader => 1
      , system => $SYS, yatt => $YATT);
   my $err = catch {
     $sub->($this, $CON, @args);
