@@ -15,6 +15,7 @@ BEGIN {
        cf_package
        cf_default
        cf_doc cf_label
+       cf_only_if_missing
       /;
 }
 
@@ -108,6 +109,8 @@ sub import_fields_from {
       } elsif (not UNIVERSAL::isa($existing, $self->Decl)) {
 	croak "Importing $class.$name onto raw field"
 	  . " (defined in $self->{cf_package}) is prohibited";
+      } elsif ($importing->{cf_only_if_missing}) {
+        ; # import $importing only if it is missing in target package.
       } elsif ($importing != $existing) {
 	croak "Conflicting import $class.$name"
 	  . " (defined in $importing->{cf_package}) "
