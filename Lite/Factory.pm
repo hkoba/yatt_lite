@@ -97,6 +97,12 @@ use YATT::Lite::MFields
        cf_always_refresh_deps
        cf_no_mro_c3
 
+       cf_special_entities
+       cf_default_lang
+       cf_no_lineinfo
+       cf_debug_parser
+       cf_check_lineno
+
        _outer_psgi_app
        _my_psgi_app
      /);
@@ -865,6 +871,13 @@ sub _cf_delegates {
      dont_debug_param
      always_refresh_deps
      no_mro_c3
+     die_in_error
+     special_entities
+     default_lang
+     no_lineinfo
+     ext_pattern
+     debug_parser
+     check_lineno
   );
 }
 
