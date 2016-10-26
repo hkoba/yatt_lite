@@ -731,4 +731,31 @@ END
   is_deeply \%lite, \%except, "parameter delegation[Factory -> Lite]";
 }
 
+{
+  my %except = map {$_ => 1}
+    (# These are internal use only, so we don't need to delegate.
+     qw(
+         facade
+         cache
+         entns2vfs_item
+         entns
+         mark)
+     ,
+     # Belows are future candidates for delegation.
+     qw(
+         no_auto_create
+         error_handler
+         parse_while_loading
+     )
+   );
+
+  my %core = map {
+    ($$_[0] =~ /^cf_(\w+)/) ? ($1 => 1) : ()
+  } YATT::Lite::MFields->get_meta("YATT::Lite::Core")->fields;
+
+  delete $core{$_} for YATT::Lite->_cf_delegates;
+
+  is_deeply \%core, \%except, "parameter delegation[Lite -> Core]";
+}
+
 done_testing();

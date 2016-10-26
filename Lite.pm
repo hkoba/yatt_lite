@@ -42,7 +42,6 @@ use YATT::Lite::MFields qw/YATT
 
 	      cf_default_lang
 
-	      cf_path2entns
 	      cf_entns2vfs_item
 	      cf_import
 	    /;
@@ -350,21 +349,29 @@ sub build_trans {
      , entns2vfs_item => $self->{cf_entns2vfs_item}
      , entns => $self->{entns}
      , @rest
-     # XXX: Should be more extensible.
-     , $self->cf_delegate_defined(qw/namespace base
-				     die_in_error tmpl_encoding
-				     debug_cgen debug_parser
-				     special_entities no_lineinfo check_lineno
-				     index_name
-				     ext_public
-				     ext_private
-				     rc_script
-				     lcmsg_sink
-				     only_parse
-				     always_refresh_deps
-				     no_mro_c3
-				     import
-				    /));
+     , $self->cf_delegate_defined($self->_cf_delegates));
+}
+
+sub _cf_delegates {
+  qw(namespace
+     base
+     die_in_error
+     tmpl_encoding
+     debug_cgen
+     debug_parser
+     special_entities
+     no_lineinfo
+     check_lineno
+     index_name
+     ext_public
+     ext_private
+     rc_script
+     lcmsg_sink
+     only_parse
+     always_refresh_deps
+     no_mro_c3
+     import
+    )
 }
 
 sub _before_after_new {
