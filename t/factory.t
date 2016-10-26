@@ -697,4 +697,38 @@ END
   $test->(["/foo/bar/", "/unk/"], undef, $T);
 }
 
+#----------------------------------------
+# parameter delegation
+#----------------------------------------
+
+{
+  my %except = map {$_ => 1}
+    qw(
+        vfs
+        dir
+        app_ns
+        app_name
+        factory
+
+        tmpl_cache
+        entns2vfs_item
+
+        error_handler
+        lcmsg_sink
+
+        base
+        import
+        rc_script
+        info
+    );
+
+  my %lite = map {
+    ($$_[0] =~ /^cf_(\w+)/) ? ($1 => 1) : ()
+  } YATT::Lite::MFields->get_meta("YATT::Lite")->fields;
+
+  delete $lite{$_} for YATT::Lite::Factory->_cf_delegates;
+
+  is_deeply \%lite, \%except, "parameter delegation[Factory -> Lite]";
+}
+
 done_testing();
