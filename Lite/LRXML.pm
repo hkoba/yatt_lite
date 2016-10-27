@@ -629,10 +629,7 @@ sub add_args {
     unless (defined $argName) {
       die $self->synerror_at($self->{startln}, 'Invalid argument spec');
     }
-    if (exists $part->{arg_dict}{$argName}) {
-      die $self->synerror_at($self->{startln}, 'Argument %s redefined in %s %s'
-		   , $argName, $part->{cf_kind}, $part->{cf_name});
-    }
+
     my ($type, $dflag, $default);
     if ($node_type == TYPE_ATT_NESTED) {
       $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
@@ -640,23 +637,38 @@ sub add_args {
     } else {
       ($type, $dflag, $default) = split m{([|/?!])}, $desc || '', 2;
     };
-    my $var = $self->mkvar_at($self->{startln}
-			      , $type, $argName, nextArgNo($part)
-			      , $lno, $node_type, $dflag
-			      , defined $default
-			      ? $self->_parse_text_entities($default) : undef);
 
-    if ($node_type == TYPE_ATT_NESTED) {
-      # XXX: [delegate:type ...], [code  ...] の ... が来る
-      # 仮想的な widget にする？ のが一番楽そうではあるか。そうすれば add_args 出来る。
-      # $self->add_arg_of_delegate/code/...へ。
-      my $t = $var->type->[0];
-      my $sub = $self->can("add_arg_of_type_$t")
-	or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $t);
-      $sub->($self, $part, $var, \@rest);
+    if (my $var = $part->{arg_dict}{$argName}) {
+      if ($var->from_route) {
+        # Override $type, $dflag, $default of this var.
+        $self->set_var_type($var, $type); # type is always overridden.
+        $var->dflag($dflag) if $dflag;
+        $var->default($self->_parse_text_entities($default))
+          if defined $default;
+      } else {
+        die $self->synerror_at($self->{startln}
+                               , 'Argument %s redefined in %s %s'
+                               , $argName, $part->{cf_kind}, $part->{cf_name});
+      }
     } else {
-      push @{$part->{arg_order}}, $argName;
-      $part->{arg_dict}{$argName} = $var;
+      my $var = $self->mkvar_at($self->{startln}
+                                , $type, $argName, nextArgNo($part)
+                                , $lno, $node_type, $dflag
+                                , defined $default
+                                ? $self->_parse_text_entities($default) : undef);
+
+      if ($node_type == TYPE_ATT_NESTED) {
+        # XXX: [delegate:type ...], [code  ...] の ... が来る
+        # 仮想的な widget にする？ のが一番楽そうではあるか。そうすれば add_args 出来る。
+        # $self->add_arg_of_delegate/code/...へ。
+        my $t = $var->type->[0];
+        my $sub = $self->can("add_arg_of_type_$t")
+          or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $t);
+        $sub->($self, $part, $var, \@rest);
+      } else {
+        push @{$part->{arg_order}}, $argName;
+        $part->{arg_dict}{$argName} = $var;
+      }
     }
   }
   $self;
@@ -669,6 +681,7 @@ sub add_url_params {
     my $type = 'value'; # XXX: type_or_pat
     my $var = $self->mkvar_at($self->{startln}, $type, $argName
 			      , nextArgNo($part));
+    $var->from_route(1);
     push @{$part->{arg_order}}, $argName;
     $part->{arg_dict}{$argName} = $var;
   }
