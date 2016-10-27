@@ -124,7 +124,7 @@ sub is_or_like($$;$) {
 END
   };
 
-  my $out_index = $hello->(content => 'World');
+  my $out_index = $hello->(content => 'World;-)');
   my $out_beta = $hello->(beta => "world line");
 
   # XXX: subdir

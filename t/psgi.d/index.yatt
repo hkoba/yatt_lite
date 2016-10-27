@@ -1,4 +1,4 @@
-<!yatt:args "/{any:.*}">
+<!yatt:args "/{any:.*}" any="?;-)">
 <yatt:hello id="content">
 World&yatt:any;
 </yatt:hello>
