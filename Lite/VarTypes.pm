@@ -23,7 +23,9 @@ sub add_slot_to {
 BEGIN {
   our @fields = qw(type
 		   varname argno
-		   lineno quote dflag default);
+		   lineno quote dflag default
+                   from_route
+                );
   my $slotNum = 0;
   foreach my $name (@fields) {
     # accessor
