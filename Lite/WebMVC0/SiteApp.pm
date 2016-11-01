@@ -301,11 +301,11 @@ sub call {
     }
     $res->body($con->buffer);
     return $res->finalize;
-  } elsif (ref $error eq 'ARRAY') {
+  } elsif (ref $error eq 'ARRAY' or ref $error eq 'CODE') {
     # redirect
     if ($self->{cf_debug_psgi}) {
       if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
-	print $errfh "PSGI Tuple: ", terse_dump($error), "\n";
+	print $errfh "PSGI Response: ", terse_dump($error), "\n";
       }
     }
     return $error;
