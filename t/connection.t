@@ -52,6 +52,25 @@ my $i = 1;
     like $@, qr{^Trivial alert 'MyAlert'}, $T . ' $con->raise(alert)';
   }
 
+  {
+    my $con = YATT::Lite::Connection->create(undef, noheader => 1);
+    eval {
+      $con->raise_response([200, [], ["OK"]]);
+    };
+    is_deeply $@, [200, [], ["OK"]], "raise_response([TUPLE])";
+
+    eval {
+      $con->raise_response(sub {
+                             my ($responder) = @_;
+                             return sub {
+                               my ($content) = @_;
+                               [200, [], [$content]];
+                             };
+                           });
+    };
+    is_deeply $@->()->("OKOK"), [200, [], ["OKOK"]], "raise_response([delayed])";
+  }
+
   SKIP:
   {
     my $T = '[with header]';

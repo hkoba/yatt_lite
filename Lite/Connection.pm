@@ -174,6 +174,14 @@ sub cf_pairs {
 
 #========================================
 
+# Just a wrapper for die.
+sub raise_response {
+  my ($con, $response) = @_;
+  die $response;
+}
+
+#========================================
+
 sub as_error {
   my PROP $prop = prop(my $glob = shift);
   $prop->{is_error} = 1;
