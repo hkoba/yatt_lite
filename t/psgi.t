@@ -48,6 +48,7 @@ sub is_or_like($$;$) {
 	  , app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
 	  , use_subpath => 1
+          # , match_argsroute_first => 0
 	  , (psgi_fallback => YATT::Lite::WebMVC0::SiteApp
 	     ->psgi_file_app("$rootname.d.fallback"))
 	 );
@@ -231,6 +232,32 @@ END
       is $res->[0], 200, "$theme $p status";
       is_or_like join("", @{$res->[2]})
 	, $hello->(content => "World from action")
+	  , "$theme $p body";
+    }
+  }
+  {
+    ;
+    my $theme = "[route matching order]";
+    my $get_env = sub {
+      my ($path) = @_;
+      my Env $env = Env->psgi_simple_env;
+      $env->{PATH_INFO} = $path;
+      $env->{SCRIPT_NAME} = '';
+      $env;
+    };
+    {
+      my $res = $app->($get_env->("/index2/doc/".(my $p = "hello.md")));
+      is $res->[0], 200, "$theme $p status";
+      is_or_like join("", @{$res->[2]})
+	, "<h2>Render doc: hello.md</h2>\n"
+	  , "$theme $p body";
+    }
+    {
+      my $theme = "First action should match";
+      my $res = $app->($get_env->("/index2/doc/".(my $p = "hello.gif")));
+      is $res->[0], 200, "$theme $p status";
+      is_or_like join("", @{$res->[2]})
+	, "Action: $p"
 	  , "$theme $p body";
     }
   }

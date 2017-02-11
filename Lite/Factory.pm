@@ -105,6 +105,8 @@ use YATT::Lite::MFields
 
        _outer_psgi_app
        _my_psgi_app
+
+       cf_match_argsroute_first
      /);
 
 use YATT::Lite::Util::AsBase;
@@ -878,6 +880,7 @@ sub _cf_delegates {
      ext_pattern
      debug_parser
      check_lineno
+     match_argsroute_first
   );
 }
 

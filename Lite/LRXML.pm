@@ -28,6 +28,8 @@ use fields qw/re_decl
 	      subroutes
 	      rootroute
 
+              cf_match_argsroute_first
+
 	      _original_entpath
 	    /;
 
@@ -312,8 +314,10 @@ sub parse_decl {
 
 sub finalize_template {
   (my MY $self, my Template $tmpl) = @_;
-  if ($self->{rootroute}) {
-    $self->subroutes->append($self->{rootroute});
+  if ($self->{cf_match_argsroute_first}) {
+    if ($self->{rootroute}) {
+      $self->subroutes->append($self->{rootroute});
+    }
   }
   if ($self->{subroutes}) {
     $tmpl->{cf_subroutes} = $self->{subroutes};
@@ -514,7 +518,11 @@ sub declare_args {
 			       , q{Invalid location in %s:%s - "%s"}
 			       , $ns, 'args', $patNode->[NODE_BODY])
       };
-    $self->{rootroute} = $mapping;
+    if ($self->{cf_match_argsroute_first}) {
+      $self->{rootroute} = $mapping;
+    } else {
+      $self->{subroutes}->append($mapping);
+    }
     $self->add_url_params($newpart, lexpand($mapping->cget('params')));
   }
 

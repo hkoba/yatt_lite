@@ -14,6 +14,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_die_in_error cf_error_handler
 	      cf_special_entities
 	      cf_lcmsg_sink
+              cf_match_argsroute_first
 
 	      n_compiles
 	    /;
@@ -244,7 +245,9 @@ sub synerror {
     # $self->{parser} ||=
       $self->Parser->new
 	(vfs => $self, $self->cf_delegate
-	 (qw(namespace special_entities)
+	 (qw(namespace special_entities
+             match_argsroute_first
+          )
 	  , [debug_parser => 'debug']
 	  , [tmpl_encoding => 'encoding']
 	 )
