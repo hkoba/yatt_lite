@@ -91,7 +91,7 @@ please dispose this mail.
   <a href="&yatt:back;">back</a>
 </yatt:envelope>
 
-<!yatt:action confirm token=!>
+<!yatt:action confirm>
 my ($this, $con) = @_;
 
 my $token = $con->param_type(token => word => 'Token should be a word.');

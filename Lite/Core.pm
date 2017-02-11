@@ -59,6 +59,24 @@ use YATT::Lite::Breakpoint ();
 				       )]]
     );
 
+  sub YATT::Lite::Core::Part::public_name {
+    (my Part $part) = @_;
+    $part->{cf_name};
+  }
+  sub YATT::Lite::Core::Action::public_name {
+    (my Action $action) = @_;
+    substr($action->{cf_name}, 3);
+  }
+  sub YATT::Lite::Core::Part::method_name {...}
+  sub YATT::Lite::Core::Widget::method_name {
+    (my Widget $widget) = @_;
+    "render_$widget->{cf_name}";
+  }
+  sub YATT::Lite::Core::Action::method_name {
+    (my Action $action) = @_;
+    $action->{cf_name};
+  }
+
   sub YATT::Lite::Core::Part::configure_folder {
     (my Part $part, my Folder $folder) = @_;
     Scalar::Util::weaken($part->{cf_folder} = $folder);

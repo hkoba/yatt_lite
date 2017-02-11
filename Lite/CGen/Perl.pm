@@ -123,13 +123,24 @@ use YATT::Lite::Constants;
   sub generate_action {
     (my MY $self, my Action $action) = @_;
     # XXX: 改行の調整が必要。
+    my @src = ($self->sync_curline($action->{cf_startln})
+               , "sub $$action{cf_name} {");
     my $src = $self->{curtmpl}->source_substr
       ($action->{cf_bodypos}, $action->{cf_bodylen});
+
+    if (lexpand($action->{arg_order})
+        or $src !~ m{^([\ \t\n]*)my\s*\([^;\)]+\)\s*=\s*\@_\s*;}) {
+      # If an action has no arguments
+      # and its source doesn't start with my (...) = @_;,
+      # insert preamble and getargs.
+      push @src, $self->gen_preamble($action)
+        , $self->gen_getargs($action, not $action->{cf_implicit});
+    }
+
     my $has_nl = $src =~ s/\r?\n\Z//;
     $self->{curline} = $action->{cf_bodyln} + numLines($src)
       + ($has_nl ? 1 : 0);
-    sprintf "sub %s {%s}\n"
-      , $action->{cf_name}, $src;
+    (@src, $src, "}");
   }
   #========================================
   sub gen_preamble {q{ my ($this, $CON) = splice @_, 0, 2;}}

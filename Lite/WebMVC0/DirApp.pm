@@ -79,9 +79,10 @@ sub prepare_part_handler {
     $pkg = $trans->find_product(perl => $tmpl) or do {
       croak $self->error("Can't compile template file: %s", $file);
     };
-    my $name = $part->cget('name');
-    $sub = $pkg->can("render_$name") or do {
-      croak $self->error("Can't find page %s for file: %s", $name, $file);
+
+    $sub = $pkg->can($part->method_name) or do {
+      croak $self->error("Can't find %s %s for file: %s"
+                         , $part->cget('kind'), $part->public_name, $file);
     };
     @args = $part->reorder_cgi_params($con, $actual)
       unless $self->{cf_dont_map_args};

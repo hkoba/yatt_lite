@@ -163,7 +163,8 @@ sub cut_next_nl {
   my MY $self = shift;
   # undef は返したくないので。
   return wantarray ? () : ''
-    unless @{$self->{curtoks}} and $self->{curtoks}[0] =~ /^\r?\n$/;
+    unless $self->{curtoks}
+    and @{$self->{curtoks}} and $self->{curtoks}[0] =~ /^\r?\n$/;
   return wantarray ? () : ''
     if @{$self->{curtoks}} == 1; # 最後の一個の改行は、残す。これは "}\n" のため
   $self->{curline}++;
