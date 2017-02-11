@@ -465,7 +465,11 @@ sub build_widget { shift->Widget->new(@_) }
 sub build_page { shift->Page->new(@_) }
 sub build_action {
   (my MY $self, my (%opts)) = @_;
+
+  # XXX: This is a workaround to have renderers and actions
+  # in the same hash table $template->{Item}.
   $opts{name} = "do_$opts{name}";
+
   $self->Action->new(%opts);
 }
 sub build_data { shift->Data->new(@_) }
