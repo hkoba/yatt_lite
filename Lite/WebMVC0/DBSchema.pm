@@ -382,7 +382,10 @@ sub ensure_table_populated {
 sub sqlite_begin_create {
   (my MY $schema) = @_;
   # To speedup create statements.
-  $schema->dbh->do("PRAGMA synchronous = OFF");
+  my $dbh = $schema->dbh;
+  if ($dbh->{AutoCommit}) {
+    $dbh->do("PRAGMA synchronous = OFF");
+  }
 }
 
 sub expand_codevalue {
