@@ -577,7 +577,9 @@ sub make_connection {
   }
   $self->SUPER::make_connection
   (@opts
-   , $self->cf_delegate_defined(qw(is_psgi no_nested_query))
+   , $self->cf_delegate_defined(qw(is_psgi
+                                   no_unicode_params
+                                   no_nested_query))
    , @args);
 }
 
