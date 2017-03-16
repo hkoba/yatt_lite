@@ -141,6 +141,30 @@ sub queryobj {
   $prop->{cf_parameters} || $prop->{cf_hmv} || $prop->{cf_cgi};
 }
 
+*remove_param = *delete_param; *remove_param = *delete_param;
+sub delete_param {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($key) = @_;
+  unless (defined $key) {
+    croak "Undefined key!";
+  }
+  if (my $dict = $prop->{cf_parameters}) {
+    # For nested_query (array_param)
+    delete $dict->{$key};
+  } elsif ($dict = $prop->{cf_hmv}) {
+    # For direct Hash::MultiValue.
+    $dict->remove($key);
+  } elsif (($dict = $prop->{cf_cgi})->can("parameters")) {
+    # For Plack::Request
+    $dict->parameters->remove($key);
+  } elsif ($dict->can("delete")) {
+    # For CGI family.
+    $dict->delete($key);
+  } else {
+    croak "No queryobj found!";
+  }
+}
+
 #========================================
 
 sub configure_cgi {
