@@ -12,6 +12,7 @@ use fields qw(cf_FH cf_filename cf_string cf_tokens
 	      cf_allow_empty_name
 	      cf_encoding cf_crlf
 	      cf_nocr cf_subst
+              cf_first_lineno
 	      cf_skip_comment cf_bytes);
 
 use Exporter qw(import);
@@ -19,7 +20,7 @@ our @EXPORT = qw(read_file_xhf);
 our @EXPORT_OK = (@EXPORT, qw(parse_xhf $cc_name));
 
 use YATT::Lite::Util;
-use YATT::Lite::Util::Enum _ => [qw(NAME SIGIL VALUE)];
+use YATT::Lite::Util::Enum _ => [qw(NAME SIGIL VALUE LINENO)];
 
 our $cc_name  = qr{[0-9A-Za-z_\.\-/~!]};
 our $re_suffix= qr{\[$cc_name*\]};
@@ -128,6 +129,7 @@ sub tokenize_1 {
     *_ =  \ $_[0];
     $sub->($_);
   }
+  my $lineno = $reader->{cf_first_lineno} // 1;
   my ($pos, $ncomments, @tokens, @result);
   foreach my $token (@tokens = split /(?<=\n)(?=[^\ \t])/, $_[0]) {
     $pos++;
@@ -171,7 +173,9 @@ sub tokenize_1 {
       # Trim leading space for $tabsp eq "\n".
       $token =~ s/^[\ \t]//;
     }
-    push @result, [$name, $sigil, $token];
+    push @result, [$name, $sigil, $token, $lineno];
+  } continue {
+    $lineno++;
   }
 
   # Comment only paragraph should return nothing.
@@ -180,11 +184,16 @@ sub tokenize_1 {
   wantarray ? @result : \@result;
 }
 
-sub token_lineno {
-  my ($tokens, $pos) = @_;
-  my $lineno = 1;
-  $lineno += tr|\n|| for grep {defined} @$tokens[0 .. $pos];
-  $lineno;
+sub fileinfo {
+  (my MY $reader, my $desc) = @_;
+  $reader->fileinfo_lineno($desc->[_LINENO]);
+}
+
+sub fileinfo_lineno {
+  (my MY $reader, my $lineno) = @_;
+  sprintf("at %s line %d"
+          , $reader->{cf_filename} // "(unknown)"
+          , $lineno);
 }
 
 sub organize {
