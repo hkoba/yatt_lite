@@ -58,6 +58,11 @@ sub configure_filename {
   $self;
 }
 
+sub configure_filename_for_error {
+  (my MY $self, my ($fn)) = @_;
+  $self->{cf_filename} = $fn;
+}
+
 # To accept in-stream encoding spec.
 # (See YATT::Lite::Test::XHFTest::load and t/lite_xhf.t)
 sub configure_encoding {

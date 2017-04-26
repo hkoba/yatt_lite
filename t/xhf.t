@@ -117,7 +117,7 @@ y: 2
 END
     , [[foo => 1, bar => "\n2\n", baz => 3], [x => 1, y => 2]];
 
-  test_parser [parser(<<END)->read]
+  test_parser [parser(<<END, filename_for_error => __FILE__, first_lineno => __LINE__+1)->read]
 foo: 1
 bar{
 x: 2.1
