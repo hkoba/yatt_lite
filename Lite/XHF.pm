@@ -6,6 +6,8 @@ use utf8;
 
 our $VERSION = "0.03";
 
+use constant TRACE => $ENV{TRACE_XHF_PARSER};
+
 use base qw(YATT::Lite::Object);
 use fields qw(cf_FH cf_filename cf_string cf_tokens
 	      fh_configured
@@ -13,6 +15,7 @@ use fields qw(cf_FH cf_filename cf_string cf_tokens
 	      cf_encoding cf_crlf
 	      cf_nocr cf_subst
               cf_first_lineno
+              _depth
 	      cf_skip_comment cf_bytes);
 
 use Exporter qw(import);
@@ -84,6 +87,11 @@ sub configure_string {
   open $self->{cf_FH}, '<', \ $self->{cf_string}
     or croak "Can't create string stream: $!";
   $self;
+}
+
+sub trace {
+  (my MY $reader, my ($msg, @desc)) = @_;
+  print STDERR "  " x $reader->{_depth}, $msg, terse_dump(@desc), "\n";
 }
 
 # XXX: Should I rename this to read_one()?
@@ -206,6 +214,7 @@ sub fileinfo_lineno {
 
 sub organize {
   my MY $reader = shift;
+  local $reader->{_depth} = -1;
   my $pos = 0;
   my @result;
   while ($pos < @_) {
@@ -235,6 +244,8 @@ sub organize {
 # '[' block
 sub organize_array {
   (my MY $reader, my ($posref, $tokens, $first)) = @_;
+  local $reader->{_depth} = $reader->{_depth} + 1;
+  $reader->trace("> ", $first) if TRACE;
   my @result;
   push @result, $first->[_VALUE] if defined $first and $first->[_VALUE] ne '';
   while ($$posref < @$tokens) {
@@ -246,9 +257,11 @@ sub organize_array {
           ." (line $first->[_LINENO]) is closed by '$desc->[_SIGIL]' "
           .$reader->fileinfo($desc)."\n";
       }
+      $reader->trace("< ", $first, $desc) if TRACE;
       return \@result;
     }
     elsif ($desc->[_NAME] ne '') {
+      $reader->trace("| ", $desc) if TRACE;
       push @result, $desc->[_NAME];
     }
     # VALUE
@@ -257,6 +270,7 @@ sub organize_array {
       push @result, $sub->($reader, $posref, $tokens, $desc);
     }
     else {
+      $reader->trace("| ", $desc) if TRACE;
       push @result, $desc->[_VALUE];
     }
   }
@@ -266,11 +280,12 @@ sub organize_array {
 
 # '{' block.
 sub organize_hash {
-  die "Invalid XHF hash block beginning! ". join("", @$first)
   (my MY $reader, my ($posref, $tokens, $first)) = @_;
   croak "Invalid XHF hash block beginning! "
     . join("", @$first).$reader->fileinfo($first)."\n"
     if defined $first and $first->[_VALUE] ne '';
+  local $reader->{_depth} = $reader->{_depth} + 1;
+  $reader->trace("> ", $first) if TRACE;
   my %result;
   while ($$posref < @$tokens) {
     my $desc = $tokens->[$$posref++];
@@ -281,6 +296,7 @@ sub organize_hash {
           ." (line $first->[_LINENO]) is closed by '$desc->[_SIGIL]' "
           .$reader->fileinfo($desc)."\n";
       }
+      $reader->trace("< ", $first, $desc) if TRACE;
       return \%result;
     }
     elsif ($desc->[_SIGIL] eq '-') {
@@ -304,6 +320,7 @@ sub organize_hash {
       };
       $reader->add_value($result{$desc->[_VALUE]}, $value);
     } else {
+      $reader->trace("| ", $desc) if TRACE;
       if (my $sub = $OPN{$desc->[_SIGIL]}) {
 	# sigil がある時、value を無視して、良いのか?
 	$desc->[_VALUE] = $sub->($reader, $posref, $tokens, $desc);
