@@ -243,27 +243,27 @@ foo{
 - y
 END
 
-  test_error <<END, qr/paren mismatch. '\[' is closed by '\}'/, "Mismatching [} ";
+  test_error <<END, qr/paren mismatch. '\[' (?:\(line \d+\) )?is closed by '\}'/, "Mismatching [} ";
 foo[
 - x
 - y
 }
 END
 
-  test_error <<END, qr/paren mismatch. '\{' is closed by '\]'/, "Mismatching {]";
+  test_error <<END, qr/paren mismatch. '\{' (?:\(line \d+\) )?is closed by '\]'/, "Mismatching {]";
 foo{
 - x
 - y
 ]
 END
 
-  test_error <<END, qr/Field close '\]' without open!/, "close without open";
+  test_error <<END, qr/Field close '\]' (?:\(line \d+\) )?without open!/, "close without open";
 - x
 - y
 ]
 END
 
-  test_error <<END, qr/Field close '\}' without open!/, "close without open";
+  test_error <<END, qr/Field close '\}' (?:\(line \d+\) )?without open!/, "close without open";
 - x
 - y
 }

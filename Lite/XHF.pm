@@ -139,15 +139,17 @@ sub tokenize_1 {
     }
 
     unless ($token =~ s{^($cc_name*$re_suffix*) ($cc_sigil) (?:($cc_tabsp)|(\n|$))}{}x) {
-      croak "Invalid XHF token '$token': line " . token_lineno(\@tokens, $pos);
+      croak "Invalid XHF token '$token' ".$reader->fileinfo_lineno($lineno)."\n";
     }
     my ($name, $sigil, $tabsp, $eol) = ($1, $2, $3, $4);
 
     if ($name eq '') {
-      croak "Invalid XHF token(name is empty for '$token')"
+      croak "Invalid XHF token(name is empty for '$token') "
+        .$reader->fileinfo_lineno($lineno)."\n"
 	if $sigil eq ':' and not $reader->{cf_allow_empty_name};
     } elsif ($NAME_LESS{$sigil}) {
-      croak "Invalid XHF token('$sigil' should not be prefixed by name '$name')"
+      croak "Invalid XHF token('$sigil' should not be prefixed by name '$name') "
+        .$reader->fileinfo_lineno($lineno)."\n";
     }
 
     # Comment fields are ignored.
@@ -166,9 +168,10 @@ sub tokenize_1 {
     } else {
       # Deny:  name{ foo
       # Allow: name[ foo
-      croak "Invalid XHF token(container with value): "
+      croak "Invalid XHF token(container with value) "
 	. join("", grep {defined $_} $name, $sigil, $tabsp, $token)
-	  if $sigil eq '{' and $token ne "";
+        . $reader->fileinfo_lineno($lineno)."\n"
+        if $sigil eq '{' and $token ne "";
 
       # Trim leading space for $tabsp eq "\n".
       $token =~ s/^[\ \t]//;
@@ -198,17 +201,20 @@ sub fileinfo_lineno {
 
 sub organize {
   my MY $reader = shift;
+  my $pos = 0;
   my @result;
-  while (@_) {
-    my $desc = shift;
+  while ($pos < @_) {
+    my $desc = $_[$pos++];
     unless (defined $desc->[_NAME]) {
-      croak "Invalid XHF: Field close '$desc->[_SIGIL]' without open!";
+      croak "Invalid XHF: Field close '$desc->[_SIGIL]'"
+        ." (line $desc->[_LINENO]) without open! "
+        .$reader->fileinfo($desc)."\n";
     }
     push @result, $desc->[_NAME] if $desc->[_NAME] ne ''
       or $ALLOW_EMPTY_NAME{$desc->[_SIGIL]};
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
       # sigil がある時、value を無視して、良いのか?
-      push @result, $sub->($reader, \@_, $desc);
+      push @result, $sub->($reader, \$pos, \@_, $desc);
     } else {
       push @result, $desc->[_VALUE];
     }
@@ -223,15 +229,17 @@ sub organize {
 
 # '[' block
 sub organize_array {
-  (my MY $reader, my ($tokens, $first)) = @_;
+  (my MY $reader, my ($posref, $tokens, $first)) = @_;
   my @result;
   push @result, $first->[_VALUE] if defined $first and $first->[_VALUE] ne '';
-  while (@$tokens) {
-    my $desc = shift @$tokens;
+  while ($$posref < @$tokens) {
+    my $desc = $tokens->[$$posref++];
     # NAME
     unless (defined $desc->[_NAME]) {
       if ($desc->[_SIGIL] ne ']') {
-	croak "Invalid XHF: paren mismatch. '[' is closed by '$desc->[_SIGIL]'";
+	croak "Invalid XHF: paren mismatch. '['"
+          ." (line $first->[_LINENO]) is closed by '$desc->[_SIGIL]' "
+          .$reader->fileinfo($desc)."\n";
       }
       return \@result;
     }
@@ -241,64 +249,72 @@ sub organize_array {
     # VALUE
     if (my $sub = $OPN{$desc->[_SIGIL]}) {
       # sigil がある時、value があったらどうするかは、子供次第。
-      push @result, $sub->($reader, $tokens, $desc);
+      push @result, $sub->($reader, $posref, $tokens, $desc);
     }
     else {
       push @result, $desc->[_VALUE];
     }
   }
-  croak "Invalid XHF: Missing close ']'";
+  croak "Invalid XHF: Missing close ']' for '[' "
+    .$reader->fileinfo($first)."\n";
 }
 
 # '{' block.
 sub organize_hash {
-  (my MY $reader, my ($tokens, $first)) = @_;
   die "Invalid XHF hash block beginning! ". join("", @$first)
+  (my MY $reader, my ($posref, $tokens, $first)) = @_;
+  croak "Invalid XHF hash block beginning! "
+    . join("", @$first).$reader->fileinfo($first)."\n"
     if defined $first and $first->[_VALUE] ne '';
   my %result;
-  while (@$tokens) {
-    my $desc = shift @$tokens;
+  while ($$posref < @$tokens) {
+    my $desc = $tokens->[$$posref++];
     # NAME
     unless (defined $desc->[_NAME]) {
       if ($desc->[_SIGIL] ne '}') {
-	croak "Invalid XHF: paren mismatch. '{' is closed by '$desc->[_SIGIL]'";
+	croak "Invalid XHF: paren mismatch. '{'"
+          ." (line $first->[_LINENO]) is closed by '$desc->[_SIGIL]' "
+          .$reader->fileinfo($desc)."\n";
       }
       return \%result;
     }
     elsif ($desc->[_SIGIL] eq '-') {
       # Should treat two lines as one key value pair.
-      unless (@$tokens) {
+      unless ($$posref < @$tokens) {
 	croak "Invalid XHF hash:"
-	  ." key '- $desc->[_VALUE]' doesn't have value!";
+	  ." key '- $desc->[_VALUE]' doesn't have value! "
+          .$reader->fileinfo($desc)."\n";
       }
-      my $valdesc = shift @$tokens;
+      my $valdesc = $tokens->[$$posref++];
       my $value = do {
 	if (my $sub = $OPN{$valdesc->[_SIGIL]}) {
-	  $sub->($reader, $tokens, $valdesc);
+	  $sub->($reader, $posref, $tokens, $valdesc);
 	} elsif ($valdesc->[_SIGIL] eq '-') {
 	  $valdesc->[_VALUE];
 	} else {
 	  croak "Invalid XHF hash value:"
-	    . " key '$desc->[_VALUE]' has invalid sigil '$valdesc->[_SIGIL]'";
+	    . " key '$desc->[_VALUE]' has invalid sigil '$valdesc->[_SIGIL]' "
+            .$reader->fileinfo($valdesc)."\n"
 	}
       };
       $reader->add_value($result{$desc->[_VALUE]}, $value);
     } else {
       if (my $sub = $OPN{$desc->[_SIGIL]}) {
 	# sigil がある時、value を無視して、良いのか?
-	$desc->[_VALUE] = $sub->($reader, $tokens, $desc);
+	$desc->[_VALUE] = $sub->($reader, $posref, $tokens, $desc);
       }
       $reader->add_value($result{$desc->[_NAME]}, $desc->[_VALUE]);
     }
   }
-  croak "Invalid XHF: Missing close '}'";
+  croak "Invalid XHF: Missing close '}' for '{' "
+    .$reader->fileinfo($first)."\n";
 }
 
 # '=' value
 sub _undef {undef}
 our %EXPR = (null => \&_undef, 'undef' => \&_undef);
 sub organize_expr {
-  (my MY $reader, my ($tokens, $first)) = @_;
+  (my MY $reader, my ($posref, $tokens, $first)) = @_;
   if ((my $val = $first->[_VALUE]) =~ s/^\#(\w+)\s*//) {
     my $sub = $EXPR{$1}
       or croak "Invalid XHF keyword: '= #$1'";
