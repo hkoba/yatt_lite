@@ -67,6 +67,7 @@ foreach my $test (combination(['', '/foo/bar']
         #
         $env->{REDIRECT_HANDLER} = 'x-psgi-handler';
         $env->{REDIRECT_STATUS} = 200;
+        $env->{REDIRECT_URL} = "$url.yatt";
 
       } else {
         #
