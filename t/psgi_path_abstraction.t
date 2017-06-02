@@ -112,6 +112,31 @@ foreach my $test (combination(['', '/foo/bar']
         }
       }
     }
+
+    {
+      my ($real_dir, $site, $mkpsgi) = $make_test_env->();
+
+      my $item = 0;
+      $item++;
+      foreach my $req (['/' => 'index'], ["/test$item", "test$item"]) {
+        my ($url, $wname) = @$req;
+
+        {
+          MY->mkfile("$real_dir/$wname.yatt"
+                     , qq{(&yatt:file_location();)});
+
+          my Env $psgi = $mkpsgi->($url);
+
+          describe "&yatt:file_location(); for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
+
+            it "should return ($script_name$url)", sub {
+
+              expect($site->call($psgi))->to_be([200, $CT, ["($script_name$url)"]]);
+            };
+          };
+        }
+      }
+    }
   };
 }
 
