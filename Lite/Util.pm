@@ -291,6 +291,23 @@ require Scalar::Util;
     return;
   }
 
+  sub trim_common_suffix_from {
+    @_ == 2 or Carp::croak "trim_common_suffix_from(FROM, COMPARE)";
+    my $from = $_[0];
+    my $cmppos = (length $_[1]) - 1;
+    while (length $from and $cmppos >= 0) {
+      (my $slash = rindex($_[1], "/", $cmppos)) >= 0
+        or last;
+      (my $pos = rindex($from, substr($_[1], $slash, $cmppos - $slash))) >= 0
+        or last;
+
+      substr($from, $pos) = "";
+
+      $cmppos = $slash - 1;
+    }
+    $from;
+  }
+
   sub dict_order {
     my ($a, $b, $start) = @_;
     $start = 1 unless defined $start;

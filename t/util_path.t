@@ -14,7 +14,9 @@ use Test::More;
 use YATT::Lite::Util::File qw(mkfile);
 
 BEGIN {
-  use_ok('YATT::Lite::Util', qw(split_path lookup_path));
+  use_ok('YATT::Lite::Util', qw(split_path lookup_path
+                                trim_common_suffix_from
+                             ));
 }
 
 my $BASE = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);
@@ -191,6 +193,23 @@ $i++;
     $test->('/filevsdir/virt/bar'
 	    , [$tmpl, '/filevsdir/', 'index.yatt', '/virt/bar']);
   }
+}
+
+{
+  my $test = sub {
+    my ($script_name, $script_filename, $expect) = @_;
+    is(trim_common_suffix_from($script_name, $script_filename)
+       , $expect
+       , "trim_common_suffix_from($script_name, $script_filename) => $expect");
+  };
+
+  $test->('/foo/cgi-bin/dispatch.cgi'
+          , '/var/www/foo/html/cgi-bin/dispatch.cgi'
+          => '/foo');
+
+  $test->('/cgi-bin/dispatch.cgi'
+          , '/var/www/cgi-bin/dispatch.cgi'
+          => '');
 }
 
 done_testing();
