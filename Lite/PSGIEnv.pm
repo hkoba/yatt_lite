@@ -17,6 +17,7 @@ BEGIN {
 	  PATH_INFO
 	  PATH_TRANSLATED
 	  REDIRECT_STATUS
+          REDIRECT_HANDLER
 	  REQUEST_URI
 	  DOCUMENT_URI
 
@@ -58,6 +59,8 @@ BEGIN {
 	  psgix.session
 	  psgix.session.options
 	  psgix.logger
+
+          yatt.script_name
        /;
   our %FIELDS = map {$_ => ''} @PSGI_FIELDS;
 }
