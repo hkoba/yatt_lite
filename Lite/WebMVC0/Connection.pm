@@ -236,13 +236,16 @@ sub convert_array_param_cgi {
 
 # Location(path part of url) of overall SiteApp.
 sub site_location {
-  my PROP $prop = (my $glob = shift)->prop;
-  $prop->{cf_site_prefix} . '/';
+  shift->site_prefix . '/';
 }
 *site_loc = *site_location; *site_loc = *site_location;
 sub site_prefix {
   my PROP $prop = (my $glob = shift)->prop;
-  $prop->{cf_site_prefix};
+  # Note: This is safe because site_prefix 0 is meaningless(I hope).
+  $prop->{cf_site_prefix} || do {
+    my Env $env = $prop->{cf_env};
+    $env->{'yatt.script_name'} // ''
+  }
 }
 
 # Location of DirApp
@@ -283,7 +286,7 @@ sub mkurl {
 
   my $path = do {
     if (defined $file and $file =~ m!^/!) {
-      $prop->{cf_site_prefix}.$file;
+      $glob->site_prefix.$file;
     } else {
       my ($orig, $dir) = ('');
       if (($dir = $req) =~ s{([^/]+)$}{}) {
