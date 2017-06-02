@@ -433,11 +433,22 @@ sub split_path_info {
     # XXX: Is userdir ok? like /~$USER/dir?
     # XXX: should have cut_depth option.
     #
-    split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root}
-	       , $self->{cf_use_subpath}
-	       , $self->{cf_ext_public}
-	     );
-    # or die.
+    my ($tmpldir, $loc, $file, $trailer, $is_index)
+      = split_path($env->{PATH_TRANSLATED}, $self->{cf_app_root}
+                   , $self->{cf_use_subpath}
+                   , $self->{cf_ext_public}
+                 );
+
+    # This is a workaround for $is_index. Determining $is_index only from
+    # PATH_TRANSLATED was just wrong.
+    #
+    # So instead turn on it when "$env->{REQUEST_URI}$file" eq $env->{REDIRECT_URL};
+    #
+    $is_index ||= ($env->{REQUEST_URI}
+                   and $env->{REDIRECT_URL}
+                   and "$env->{REQUEST_URI}$file" eq $env->{REDIRECT_URL});
+
+    ($tmpldir, $loc, $file, $trailer, $is_index);
 
   } elsif (nonempty($env->{PATH_INFO})) {
     #
