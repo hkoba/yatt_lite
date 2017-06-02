@@ -16,6 +16,7 @@ use HTTP::Message::PSGI;
 
 use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
+use YATT::Lite::Util qw/combination/;
 use YATT::Lite::Util::File qw/mkfile/;
 use File::Path qw(make_path);
 use Cwd;
@@ -27,8 +28,6 @@ my $testno = 0;
 my $CT = ["Content-Type", q{text/html; charset="utf-8"}];
 
 my $cwd = cwd();
-
-sub combination (@);
 
 foreach my $test (combination(['', '/foo/bar']
                               , [[path_translated => 1], [direct => 0]]))
@@ -108,17 +107,3 @@ foreach my $test (combination(['', '/foo/bar']
 chdir($cwd);
 
 done_testing();
-
-sub combination (@) {
-  my $comb; $comb = sub {
-    my $prefix = shift;
-    return $prefix unless @_;
-    my ($list, @rest) = @_;
-    if (@rest) {
-      map {$comb->([@$prefix, $_], @rest)} @$list;
-    } else {
-      map {[@$prefix, $_]} @$list;
-    }
-  };
-  $comb->([], @_);
-}

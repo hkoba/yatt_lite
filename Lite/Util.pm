@@ -336,6 +336,20 @@ require Scalar::Util;
     map {[$_, split /(\d+)/, $$_[$nth]]} @_;
   }
 
+  sub combination (@) {
+    my $comb; $comb = sub {
+      my $prefix = shift;
+      return $prefix unless @_;
+      my ($list, @rest) = @_;
+      if (@rest) {
+        map {$comb->([@$prefix, $_], @rest)} @$list;
+      } else {
+        map {[@$prefix, $_]} @$list;
+      }
+    };
+    $comb->([], @_);
+  }
+
   sub captured (&) {
     my ($code) = @_;
     open my $fh, '>:utf8', \ (my $buffer = "") or die "Can't create capture buf:$!";
