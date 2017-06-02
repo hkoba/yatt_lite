@@ -33,6 +33,8 @@ use YATT::Lite::MFields qw/cf_noheader
 			   re_handled_ext
 
                            cf_progname
+
+                           cf_no_trim_script_name
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -40,6 +42,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			mk_http_status
 			default ckrequire
 			escape
+                        trim_common_suffix_from
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
@@ -214,6 +217,9 @@ sub call {
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->split_path_info($env);
 
+  # Set $env->{yatt.script_name}
+  $self->set_yatt_script_name($env);
+
   my ($realdir, $virtdir);
   if (@pi) {
     $realdir = "$tmpldir$loc";
@@ -384,6 +390,29 @@ sub is_done {
 }
 
 #========================================
+
+sub set_yatt_script_name {
+  (my MY $self, my Env $env) = @_;
+
+  $env->{'yatt.script_name'} = do {
+    if (not $self->{cf_no_trim_script_name}
+        and $env->{REDIRECT_HANDLER}
+        and ($env->{REDIRECT_STATUS} // 0) == 200
+        and $env->{SCRIPT_FILENAME}
+      ) {
+      #
+      # For Apache Action+AddHandler mapping.
+      #
+      trim_common_suffix_from($env->{SCRIPT_NAME}
+                              , $env->{SCRIPT_FILENAME});
+    } else {
+      #
+      # Normal case.
+      #
+      $env->{SCRIPT_NAME};
+    }
+  };
+}
 
 sub split_path_info {
   (my MY $self, my Env $env) = @_;
@@ -643,14 +672,15 @@ foreach my $name (qw/
   };
 }
 
-foreach my $item (map([lc($_) => uc($_)]
-		      , qw/SCRIPT_NAME
-			   PATH_INFO
-			   REQUEST_URI
+foreach my $item (map([$_ => uc($_)]
+		      , qw/path_info
+			   request_uri
 
-			   SCRIPT_URI
-			   SCRIPT_URL
-			   SCRIPT_FILENAME
+			   script_uri
+			   script_url
+			   script_filename
+
+                           SCRIPT_NAME
 			   /)) {
   my ($method, $env_name) = @$item;
   Entity $method => sub {
@@ -658,6 +688,15 @@ foreach my $item (map([lc($_) => uc($_)]
     $env->{$env_name};
   };
 }
+
+# &yatt:SCRIPT_NAME(); is original $env->{SCRIPT_NAME}
+# &yatt:script_name(); is $env->{'yatt.script_name'}
+
+Entity script_name => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  $env->{'yatt.script_name'};
+};
 
 #========================================
 

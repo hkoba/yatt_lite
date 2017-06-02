@@ -403,7 +403,7 @@ sub file_location {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{cf_env};
   my $loc = do {
-    if (my $sn = $env->{SCRIPT_NAME}) {
+    if (my $sn = $env->{'yatt.script_name'}) {
       "$sn/"
     } else {
       $prop->{cf_location} // "/";
