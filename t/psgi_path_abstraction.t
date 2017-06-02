@@ -88,30 +88,29 @@ foreach my $test (combination(['', '/foo/bar']
   describe "When expected script_name is ($script_name) with $theme mode,", sub {
 
     {
-    my ($real_dir, $site, $mkpsgi) = $make_test_env->();
+      my ($real_dir, $site, $mkpsgi) = $make_test_env->();
 
-    my $item = 0;
-    $item++;
-    foreach my $req (['/' => 'index'], ["/test$item", "test$item"])
-    {
-      my ($url, $wname) = @$req;
+      my $item = 0;
+      $item++;
+      foreach my $req (['/' => 'index'], ["/test$item", "test$item"]) {
+        my ($url, $wname) = @$req;
 
-      {
-        MY->mkfile("$real_dir/$wname.yatt"
-                   , qq{(&yatt:script_name();)});
+        {
+          MY->mkfile("$real_dir/$wname.yatt"
+                     , qq{(&yatt:script_name();)});
 
-        my Env $psgi = $mkpsgi->($url);
+          my Env $psgi = $mkpsgi->($url);
 
-        describe "&yatt:script_name(); for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
+          describe "&yatt:script_name(); for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
 
-          it "should return ($script_name)", sub {
+            it "should return ($script_name)", sub {
 
-            expect($site->call($psgi))->to_be([200, $CT, ["($script_name)"]]);
+              expect($site->call($psgi))->to_be([200, $CT, ["($script_name)"]]);
+            };
           };
-        };
+        }
       }
     }
-  }
   };
 }
 
