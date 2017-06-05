@@ -129,7 +129,7 @@ use YATT::Lite::Constants;
       ($action->{cf_bodypos}, $action->{cf_bodylen});
 
     if (lexpand($action->{arg_order})
-        or $src !~ m{^([\ \t\n]*)my\s*\([^;\)]+\)\s*=\s*\@_\s*;}) {
+        or $src !~ m{^([\ \t\r\n]*)my\s*\([^;\)]+\)\s*=\s*\@_\s*;}) {
       # If an action has no arguments
       # and its source doesn't start with my (...) = @_;,
       # insert preamble and getargs.
