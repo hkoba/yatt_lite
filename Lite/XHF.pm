@@ -80,6 +80,15 @@ sub configure_string {
   $self;
 }
 
+sub read_all {
+  (my MY $self) = @_;
+  my @res;
+  while (my @block = $self->read) {
+    push @res, @block;
+  }
+  wantarray ? @res : \@res;
+}
+
 # XXX: Should I rename this to read_one()?
 sub read {
   my MY $self = shift;
