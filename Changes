@@ -1,5 +1,8 @@
 Revision history for YATT::Lite
 
+0.101     2016-05-24
+    * Just tagged 0.101 (from 0.100_003)
+
 0.100_003 2015-11-05
     * Bug fix for [RT #108427] [GH #62] Undeclared dependency on Test::Kantan
 
