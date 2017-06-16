@@ -57,6 +57,7 @@ Lite/Test/XHFTest.pm
 Lite/Test/XHFTest2.pm
 Lite/Types.pm
 Lite/Util.pm
+Lite/Util/AllowRedundantSprintf.pm
 Lite/Util/AsBase.pm
 Lite/Util/CGICompat.pm
 Lite/Util/CmdLine.pm
@@ -141,6 +142,14 @@ samples/basic/12/t/offline.t
 samples/basic/12/t/psgi_offline.t
 samples/basic/12/ytmpl/.htyattrc.pl
 samples/basic/12/ytmpl/part.ytmpl
+samples/basic/13/app.psgi
+samples/basic/13/html/index.yatt
+samples/basic/13/t/.htaccess
+samples/basic/13/t/1-mkhidden.xhf
+samples/basic/13/t/fcgi_offline.t
+samples/basic/13/t/http_localhost.t
+samples/basic/13/t/offline.t
+samples/basic/13/t/psgi_offline.t
 samples/basic/2/.symlinks
 samples/basic/2/app.psgi
 samples/basic/2/html/index.yatt
@@ -598,6 +607,7 @@ t/dbschema_dbic.t
 t/entpath.t
 t/error.t
 t/factory.t
+t/factory_crossbase.t
 t/instpkg.t
 t/lib/.symlinks
 t/lineno.t
@@ -609,8 +619,10 @@ t/partial.t
 t/psgi.d.fallback/beta/fbck.html
 t/psgi.d/.htaccess
 t/psgi.d/beta/world_line.yatt
+t/psgi.d/empty.yatt
 t/psgi.d/hidden.ytmpl
 t/psgi.d/index.yatt
+t/psgi.d/index2.yatt
 t/psgi.d/no_subpath.yatt
 t/psgi.d/test.css
 t/psgi.d/test.lib/Foo.pm
@@ -619,6 +631,9 @@ t/psgi.ytmpl/hello.ytmpl
 t/psgi_conn_param.t
 t/psgi_conn_upload.t
 t/psgi_error_status.t
+t/psgi_is_current_page.t
+t/psgi_path_abstraction.t
+t/psgi_raise_response.t
 t/reload.t
 t/runtests.zsh
 t/scripts/app.psgi
@@ -633,6 +648,9 @@ t/scripts/render.ytmpl/2/index.yatt
 t/scripts/render.ytmpl/2/index.yatt.in
 t/scripts/render.ytmpl/3/index.err
 t/scripts/render.ytmpl/3/index.yatt
+t/scripts/render.ytmpl/4/index.html
+t/scripts/render.ytmpl/4/index.yatt
+t/scripts/render.ytmpl/4/index.yatt.in
 t/subroutes.t
 t/t_lib.pl
 t/t_preload.pm
