@@ -45,6 +45,8 @@ on test => sub {
  requires 'Plack::Test';
  requires 'Test::Refcount';
 
+ requires 'Plack::Middleware::Session';
+
  requires 'CGI::Session';
  requires 'FCGI::Client';
  requires 'FCGI';
