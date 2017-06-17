@@ -1,5 +1,46 @@
 Revision history for YATT::Lite
 
+0.101_001 2017-06-17
+    * (Possibly breaking) API changes
+         - [GH #84] Now yatt:args "/URL/{PATTERN}" is tested in written order.
+         - [GH #64] Use c3 mro for widget search by default.
+
+    * New/changed YATT Declarations
+         - [GH #54] <!yatt:base "file_or_directory">
+         - [GH #14] <!yatt:action "/URL/{PATTERN}">
+
+    * New/changed YATT Entities
+         - [GH #92] &yatt:script_name(); now respects Apache's Action+AddHandler
+         - [GH #74] &yatt:param(); is now equiv of &yatt:CON:param();.
+         - [GH #73] &yatt:coalesce(); now behaves like SQL's coalesce().
+         - [GH #70] &yatt:file_location(); and &yatt:is_current_page(page)
+
+    * Enhancement
+         - [GH #91] Better error reporting for XHF parser
+         - [GH #82] Add support for bufferedstreaming in raised response.
+         - [GH #80] Allow declaring types for routed args
+         - [GH #79] Site-wide special_entities
+         - [GH #71] Now delegate type can have argument list.
+         - [GH #69] YATT::Lite::Macro is now visible from subclasses.
+         - [GH #63] `Action NAME => SUB` support in `.htyattrc.pl`
+
+    * Miscellaneous helper functions.
+         - [GH #94] YATT::Lite::XHF->read_all()
+         - [GH #90] WebMVC0::Connection->delete_param
+         - [GH #82] Lite::Connection->raise_response($psgi_response).
+         - [GH #68] YATT::Lite::Factory->wrapped_by($outer_app) for Plack::Middleware.
+
+    * Bug fixes
+         - [GH #93] yatt:action arg detection should care DOS crlf too.
+         - [GH #83] Fix for bug "Safety level may not be changed inside a transaction"
+         - [GH #77] :CON:mkquery() now encode utf8 correctly.
+         - [GH #76] yatt:my code works for wide chars.
+         - [GH #75] Avoid use of error.ytmpl until code-generator becomes ready.
+         - [GH #74] Now yatt.render sets :CON:param() too.
+         - [GH #72] BUG: "Inconsistent hierarchy during C3 merge" occurs for complex inheritance.
+         - [GH #61] Adapt sprintf redundant arg warnings(5.22)
+
+
 0.101     2016-05-24
     * Just tagged 0.101 (from 0.100_003)
 

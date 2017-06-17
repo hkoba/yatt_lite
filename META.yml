@@ -21,13 +21,14 @@ build_requires:
   Test::Differences: '0'
   Test::Kantan: '0'
   Test::More: '0'
+  Test::Refcount: '0'
   Test::WWW::Mechanize::PSGI: '0'
   Time::HiRes: '0'
 configure_requires:
   Module::Build: '0'
   Module::CPANfile: '0'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4214, CPAN::Meta::Converter version 2.150001'
+generated_by: 'Module::Build version 0.4224, CPAN::Meta::Converter version 2.150010'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -56,4 +57,6 @@ requires:
   version: '0.77'
 resources:
   license: http://dev.perl.org/licenses/
-version: '0.101'
+  repository: https://github.com/hkoba/yatt_lite
+version: 0.101_001
+x_serialization_backend: 'CPAN::Meta::YAML version 0.018'
