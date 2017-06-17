@@ -5,6 +5,7 @@ use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
 #----------------------------------------
 
+use mro 'c3';
 use YATT::Lite qw/*SYS/;
 use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;

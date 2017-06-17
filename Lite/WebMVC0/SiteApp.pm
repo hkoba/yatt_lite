@@ -5,6 +5,8 @@ use Carp;
 use YATT::Lite::Breakpoint;
 sub MY () {__PACKAGE__}
 
+use mro 'c3';
+
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 #========================================
