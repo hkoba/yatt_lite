@@ -11,7 +11,12 @@ require encoding;
 #use encoding qw(:locale), map {$_ => _get_locale_encoding()} qw(STDOUT STDERR);
 # binmode STDERR, sprintf ":encoding(%s)", _get_locale_encoding();
 
-use YATT::Lite::WebMVC0::SiteApp;
+{
+  package
+    t_register_app;
+  use YATT::Lite::WebMVC0::SiteApp -as_base;
+  use YATT::Lite::WebMVC0::Partial::Session;
+}
 use YATT::Lite::Test::TestUtil;
 use Test::More;
 use YATT::Lite::Util qw(lexpand read_file);
@@ -38,7 +43,7 @@ sub do_test {
 
   plan tests => 4;
 
-  my $app = YATT::Lite::WebMVC0::SiteApp->new
+  my $app = t_register_app->new
     (app_ns => 'MyApp'
      , app_root => $app_root
      , doc_root => "$app_root/html"

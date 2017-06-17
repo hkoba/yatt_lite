@@ -1,1 +1,1 @@
-../../app.psgi
+../../oldsessioncompat.psgi
