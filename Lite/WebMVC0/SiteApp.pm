@@ -178,6 +178,9 @@ sub to_app {
 
 sub prepare_app {
   (my MY $self) = @_;
+
+  $self->next::method;
+
   $self->{cf_is_psgi} = 1;
   require Plack::Request;
   require Plack::Response;
@@ -308,7 +311,11 @@ sub call {
       $res->headers->header(@h);
     }
     $res->body($con->buffer);
-    return $res->finalize;
+
+    my $tuple = $res->finalize;
+    $self->finalize_response($env, $tuple);
+    return $tuple;
+
   } elsif (ref $error eq 'ARRAY' or ref $error eq 'CODE') {
     # redirect
     if ($self->{cf_debug_psgi}) {
@@ -625,6 +632,11 @@ sub make_connection {
    , @args);
 }
 
+sub finalize_response {
+  shift->next::method(@_);
+}
+
+# This will be called back from $CON->flush_heades.
 sub finalize_connection {
   my MY $self = shift;
   my ConnProp $prop = (my $glob = shift)->prop;

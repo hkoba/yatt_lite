@@ -269,6 +269,7 @@ sub n_destroyed {$_n_destroyed}
     }
   }
   sub prepare_app { return }
+  sub finalize_response { return }
 
   our $load_count;
   sub sandbox_dofile {
