@@ -3,6 +3,8 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use 5.009; # For real hash only. (not works for pseudo-hash)
 
+use constant DEBUG_IMPORT => $ENV{DEBUG_YATT_IMPORT} // 0;
+
 use parent qw/YATT::Lite::Object/;
 
 sub Decl () {'YATT::Lite::MFields::Decl'}
@@ -30,6 +32,7 @@ use YATT::Lite::Util qw/globref look_for_globref list_isa fields_hash
 use Carp;
 
 sub import {
+  Carp::carp(scalar caller, " calls $_[0]->import()") if DEBUG_IMPORT;
   my $pack = shift;
   my $callpack = caller;
   $pack->define_fields($callpack, @_);

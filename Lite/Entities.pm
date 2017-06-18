@@ -3,6 +3,8 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
+use constant DEBUG_IMPORT => $ENV{DEBUG_YATT_IMPORT} // 0;
+
 use mro 'c3';
 # XXX: 残念ながら、要整理。
 
@@ -33,6 +35,7 @@ sub CON { return $CON }
 
 sub import {
   my ($pack, @opts) = @_;
+  Carp::carp(scalar caller, " calls $_[0]->import()") if DEBUG_IMPORT;
   @opts = $pack->default_export unless @opts;
   my $callpack = caller;
   my (%opts, @task);

@@ -9,10 +9,13 @@ our @EXPORT_OK = @EXPORT;
 
 use YATT::Lite::Util qw/ckeval globref/;
 
+use constant DEBUG_IMPORT => $ENV{DEBUG_YATT_IMPORT} // 0;
+
 require mro;
 require YATT::Lite::MFields;
 
 sub import {
+  Carp::carp(scalar caller, " calls $_[0]->import()") if DEBUG_IMPORT;
   parse_args(\@_, scalar caller);
   goto &Exporter::import;
 }
