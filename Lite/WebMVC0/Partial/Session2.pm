@@ -4,13 +4,24 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
+use constant DEBUG => ($ENV{DEBUG_YATT_SESSION2} // 0);
+use YATT::Lite::Util qw/dputs/;
+
+use Plack::Util;
+
+#========================================
+
 # This version of YATT::Lite::WebMVC0::Partial::Session2 directly
 # calls *internal* methods of Plack::Middleware::Session.
 
 use Plack::Middleware::Session;
 sub default_session_middleware_class {'Plack::Middleware::Session'}
 
-use YATT::Lite::PSGIEnv;
+#========================================
+
+use YATT::Lite::PSGIEnv qw/
+                            yatt.session
+                          /;
 
 use YATT::Lite::Partial
   (requires => [qw/
@@ -25,18 +36,21 @@ use YATT::Lite::Partial
    , -Entity, -CON
   );
 
-Entity session => sub {
+#========================================
+
+Entity psgix_session => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
   $env->{'psgix.session'};
 };
 
-Entity session_options => sub {
+Entity psgix_session_options => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
   $env->{'psgix.session.options'};
 };
 
+#----------------------------------------
 Entity session_start => sub {
   my ($this, @opts) = @_;
   my Env $env = $CON->env;
@@ -44,15 +58,26 @@ Entity session_start => sub {
   "";
 };
 
+#----------------------------------------
+sub default_session_class {'Plack::Session'}
+
+Entity session => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  $env->{'yatt.session'};
+};
+
 {
   foreach my $meth (qw(id get set remove keys expire)) {
     Entity "session_$meth" => sub {
       my $this = shift;
       my Env $env = $CON->env;
-      $env->{'psgix.session'}->$meth(@_);
+      $env->{'yatt.session'}->$meth(@_);
     };
   }
 }
+
+#========================================
 
 #
 # Stolen from the top half of Plack::Middleware::Session->call
@@ -60,16 +85,23 @@ Entity session_start => sub {
 sub session_start {
   (my MY $self, my ($env, @opts)) = @_;
 
-  my ($id, $session) = $self->{_session_middleware}->get_session($env);
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
+  my ($id, $session) = $mw->get_session($env);
 
   if ($id && $session) {
     $env->{'psgix.session'} = $session;
   } else {
-    $id = $self->generate_id($env);
+    $id = $mw->generate_id($env);
     $env->{'psgix.session'} = {};
   }
 
   $env->{'psgix.session.options'} = { id => $id, @opts };
+
+  $env->{'yatt.session'}
+    = Plack::Util::load_class($self->default_session_class)->new($env);
 }
 
 #
@@ -93,10 +125,13 @@ sub finalize_response {
   }
 }
 
+#
+# This prepare_app is called very late of inheritance chain.
+#
 sub prepare_app {
   (my MY $self) = @_;
 
-  $self->next::method;
+  dputs('START') if DEBUG >= 3;
 
   my $mw = $self->{_session_middleware} = do {
     my $class = $self->{cf_session_middleware_class}
@@ -110,7 +145,17 @@ sub prepare_app {
                });
   };
 
+  dputs('session_middleware is created') if DEBUG >= 3;
+
   $mw->prepare_app;
+
+  dputs('after session_middleware->prepare_app') if DEBUG >= 3;
+
+  dputs('begin maybe::next::method') if DEBUG >= 3;
+
+  $self->maybe::next::method;
+
+  dputs('DONE') if DEBUG >= 3;
 }
 
 1;
