@@ -128,8 +128,7 @@ $yatt to know your actual psgi app (sub), by calling `$site->wrapped_by($sub)`.
 use strict;
 use FindBin;
 
-use YATT::Lite::WebMVC0::SiteApp -as_base;
-use YATT::Lite qw/Entity *CON/;
+use YATT::Lite::WebMVC0::SiteApp -as_base, -Entity, qw/*CON/;
 use YATT::Lite::PSGIEnv;
 
 {
