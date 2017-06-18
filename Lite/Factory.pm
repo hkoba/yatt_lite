@@ -317,9 +317,12 @@ sub find_factory_script {
 }
 
 #========================================
+# `use Factory -as_base` in app.psgi will come here.
+#
 sub _import_as_base {
   my ($myPack, $callpack) = @_;
   $myPack->SUPER::_import_as_base($callpack);
+  # To define EntNS in $callpack and set $myPack to @{$callpack::ISA}.
   $myPack->default_default_app->define_Entity(undef, $callpack);
 }
 
