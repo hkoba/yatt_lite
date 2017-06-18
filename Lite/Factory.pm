@@ -109,7 +109,7 @@ use YATT::Lite::MFields
        cf_match_argsroute_first
      /);
 
-use YATT::Lite::Util::AsBase;
+use YATT::Lite::Util::AsBase qw/-as_base import/;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_dir fields_hash
 			lookup_path
@@ -314,6 +314,13 @@ sub find_factory_script {
     }
   } continue { pop @path }
   return;
+}
+
+#========================================
+sub _import_as_base {
+  my ($myPack, $callpack) = @_;
+  $myPack->SUPER::_import_as_base($callpack);
+  $myPack->default_default_app->define_Entity(undef, $callpack);
 }
 
 #========================================
