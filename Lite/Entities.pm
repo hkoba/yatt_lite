@@ -74,6 +74,8 @@ sub declare_as_base {
   my ($myPack, $opts, $callpack) = @_;
   # ckrequire($myPack); # Not needed because $myPack is just used!
 
+  mro::set_mro($callpack, 'c3');
+
   # Fill $callpack's %FIELDS, by current ISA.
   YATT::Lite::MFields->add_isa_to($callpack, $myPack)
       ->define_fields($callpack);
