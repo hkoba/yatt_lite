@@ -1,6 +1,7 @@
 package YATT::Lite::NSBuilder; sub MY () {__PACKAGE__}
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
+use mro 'c3';
 
 use YATT::Lite::Util qw(lexpand);
 
