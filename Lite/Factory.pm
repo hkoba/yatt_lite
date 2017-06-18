@@ -268,8 +268,8 @@ sub n_destroyed {$_n_destroyed}
       die "Unknown load result from: $fn";
     }
   }
-  sub prepare_app { return }
-  sub finalize_response { return }
+  sub prepare_app { shift->maybe::next::method(@_) }
+  sub finalize_response { shift->maybe::next::method(@_) }
 
   our $load_count;
   sub sandbox_dofile {
