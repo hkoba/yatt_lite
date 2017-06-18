@@ -79,6 +79,25 @@ require Scalar::Util;
     return undef unless defined $symtab->{$name};
     globref($class, $name);
   }
+  sub call_ns_function_or_default {
+    my ($class, $funcname, $default) = @_;
+    my $symtab = symtab($class);
+    my ($glob, $code);
+    if (defined ($glob = $symtab->{$funcname})
+        and ($code = *{$glob}{CODE})) {
+      $code->()
+    } else {
+      $default;
+    }
+  }
+  sub ns_filename {
+    my ($ns) = @_;
+    if (my $fn = call_ns_function_or_default($ns, 'filename')) {
+      "$ns \[$fn]"
+    } else {
+      $ns;
+    }
+  }
   sub fields_hash {
     my $sym = look_for_globref(shift, 'FIELDS')
       or return undef;
