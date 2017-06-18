@@ -54,7 +54,7 @@ MY->cf_mkaccessors(qw/app_name/);
 # Entities を多重継承する理由は import も継承したいから。
 # XXX: やっぱり、 YATT::Lite には固有の import を用意すべきではないか?
 #   yatt_default や cgen_perl を定義するための。
-use YATT::Lite::Entities -as_base, qw(*YATT *CON *SYS);
+use YATT::Lite::Entities -as_base, qw(*YATT *CON *SYS import);
 
 # For error, raise, DONE. This is inserted to ISA too.
 use YATT::Lite::Partial::ErrorReporter;
