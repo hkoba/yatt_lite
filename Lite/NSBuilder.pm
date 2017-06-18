@@ -5,6 +5,8 @@ use mro 'c3';
 
 use YATT::Lite::Util qw(lexpand);
 
+use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
+
 {
   # bootscript が決まれば、root NS も一つに決まる、としよう。 MyApp 、と。
   # instpkg の系列も決まる、と。 MyApp::INST1, 2, ... だと。
@@ -47,6 +49,8 @@ use YATT::Lite::Util qw(lexpand);
       // $self->{default_app}->default_app_ns;
     try_require($app_ns);
 
+    Carp::carp("init_app_ns called") if DEBUG;
+
     my $site_entns = $self->{default_app}->ensure_entns
       (ref $self, $self->{default_app}->list_entns(ref $self));
 
@@ -78,6 +82,10 @@ use YATT::Lite::Util qw(lexpand);
   }
   sub buildns {
     (my MY $self, my ($subns, $baselist, $path)) = @_;
+    Carp::carp("buildns called") if DEBUG;
+    unless (defined $self->{app_ns}) {
+      croak "buildns is called without app_ns!";
+    }
     # This usually creates MyApp::INST$n and set it's ISA.
     $subns ||= $self->default_subns;
     my @base = map {ref $_ || $_} @$baselist;
