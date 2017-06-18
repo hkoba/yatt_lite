@@ -875,6 +875,18 @@ sub pkg2pm {
   "$pack.pm";
 }
 
+sub dputs {
+  (undef, undef, my $line) = caller(0);
+  (undef, undef, undef, my $func) = caller(1);
+  print STDERR "# $func $line: ", (map {
+    if (defined $_ and not ref $_) {
+      $_
+    } else {
+      terse_dump($_)
+    }
+  } @_), "\n";
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #
