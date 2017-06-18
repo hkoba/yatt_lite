@@ -326,6 +326,13 @@ sub _import_as_base {
   $myPack->default_default_app->define_Entity(undef, $callpack);
 }
 
+# Just to allow writing `use Factory -Entity;` in your app.psgi.
+# Not actually required.
+sub _import_Entity {
+  my ($myPack, $callpack) = @_;
+  $myPack->default_default_app->define_Entity(undef, $callpack);
+}
+
 #========================================
 
 sub new {
