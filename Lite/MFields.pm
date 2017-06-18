@@ -28,6 +28,7 @@ BEGIN {
 
 use YATT::Lite::Util qw/globref look_for_globref list_isa fields_hash
 			lexpand
+                        terse_dump
 		       /;
 use Carp;
 
@@ -191,16 +192,30 @@ sub add_isa_to {
     *$sym = $isa = [];
   }
 
+  my $using_c3 = mro::get_mro($target) eq 'c3';
   foreach my $base (@base) {
-    next if grep {$_ eq $base} @$isa;
-#    if (my $err = do {local $@; eval {
+    my $cur_linear = mro::get_linear_isa($target);
+    next if grep {$_ eq $base} @$cur_linear;
+    if ($using_c3) {
+      my $adding = mro::get_linear_isa($base);
+
+      local $@;
+      eval {
+        unshift @$isa, $base;
+      };
+      if (my $err = $@) {
+        croak "Can't add base '$base' to '$target'!\n"
+          .  "  Target '$target' ISA (\n    ".join("\n    ", map {
+            YATT::Lite::Util::ns_filename($_)
+          } @$cur_linear).")\n"
+          .  "  Adding '$base' ISA (\n    ".join("\n    ", map {
+            YATT::Lite::Util::ns_filename($_)
+          } @$adding)
+          ."\n) because of this error: " . $err;
+      }
+    } else {
       push @$isa, $base
-#    }; $@}) {
-#      if ($err =~ /^Inconsistent hierarchy during C3 merge of class/) {
-#	print "[inserting $base to $target] $err";
-#	next;
-#      }
-#    }
+    }
   }
 
   $pack;
