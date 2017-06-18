@@ -48,6 +48,8 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
+our @EXPORT_OK = qw/*CON/;
+
 use YATT::Lite::WebMVC0::DirApp ();
 sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}

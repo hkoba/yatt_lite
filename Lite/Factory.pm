@@ -126,7 +126,7 @@ use YATT::Lite::Partial::ErrorReporter;
 use YATT::Lite::Partial::AppPath;
 
 use YATT::Lite qw/Entity *SYS *YATT *CON/;
-
+our @EXPORT_OK = qw/*CON/;
 
 use YATT::Lite::Util::CycleDetector qw/Visits/;
 
