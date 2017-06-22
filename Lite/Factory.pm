@@ -187,11 +187,29 @@ sub load_factory_for_psgi {
   if (-d "$app_root/ytmpl") {
     $default{app_base} ||= '@ytmpl';
   }
-  if (my (@cf) = map {
+
+  my $env = delete $default{environment};
+
+  my (@cf) = map {
     my $cf = "$app_rootname.$_";
     -e $cf ? $cf : ()
-  } $pack->default_config_filetypes) {
-    croak "Multiple configuration files!: @cf" if @cf > 1;
+  } $pack->default_config_filetypes;
+
+  if (@cf and $env) {
+    croak "Can't use environment and @cf at once!";
+  } elsif (@cf > 1) {
+    croak "Multiple configuration files!: @cf";
+  }
+
+  if ($env) {
+    my $config = $pack->config_for_env($app_root, $env);
+    return $pack->_with_loading_file($config, sub {
+      $pack->new(app_root => $app_root, %default
+                 , $pack->load_config($config));
+    });
+  }
+
+  if (@cf) {
     $pack->_with_loading_file($cf[0], sub {
 				$pack->new(app_root => $app_root, %default
 					   , $pack->read_file($cf[0]));
@@ -199,6 +217,26 @@ sub load_factory_for_psgi {
   } else {
     $pack->new(app_root => $app_root, %default);
   }
+}
+
+#
+# Load Amon2 style config.pl
+#
+sub config_for_env {
+  my ($pack, $app_root, $environment) = @_;
+  "$app_root/config/$environment.pl";
+}
+
+sub load_config {
+  my ($pack, $cf) = @_;
+  my $config = dofile_in($pack, $cf);
+  unless (defined $config) {
+    croak "config script '$cf' returned undef!";
+  }
+  unless (ref $config eq 'HASH') {
+    croak "config script '$cf' doesn't return HASH! $config";
+  }
+  wantarray ? %$config : $config;
 }
 
 #========================================
