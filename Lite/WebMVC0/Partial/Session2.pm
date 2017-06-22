@@ -110,6 +110,8 @@ sub session_start {
 sub finalize_response {
   (my MY $self, my ($env, $res)) = @_;
 
+  dputs('START') if DEBUG >= 4;
+
   $self->maybe::next::method($env, $res);
 
   my $mw = $self->{_session_middleware};
@@ -117,12 +119,16 @@ sub finalize_response {
   my $options = $env->{'psgix.session.options'};
 
   if ($options->{expire}) {
+    dputs('EXPIRE') if DEBUG >= 4;
     $mw->expire_session($options->{id}, $res, $env);
   } else {
     $mw->change_id($env) if $options->{change_id};
     $mw->commit($env);
     $mw->save_state($options->{id}, $res, $env);
+    dputs('SAVED') if DEBUG >= 4;
   }
+
+  dputs('DONE') if DEBUG >= 4;
 }
 
 #
