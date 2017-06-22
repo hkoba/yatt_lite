@@ -9,7 +9,7 @@ use YATT::Lite::WebMVC0::SiteApp -as_base;
 
   ## You may prefer below since it supports app.yml:
   #
-  # my $site = MY->load_factory_for_psgi($0, %opts);
+  # my $site = MY->load_factory_for_psgi($0, environment => $ENV{PLACK_ENV} // 'development', %opts);
   #
 
   $site->to_app;
