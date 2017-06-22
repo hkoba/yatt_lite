@@ -325,7 +325,11 @@ sub call {
 	print $errfh "PSGI Response: ", terse_dump($error), "\n";
       }
     }
-    return $error;
+    return Plack::Util::response_cb($error, sub {
+      my $res = shift;
+      $self->finalize_response($env, $res);
+      $res;
+    });
   } else {
     # system_error. Should be treated by PSGI Server.
     die $error;
