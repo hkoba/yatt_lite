@@ -379,7 +379,7 @@ require Scalar::Util;
   sub terse_dump {
     require Data::Dumper;
     join ", ", map {
-      Data::Dumper->new([$_])->Terse(1)->Indent(0)->Dump;
+      Data::Dumper->new([$_])->Terse(1)->Indent(0)->Sortkeys(1)->Dump;
     } @_;
   }
 
