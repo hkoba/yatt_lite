@@ -5,7 +5,9 @@ use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 
 use constant DEBUG => ($ENV{DEBUG_YATT_SESSION2} // 0);
-use YATT::Lite::Util qw/dputs/;
+use YATT::Lite::Util qw/dputs
+                        lexpand
+                       /;
 
 use Plack::Util;
 
@@ -145,9 +147,9 @@ sub prepare_app {
 
     $class->new({app => sub {[200, [], []]}
                  , ($self->{cf_session_state}
-                    ? (state => $self->{cf_session_state}) : ())
+                    ? (state => $self->create_session_backend(state => $self->{cf_session_state})) : ())
                  , ($self->{cf_session_store}
-                    ? (store => $self->{cf_session_store}) : ())
+                    ? (store => $self->create_session_backend(store => $self->{cf_session_store})) : ())
                });
   };
 
@@ -162,6 +164,29 @@ sub prepare_app {
   $self->maybe::next::method;
 
   dputs('DONE') if DEBUG >= 3;
+}
+
+sub default_session_state {'Plack::Session::State'}
+sub default_session_store {'Plack::Session::Store'}
+
+# From Session::inflate_backend
+sub create_session_backend {
+  (my MY $self, my ($kind, $spec)) = @_;
+
+  # When $spec is not [$backend => @opts], just return it.
+  return $spec if defined $spec and ref $spec ne 'ARRAY';
+
+  my $prefix = $self->can("default_session_$kind")->();
+
+  my ($backend, @args) = lexpand($spec);
+
+  my $class = Plack::Util::load_class($backend, $prefix);
+
+  if (my $sub = $self->can("create_session_${kind}_$backend")) {
+    $sub->($self, $class, @args);
+  } else {
+    $class->new(@args);
+  }
 }
 
 1;
