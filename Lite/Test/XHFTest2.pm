@@ -16,6 +16,7 @@ use YATT::Lite::Types
 			     cf_FILE_READABLE
 			   )]]
    , [Item => -fields => [qw(cf_TITLE cf_FILE cf_METHOD cf_ACTION
+                             cf_STATUS
 			     cf_BREAK
 			     cf_SKIP_IF_ERROR
 			     cf_SAME_RESULT

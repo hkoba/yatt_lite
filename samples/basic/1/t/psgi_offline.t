@@ -100,7 +100,9 @@ test_psgi $site->to_app, sub {
 	  like $str, qr{$item->{cf_ERROR}}
 	    , "[$sect_name] $T ERROR $item->{cf_METHOD} $item->{cf_FILE}";
 	  next;
-	} elsif ($res->code >= 300 && $res->code <= 500) {
+	} elsif ($item->{cf_STATUS}
+                 ? $item->{cf_STATUS} == $res->code
+                 : $res->code >= 300 && $res->code < 500) {
 	  # fall through
 	} elsif ($res->code != 200) {
 	  Test::More::fail $item->{cf_FILE};

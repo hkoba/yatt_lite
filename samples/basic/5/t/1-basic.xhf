@@ -4,6 +4,7 @@ FILE: varerr.yatt
 HEADER[
 Content-type: ^text/html; charset="?utf-8"?
 ]
+STATUS: 500
 BODY[
 - <title>ERROR\(No such variable &#39;foo&#39;\)</title>
 - <h2>No such variable &#39;foo&#39;</h2>
