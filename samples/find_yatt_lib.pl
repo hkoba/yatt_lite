@@ -23,7 +23,9 @@ print STDERR "# found=$found\n" if DEBUG_FIND_YATT_LIB;
 
 my @libdir = $found;
 
-if (-d (my $dn = File::Basename::dirname($found) . "/extlib")) {
+foreach my $d (qw(extlib local/lib/perl5)) {
+  -d (my $dn = File::Basename::dirname($found) . "/$d")
+    or next;
   push @libdir, $dn;
 }
 print STDERR "# libdir=@libdir\n" if DEBUG_FIND_YATT_LIB;
