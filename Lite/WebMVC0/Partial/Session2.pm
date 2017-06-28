@@ -120,6 +120,10 @@ sub finalize_response {
   my $session = $env->{'psgix.session'};
   my $options = $env->{'psgix.session.options'};
 
+  if (not $session) {
+    return;
+  }
+
   if ($options->{expire}) {
     dputs('EXPIRE') if DEBUG >= 4;
     $mw->expire_session($options->{id}, $res, $env);

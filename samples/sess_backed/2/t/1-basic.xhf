@@ -68,6 +68,13 @@ BODY:
  </html>
 
 
+
+TITLE: No session_start() must be safe too.
+FILE: index
+BODY:
+ <h2>Ok</h2>
+
+
 ACTION[
 remove: ../var/db/site.db*
 ]
