@@ -21,9 +21,7 @@ sub default_session_middleware_class {'Plack::Middleware::Session'}
 
 #========================================
 
-use YATT::Lite::PSGIEnv qw/
-                            yatt.session
-                          /;
+use YATT::Lite::PSGIEnv;
 
 use YATT::Lite::Partial
   (requires => [qw/
@@ -66,7 +64,7 @@ sub default_session_class {'Plack::Session'}
 Entity session => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
-  $env->{'yatt.session'};
+  $env->{'plack.session'};
 };
 
 {
@@ -74,7 +72,7 @@ Entity session => sub {
     Entity "session_$meth" => sub {
       my $this = shift;
       my Env $env = $CON->env;
-      $env->{'yatt.session'}->$meth(@_);
+      $env->{'plack.session'}->$meth(@_);
     };
   }
 }
@@ -102,7 +100,7 @@ sub session_start {
 
   $env->{'psgix.session.options'} = { id => $id, @opts };
 
-  $env->{'yatt.session'}
+  $env->{'plack.session'}
     = Plack::Util::load_class($self->default_session_class)->new($env);
 }
 

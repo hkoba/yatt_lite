@@ -57,6 +57,7 @@ BEGIN {
 	  psgi.run_once
 	  psgi.nonblocking
 	  psgi.streaming
+          plack.session
 	  psgix.session
 	  psgix.session.options
 	  psgix.logger
