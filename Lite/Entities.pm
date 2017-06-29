@@ -10,7 +10,11 @@ use mro 'c3';
 
 require YATT::Lite::MFields;
 
-use YATT::Lite::Util qw/globref terse_dump url_encode/;
+use YATT::Lite::Util qw/
+                         globref terse_dump url_encode
+                         secure_text_plain
+                         psgi_text
+                       /;
 
 sub default_export { qw(*YATT) }
 
@@ -246,6 +250,13 @@ sub entity_inspector {
   croak "Not a code ref" unless ref $code;
   Sub::Inspector->new($code);
 }
+
+sub raise_dump {
+  my ($this, @args) = @_;
+  $this->raise_response($this->psgi_text(500, terse_dump(@args)));
+}
+
+sub entity_raise_dump {shift->raise_dump(@_)}
 
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
