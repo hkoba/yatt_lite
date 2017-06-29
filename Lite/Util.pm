@@ -834,6 +834,12 @@ sub psgi_error {
   return [$status, [$self->secure_text_plain, @rest], [escape($msg)]];
 }
 
+sub psgi_text {
+  my ($self, $statusAndHeader, @args) = @_;
+  my ($status, @header) = ref $statusAndHeader ? @$statusAndHeader : $statusAndHeader;
+  return [$status, [$self->secure_text_plain, @header], \@args];
+}
+
 sub ixhash {
   tie my %hash, 'Tie::IxHash', @_;
   \%hash;
