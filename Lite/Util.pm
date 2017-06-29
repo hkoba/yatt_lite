@@ -819,6 +819,16 @@ sub secure_text_plain {
    );
 }
 
+#========================================
+
+# Just a wrapper (and hook) for die. $self is ignored.
+sub raise_response {
+  my ($self, $response) = @_;
+  die $response;
+}
+
+#========================================
+
 sub psgi_error {
   my ($self, $status, $msg, @rest) = @_;
   return [$status, [$self->secure_text_plain, @rest], [escape($msg)]];

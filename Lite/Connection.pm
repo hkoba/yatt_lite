@@ -52,7 +52,10 @@ use YATT::Lite::MFields
    , qw/cf_lang/
   );
 
-use YATT::Lite::Util qw(globref lexpand fields_hash incr_opt terse_dump);
+use YATT::Lite::Util qw(
+                         globref lexpand fields_hash incr_opt terse_dump
+                         raise_response
+                     );
 use YATT::Lite::PSGIEnv;
 
 sub prop { *{shift()}{HASH} }
@@ -170,14 +173,6 @@ sub cf_pairs {
   map {
     [substr($_, 3) => $prop->{$_}]
   } grep {/^cf_/ && $_ ne 'cf_buffer'} keys %$fields;
-}
-
-#========================================
-
-# Just a wrapper for die.
-sub raise_response {
-  my ($con, $response) = @_;
-  die $response;
 }
 
 #========================================
