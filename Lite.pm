@@ -768,6 +768,11 @@ sub YATT::Lite::EntNS::entity_file_rootname {
   $fn;
 };
 
+sub YATT::Lite::EntNS::entity_app_name {
+  my ($this) = @_;
+  $YATT->cget('app_name');
+};
+
 #----------------------------------------
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_facade();
