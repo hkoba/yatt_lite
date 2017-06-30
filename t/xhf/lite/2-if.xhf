@@ -144,3 +144,26 @@ IN:
 OUT:
  You should see empty line:
  
+
+TITLE: Each arm of yatt:if should create separate scope for yatt:my
+IN:
+ <!yatt:args foo bar baz>
+ <yatt:if "&yatt:foo;">
+   <yatt:my x=foo/>
+   <yatt:test x/>
+ <:yatt:else if="&yatt:bar;"/>
+   <yatt:my x=bar/>
+   <yatt:test x/>
+ <:yatt:else if="&yatt:baz;"/>
+   <yatt:my x=baz/>
+   <yatt:test x/>
+ <:yatt:else/>
+ NONE
+ </yatt:if>
+ 
+ <!yatt:widget test x>
+ &yatt:x;
+OUT:
+ NONE
+ 
+
