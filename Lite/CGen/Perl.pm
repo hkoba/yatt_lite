@@ -830,9 +830,9 @@ sub feed_arg_spec {
 	push @{$arms[-1]}, lexpand($arg->[NODE_VALUE]);
       }
     }
-    local $self->{scope} = $self->mkscope({}, $self->{scope});
     my @expr = map {
       my ($fmt, $guard, @body) = @$_;
+      local $self->{scope} = $self->mkscope({}, $self->{scope});
       local $self->{curtoks} = [@body];
       (defined $guard
        ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : $fmt)
