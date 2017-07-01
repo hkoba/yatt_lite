@@ -93,6 +93,20 @@ sub node_extract {
   nx($node, @_);
 }
 
+sub node_as_hash {
+  my ($self, $node) = @_;
+
+  my $hash;
+  foreach my $k (qw(TYPE
+                    PATH BODY ATTLIST
+                    AELEM_HEAD AELEM_FOOT)) {
+    my $i = __PACKAGE__->can("NODE_$k")->();
+    next if $#$node <= $i;
+    $hash->{lc($k)} = $node->[$i] if defined $node->[$i];
+  }
+  $hash;
+}
+
 #========================================
 my $symtab = YATT::Lite::Util::symtab(__PACKAGE__);
 our @EXPORT = grep {*{$symtab->{$_}}{CODE}} keys %$symtab;
