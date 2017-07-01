@@ -84,13 +84,13 @@ sub prepare_part_handler {
       croak $self->error("Can't find %s %s for file: %s"
                          , $part->cget('kind'), $part->public_name, $file);
     };
-    @args = $part->reorder_cgi_params($con, $actual)
+    @args = $trans->reorder_cgi_params($part, $con, $actual)
       unless $self->{cf_dont_map_args};
 
   } else {
     ($part, $sub, $pkg) = $trans->find_part_handler([$file, $type, $item]);
 
-    @args = $part->reorder_cgi_params($con)
+    @args = $trans->reorder_cgi_params($part, $con)
       unless $self->{cf_dont_map_args} || $part->isa($trans->Action);
   }
 

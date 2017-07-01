@@ -138,9 +138,10 @@ use YATT::Lite::Breakpoint ();
     }
     wantarray ? @params : \@params;
   }
-
-  sub YATT::Lite::Core::Part::reorder_cgi_params {
-    (my Widget $widget, my ($cgi, $list)) = @_;
+}
+{
+  sub reorder_cgi_params {
+    (my MY $self, my Widget $widget, my ($cgi, $list)) = @_;
     $list ||= [];
     foreach my $name ($cgi->param) {
       next unless $name =~ /^[a-z]\w*$/i;

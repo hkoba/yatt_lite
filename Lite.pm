@@ -240,7 +240,7 @@ sub prepare_part_handler {
     croak $self->error(q|Forbidden request %s|, terse_dump($mapped));
   }
 
-  my @args; @args = $part->reorder_cgi_params($con)
+  my @args; @args = $trans->reorder_cgi_params($part, $con)
     unless $self->{cf_dont_map_args} || $part->isa($trans->Action);
 
   ($part, $sub, $pkg, \@args);
