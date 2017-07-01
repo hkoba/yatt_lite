@@ -992,6 +992,24 @@ sub feed_arg_spec {
   }
 }
 
+# A skeleton for new macro.
+# {
+#   MY->make_arg_spec(\ my %args, \ my @args, qw(if unless));
+#   sub macro_return {
+#     (my MY $self, my $node) = @_;
+#     my ($path, $body, $primary, $head, $foot) = nx($node);
+#
+#     \ ($self->dump_as_comment_line($self->node_as_hash($node)));
+#   }
+# }
+
+sub dump_as_comment_line {
+  (my MY $self, my $node) = @_;
+  my $str = terse_dump($node);
+  $str =~ s/^/# /mg;
+  $str."\n";
+}
+
 sub entx {
   my ($node) = @_;
   @{$node}[2..$#$node];
