@@ -160,6 +160,12 @@ use YATT::Lite::Breakpoint ();
           die "Unknown args$wname: $name\n";
         }
       };
+      if ($argdecl->type->[0] eq 'code') {
+        if ($stash) {
+          push @{$stash->{$name}}, $cgi->multi_param($name);
+        }
+        next;
+      }
       my @value = $cgi->multi_param($name);
       $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
 	? \@value : $value[0];
