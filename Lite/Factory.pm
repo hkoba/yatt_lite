@@ -309,7 +309,16 @@ sub n_destroyed {$_n_destroyed}
       die "Unknown load result from: $fn";
     }
   }
-  sub prepare_app { shift->maybe::next::method(@_) }
+  sub prepare_app {
+    (my MY $self) = shift;
+    $self->maybe::next::method(@_);
+  }
+  sub prepare_deployment {
+    (my MY $self) = shift;
+    $self->maybe::next::method(@_);
+    $self->{cf_stash_unknown_params_to}
+      //= $self->default_stash_unknown_params_to;
+  }
   sub finalize_response { shift->maybe::next::method(@_) }
 
   our $load_count;
@@ -427,6 +436,11 @@ sub after_new {
     $self->{cf_output_encoding} //= $self->default_output_encoding;
   }
   $self->{cf_use_subpath} //= 1;
+
+  # prepare_app is too late to set delegated params
+  if (($ENV{PLACK_ENV} // '') ne 'development') {
+    $self->prepare_deployment;
+  }
 }
 
 sub compat_default_output_encoding { '' }
@@ -436,6 +450,7 @@ sub default_tmpl_encoding   { 'utf-8' }
 sub default_index_name { 'index' }
 sub default_ext_public {'yatt'}
 sub default_ext_private {'ytmpl'}
+sub default_stash_unknown_params_to {'yatt.unknown_params'}
 
 sub _after_after_new {
   (my MY $self) = @_;
