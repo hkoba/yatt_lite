@@ -311,6 +311,27 @@ C<my:型名=> のように、 C<my> と C<=> の間に C<:型名> で型を指�
   </yatt:foreach>
 
 
+=head2 C<yatt:return>
+X<return>
+
+エラー処理などで Early return を書きたい時に使います。 C<if="..."> か
+C<unless="..."> の条件式を渡すことで、指定条件成立時に early return する
+ことが出来ます。(if, unless は無くても構いません)
+
+  <yatt:return if="&yatt:some_error;">
+    <h2>エラーが見つかりました！</h2>
+    &yatt:some_error;
+  </yatt:return>
+
+  <yatt:my data:value="&yatt:get_some_data();"/>
+  <yatt:return unless="&yatt:data;">
+    <h2>データが取得できませんでした！</h2>
+  </yatt:return>
+
+
+注意点： C<yatt:return> は単なる実行の打ち切りなので、それ以前に
+出力された内容が有った場合、それも出力されます。
+
 =head1 Entity reference
 
 C<&yatt> から C<;> までの範囲は、Entity 参照式となり、テンプレートへの値の埋め込みを
