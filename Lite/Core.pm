@@ -145,11 +145,21 @@ use YATT::Lite::Breakpoint ();
   sub reorder_cgi_params {
     (my MY $self, my Widget $widget, my ($cgi, $list)) = @_;
     $list ||= [];
+    my $stash;
+    if ($self->{cf_stash_unknown_params_to}) {
+      $stash = $cgi->stash->{$self->{cf_stash_unknown_params_to}} //= +{};
+    }
     foreach my $name ($cgi->param) {
       next unless $name =~ /^[a-z]\w*$/i;
       my $wname = $widget->{cf_name} ? " for widget '$widget->{cf_name}'" : "";
-      my $argdecl = $widget->{arg_dict}{$name}
-	or die "Unknown args$wname: $name\n";
+      my $argdecl = $widget->{arg_dict}{$name} or do {
+        if ($stash) {
+          push @{$stash->{$name}}, $cgi->multi_param($name);
+          next;
+        } else {
+          die "Unknown args$wname: $name\n";
+        }
+      };
       my @value = $cgi->multi_param($name);
       $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
 	? \@value : $value[0];
