@@ -992,6 +992,44 @@ sub feed_arg_spec {
   }
 }
 
+{
+  MY->make_arg_spec(\ my %args, \ my @args, qw(if unless));
+  sub macro_return {
+    (my MY $self, my $node) = @_;
+    my ($path, $body, $primary, $head, $foot) = nx($node);
+
+    if ($foot || $head) {
+      die $self->generror("Unsupported syntax: foot");
+    }
+
+    my ($fmt, $guard) = do {
+      if ($self->feed_arg_spec($primary, \%args, \@args
+                               , my ($if, $unless))) {
+        # conditional return
+        # if ()
+        my ($kw, $cond) = do {
+          if ($if) { (if => $if) }
+          elsif ($unless) { (unless => $unless) }
+          else { die "??" }
+        };
+        ("$kw (%s) ", $cond->[NODE_VALUE]);
+      } else {
+        ();
+      }
+    };
+
+    my $expr = do {
+      local $self->{scope} = $self->mkscope({}, $self->{scope});
+      local $self->{curtoks} = [lexpand($body->[NODE_VALUE])];
+      (defined $guard
+       ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : '')
+	.'{'.$self->cut_next_nl.$self->as_print(' return}');
+    };
+
+    \ $expr;
+  }
+}
+
 # A skeleton for new macro.
 # {
 #   MY->make_arg_spec(\ my %args, \ my @args, qw(if unless));
