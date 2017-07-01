@@ -12,6 +12,7 @@ require YATT::Lite::MFields;
 
 use YATT::Lite::Util qw/
                          globref terse_dump url_encode
+                         raise_response
                          secure_text_plain
                          psgi_text
                        /;
