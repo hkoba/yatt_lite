@@ -37,6 +37,7 @@ use Encode;
 		cf_PARAM
 		cf_OUT
 		cf_ERROR
+                cf_ERROR_BODY
 
 		cf_REQUIRE
 

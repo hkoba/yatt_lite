@@ -154,13 +154,19 @@ foreach my MY $sect (@section) {
 	    fail "$title: runtime error: $@";
 	  }
 	}
-      } elsif ($test->{cf_ERROR}) {
+      } elsif ($test->{cf_ERROR} or $test->{cf_ERROR_BODY}) {
 	eval {
 	  my $tmpl = $yatt->find_file($test->{realfile});
 	  my $pkg = $yatt->find_product(perl => $tmpl);
 	  captured($pkg => render_ => lexpand($test->{cf_PARAM}));
 	};
-	like $@, qr{^$test->{cf_ERROR}}, $title;
+        if (ref $test->{cf_ERROR_BODY}) {
+          is_deeply $@->[2], $test->{cf_ERROR_BODY}, $title;
+        } elsif (ref $test->{cf_ERROR}) {
+          is_deeply $@, $test->{cf_ERROR}, $title;
+        } else {
+          like $@, qr{^$test->{cf_ERROR}}, $title;
+        }
       }
     }
     $last_title = $test->{cf_TITLE} if $test->{cf_TITLE};
