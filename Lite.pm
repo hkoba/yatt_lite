@@ -45,6 +45,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_entns2vfs_item
 	      cf_import
               cf_match_argsroute_first
+              cf_stash_unknown_params_to
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -373,6 +374,7 @@ sub _cf_delegates {
      no_mro_c3
      import
      match_argsroute_first
+     stash_unknown_params_to
     )
 }
 

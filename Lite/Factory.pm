@@ -107,7 +107,10 @@ use YATT::Lite::MFields
        _my_psgi_app
 
        cf_match_argsroute_first
-     /);
+       /
+ , [cf_stash_unknown_params_to => 
+    (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
+);
 
 use YATT::Lite::Util::AsBase qw/-as_base import/;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
@@ -937,6 +940,7 @@ sub _cf_delegates {
      debug_parser
      check_lineno
      match_argsroute_first
+     stash_unknown_params_to
   );
 }
 

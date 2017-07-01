@@ -16,6 +16,8 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_lcmsg_sink
               cf_match_argsroute_first
 
+              cf_stash_unknown_params_to
+
 	      n_compiles
 	    /;
 use YATT::Lite::Util;
