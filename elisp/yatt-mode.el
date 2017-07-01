@@ -159,16 +159,20 @@
 		 next)
 	(reg (car regions) (car regions))
 	(next (cdr regions) (cdr regions))
-	(section `((default) ,(cadr (car regions))))
-	reg)
+	(section
+         (if (not (eq (car reg) 'yatt-declaration-mode))
+             `((default)
+               ,(cadr (car regions)))))
+        )
       ;; 次が無いなら、最後の section を詰めて返す
       ((not next)
        (reverse (cons (append section (list (caddr reg))) result)))
     (when (eq (car reg) 'yatt-declaration-mode)
       (setq begin (cadr reg) end (caddr reg)
 	    ;; ここまでを登録しつつ、
-	    result (cons (append section (list begin))
-			 result)
+	    result (if section
+                       (cons (append section (list begin))
+                             result))
 	    ;; 新しい section を始める
 	    section (list (yatt-mode-decltype reg) end)))))
 
