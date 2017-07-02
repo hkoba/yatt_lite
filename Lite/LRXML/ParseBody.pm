@@ -56,7 +56,7 @@ sub _parse_body {
 		  , [split /:/, $path]
 		 , undef];
 
-      if (my @atts = $self->parse_attlist($_)) {
+      if (my @atts = $self->parse_attlist(\$_)) {
 	$elem->[NODE_ATTLIST] = \@atts;
       }
 

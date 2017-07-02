@@ -84,13 +84,14 @@ sub after_new {
     ||= qr{(?<ws>\s++)
 	 | (?<comment>--+.*?--+)
 	 | (?<macro>%(?:[\w\:\.]+(?:[\w:\.\-=\[\]\{\}\(,\)]+)?);)
-	 | (?:(?<attname>[\w:]+)\s*=\s*+)?+
+	 |
 	   (?:'(?<sq>[^']*+)'
 	   |"(?<dq>[^\"]*+)"
 	   |(?<nest>\[) | (?<nestclo>\])
 	   |$entOpen
 	   |(?<bare>[^\s'\"<>\[\]/=]++)
 	   )
+           (?<equal>\s*=\s*+)?+
 	}xs;
   $self->{re_body} ||= qr{$entOpen
 			|<(?:(?<clo>/?)(?<opt>:?)(?<elem>$nspat(?::\w++)+)
@@ -105,6 +106,23 @@ sub after_new {
   $self->{re_eparen} ||= qr{(\( (?<paren> (?: (?> [^()]+) | (?-2) )*) \) )}xs;
   $self;
 }
+
+use YATT::Lite::Types
+  ([EntMatch => fields => [qw/
+                               entity
+                               lcmsg
+                               msgopn msgsep msgclo
+                               special
+                             /]
+    , [AttMatch => fields => [qw/ws comment
+                                 macro
+                                 sq dq bare
+                                 nest nestclo
+                                 equal
+                                /]]
+  ]
+ );
+
 #========================================
 
 # Debugging aid.
@@ -221,7 +239,7 @@ sub parse_decl {
     my $is_new;
     if ($self->can("build_$kind")) {
       # yatt:widget, action
-      my (@args) = $self->parse_attlist($str, 1); # To delay entity parsing.
+      my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
       my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
 	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}
 			       , $ns, $kind
@@ -255,7 +273,7 @@ sub parse_decl {
     } elsif (my $sub = $self->can("declare_$kind")) {
       # yatt:base, yatt:args vs perl:base, perl:args...
       # 戻り値が undef なら、同じ $part を用いつづける。
-      $part = $sub->($self, $tmpl, $ns, $self->parse_attlist($str, 1))
+      $part = $sub->($self, $tmpl, $ns, $self->parse_attlist(\$str, 1))
 	// $part;
     } else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
@@ -326,43 +344,102 @@ sub finalize_template {
 }
 
 sub parse_attlist {
-  my MY $self = shift;
-  my ($for_decl) = my @opt = splice @_, 1;
-  my (@result);
+  (my MY $self, my ($strref, @opt)) = @_;
+  $self->parse_attlist_with_lvalue($self->{curpos}, undef, $strref, @opt);
+}
+
+sub parse_attlist_with_lvalue {
+  (my MY $self, my ($outer_start, $outer_lvalue, $strref, @opt)) = @_;
+  my ($for_decl) = @opt;
+  my (@result, @lvalue);
   my $curln = $self->{endln};
-  while ($_[0] =~ s{^$$self{re_att}}{}xs) {
+  while ($$strref =~ s{^$$self{re_att}}{}xs) {
     my $start = $self->{curpos};
     $self->{curpos} += length $&;
     # startln は不変に保つ. これは add_part が startln を使うため
     $self->{endln} += numLines($&);
-    next if $+{ws} || $+{comment};
-    last if $+{nestclo};
-    next if $+{macro};		#XXX: 今はまだ argmacro を無視！
-    push @result, do {
-      my @common = ($start, $self->{curpos}, $curln);
-      if (not $+{attname} and $+{bare} and is_ident($+{bare})) {
-	[TYPE_ATT_NAMEONLY, @common, split_ns($+{bare})];
-      } elsif ($+{nest}) {
-	[TYPE_ATT_NESTED, @common, $+{attname}
-	 , $self->parse_attlist($_[0], @opt)];
-      } elsif ($+{entity} or $+{special}) {
-	# XXX: 間に space が入ってたら?
-	if ($+{lcmsg}) {
-	  die $self->synerror_at($self->{startln}
-				 , q{l10n msg is not allowed here});
-	}
-	[TYPE_ATT_TEXT, @common, $+{attname}, [$self->mkentity(@common)]];
+
+    my AttMatch $m = \%+;
+    next if $m->{ws} || $m->{comment};
+    next if $m->{macro};		#XXX: 今はまだ argmacro を無視！
+
+    my @common = ($start, $self->{curpos}, $curln);
+    my $mklval = sub {
+      if (@lvalue) {
+        my ($s, $p, $l, $n) = splice(@lvalue);
+        # For endpos, curpos should be fetched after the parsing.
+        ($s, $self->{curpos}, $l, $n);
       } else {
-	# XXX: stringify したくなるかもだから、 sq/dq の区別も保存するべき?
-	my ($quote, $value) = oneof(\%+, qw(bare sq dq));
-	[!$quote && is_ident($value) ? TYPE_ATT_BARENAME : TYPE_ATT_TEXT
-	 , @common, split_ns($+{attname})
-	 , $for_decl ? $value : $self->_parse_text_entities($value)];
+        (@common, undef);
       }
     };
+
+    if (not $m->{equal}) {
+      # create node. may have lvalue.
+      if ($m->{nestclo}) {
+        unless ($outer_lvalue) {
+          Carp::croak("syntax error");
+        }
+        my ($s, $p, $l, $n) = do {
+          if ($outer_lvalue && @$outer_lvalue) {
+            splice(@$outer_lvalue);
+          } else {
+            (@common, undef)
+          }
+        };
+        return [TYPE_ATT_NESTED
+                , $outer_start, $self->{curpos}, $l, $n
+                , @result];
+      }
+
+      push @result, do {
+        if ($m->{bare} and is_ident($m->{bare})) {
+          if (@lvalue) {
+            [TYPE_ATT_BARENAME, splice(@lvalue), $m->{bare}]
+          } else {
+            [TYPE_ATT_NAMEONLY, @common, split_ns($m->{bare})];
+          }
+        }
+        elsif ($m->{nest}) {
+          $self->parse_attlist_with_lvalue($start, \@lvalue, $strref, @opt);
+        }
+        elsif ($+{entity} or $+{special}) {
+          # XXX: 間に space が入ってたら?
+          if ($m->{lcmsg}) {
+            die $self->synerror_at($self->{startln}
+                                   , q{l10n msg is not allowed here});
+          }
+          [TYPE_ATT_TEXT, $mklval->(), [$self->mkentity(@common)]];
+        }
+        else {
+          my ($quote, $value) = oneof($m, qw(bare sq dq));
+          [TYPE_ATT_TEXT, $mklval->()
+           , $for_decl ? $value : $self->_parse_text_entities($value)];
+        }
+      };
+    }
+    elsif (
+      # m->{equal} and
+      not @lvalue
+    ) {
+      # got lvalue =, continue to rvalue
+      if ($m->{bare} and is_ident($m->{bare})) {
+        @lvalue = (@common, split_ns($m->{bare}));
+      }
+      else {
+        Carp::croak("unknown");
+      }
+    }
+    else {
+      # error
+      die $self->synerror_at(
+        $self->{startln}
+        , q{assignment (=) after assignment (=) is not allowed}
+      );
+    }
   } continue {
     $curln = $self->{endln};
-    $self->_verify_token($self->{curpos}, $_[0]) if $self->{cf_debug};
+    $self->_verify_token($self->{curpos}, $$strref) if $self->{cf_debug};
   }
   wantarray ? @result : \@result;
 }
