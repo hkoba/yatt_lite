@@ -1080,7 +1080,7 @@ sub take_spread_name {
       local $self->{curtoks} = [lexpand($body->[NODE_VALUE])];
       (defined $guard
        ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : '')
-	.'{'.$self->cut_next_nl.$self->as_print(' return}');
+	.'{'.$self->cut_next_nl.$self->as_print(' die \"DONE"}');
     };
 
     \ $expr;
