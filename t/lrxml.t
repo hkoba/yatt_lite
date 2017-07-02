@@ -474,6 +474,37 @@ END
 ], "Embeded l10n message.";
 }
 
+{
+  my $tmpl = $CLASS->Template->new;
+  $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<yatt:my [x y :::z]="1..8" />
+x=&yatt:x;
+y=&yatt:y;
+z=&yatt:z;
+END
+
+  my $name = '';
+  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    , "tmpl Item '$name'";
+
+  print "# ", YATT::Lite::Util::terse_dump($w->{tree}), "\n";
+  is_deeply $w->{tree}
+    , [[5,0,29,1
+        , ['yatt','my']
+        , undef
+        , [[8,18,26,1
+           , [[6,10,11,1,'x']
+              , [6,12,13,1,'y']
+              , [6,14,18,1, ['','','','z']]]
+           , '1..8']]
+        ,undef,undef,30]
+       , "\n"
+       , 'x=',[3,32,40,2,'yatt',['var','x']],"\n"
+       , 'y=',[3,43,51,3,'yatt',['var','y']],"\n"
+       , 'z=',[3,54,62,4,'yatt',['var','z']],"\n"];
+
+}
+
 # (- (region-end) (region-beginning))
 #
 done_testing();
