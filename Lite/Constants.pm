@@ -63,6 +63,15 @@ sub node_type    { $_[1]->[NODE_TYPE] }
 sub node_path    { $_[1]->[NODE_PATH] }
 sub node_attlist { $_[1]->[NODE_ATTLIST] }
 
+sub node_has_name_list {
+  array_of_array($_[1][NODE_PATH]);
+}
+sub array_of_array {
+  my ($path) = @_;
+  ref $path eq 'ARRAY'
+    && ref $path->[0] eq 'ARRAY'
+}
+
 sub node_body {
   shift->node_value(@_);
 }
