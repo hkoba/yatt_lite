@@ -927,6 +927,15 @@ sub is_done {
     and ${$_[0]} eq 'DONE';
 }
 
+sub rewind {
+  if ($_[0]->can("rewind")) {
+    $_[0]->rewind
+  } else {
+    seek $_[0], 0, 0;
+    truncate $_[0], 0;
+  }
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #

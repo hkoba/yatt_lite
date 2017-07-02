@@ -1050,7 +1050,7 @@ sub take_spread_name {
 }
 
 {
-  MY->make_arg_spec(\ my %args, \ my @args, qw(if unless));
+  MY->make_arg_spec(\ my %args, \ my @args, qw(if unless local));
   sub macro_return {
     (my MY $self, my $node) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);
@@ -1059,9 +1059,11 @@ sub take_spread_name {
       die $self->generror("Unsupported syntax: foot");
     }
 
+    $self->feed_arg_spec($primary, \%args, \@args
+                         , my ($if, $unless, $local));
+
     my ($fmt, $guard) = do {
-      if ($self->feed_arg_spec($primary, \%args, \@args
-                               , my ($if, $unless))) {
+      if ($if || $unless) {
         # conditional return
         # if ()
         my ($kw, $cond) = do {
@@ -1075,12 +1077,20 @@ sub take_spread_name {
       }
     };
 
+    my ($begin, $end) = do {
+      if ($local) {
+        ('{', ' return}');
+      } else {
+        ('{YATT::Lite::Util::rewind($CON); ', ' die \"DONE"}');
+      }
+    };
+
     my $expr = do {
       local $self->{scope} = $self->mkscope({}, $self->{scope});
       local $self->{curtoks} = [lexpand($body->[NODE_VALUE])];
       (defined $guard
        ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : '')
-	.'{'.$self->cut_next_nl.$self->as_print(' die \"DONE"}');
+	.$begin.$self->cut_next_nl.$self->as_print($end);
     };
 
     \ $expr;
