@@ -502,7 +502,9 @@ use YATT::Lite::Constants;
   sub argName  {
     my ($arg, $skip) = @_;
     my $name = $$arg[NODE_PATH];
-    unless (wantarray and ref $name) {
+    if (array_of_array($name)) {
+      Carp::croak("namelist is given for argName()!");
+    } elsif (not (wantarray and ref $name)) {
       $name;
     } elsif (defined $skip) {
       @{$name}[$skip .. $#$name];
@@ -841,13 +843,24 @@ sub feed_arg_spec {
   }
 }
 
+sub is_spread {
+  ref $_[0] eq 'ARRAY'
+    && @{$_[0]} == 4
+    && $_[0][0] eq ''
+    && $_[0][1] eq ''
+    && $_[0][2] eq ''
+}
+sub take_spread_name {
+  $_[0]->[3];
+}
+
 {
   sub macro_my {
     (my MY $self, my $node) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);
 
     my $has_body = $body && @$body ? 1 : 0;
-    my $adder = sub {
+    my $simple_adder = sub {
       my ($default_type, $arg, $valNode, $skip) = @_;
       my ($name, $typename) = argName($arg, $skip);
       if (my $oldvar = $self->find_var($name)) {
@@ -867,6 +880,51 @@ sub feed_arg_spec {
 	my $expr = 'my '.$self->as_lvalue($var);
 	my $value = argValue($valNode);
 	$expr .= $value ? (' = '.$self->as_cast_to($var, $value)) : ';';
+      }
+    };
+    my $adder = sub {
+      my ($default_type, $arg, $valNode, $skip) = @_;
+      if (array_of_array($arg->[NODE_PATH])) {
+        my (@pre, @main);
+        foreach my $nameSpec (@{$arg->[NODE_PATH]}) {
+          my $is_spread = is_spread($nameSpec->[NODE_PATH]);
+          my ($name, $typename) = do {
+            if ($is_spread) {
+              (take_spread_name($nameSpec->[NODE_PATH]), 'list')
+            } else {
+              argName($nameSpec, $skip);
+            }
+          };
+
+          if (my $oldvar = $self->find_var($name)) {
+            die $self->generror("Conflicting variable '%s'"
+                                ." (previously defined at line %s)"
+                                , $name, $oldvar->lineno // '(unknown)');
+          }
+          $typename ||= $default_type;
+          if (my $sub = $self->can("_macro_my_$typename")) {
+            ...
+          }
+          my $var = $self->{scope}[0]{$name}
+            = $self->mkvar_at(undef, $typename, $name)
+            or die $self->generror("Unknown type '%s' for variable '%s'"
+                                   , $typename, $name);
+
+            if (@pre) {
+              die $self->generror("Multiple spread op is prohibited");
+            }
+          if ($is_spread) {
+            push @pre, 'my '.$self->as_lvalue($var).' = []';
+            push @main, '@'.$self->as_lvalue($var);
+          } else {
+            push @main, 'my '.$self->as_lvalue($var);
+          }
+        }
+        my $main = sprintf(q|(%s) = %s|, join(", ", @main)
+                           , $self->as_list(argValue($valNode)));
+        (@pre, $main);
+      } else {
+        $simple_adder->(@_)
       }
     };
     my @assign;
