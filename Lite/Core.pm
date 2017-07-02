@@ -432,7 +432,7 @@ sub synerror {
 	   if (not $self->{cf_debug_cgen}) {
 	   } else {
 	     my Template $real = $info->{folder};
-	     print STDERR "# compiling $type code of $real->{cf_path}\n";
+	     print STDERR "# compiling @{[$type//'undef']} code of @{[$real->{cf_path}//'undef']}\n";
 	     if ($self->{cf_debug_cgen} >= 2) {
 	       print STDERR "#--BEGIN--\n";
 	       print STDERR @script, "\n";
