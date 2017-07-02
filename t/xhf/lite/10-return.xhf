@@ -25,7 +25,6 @@ PARAM[
 - Y
 ]
 OUT:
- 
    y=Y
 
 
@@ -66,7 +65,6 @@ PARAM[
 - X
 ]
 OUT:
- 
    y=
 
 TITLE: return unless=x
@@ -84,5 +82,36 @@ IN:
  </yatt:return>
  BAZ
 OUT:
- FOO
  BAR
+
+
+TITLE: non-local return from widget (with output rewinding)
+IN:
+ FOO
+ <yatt:bar/>
+ BAZ
+ <!yatt:widget bar>
+ <yatt:return>
+ BAR
+ </yatt:return>
+ hogee
+OUT:
+ BAR
+
+
+TITLE: local return from widget(which does not rewind)
+IN:
+ FOO
+ <yatt:bar/>
+ BAZ
+ <!yatt:widget bar>
+ hoehoe
+ <yatt:return local>
+ BAR
+ </yatt:return>
+ hogee
+OUT:
+ FOO
+ hoehoe
+ BAR
+ BAZ
