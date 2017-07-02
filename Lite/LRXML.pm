@@ -426,6 +426,9 @@ sub parse_attlist_with_lvalue {
       if ($m->{bare} and is_ident($m->{bare})) {
         @lvalue = (@common, split_ns($m->{bare}));
       }
+      elsif ($m->{nestclo}) {
+        @lvalue = (@common, [splice @result]);
+      }
       else {
         Carp::croak("unknown");
       }
