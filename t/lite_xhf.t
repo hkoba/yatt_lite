@@ -28,8 +28,11 @@ use YATT::Lite::Test::TestUtil;
 use YATT::t::t_preload; # To make Devel::Cover happy.
 
 use YATT::Lite;
-use YATT::Lite::Util qw(lexpand);
-use YATT::Lite::Util qw(appname);
+use YATT::Lite::Util qw/
+                         lexpand
+                         appname
+                         is_done
+                     /;
 sub myapp {join _ => MyTest => appname($0), @_}
 
 use YATT::Lite::Breakpoint;
@@ -146,11 +149,16 @@ foreach my MY $sect (@section) {
 	if ($error) {
 	  skip "not compiled - $title", 1;
 	} else {
+          my $buffer = "";
 	  eval {
-	    eq_or_diff captured($pkg => render_ => lexpand($test->{cf_PARAM}))
-	      , encode(utf8 => $test->{cf_OUT}), "$title";
+            {
+              open my $fh, '>:utf8', \ $buffer;
+              $pkg->render_($fh, lexpand($test->{cf_PARAM}));
+            }
 	  };
-	  if ($@) {
+          eq_or_diff $buffer, encode(utf8 => $test->{cf_OUT}), "$title";
+
+	  if ($@ and not is_done($@)) {
 	    fail "$title: runtime error: $@";
 	  }
 	}
