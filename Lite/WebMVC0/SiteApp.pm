@@ -45,6 +45,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			default ckrequire
 			escape
                         trim_common_suffix_from
+                        is_done
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
@@ -398,11 +399,6 @@ sub trim_site_prefix {
 # * X-Request-With
 # * X-Frame-Options
 # * Strict-Transport-Security
-
-sub is_done {
-  defined $_[0] and ref $_[0] eq 'SCALAR' and not ref ${$_[0]}
-    and ${$_[0]} eq 'DONE';
-}
 
 #========================================
 

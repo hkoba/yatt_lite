@@ -922,6 +922,11 @@ sub dputs {
   } @_), "\n";
 }
 
+sub is_done {
+  defined $_[0] and ref $_[0] eq 'SCALAR' and not ref ${$_[0]}
+    and ${$_[0]} eq 'DONE';
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #
