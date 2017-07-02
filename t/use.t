@@ -29,7 +29,7 @@ find {
   no_chdir => 1,
   wanted => sub {
   my $name = $File::Find::name;
-  return unless $name =~ m{\.pm$};
+  return unless $name =~ m{(?:^|/)\w+\.pm$};
   $name =~ s{^\Q$dist_root\E/}{YATT/};
   $name =~ s{/}{::}g;
   $name =~ s{\.pm$}{}g;
