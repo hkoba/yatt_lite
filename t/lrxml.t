@@ -394,6 +394,40 @@ END
 ], "var in nested body."
 }
 
+{
+  my $tmpl = $CLASS->Template->new;
+  $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<yatt:my [code:code src:source]>
+  <h2>&yatt:x;</h2>
+  &yatt:y;
+</yatt:my>
+END
+
+  my $name = '';
+  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    , "tmpl Item '$name'";
+
+  # print "# ", YATT::Lite::Util::terse_dump($w->{tree}), "\n";
+  is_deeply $w->{tree}
+    , [[5,0,32,1
+        , ['yatt','my']
+        , [6,undef,undef,1,'body'
+           , ['
+','  <h2>'
+              , [3,39,47,2,'yatt',['var','x']],'</h2>
+','  '
+              , [3,55,63,3,'yatt',['var','y']],'','
+']]
+        , [[9,9,31,1,undef
+            ,[6,10,19,1,['code','code']]
+            ,[6,20,30,1,['src','source']]
+          ]]
+        , undef,undef,33,63]
+       ,'
+'];
+
+}
+
 if (1) {
   my $tmpl = $CLASS->Template->new;
   $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
