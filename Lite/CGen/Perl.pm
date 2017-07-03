@@ -263,9 +263,10 @@ use YATT::Lite::Constants;
 	next;
       }
       # 許されるのは entity だけでは？ でもないか。 element 引数の時は、capture したいはず。
-      my $sub = $dispatch->[$node->[0]]
-	or die $self->generror("gen_as %s: Unknown node type: %d"
-			       , $type, $node->[0]);
+      my $sub = $dispatch->[$node->[0]] or do {
+        die $self->generror("gen_as %s: Unknown node type: %d"
+                            , $type, $node->[0]);
+      };
       my $expr = $sub->($self, $node);
       next unless defined $expr;
       if (ref $expr) {
