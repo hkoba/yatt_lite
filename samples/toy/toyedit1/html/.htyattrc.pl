@@ -91,7 +91,7 @@ Entity mh_load => sub {
   unless (-r $fn) {
     die "Can't read '$fn'\n";
   }
-  $yatt->read_file_xhf($fn);
+  $yatt->read_file_xhf($fn, single => 1); # or all => 0
 };
 
 sub escape_nl {

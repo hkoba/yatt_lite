@@ -42,8 +42,17 @@ sub after_new {
 }
 
 sub read_file_xhf {
-  my ($pack, $fn, @rest) = @_;
-  MY->new(filename => $fn, encoding => 'utf8', @rest)->read_all;
+  my ($pack, $fn, %rest) = @_;
+  my $method = do {
+    my $single = delete $rest{single};
+    my $all = delete $rest{all} // 1;
+    if ($single or not $all) {
+      'read';
+    } else {
+      'read_all';
+    }
+  };
+  MY->new(filename => $fn, encoding => 'utf8', %rest)->$method;
 }
 
 sub parse_xhf {
