@@ -43,7 +43,7 @@ sub after_new {
 
 sub read_file_xhf {
   my ($pack, $fn, @rest) = @_;
-  MY->new(filename => $fn, encoding => 'utf8', @rest)->read;
+  MY->new(filename => $fn, encoding => 'utf8', @rest)->read_all;
 }
 
 sub parse_xhf {
