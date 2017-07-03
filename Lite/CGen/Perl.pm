@@ -921,8 +921,8 @@ sub take_spread_name {
             push @main, 'my '.$self->as_lvalue($var);
           }
         }
-        my $main = sprintf(q|(%s) = %s|, join(", ", @main)
-                           , $self->as_list(argValue($valNode)));
+        my $main = sprintf(q|(%s) = (%s)|, join(", ", @main)
+                           , join("", $self->as_list(lexpand(argValue($valNode)))));
         (@pre, $main);
       } else {
         $simple_adder->(@_)
