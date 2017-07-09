@@ -496,7 +496,9 @@ sub redirect {
       $$arg;
     } elsif ($_[0] =~ m{^(?:\w+:)?//([^/]+)}
 	     and $1 ne ($glob->mkhost // '')) {
-      die $glob->error("External redirect is not allowed: %s", $_[0]);
+      die $glob->error_with_status(
+        400, "External redirect is not allowed: %s", $_[0]
+      );
     } else {
       # taint check
       shift;
