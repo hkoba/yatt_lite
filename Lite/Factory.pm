@@ -1021,6 +1021,13 @@ sub config_filetypes {
   }
 }
 
+sub find_unique_config_file {
+  (my MY $self, my $base_path) = @_;
+  my @cf = $self->list_config_files($base_path);
+  $self->error("Multiple configuration files!", @cf) if @cf > 1;
+  @cf ? $cf[0] : undef;
+}
+
 sub list_config_files {
   (my MY $self, my $base_path) = @_;
   map {
