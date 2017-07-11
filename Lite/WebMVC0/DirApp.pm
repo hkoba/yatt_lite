@@ -270,9 +270,17 @@ sub dir_config {
   my PROP $prop = $CON->prop;
   my $cache = $prop->{dir_config_cache} //= +{};
 
+  my $config = $cache->{$self->{cf_app_name}};
 
-  my $config = $cache->{$self->{cf_app_name}}
-    //= $SYS->var_config_for($self) || $self->{cf_dir_config} || +{};
+  unless ($config) {
+    my $cfg = $self->{cf_dir_config} || +{};
+
+    # If var_config exist, merge it onto original dir_config.
+    if (my $var_config = $SYS->var_config_for($self)) {
+      $cfg->{$_} = $var_config->{$_} for keys %$var_config;
+    }
+    $config = $cache->{$self->{cf_app_name}} = $cfg;
+  }
 
   return $config unless defined $name;
 
