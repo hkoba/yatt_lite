@@ -193,10 +193,7 @@ sub load_factory_for_psgi {
 
   my $env = delete $default{environment};
 
-  my (@cf) = map {
-    my $cf = "$app_rootname.$_";
-    -e $cf ? $cf : ()
-  } $pack->default_config_filetypes;
+  my (@cf) = $pack->list_config_files($app_rootname);
 
   if (@cf and $env) {
     croak "Can't use environment and @cf at once!";
@@ -746,10 +743,7 @@ sub load_yatt {
   if (not $self->{cf_allow_missing_dir} and not -d $path) {
     croak "Can't find '$path'!";
   }
-  if (my (@cf) = map {
-    my $cf = untaint_any($path) . "/.htyattconfig.$_";
-    -e $cf ? $cf : ()
-  } $self->config_filetypes) {
+  if (my (@cf) = $self->list_config_files(untaint_any($path)."/.htyattconfig")) {
     $self->error("Multiple configuration files!", @cf) if @cf > 1;
     _with_loading_file {$self} $cf[0], sub {
       $self->build_yatt($path, $basedir, $visits, $self->read_file($cf[0]));
@@ -1020,11 +1014,19 @@ sub read_file {
 sub default_config_filetypes {qw/xhf yml/}
 sub config_filetypes {
   (my MY $self) = @_;
-  if (my $item = $self->{cf_config_filetypes}) {
+  if (ref $self and my $item = $self->{cf_config_filetypes}) {
     lexpand($item)
   } else {
     $self->default_config_filetypes
   }
+}
+
+sub list_config_files {
+  (my MY $self, my $base_path) = @_;
+  map {
+    my $cf = "$base_path.$_";
+    -e $cf ? $cf : ()
+  } $self->config_filetypes
 }
 
 sub read_file_xhf {
