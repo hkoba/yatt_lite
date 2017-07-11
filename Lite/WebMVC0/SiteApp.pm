@@ -587,7 +587,7 @@ sub psgi_dump {
   my MY $self = shift;
   [200
    , [$self->secure_text_plain]
-   , [map {escape(terse_dump($_))} @_]];
+   , [join("\n", map {terse_dump($_)} @_)]];
 }
 
 #========================================
