@@ -60,6 +60,11 @@ use YATT::Lite::PSGIEnv;
 
 sub prop { *{shift()}{HASH} }
 
+sub YATT {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{cf_yatt};
+}
+
 # # XXX: Experimental. This can slowdown 20%! the code like: print $CON (text);
 # use overload qw/%{}  as_hash
 # 		bool as_bool/;
