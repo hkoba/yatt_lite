@@ -269,6 +269,8 @@ sub dir_config {
 
   my PROP $prop = $CON->prop;
   my $cache = $prop->{dir_config_cache} //= +{};
+  # This ensures every request has a fresh cache for dir_config
+  # and every request tests the cache at most once.
 
   my $config = $cache->{$self->{cf_app_name}};
 
