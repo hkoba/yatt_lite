@@ -1040,7 +1040,7 @@ sub read_file_yml {
   (my MY $self, my $fn) = @_;
   require YAML::Tiny;
   my $yaml = YAML::Tiny->read($fn);
-  wantarray ? lexpand($yaml->[0]) : $yaml;
+  wantarray ? lexpand($yaml->[0]) : $yaml->[0];
 }
 
 #========================================

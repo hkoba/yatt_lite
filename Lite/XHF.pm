@@ -109,7 +109,10 @@ sub read_all {
   while (my @block = $self->read) {
     push @res, @block;
   }
-  wantarray ? @res : \@res;
+  wantarray ? @res : do {
+    my %dict = @res;
+    \%dict;
+  };
 }
 
 # XXX: Should I rename this to read_one()?
