@@ -936,6 +936,24 @@ sub rewind {
   }
 }
 
+sub merge_hash_renaming (&@) {
+  my ($code, $base, @overlay) = @_;
+  my $result = +{%$base};
+  foreach my $hash (@overlay) {
+    local $_;
+    foreach (keys %$hash) {
+      if ($code) {
+        my ($renamed) = $code->($_)
+          or next;
+        $result->{$renamed} = $hash->{$_};
+      } else {
+        $result->{$_} = $hash->{$_};
+      }
+    }
+  }
+  $result;
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #

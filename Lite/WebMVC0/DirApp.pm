@@ -287,7 +287,19 @@ sub dir_config {
   return $config unless defined $name;
 
   $config->{$name} // $default;
-};
+}
+
+sub merged_dir_config {
+  (my MY $self, my $name) = @_;
+
+  my $all_config = $self->dir_config;
+
+  my $base = $all_config->{$name} // +{};
+
+  YATT::Lite::Util::merge_hash_renaming {
+    /^${name}[_\.](.*)/
+  } $base, $all_config;
+}
 
 use YATT::Lite::Breakpoint;
 YATT::Lite::Breakpoint::break_load_dirhandler();
