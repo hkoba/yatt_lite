@@ -37,6 +37,8 @@ use YATT::Lite::MFields qw/cf_noheader
                            cf_progname
 
                            cf_no_trim_script_name
+
+                           var_config
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -63,6 +65,7 @@ sub after_new {
   $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
   $self->{cf_per_role_docroot_key} ||= $self->default_per_role_docroot_key;
   $self->{cf_default_role} ||= $self->default_default_role;
+  $self->{var_config} = +{};
 }
 
 sub default_per_role_docroot_key { 'yatt.role' }
@@ -652,6 +655,58 @@ sub finalize_connection {
 sub header_charset {
   (my MY $self) = @_;
   $self->{cf_header_charset} || $self->{cf_output_encoding};
+}
+
+#========================================
+
+#
+# Alternative dir_config under $app_root/var/config/$app_name.{yml,xhf}
+# Note: $app_name may contain '/'.
+#
+sub var_config_for {
+  (my MY $self, my $yatt_or_app_name) = @_;
+
+  my $app_name = do {
+    if (ref $yatt_or_app_name) {
+      $yatt_or_app_name->app_name
+    } else {
+      $yatt_or_app_name
+    }
+  };
+
+  my $var_config = "$self->{cf_app_root}/var/config"; # XXX: override.
+
+  my $base_path = "$var_config/$app_name";
+
+  my $has_latest_entry = sub {
+    my ($dict, $key) = @_;
+
+    defined (my $prev_entry = $dict->{$key})
+      or return undef;
+
+    my ($age, $path, $obj) = @$prev_entry;
+    my $new_age = -M $path or do {
+      delete $dict->{$key};
+      return undef;
+    };
+
+    $new_age == $age
+      or return undef;
+
+    $prev_entry;
+  };
+
+  if (my $prev_entry = $has_latest_entry->($self->{var_config}, $base_path)) {
+
+    $prev_entry->[-1];
+
+  } elsif (my $cf = $self->find_unique_config_file($base_path)) {
+    my $obj = $self->read_file($cf);
+    $self->{var_config}{$base_path} = [-M $cf, $cf, $obj];
+    $obj;
+  } else {
+    undef;
+  }
 }
 
 #========================================
