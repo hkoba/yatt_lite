@@ -4,7 +4,7 @@ use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use mro 'c3';
 
-use YATT::Lite -as_base, qw/*SYS
+use YATT::Lite -as_base, qw/*SYS *CON
 			    Entity/;
 use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
@@ -257,9 +257,19 @@ sub error_handler {
 
 Entity dir_config => sub {
   my ($this, $name, $default) = @_;
+
+  my PROP $prop = $CON->prop;
+
+  my $cache = $prop->{dir_config_cache} //= +{};
+
   my MY $self = $this->YATT;
-  return $self->{cf_dir_config} unless defined $name;
-  $self->{cf_dir_config}{$name} // $default;
+
+  my $config = $cache->{$self->{cf_app_name}}
+    //= $SYS->var_config_for($self) || $self->{cf_dir_config} || +{};
+
+  return $config unless defined $name;
+
+  $config->{$name} // $default;
 };
 
 use YATT::Lite::Breakpoint;

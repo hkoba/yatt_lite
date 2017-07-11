@@ -15,6 +15,8 @@ use YATT::Lite::MFields
 
     cf_no_unicode_params
 
+    dir_config_cache
+
     current_user
    /);
 use YATT::Lite::Util qw(globref url_encode nonempty empty rootname lexpand);
