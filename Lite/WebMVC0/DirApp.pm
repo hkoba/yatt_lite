@@ -255,14 +255,21 @@ sub error_handler {
 			 , $errcon->buffer); # ->DONE was not ok.
 }
 
+# dir_config should be fetched from target dirapp for this request($CON)
+# instead from container of called template($this)
+# because widgets can be abstracted out to library dirs.
+
 Entity dir_config => sub {
-  my ($this, $name, $default) = @_;
+  my $this = shift;
+  $CON->YATT->dir_config(@_);
+};
+
+sub dir_config {
+  (my MY $self, my ($name, $default)) = @_;
 
   my PROP $prop = $CON->prop;
-
   my $cache = $prop->{dir_config_cache} //= +{};
 
-  my MY $self = $this->YATT;
 
   my $config = $cache->{$self->{cf_app_name}}
     //= $SYS->var_config_for($self) || $self->{cf_dir_config} || +{};
