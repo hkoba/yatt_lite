@@ -277,9 +277,9 @@ sub dir_config {
   unless ($config) {
     my $cfg = $self->{cf_dir_config} || +{};
 
-    # If var_config exist, merge it onto original dir_config.
-    if (my $var_config = $SYS->var_config_for($self)) {
-      $cfg->{$_} = $var_config->{$_} for keys %$var_config;
+    # If dirapp_config exist, merge it onto original dir_config.
+    if (my $dirapp_config = $SYS->dirapp_config_for($self)) {
+      $cfg->{$_} = $dirapp_config->{$_} for keys %$dirapp_config;
     }
     $config = $cache->{$self->{cf_app_name}} = $cfg;
   }

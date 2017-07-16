@@ -38,7 +38,8 @@ use YATT::Lite::MFields qw/cf_noheader
 
                            cf_no_trim_script_name
 
-                           var_config
+                           cf_config_dir
+                           dirapp_config
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -65,7 +66,9 @@ sub after_new {
   $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
   $self->{cf_per_role_docroot_key} ||= $self->default_per_role_docroot_key;
   $self->{cf_default_role} ||= $self->default_default_role;
-  $self->{var_config} = +{};
+  $self->{cf_config_dir} //= "$self->{cf_app_root}/config"
+    if $self->{cf_app_root};
+  $self->{dirapp_config} = +{};
 }
 
 sub default_per_role_docroot_key { 'yatt.role' }
@@ -660,10 +663,10 @@ sub header_charset {
 #========================================
 
 #
-# Alternative dir_config under $app_root/var/config/$app_name.{yml,xhf}
+# Alternative dir_config under $app_root/config/$app_name.{yml,xhf}
 # Note: $app_name may contain '/'.
 #
-sub var_config_for {
+sub dirapp_config_for {
   (my MY $self, my $yatt_or_app_name) = @_;
 
   my $app_name = do {
@@ -674,9 +677,7 @@ sub var_config_for {
     }
   };
 
-  my $var_config = "$self->{cf_app_root}/var/config"; # XXX: override.
-
-  my $base_path = "$var_config/$app_name";
+  my $base_path = "$self->{cf_config_dir}/$app_name";
 
   my $has_latest_entry = sub {
     my ($dict, $key) = @_;
@@ -696,13 +697,13 @@ sub var_config_for {
     $prev_entry;
   };
 
-  if (my $prev_entry = $has_latest_entry->($self->{var_config}, $base_path)) {
+  if (my $prev_entry = $has_latest_entry->($self->{dirapp_config}, $base_path)) {
 
     $prev_entry->[-1];
 
   } elsif (my $cf = $self->find_unique_config_file($base_path)) {
     my $obj = $self->read_file($cf);
-    $self->{var_config}{$base_path} = [-M $cf, $cf, $obj];
+    $self->{dirapp_config}{$base_path} = [-M $cf, $cf, $obj];
     $obj;
   } else {
     undef;
