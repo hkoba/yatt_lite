@@ -30,7 +30,6 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_backend
 			   cf_site_config
 			   cf_logfile
-			   cf_debug_allowed_ip
 			   cf_overwrite_status_code_for_errors_as
 			   re_handled_ext
 
@@ -561,6 +560,12 @@ sub is_debug_allowed {
   (my MY $self, my Env $env) = @_;
   return unless $self->{allow_debug_from};
   return unless defined(my $ip = $self->guess_client_ip($env));
+  $self->is_debug_allowed_ip($ip);
+}
+
+sub is_debug_allowed_ip {
+  (my MY $self, my $ip) = @_;
+  $self->configure_allow_debug_from unless $self->{allow_debug_from};
   $ip =~ $self->{allow_debug_from};
 }
 
@@ -575,9 +580,12 @@ sub guess_client_ip {
   }
 }
 
+*configure_debug_allowed_ip = *configure_allow_debug_from;
+*configure_debug_allowed_ip = *configure_allow_debug_from;
+
 sub configure_allow_debug_from {
   (my MY $self, my $data) = @_;
-  my $pat = join "|", map { quotemeta($_) } lexpand($data);
+  my $pat = join "|", map { quotemeta($_) } lexpand($data // ['127.0.0.1']);
   $self->{allow_debug_from} = qr{^(?:$pat)};
 }
 
@@ -726,18 +734,10 @@ Entity is_debug_allowed_ip => sub {
 
   $remote_addr //= do {
     my Env $env = $CON->env;
-    $env->{HTTP_X_REAL_IP}
-      // $env->{HTTP_X_CLIENT_IP}
-	// $env->{HTTP_X_FORWARDED_FOR}
-	  // $env->{REMOTE_ADDR};
+    $self->guess_client_ip($env);
   };
 
-  unless (defined $remote_addr and $remote_addr ne '') {
-    return 0;
-  }
-
-  grep {$remote_addr ~~ $_} lexpand($self->{cf_debug_allowed_ip}
-				    // ['127.0.0.1']);
+  $self->is_debug_allowed_ip($remote_addr)
 };
 
 foreach my $name (qw/
