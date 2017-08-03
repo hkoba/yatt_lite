@@ -311,7 +311,8 @@ sub call {
   try_invoke($con, 'flush_headers');
 
   if (not $error or is_done($error)) {
-    my $res = Plack::Response->new(200);
+    my $code = $con->cget('status') // $env->{REDIRECT_STATUS} // 200;
+    my $res = Plack::Response->new($code);
     $res->content_type("text/html"
 		       . ($self->{cf_header_charset}
 			  ? qq{; charset="$self->{cf_header_charset}"}
