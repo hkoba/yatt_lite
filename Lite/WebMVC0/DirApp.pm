@@ -112,7 +112,9 @@ sub find_handler {
   if ($prop->{cf_is_index}) {
     my $sub_fn = substr($prop->{cf_path_info}, length($prop->{cf_location}));
     $sub_fn =~ s,/.*,,;
-    if ($sub_fn ne '' and my $action = $self->get_action_handler($sub_fn, 1)) {
+    if ($sub_fn ne ''
+          and $sub_fn !~ m{\.$self->{cf_ext_public}\z}
+          and my $action = $self->get_action_handler($sub_fn, 1)) {
       return $action
     }
   }
