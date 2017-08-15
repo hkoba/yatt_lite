@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+REQUIRE[
+- Session::ExpiryFriendly
+]
 USE_COOKIE: 1
 
 TITLE: 1st index
