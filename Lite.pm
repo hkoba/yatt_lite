@@ -67,7 +67,7 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			look_for_globref
 			subname ckeval ckrequire
 			secure_text_plain
-                        psgi_error
+                        raise_psgi_error
 			define_const
 		       /;
 
@@ -219,7 +219,7 @@ sub _handle_yatt {
 sub _handle_ytmpl {
   (my MY $self, my ($con, $file)) = @_;
 
-  $self->raise_response($self->psgi_error(403, "Forbidden filetype: $file"));
+  $self->raise_psgi_error(403, "Forbidden filetype: $file");
 }
 
 #----------------------------------------
