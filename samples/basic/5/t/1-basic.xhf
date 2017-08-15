@@ -15,4 +15,5 @@ SKIP_IF_ERROR: Forbidden
 HEADER[
 Content-type: ^text/plain; charset="?utf-8"?
 ]
-BODY: Forbidden filetype: error.ytmpl
+BODY:
+ Forbidden filetype: error.ytmpl
