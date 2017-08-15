@@ -89,7 +89,7 @@ sub _runas_cgi {
   } else {
     # dispatch without catch.
     my @params = $self->make_cgi($env, $args, \%opts);
-    my $con = $self->make_connection($fh, @params);
+    my $con = $self->make_connection($fh, @params, no_auto_flush_headers => 1);
     $self->cgi_dirhandler($con, @params);
   }
 }

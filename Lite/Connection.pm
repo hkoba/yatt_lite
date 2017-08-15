@@ -22,6 +22,8 @@ use YATT::Lite::MFields
 
    # To suppress HTTP header, set this.
    , 'cf_noheader'
+   # To suppress flush_header on DESTROY, set this.
+   , 'cf_no_auto_flush_headers'
 
    # To distinguish error state.
    , qw/is_error raised oldbuf/
@@ -292,7 +294,8 @@ DESTROY {
   local $@;
 
   my PROP $prop = prop(my $glob = shift);
-  $glob->flush_headers;
+  $glob->flush_headers
+    unless $prop->{cf_no_auto_flush_headers};
   if (my $backend = delete $prop->{cf_backend}) {
     if ($prop->{cf_debug} and my $errfh = $glob->error_fh) {
       print $errfh "DEBUG: Connection->backend is detached($backend)\n";
