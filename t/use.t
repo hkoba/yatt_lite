@@ -18,6 +18,7 @@ use File::Find;
 my %prereq
   = ('YATT::Lite::WebMVC0::DBSchema::DBIC' => [qw/DBIx::Class::Schema/]
      , 'YATT::Lite::Test::TestFCGI' => [qw/HTTP::Response/]
+     , 'YATT::Lite::WebMVC0::Partial::Session3' => [qw/Session::ExpiryFriendly/]
     );
 
 my %ignore; map ++$ignore{$_}, ();
