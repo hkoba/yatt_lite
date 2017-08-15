@@ -842,6 +842,13 @@ sub psgi_text {
   return [$status, [$self->secure_text_plain, @header], \@args];
 }
 
+sub psgi_dump {
+  my $self = shift;
+  [200
+   , [$self->secure_text_plain]
+   , [join("\n", map {terse_dump($_)} @_)]];
+}
+
 sub ixhash {
   tie my %hash, 'Tie::IxHash', @_;
   \%hash;

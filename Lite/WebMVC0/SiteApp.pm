@@ -48,6 +48,7 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			escape
                         trim_common_suffix_from
                         is_done
+                        psgi_dump
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
@@ -593,13 +594,6 @@ sub has_htdebug {
   (my MY $self, my $name) = @_;
   defined $self->{cf_app_root}
     and -e "$self->{cf_app_root}/.htdebug_$name"
-}
-
-sub psgi_dump {
-  my MY $self = shift;
-  [200
-   , [$self->secure_text_plain]
-   , [join("\n", map {terse_dump($_)} @_)]];
 }
 
 #========================================
