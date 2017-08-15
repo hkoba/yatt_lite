@@ -107,14 +107,15 @@ foreach my File $sect (@{$tests->{files}}) {
       } elsif (ref $@ eq 'ARRAY' and @{$@} == 3) {
 	# PSGI triple was raised.
 	$header = join("\n", @{$@->[1]});
+        $buffer ||= join("\n", @{$@->[2]});
       } elsif ($@) {
 	Test::More::fail $item->{cf_FILE};
 	Test::More::diag $@;
 	next;
       }
 
-
-      if ($buffer =~ s/\A((?:[^\n\r]+\r?\n)*\r?\n)//) {
+      if (not $header
+          and $buffer =~ s/\A((?:[^\n\r]+\r?\n)*\r?\n)//) {
 	$header = $1;
       }
 
