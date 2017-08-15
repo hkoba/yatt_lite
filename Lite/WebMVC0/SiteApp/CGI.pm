@@ -43,9 +43,16 @@ sub _callas_cgi {
 
 sub _runas_cgi {
   (my MY $self, my $fh, my Env $env, my ($args, %opts)) = @_;
+
+  # Note: This is usually tested in cgi-bin.
   if (-e ".htdebug_env") {
     $self->printenv($fh, $env);
     return;
+  }
+
+  # This flag is useful to debug "malformed header from script" case.
+  if (-e ".htdebug_dumb_header") {
+    print $fh "\n\n";
   }
 
   $self->init_by_env($env);
