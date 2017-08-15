@@ -829,6 +829,15 @@ sub raise_response {
 
 #========================================
 
+foreach my $what (qw(error text dump)) {
+  my $actual = "psgi_$what";
+  my $method = "raise_$actual";
+  *{globref($method)} = sub {
+    my $self = shift;
+    $self->raise_response($self->$actual(@_));
+  };
+}
+
 sub psgi_error {
   my ($self, $status, $msg, @rest) = @_;
   return [$status, [$self->secure_text_plain, @rest]
