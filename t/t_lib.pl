@@ -21,7 +21,12 @@ my (@libdir);
 if ((my $p = List::MoreUtils::last_index
      (sub {$_ eq 'YATT'}
       , my @d = MY->splitdir($dir))) >= 0) {
-  push @libdir, MY->catdir(@d[0 .. ($p-1)]);
+  my @outer_dir = @d[0 .. ($p-1)];
+  push @libdir, MY->catdir(@outer_dir);
+  if ($outer_dir[-1] eq 'lib'
+      and -d (my $local_lib = MY->catdir(@outer_dir[0..$#outer_dir-1], qw(local lib perl5)))) {
+    push @libdir, $local_lib;
+  }
 }
 
 if (-d (my $d = "$dir/../blib/lib")."/YATT") {
