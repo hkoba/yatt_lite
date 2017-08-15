@@ -19,6 +19,7 @@ use YATT::Lite::Types
                              cf_STATUS
 			     cf_BREAK
 			     cf_SKIP_IF_ERROR
+                             cf_ACCEPT_ERROR
 			     cf_SAME_RESULT
 			     cf_PERL_MINVER
 			     cf_SITE_CONFIG
@@ -208,6 +209,9 @@ sub mechanized {
 	      and $error =~ m{$item->{cf_SKIP_IF_ERROR}}) {
 	    my $skip_count = $tests->skipcount_for_request_error($item);
 	    skip $error, $skip_count;
+          } elsif ($item->{cf_ACCEPT_ERROR}
+                   and grep {$error =~ $_} lexpand($item->{cf_ACCEPT_ERROR})) {
+            # ok
 	  } else {
 	    fail "[$sect_name] $T Unknown error: $error";
 	    next;
