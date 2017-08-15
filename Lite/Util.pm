@@ -831,7 +831,9 @@ sub raise_response {
 
 sub psgi_error {
   my ($self, $status, $msg, @rest) = @_;
-  return [$status, [$self->secure_text_plain, @rest], [escape($msg)]];
+  return [$status, [$self->secure_text_plain, @rest]
+          , [escape($msg)
+             , $msg =~ /\n\z/ ? () : "\n" ]];
 }
 
 sub psgi_text {
