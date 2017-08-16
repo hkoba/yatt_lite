@@ -84,7 +84,7 @@ sub _runas_cgi {
     };
 
     $self->cgi_process_error($error, $con, $fh, $env);
-    $con->header_was_sent;
+    $con->header_was_sent if $con;
 
   } else {
     # dispatch without catch.
