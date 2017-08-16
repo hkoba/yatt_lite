@@ -831,10 +831,11 @@ sub raise_response {
 
 foreach my $what (qw(error text dump)) {
   my $actual = "psgi_$what";
+  my $sub = __PACKAGE__->can($actual);
   my $method = "raise_$actual";
   *{globref($method)} = sub {
     my $self = shift;
-    $self->raise_response($self->$actual(@_));
+    $self->raise_response($sub->($self, @_));
   };
 }
 
