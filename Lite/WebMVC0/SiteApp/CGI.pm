@@ -44,14 +44,13 @@ sub _callas_cgi {
 sub _runas_cgi {
   (my MY $self, my $fh, my Env $env, my ($args, %opts)) = @_;
 
-  # Note: This is usually tested in cgi-bin.
-  if (-e ".htdebug_env") {
+  if ($self->has_htdebug("env")) {
     $self->printenv($fh, $env);
     return;
   }
 
   # This flag is useful to debug "malformed header from script" case.
-  if (-e ".htdebug_dumb_header") {
+  if ($self->has_htdebug("dumb_header")) {
     print $fh "\n\n";
   }
 
@@ -123,7 +122,7 @@ sub cgi_dirhandler {
 
 sub make_cgi {
   (my MY $self, my Env $env, my ($args, $opts)) = @_;
-  my ($cgi, $root, $loc, $file, $trailer);
+  my ($cgi, $root, $loc, $file, $trailer, $is_index);
   unless ($self->{cf_noheader}) {
     $cgi = do {
       if (ref $args and UNIVERSAL::can($args, 'param')) {
@@ -133,7 +132,7 @@ sub make_cgi {
       }
     };
 
-    ($root, $loc, $file, $trailer) = my @pi = $self->split_path_info($env);
+    ($root, $loc, $file, $trailer, $is_index) = my @pi = $self->split_path_info($env);
 
     unless (@pi) {
       # XXX: This is too early for fatal to browser. mmm
@@ -156,8 +155,16 @@ sub make_cgi {
       $path = Cwd::abs_path($path) // die "No such file: $path\n";
     }
     # XXX: widget 直接呼び出しは？ cgi じゃなしに、直接パラメータ渡しは？ =>
-    ($root, $loc, $file, $trailer) = split_path($path, $self->{cf_app_root});
+    ($root, $loc, $file, $trailer, $is_index) = split_path($path, $self->{cf_app_root});
     $cgi = $self->new_cgi(@$args);
+  }
+
+  if ($self->has_htdebug("path_info")) {
+    $self->raise_psgi_dump([loc     => $loc]
+                           , [file    => $file]
+                           , [trailer => $trailer]
+                           , [is_index => $is_index]
+                         );
   }
 
   (env => $env, $self->connection_quad(["$root$loc", $loc, $file, $trailer])
