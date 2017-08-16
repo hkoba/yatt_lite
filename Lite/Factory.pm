@@ -121,6 +121,9 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			globref_default
 			define_const
 			terse_dump
+                        psgi_dump
+                        raise_psgi_dump
+                        raise_response
 		       /;
 
 use YATT::Lite::XHF ();

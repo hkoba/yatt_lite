@@ -48,7 +48,6 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			escape
                         trim_common_suffix_from
                         is_done
-                        psgi_dump
 			lexpand rootname extname untaint_any terse_dump);
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
