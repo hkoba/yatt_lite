@@ -856,7 +856,7 @@ sub psgi_dump {
   my $self = shift;
   [200
    , [$self->secure_text_plain]
-   , [join("\n", map {terse_dump($_)} @_)]];
+   , [join("\n", map {terse_dump($_)} @_)."\n"]];
 }
 
 sub ixhash {
