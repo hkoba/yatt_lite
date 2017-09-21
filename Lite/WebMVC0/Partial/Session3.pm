@@ -57,6 +57,11 @@ Entity session_start => sub {
   "";
 };
 
+Entity get_session => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  $CON->cget('system')->{_session}->get_session($env);
+};
 #----------------------------------------
 
 sub finalize_response {
