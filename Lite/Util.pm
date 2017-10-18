@@ -382,6 +382,12 @@ require Scalar::Util;
       Data::Dumper->new([$_])->Terse(1)->Indent(0)->Sortkeys(1)->Dump;
     } @_;
   }
+  sub indented_dump {
+    require Data::Dumper;
+    join ", ", map {
+      Data::Dumper->new([$_])->Terse(1)->Indent(1)->Sortkeys(1)->Dump;
+    } @_;
+  }
 
   sub is_debugging {
     my $symtab = $main::{'DB::'} or return 0;
@@ -462,7 +468,7 @@ BEGIN {
 	} else {
 	  # XXX: Is this secure???
 	  # XXX: Should be JSON?
-	  my $copy = terse_dump($str);
+	  my $copy = indented_dump($str);
 	  $copy =~ s{([<\"]|-->)}{$escape{$1}}g; # XXX: Minimum. May be insecure.
 	  $copy;
 	}
