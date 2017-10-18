@@ -11,7 +11,8 @@ BODY:
  <h2>Session2 test1</h2>
  
  
- <pre id="session_content">session content={}</pre><form method="POST">
+ <pre id="session_content">session content={}
+ </pre><form method="POST">
    <dl>
    
      <dt>foo</dt>
@@ -51,7 +52,12 @@ BODY:
  <h2>Session2 test1</h2>
  
  
- <pre id="session_content">session content={'bar' => 'yyy','baz' => 'zzz','foo' => 'xxx'}</pre><form method="POST">
+ <pre id="session_content">session content={
+   'bar' => 'yyy',
+   'baz' => 'zzz',
+   'foo' => 'xxx'
+ }
+ </pre><form method="POST">
    <dl>
    
      <dt>foo</dt>

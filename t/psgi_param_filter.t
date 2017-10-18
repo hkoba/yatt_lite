@@ -6,6 +6,7 @@ use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 
 use Test::More;
+use Test::Differences;
 use File::Temp qw(tempdir);
 
 use Plack::Test;
@@ -50,15 +51,53 @@ END
     my ($cb) = @_;
     # Sanity check.
     my $res = $cb->(GET "/?x=A;y=B;z=C");
-    is $res->content, "x=A\ny=B\nz=C\nstash={'yatt.unknown_params' => {}}\n\n";
+    eq_or_diff($res->content, <<'END');
+x=A
+y=B
+z=C
+stash={
+  'yatt.unknown_params' => {}
+}
+
+
+END
 
     # Unknown params are stashed.
     $res = $cb->(GET "/?a=X;b=Y;x=Z");
-    is $res->content, "x=Z\ny=\nz=\nstash={'yatt.unknown_params' => {'a' => ['X'],'b' => ['Y']}}\n\n";
+    eq_or_diff($res->content, <<'END');
+x=Z
+y=
+z=
+stash={
+  'yatt.unknown_params' => {
+    'a' => [
+      'X'
+    ],
+    'b' => [
+      'Y'
+    ]
+  }
+}
+
+
+END
 
     # Also known but code params are stashed.
     $res = $cb->(GET "/?body=foo");
-    is $res->content, "x=\ny=\nz=\nstash={'yatt.unknown_params' => {'body' => ['foo']}}\n\n";
+    eq_or_diff($res->content, <<'END');
+x=
+y=
+z=
+stash={
+  'yatt.unknown_params' => {
+    'body' => [
+      'foo'
+    ]
+  }
+}
+
+
+END
 
   };
 }
@@ -89,7 +128,14 @@ END
     my ($cb) = @_;
     # Sanity check.
     my $res = $cb->(GET "/?x=A;y=B;z=C");
-    is $res->content, "x=A\ny=B\nz=C\nstash={}\n\n";
+    eq_or_diff($res->content, <<'END');
+x=A
+y=B
+z=C
+stash={}
+
+
+END
 
     # Unknown args are raised as error
     $res = $cb->(GET "/?a=A;y=B;z=C");
