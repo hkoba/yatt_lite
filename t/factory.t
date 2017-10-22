@@ -544,7 +544,8 @@ use FindBin;
 use YATT::Lite::WebMVC0::SiteApp -as_base;
 
 return do {
-  my $site = MY->new(app_root => $FindBin::Bin
+  my $site = MY->new(app_ns => 'MyApp_load_factory'
+                     , app_root => $FindBin::Bin
 		     , doc_root => "$FindBin::Bin/html");
 
   if (MY->want_object) {
