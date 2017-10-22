@@ -213,15 +213,15 @@ sub load_factory_for_psgi {
   }
 
   my MY $self = do {
-  if (@cf) {
-    $pack->_with_loading_file($cf[0], sub {
-				$pack->new(app_root => $app_root, %default
-					   , $pack->read_file($cf[0]));
-			      })
-  } else {
-    $pack->new(app_root => $app_root, %default);
-  }
-};
+    if (@cf) {
+      $pack->_with_loading_file($cf[0], sub {
+                                  $pack->new(app_root => $app_root, %default
+                                               , $pack->read_file($cf[0]));
+                                })
+    } else {
+      $pack->new(app_root => $app_root, %default);
+    }
+  };
 
   unless ($self->{__after_new_is_called__}) {
     Carp::croak("after_new is not called correctly!");
