@@ -9,6 +9,7 @@ use YATT::Lite -as_base, qw/*SYS *CON
 use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
 			   cf_overwrite_status_code_for_errors_as
+                           cf_ext_public_action
 
 			   Action/;
 
@@ -24,6 +25,12 @@ use YATT::Lite::Util qw/cached_in ckeval
 		      /;
 
 use YATT::Lite::Error;
+
+sub after_new {
+  (my MY $self) = @_;
+  $self->SUPER::after_new;
+  $self->{cf_ext_public_action} //= $self->default_ext_public_action;
+}
 
 # sub handle_ydo, _do, _psgi...
 
@@ -106,6 +113,8 @@ sub prepare_part_handler {
 # Action handling
 #========================================
 
+sub default_ext_public_action {'ydo'}
+
 sub find_handler {
   (my MY $self, my ($ext, $file, $con)) = @_;
   my PROP $prop = $con->prop;
@@ -144,6 +153,7 @@ sub get_action_handler {
     ($self->{Action} //= {}, $path, $self, undef, sub {
        # first time.
        my ($self, $sys, $path) = @_;
+       return undef unless $path =~ m{\.$self->{cf_ext_public_action}\z};
        my $age = -M $path;
        return undef if not defined $age and $can_be_missing;
        my $sub = compile_file_in(ref $self, $path);
