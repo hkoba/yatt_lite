@@ -212,6 +212,7 @@ sub load_factory_for_psgi {
     });
   }
 
+  my MY $self = do {
   if (@cf) {
     $pack->_with_loading_file($cf[0], sub {
 				$pack->new(app_root => $app_root, %default
@@ -220,6 +221,13 @@ sub load_factory_for_psgi {
   } else {
     $pack->new(app_root => $app_root, %default);
   }
+};
+
+  unless ($self->{__after_new_is_called__}) {
+    Carp::croak("after_new is not called correctly!");
+  }
+
+  $self;
 }
 
 #
@@ -803,6 +811,10 @@ sub build_yatt {
   }
 
   my $yatt = $self->{path2yatt}{$path} = $app_ns->new(@args, %opts);
+
+  unless ($yatt->after_new_is_called) {
+    Carp::croak("after_new is not called for $path!");
+  }
 
   if ($has_rc) {
     $yatt->setup_rc_actions;
