@@ -16,6 +16,8 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
   # MyApp::INST1::dir::dir::dir::file
   # MyApp::TMPL1::dir::dir::dir::file
   use parent qw(YATT::Lite::Object);
+  use YATT::Lite::Partial::MarkAfterNew -as_base;
+
   use Carp;
   use YATT::Lite::Util qw(ckeval ckrequire set_inc symtab globref);
   our %SEEN_NS;

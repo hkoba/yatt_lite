@@ -14,6 +14,7 @@ use List::MoreUtils qw/uniq/;
 # YATT Internalへの Facade. YATT の初期化パラメータの保持者でもある。
 #
 use parent qw/YATT::Lite::Object File::Spec/;
+use YATT::Lite::Partial::MarkAfterNew -as_base;
 use YATT::Lite::MFields qw/YATT
 	      cf_dir
 	      cf_vfs cf_base
