@@ -285,6 +285,9 @@ sub cmd_setup {
 #========================================
 sub after_new {
   my MY $self = shift;
+
+  $self->SUPER::after_new(); # **REQUIRED**
+
   $self->{cf_tmpdir}  //= $self->app_path_var_tmp;
   $self->{cf_datadir} //= $self->app_path_var('data');
   $self->{cf_dbname}  //= "$self->{cf_datadir}/.htdata.db";
