@@ -259,7 +259,7 @@ sub n_destroyed {$_n_destroyed}
   our %sub2self;
   DESTROY {
     (my MY $self) = @_;
-    print STDERR "DESTROY $self\n" if DEBUG_FACTORY;
+    print STDERR "# DESTROY $self\n" if DEBUG_FACTORY;
     delete $self->{_my_psgi_app};
     if (my $outer = delete $self->{_outer_psgi_app}) {
       delete $sub2self{$outer};
@@ -786,6 +786,8 @@ sub build_yatt {
   if ($has_rc = (-e (my $rc = "$path/.htyattrc.pl"))) {
     # Note: This can do "use fields (...)"
     dofile_in($app_ns, $rc);
+
+    print STDERR "# Loaded: $rc\n" if DEBUG_FACTORY;
   }
 
   my @args = (vfs => [dir => $path
@@ -817,6 +819,7 @@ sub build_yatt {
   }
 
   if ($has_rc) {
+    print STDERR "# setting up rc actions\n" if DEBUG_FACTORY;
     $yatt->setup_rc_actions;
   }
 
