@@ -53,11 +53,11 @@ describe '$CON->raise_response([$code, $msg, @args...])', sub {
       $con->raise_response([200, [], ["From raise_response"]]);
     };
 
-    it "should has code == 200", sub {
+    it "should have code == 200", sub {
       expect($res->code)->to_be(200);
     };
 
-    it "should has raised content", sub {
+    it "should have raised content", sub {
       expect($res->content)->to_be("From raise_response");
     };
   };
@@ -69,11 +69,11 @@ describe '$CON->raise_response([$code, $msg, @args...])', sub {
       $con->raise_response([404, [], ["Not found xxx"]]);
     };
 
-    it "should has code == 404", sub {
+    it "should have code == 404", sub {
       expect($res->code)->to_be(404);
     };
 
-    it "should has raised content", sub {
+    it "should have raised content", sub {
       expect($res->content)->to_be('Not found xxx');
     };
   };
