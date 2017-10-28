@@ -81,11 +81,7 @@ BEGIN {
   our @types = (qw(text list scalar)
 		, [attr => {callable => 1}]
 		, [bool => {flag => 1}]
-		, [html => {already_escaped => 1
-                            , default_dflag_default => sub {
-                              ('?', '');
-                            }
-                          }]
+		, [html => {already_escaped => 1}]
 		, [code => {callable => 1}, qw(widget)]
 		, [delegate => {callable => 1}, qw(widget delegate_vars)]);
   foreach my $spec (@types) {
@@ -101,11 +97,9 @@ BEGIN {
 	my $val = $consts->{$key};
 	my $glob = *{globref($fullName, $key)};
 	if (ref $val eq 'CODE') {
-	  *$glob = $val;
-          next if *{globref($fullName, $key)}; # To avoid 'used only once' warn
-	} else {
-	  define_const($glob, $val);
+          die "Unsupported type!";
 	}
+        define_const($glob, $val);
       }
     }
     if (@slots) {
@@ -119,6 +113,11 @@ BEGIN {
 
 # widget だけ lvalue sub にするのも、一つの手ではないか?
 {
+  package YATT::Lite::VarTypes::t_html;
+  sub default_dflag_default {
+    ('?', '');
+  }
+
   package YATT::Lite::VarTypes::t_delegate;
   sub weakened_set_widget {
     my $self = shift;
