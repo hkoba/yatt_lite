@@ -580,6 +580,8 @@ sub synerror {
                                   , $parser->{cf_body_argument_type}
                                   , $parser->{cf_body_argument}
 				  , scalar @{$widget->{arg_order} ||= []});
+      # body_argument の印を付ける。public からは受理しないように.
+      $var->mark_body_argument;
       push @{$widget->{arg_order}}, $parser->{cf_body_argument};
       $var;
     };
