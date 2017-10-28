@@ -94,7 +94,8 @@ BEGIN {
 	my $val = $consts->{$key};
 	my $glob = *{globref($fullName, $key)};
 	if (ref $val eq 'CODE') {
-	  *glob = $val
+	  *$glob = $val;
+          next if *{globref($fullName, $key)}; # To avoid 'used only once' warn
 	} else {
 	  define_const($glob, $val);
 	}
