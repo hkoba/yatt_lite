@@ -71,6 +71,9 @@ BEGIN {
       ||
     $var->[VSLOT_TYPE][0] eq 'code';
   }
+  sub YATT::Lite::VarTypes::Base::default_dflag_default {
+    ();
+  }
 }
 
 BEGIN {
@@ -78,7 +81,11 @@ BEGIN {
   our @types = (qw(text list scalar)
 		, [attr => {callable => 1}]
 		, [bool => {flag => 1}]
-		, [html => {already_escaped => 1}]
+		, [html => {already_escaped => 1
+                            , default_dflag_default => sub {
+                              ('?', '');
+                            }
+                          }]
 		, [code => {callable => 1}, qw(widget)]
 		, [delegate => {callable => 1}, qw(widget delegate_vars)]);
   foreach my $spec (@types) {

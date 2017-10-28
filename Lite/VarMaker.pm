@@ -67,6 +67,9 @@ sub parse_type_dflag_default {
 
 sub set_dflag_default_to {
   (my MY $self, my ($var, $dflag, $default)) = @_;
+  if (not $dflag) {
+    ($dflag, $default) = $var->default_dflag_default;
+  }
   $var->[VSLOT_DFLAG] = $dflag if $dflag;
   if (defined $default) {
     $var->[VSLOT_DEFAULT] = $self->_parse_text_entities($default);
