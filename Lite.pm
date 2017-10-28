@@ -47,6 +47,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_import
               cf_match_argsroute_first
               cf_stash_unknown_params_to
+              cf_body_argument
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -79,6 +80,7 @@ sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
 sub default_index_name { '' }
 sub default_ext_public {'yatt'}
 sub default_ext_private {'ytmpl'}
+sub default_body_argument { 'body' }
 
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
@@ -91,6 +93,7 @@ sub after_new {
   $self->{cf_index_name} //= "";
   $self->{cf_ext_public} //= $self->default_ext_public;
   $self->{cf_ext_private} //= $self->default_ext_private;
+  $self->{cf_body_argument} //= $self->default_body_argument;
 }
 
 sub _after_after_new {
@@ -377,6 +380,7 @@ sub _cf_delegates {
      import
      match_argsroute_first
      stash_unknown_params_to
+     body_argument
     )
 }
 

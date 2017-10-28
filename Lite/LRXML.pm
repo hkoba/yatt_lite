@@ -25,6 +25,7 @@ use fields qw/re_decl
 	      cf_base cf_scheme cf_path cf_encoding cf_debug
 	      cf_all
 	      cf_special_entities
+              cf_body_argument
 	      subroutes
 	      rootroute
 
@@ -47,6 +48,8 @@ use Carp;
 #========================================
 sub default_public_part {'page'}
 sub default_private_part {'widget'}
+sub default_body_argument { 'body' }
+
 sub default_part_for {
   (my MY $self, my Template $tmpl) = @_;
   $tmpl->{cf_public}
@@ -59,6 +62,9 @@ sub after_new {
   my MY $self = shift;
   $self->SUPER::after_new;
   Scalar::Util::weaken($self->{cf_vfs}) if $self->{cf_vfs};
+
+  $self->{cf_body_argument} //= $self->default_body_argument;
+
   $self->{cf_namespace} ||= [qw(yatt perl)];
   my $nspat = qr!@{[join "|", $self->namespace]}!;
   $self->{re_name} ||= $self->re_name;

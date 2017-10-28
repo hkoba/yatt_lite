@@ -71,7 +71,8 @@ sub _parse_body {
       my $body = [];
       $elem->[NODE_VALUE]
 	= $is_opt
-	  ? $body : [TYPE_ATTRIBUTE, undef, undef, undef, body => $body]
+        ? $body : [TYPE_ATTRIBUTE, undef, undef, undef
+                   , $self->{cf_body_argument} => $body]
 	    if not $+{empty_elem} or $is_opt;
       my $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO]
 	if not $is_opt and $elem->[NODE_VALUE];
