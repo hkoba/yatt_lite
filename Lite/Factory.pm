@@ -112,6 +112,8 @@ use YATT::Lite::MFields
     (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
  , [cf_body_argument =>
     (doc => "Name of 'body' argument. (default: body)")]
+ , [cf_body_argument_type =>
+    (doc => "Type of 'body' argument. (default: code)")]
 );
 
 use YATT::Lite::Util::AsBase qw/-as_base import/;
@@ -448,6 +450,7 @@ sub after_new {
   $self->{cf_use_subpath} //= 1;
 
   $self->{cf_body_argument} //= $self->default_body_argument;
+  $self->{cf_body_argument_type} //= $self->default_body_argument_type;
 
   # prepare_app is too late to set delegated params
   if (($ENV{PLACK_ENV} // '') ne 'development') {
@@ -464,6 +467,7 @@ sub default_ext_public {'yatt'}
 sub default_ext_private {'ytmpl'}
 sub default_stash_unknown_params_to {'yatt.unknown_params'}
 sub default_body_argument { 'body' }
+sub default_body_argument_type { 'code' }
 
 sub _after_after_new {
   (my MY $self) = @_;
@@ -974,6 +978,7 @@ sub _cf_delegates {
      match_argsroute_first
      stash_unknown_params_to
      body_argument
+     body_argument_type
   );
 }
 

@@ -16,6 +16,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
 	      cf_lcmsg_sink
               cf_match_argsroute_first
               cf_body_argument
+              cf_body_argument_type
 
               cf_stash_unknown_params_to
 
@@ -62,7 +63,9 @@ use YATT::Lite::Breakpoint ();
 				       cf_path
                                     )]]
 
-     , [AbstParser => -fields => [qw(cf_body_argument)]]
+     , [AbstParser => -fields => [qw(cf_body_argument
+                                     cf_body_argument_type
+                                  )]]
     );
 
   sub YATT::Lite::Core::Part::public_name {
@@ -270,6 +273,7 @@ sub synerror {
 	 (qw(namespace special_entities
              match_argsroute_first
              body_argument
+             body_argument_type
           )
 	  , [debug_parser => 'debug']
 	  , [tmpl_encoding => 'encoding']
@@ -571,7 +575,9 @@ sub synerror {
     }
     $widget->{arg_dict}{$parser->{cf_body_argument}} ||= do {
       # lineno も入れるべきかも。 $widget->{cf_bodyln} あたり.
-      my $var = $parser->mkvar_at(undef, code => $parser->{cf_body_argument}
+      my $var = $parser->mkvar_at(undef
+                                  , $parser->{cf_body_argument_type}
+                                  , $parser->{cf_body_argument}
 				  , scalar @{$widget->{arg_order} ||= []});
       push @{$widget->{arg_order}}, $parser->{cf_body_argument};
       $var;

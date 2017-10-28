@@ -26,6 +26,8 @@ use fields qw/re_decl
 	      cf_all
 	      cf_special_entities
               cf_body_argument
+              cf_body_argument_type
+
 	      subroutes
 	      rootroute
 
