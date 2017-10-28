@@ -735,16 +735,14 @@ sub add_args {
       $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
       # primary of [primary key=val key=val] # delegate:foo の時は BODY に入る？
     } else {
-      ($type, $dflag, $default) = split m{([|/?!])}, $desc || '', 2;
+      ($type, $dflag, $default) = $self->parse_type_dflag_default($desc);
     };
 
     if (my $var = $part->{arg_dict}{$argName}) {
       if ($var->from_route) {
         # Override $type, $dflag, $default of this var.
         $self->set_var_type($var, $type); # type is always overridden.
-        $var->dflag($dflag) if $dflag;
-        $var->default($self->_parse_text_entities($default))
-          if defined $default;
+        $self->set_dflag_default_to($var, $dflag, $default);
       } else {
         die $self->synerror_at($self->{startln}
                                , 'Argument %s redefined in %s %s'
@@ -753,9 +751,8 @@ sub add_args {
     } else {
       my $var = $self->mkvar_at($self->{startln}
                                 , $type, $argName, nextArgNo($part)
-                                , $lno, $node_type, $dflag
-                                , defined $default
-                                ? $self->_parse_text_entities($default) : undef);
+                                , $lno, $node_type);
+      $self->set_dflag_default_to($var, $dflag, $default);
 
       if ($node_type == TYPE_ATT_NESTED) {
         # XXX: [delegate:type ...], [code  ...] の ... が来る

@@ -575,13 +575,19 @@ sub synerror {
 	if $widget->{arg_dict}{$argName}->is_required;
     }
     $widget->{arg_dict}{$parser->{cf_body_argument}} ||= do {
+      my ($type, @dflag_default) = $parser->parse_type_dflag_default(
+        $parser->{cf_body_argument_type}
+      );
+
       # lineno も入れるべきかも。 $widget->{cf_bodyln} あたり.
       my $var = $parser->mkvar_at(undef
-                                  , $parser->{cf_body_argument_type}
+                                  , $type
                                   , $parser->{cf_body_argument}
 				  , scalar @{$widget->{arg_order} ||= []});
       # body_argument の印を付ける。public からは受理しないように.
       $var->mark_body_argument;
+      $parser->set_dflag_default_to($var, @dflag_default);
+
       push @{$widget->{arg_order}}, $parser->{cf_body_argument};
       $var;
     };

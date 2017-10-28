@@ -61,4 +61,16 @@ sub _mk_typerec {
   }) : $typerec;
 }
 
+sub parse_type_dflag_default {
+  split m{([|/?!])}, $_[1] || '', 2;
+}
+
+sub set_dflag_default_to {
+  (my MY $self, my ($var, $dflag, $default)) = @_;
+  $var->[VSLOT_DFLAG] = $dflag if $dflag;
+  if (defined $default) {
+    $var->[VSLOT_DEFAULT] = $self->_parse_text_entities($default);
+  }
+}
+
 1;
