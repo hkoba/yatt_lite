@@ -25,6 +25,7 @@ BEGIN {
 		   varname argno
 		   lineno quote dflag default
                    from_route
+                   is_body_argument
                 );
   my $slotNum = 0;
   foreach my $name (@fields) {
@@ -60,6 +61,15 @@ BEGIN {
     my $type = shift->[VSLOT_TYPE];
     my $want = shift;
     $type->[0] eq $want;
+  }
+  sub YATT::Lite::VarTypes::Base::mark_body_argument {
+    shift->[VSLOT_IS_BODY_ARGUMENT] = 1;
+  }
+  sub YATT::Lite::VarTypes::Base::is_unsafe_param {
+    my ($var) = @_;
+    $var->[VSLOT_IS_BODY_ARGUMENT]
+      ||
+    $var->[VSLOT_TYPE][0] eq 'code';
   }
 }
 

@@ -35,7 +35,7 @@ x=&yatt:x;
 y=&yatt:y;
 z=&yatt:z;
 stash=&yatt:CON:stash();
-<yatt:body/>
+&yatt:body;
 END
 
   local $ENV{PLACK_ENV} = 'deployment';
@@ -44,6 +44,7 @@ END
     app_ns => $CLS
     , app_root => $approot
     , doc_root => $docroot
+    , body_argument_type => 'html?'
     # , stash_unknown_params_to => 'yatt.unknown_params'
   );
 
@@ -63,7 +64,8 @@ stash={
 END
 
     # Unknown params are stashed.
-    $res = $cb->(GET "/?a=X;b=Y;x=Z");
+    # body is known but always stashed for security.
+    $res = $cb->(GET "/?a=X;b=Y;x=Z;body=ZZZ");
     eq_or_diff($res->content, <<'END');
 x=Z
 y=
@@ -75,6 +77,9 @@ stash={
     ],
     'b' => [
       'Y'
+    ],
+    'body' => [
+      'ZZZ'
     ]
   }
 }

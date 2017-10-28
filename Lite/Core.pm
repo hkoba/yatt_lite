@@ -166,7 +166,7 @@ use YATT::Lite::Breakpoint ();
           die "Unknown args$wname: $name\n";
         }
       };
-      if ($argdecl->type->[0] eq 'code') {
+      if ($argdecl->is_unsafe_param) {
         if ($stash) {
           push @{$stash->{$name}}, $cgi->multi_param($name);
         }
