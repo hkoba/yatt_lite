@@ -157,12 +157,13 @@ use YATT::Lite::Breakpoint ();
     }
     foreach my $name ($cgi->param) {
       next unless $name =~ /^[a-z]\w*$/i;
-      my $wname = $widget->{cf_name} ? " for widget '$widget->{cf_name}'" : "";
       my $argdecl = $widget->{arg_dict}{$name} or do {
         if ($stash) {
           push @{$stash->{$name}}, $cgi->multi_param($name);
           next;
         } else {
+          my $wname = $widget->{cf_name}
+            ? " for widget '$widget->{cf_name}'" : "";
           die "Unknown args$wname: $name\n";
         }
       };
