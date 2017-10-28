@@ -44,7 +44,7 @@ END
     app_ns => $CLS
     , app_root => $approot
     , doc_root => $docroot
-    , body_argument_type => 'html?'
+    , body_argument_type => 'html'
     # , stash_unknown_params_to => 'yatt.unknown_params'
   );
 

@@ -19,6 +19,15 @@ OUT:
  <div class="bar">baz</div>
 
 
+TITLE: default value of body_argument
+PARAM[
+- bar
+]
+OUT:
+ <h2>bar</h2>
+ 
+
+
 TITLE: widgets can have content argument too.
 IN:
  <!yatt:args x>
