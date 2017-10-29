@@ -266,9 +266,11 @@ require File::Basename;
   sub YATT::Lite::VFS::Folder::lookup_base {
     (my Folder $item, my VFS $vfs, my $name) = splice @_, 0, 3;
     if (not $vfs->{cf_no_mro_c3} and $item->{cf_entns}) {
-      my @super_ns = @{mro::get_linear_isa($item->{cf_entns})};
-      foreach my $super (map {my $o = $vfs->{cf_entns2vfs_item}{$_}; $o ? $o : ()}
-			 @super_ns) {
+      (undef, my @super_ns) = @{mro::get_linear_isa($item->{cf_entns})};
+      my @super = map {
+        my $o = $vfs->{cf_entns2vfs_item}{$_}; $o ? $o : ()
+      } @super_ns;
+      foreach my $super (@super) {
 	my $ans = $super->lookup_1($vfs, $name, @_) or next;
 	return $ans;
       }
