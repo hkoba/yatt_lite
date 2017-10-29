@@ -75,7 +75,7 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 		       /;
 
 sub Facade () {__PACKAGE__}
-sub default_app_ns {'MyApp'}
+sub default_app_ns {'MyYATT'}
 sub default_trans {'YATT::Lite::Core'}
 sub default_export {(shift->SUPER::default_export, qw(Entity *SYS *CON))}
 sub default_index_name { '' }

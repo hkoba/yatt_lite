@@ -44,7 +44,7 @@ sub do_test {
   plan tests => 4;
 
   my $app = t_register_app->new
-    (app_ns => 'MyApp'
+    (app_ns => 'MyYATT'
      , app_root => $app_root
      , doc_root => "$app_root/html"
     );

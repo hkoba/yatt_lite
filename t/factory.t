@@ -40,7 +40,7 @@ my $i = 0;
 # app_base 指定の有無
 #   @ytmpl か CLASS::Name か
 #
-# MyApp.pm の有無
+# MyYATT.pm の有無
 #
 # .htyattconfig.xhf の有無
 #   base: の有無.. @dir か +CLASS::Name か
@@ -69,12 +69,12 @@ my $root_sanity = sub {
 
 ++$i;
 {
-  my $THEME = "[empty MyApp]";
+  my $THEME = "[empty MyYATT]";
   #
   # When given app_ns class has no definition,
   # yatt should set its ISA correctly.
   #
-  my $CLS = 'MyAppMissing';
+  my $CLS = 'MyYATTMissing';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
@@ -97,20 +97,20 @@ my $root_sanity = sub {
 
 ++$i;
 {
-  my $THEME = "[predefined MyApp]";
+  my $THEME = "[predefined MyYATT]";
   #
   # * default_app を渡さなかった時は、 YL が default_app になる
-  # * app_ns を渡さなかったときは、 MyApp が app_ns になる
-  # * MyApp が default_app を継承済みなら、そのまま用いる。
+  # * app_ns を渡さなかったときは、 MyYATT が app_ns になる
+  # * MyYATT が default_app を継承済みなら、そのまま用いる。
   #
   my $foo_res = "My App's foo";
   {
-    package MyApp;
+    package MyYATT;
     use parent qw(YATT::Lite); use YATT::Lite::Inc;
     use YATT::Lite::MFields;
     sub foo {$foo_res}
   }
-  my $CLS = 'MyApp';
+  my $CLS = 'MyYATT';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
@@ -131,13 +131,13 @@ my $root_sanity = sub {
 
 ++$i;
 {
-  my $THEME = "[composed MyApp]";
+  my $THEME = "[composed MyYATT]";
   # * default_app のオーバライド
   # * app_ns を渡したが、それが default_app(YL) を継承していない(=空クラスの)場合、
   #   app_ns に default_app への継承関係を追加する
   #
   my $CLS = myapp($i);
-  my $default_app = 'MyApp';
+  my $default_app = 'MyYATT';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
@@ -194,7 +194,7 @@ END
 
   my $baz_res = 'My App baz';
   {
-    package MyAppBaz;
+    package MyYATTBaz;
     use parent qw(YATT::Lite); use YATT::Lite::Inc;
     use YATT::Lite::MFields qw(cf_other_config cf_other_config_list);
     sub baz {$baz_res}
@@ -251,7 +251,7 @@ END
   my $F = Factory->new(app_ns => $CLS
 		       , app_root => $approot
 		       , doc_root => $docroot
-		       , app_base => '::MyAppBaz'
+		       , app_base => '::MyYATTBaz'
 		      );
   ok $CLS->isa($YL), "$THEME $CLS isa $YL";
   
@@ -279,7 +279,7 @@ END
 
   my $qux_res = 'My App qux';
   {
-    package MyAppQux;
+    package MyYATTQux;
     use parent qw(YATT::Lite); use YATT::Lite::Inc;
     use YATT::Lite::MFields qw/cf_other_config2/;
     sub qux {$qux_res}
@@ -297,7 +297,7 @@ other_config2: in docroot
 END
 
 	     , "$approot/ytmpl/.htyattconfig.xhf" => <<'END'
-base: ::MyAppQux
+base: ::MyYATTQux
 other_config2: in @ytmpl
 END
 	     , "$approot/ytmpl/.htyattrc.pl" => <<'END'
@@ -323,7 +323,7 @@ END
 
   my $ytmpl = $F->load_yatt("$approot/ytmpl");
   ok $yatt->isa(ref $ytmpl), "$THEME docroot isa ytmpl";
-  ok $ytmpl->isa('MyAppQux'), "$THEME ytmpl isa MyAppQux";
+  ok $ytmpl->isa('MyYATTQux'), "$THEME ytmpl isa MyYATTQux";
 
   foreach my $key (qw(index)) {
     ok($yatt->find_part($key), "$THEME inst part $key is visible");
@@ -337,7 +337,7 @@ END
 
   my $quux_res = 'My App quux';
   {
-    package MyAppQuux;
+    package MyYATTQuux;
     use parent qw(YATT::Lite);use YATT::Lite::Inc;
     use YATT::Lite::MFields;
     sub quux {$quux_res}
@@ -370,7 +370,7 @@ END
   my $F = Factory->new(app_ns => $CLS
 		       , app_root => $approot
 		       , doc_root => $docroot
-		       , app_base => '::MyAppQuux'
+		       , app_base => '::MyYATTQuux'
 		      );
   ok $CLS->isa($YL), "$THEME $CLS isa $YL";
   
@@ -544,7 +544,7 @@ use FindBin;
 use YATT::Lite::WebMVC0::SiteApp -as_base;
 
 return do {
-  my $site = MY->new(app_ns => 'MyApp_load_factory'
+  my $site = MY->new(app_ns => 'MyYATT_load_factory'
                      , app_root => $FindBin::Bin
 		     , doc_root => "$FindBin::Bin/html");
 

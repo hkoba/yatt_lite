@@ -8,13 +8,13 @@ use YATT::Lite::Util qw(lexpand);
 use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
 
 {
-  # bootscript が決まれば、root NS も一つに決まる、としよう。 MyApp 、と。
-  # instpkg の系列も決まる、と。 MyApp::INST1, 2, ... だと。
+  # bootscript が決まれば、root NS も一つに決まる、としよう。 MyYATT 、と。
+  # instpkg の系列も決まる、と。 MyYATT::INST1, 2, ... だと。
   # XXX: INST を越えて共有される *.ytmpl/ は、 TMPL1, 2, ... と名づけたいが、...
   # それ以下のディレクトリ名・ファイル名はそのまま pkgname に使う。
 
-  # MyApp::INST1::dir::dir::dir::file
-  # MyApp::TMPL1::dir::dir::dir::file
+  # MyYATT::INST1::dir::dir::dir::file
+  # MyYATT::TMPL1::dir::dir::dir::file
   use parent qw(YATT::Lite::Object);
   use YATT::Lite::Partial::MarkAfterNew -as_base;
 
@@ -46,7 +46,7 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
   }
   sub init_app_ns {
     (my MY $self) = @_;
-    # This usually set 'MyApp'
+    # This usually set 'MyYATT'
     $self->{app_ns} = my $app_ns = $self->{cf_app_ns}
       // $self->{default_app}->default_app_ns;
     try_require($app_ns);
@@ -65,7 +65,7 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
       $self->define_base_of($app_ns, $self->{default_app});
     }
 
-    # Then MyApp::EntNS is composed
+    # Then MyYATT::EntNS is composed
     $self->{default_app}->ensure_entns($app_ns, @base_entns);
 
   }
@@ -88,7 +88,7 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
     unless (defined $self->{app_ns}) {
       croak "buildns is called without app_ns!";
     }
-    # This usually creates MyApp::INST$n and set it's ISA.
+    # This usually creates MyYATT::INST$n and set it's ISA.
     $subns ||= $self->default_subns;
     my @base = map {ref $_ || $_} @$baselist;
     if (@base) {

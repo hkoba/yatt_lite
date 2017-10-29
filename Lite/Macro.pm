@@ -13,8 +13,8 @@ our @EXPORT = qw(Macro lexpand);
 our @EXPORT_OK = (@EXPORT, qw(Template Part Widget Page Action));
 
 # Use cases:
-# (a) .htyattrc.pl から呼ばれて、 MyApp::INST1::CGEN_perl に macro_zzz を足す。
-# (b) MyApp.pm から呼ばれて、 MyApp::CGEN_perl に... こっちがまだだよね。
+# (a) .htyattrc.pl から呼ばれて、 MyYATT::INST1::CGEN_perl に macro_zzz を足す。
+# (b) MyYATT.pm から呼ばれて、 MyYATT::CGEN_perl に... こっちがまだだよね。
 # sub cgen_perl () {'...CGEN_perl'} を設定するべきか否か。<= ロード順問題を抱えるよね。
 
 sub define_Macro {

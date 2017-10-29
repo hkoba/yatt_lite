@@ -44,7 +44,7 @@ sub is_or_like($$;$) {
   my $site = YATT::Lite::WebMVC0::SiteApp
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
-	  , app_ns => 'MyApp'
+	  , app_ns => 'MyYATT'
 	  , app_base => ['@psgi.ytmpl']
 	  , namespace => ['yatt', 'perl', 'js']
 	  , use_subpath => 1
@@ -292,7 +292,7 @@ END
   my $app = YATT::Lite::WebMVC0::SiteApp
     ->new(app_root => $FindBin::Bin
 	  , doc_root => "$rootname.d"
-	  , app_ns => 'MyApp2'
+	  , app_ns => 'MyYATT2'
 	  , backend => $backend
 	 )
       ->to_app;

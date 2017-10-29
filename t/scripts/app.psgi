@@ -10,7 +10,7 @@ use YATT::Lite::WebMVC0::SiteApp -as_base;
 
 {
   my MY $dispatcher = do {
-    my @args = (app_ns => 'MyApp'
+    my @args = (app_ns => 'MyYATT'
                 , app_root => $app_root
                 , doc_root => $app_root);
     MY->new(@args);

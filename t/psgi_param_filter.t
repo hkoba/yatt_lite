@@ -26,7 +26,7 @@ END {
 
 my $i = 1;
 {
-  my $CLS = 'MyAppUnknownParams';
+  my $CLS = 'MyYATTUnknownParams';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
   MY->mkfile("$docroot/index.yatt", <<'END');
@@ -109,7 +109,7 @@ END
 
 ++$i;
 {
-  my $CLS = 'MyAppInDevelopment';
+  my $CLS = 'MyYATTInDevelopment';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
   MY->mkfile("$docroot/index.yatt", <<'END');
