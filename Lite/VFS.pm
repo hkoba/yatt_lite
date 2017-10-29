@@ -52,7 +52,7 @@ require File::Basename;
 		cf_mark
 		n_creates
 		cf_entns2vfs_item/;
-  use YATT::Lite::Util qw(lexpand rootname terse_dump extname);
+  use YATT::Lite::Util qw(lexpand rootname extname);
   sub default_ext_public {'yatt'}
   sub default_ext_private {'ytmpl'}
   sub new {
@@ -122,7 +122,7 @@ require File::Basename;
 
     if (DEBUG_VFS) {
       printf STDERR "# vfs-import to %s from %s (actually: %s)\n"
-	, $root->{cf_path}, terse_dump($vfs->{cf_import}), terse_dump(\@files);
+	, $root->{cf_path}, sorted_dump($vfs->{cf_import}), sorted_dump(\@files);
     }
 
     foreach my $fn (@files) {
@@ -301,11 +301,11 @@ require File::Basename;
 
     if ($file->{cf_entns} and mro::get_mro($file->{cf_entns}) eq 'c3') {
       print STDERR "use c3 for $file->{cf_entns}"
-	, "\n ".terse_dump([local => map {
+	, "\n ".sorted_dump([local => map {
 	  my Folder $f = $_;
 	  mro::get_linear_isa($f->{cf_entns})
 	} @local])
-	, "\n ".terse_dump([other => map {
+	, "\n ".sorted_dump([other => map {
 	  my Folder $f = $_;
 	  mro::get_linear_isa($f->{cf_entns})
 	} @otherdir])
@@ -465,16 +465,17 @@ require File::Basename;
       };
     }
   }
-  sub terse_dump2 {
+  sub sorted_dump {
     require Data::Dumper;
     join ", ", map {
-      Data::Dumper->new([$_])->Maxdepth(2)->Terse(1)->Indent(0)->Dump;
+      Data::Dumper->new([$_])->Maxdepth(2)->Terse(1)->Indent(0)
+        ->Sortkeys(1)->Dump;
     } @_;
   }
   sub fixup_created {
     (my VFS $vfs, my $info, my Folder $folder) = @_;
     printf STDERR "# VFS::create(%s) => %s(0x%x)\n"
-      , terse_dump2(@{$info}[1..$#$info])
+      , sorted_dump(@{$info}[1..$#$info])
       , ref $folder, ($folder+0) if DEBUG_VFS;
     # create の直後、 after_create より前に、mark を打つ。そうしないと、 delegate で困る。
     if (ref $vfs) {
