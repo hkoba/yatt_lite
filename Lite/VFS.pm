@@ -8,6 +8,7 @@ use Carp;
 use constant DEBUG_VFS => $ENV{DEBUG_YATT_VFS};
 use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
 use constant DEBUG_MRO => $ENV{DEBUG_YATT_MRO};
+use constant DEBUG_LOOKUP => $ENV{DEBUG_YATT_VFS_LOOKUP};
 
 require File::Spec;
 require File::Basename;
@@ -200,6 +201,8 @@ require File::Basename;
   }
 
   sub YATT::Lite::VFS::Folder::lookup {
+    print STDERR "# VFS: root->lookup(", sorted_dump(@_[2..$#_]), ")\n"
+      if DEBUG_LOOKUP;
     $_[0]->lookup_1(@_[1..$#_])
       // $_[0]->lookup_base(@_[1..$#_])
   }
@@ -233,6 +236,9 @@ require File::Basename;
 
   sub YATT::Lite::VFS::File::lookup_1 {
     (my vfs_file $file, my VFS $vfs, my $name) = splice @_, 0, 3;
+    print STDERR "# VFS:   $file->lookup_1("
+      , sorted_dump($file->{cf_path}) ,")(", sorted_dump($name, @_), ")\n"
+      if DEBUG_LOOKUP;
     unless (@_) {
       # ファイルの中には、深さ 1 の name しか無いはずだから。
       # mtime, refresh
@@ -244,6 +250,9 @@ require File::Basename;
   }
   sub YATT::Lite::VFS::Dir::lookup_1 {
     (my vfs_dir $dir, my VFS $vfs, my $name) = splice @_, 0, 3;
+    print STDERR "# VFS:   $dir->lookup_1("
+      , sorted_dump($dir->{cf_path}) ,")(", sorted_dump($name, @_), ")\n"
+      if DEBUG_LOOKUP;
     if (my Item $item = $dir->cached_in
 	($dir->{Item} //= {}, $name, $vfs, $vfs->{cf_mark})) {
       if ((not ref $item or not UNIVERSAL::isa($item, Item))
@@ -265,6 +274,10 @@ require File::Basename;
   }
   sub YATT::Lite::VFS::Folder::lookup_base {
     (my Folder $item, my VFS $vfs, my $name) = splice @_, 0, 3;
+    print STDERR "# VFS:      $item->lookup_base("
+      , sorted_dump($item->{cf_path}) ,")(", sorted_dump($name, @_), ")\n"
+      if DEBUG_LOOKUP;
+
     if (not $vfs->{cf_no_mro_c3} and $item->{cf_entns}) {
       (undef, my @super_ns) = @{mro::get_linear_isa($item->{cf_entns})};
       my @super = map {
@@ -476,9 +489,14 @@ require File::Basename;
   }
   sub fixup_created {
     (my VFS $vfs, my $info, my Folder $folder) = @_;
-    printf STDERR "# VFS::create(%s) => %s(0x%x)\n"
-      , sorted_dump(@{$info}[1..$#$info])
-      , ref $folder, ($folder+0) if DEBUG_VFS;
+    if (DEBUG_VFS) {
+      printf STDERR "# VFS::create(%s) => %s(0x%x)\n"
+        , sorted_dump(@{$info}[1..$#$info])
+        , ref $folder, ($folder+0);
+    } elsif (DEBUG_LOOKUP) {
+      print STDERR "# VFS: created: $folder (path="
+        , sorted_dump($folder->{cf_path}), ")\n";
+    }
     # create の直後、 after_create より前に、mark を打つ。そうしないと、 delegate で困る。
     if (ref $vfs) {
       $vfs->{n_creates}++;
