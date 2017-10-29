@@ -511,6 +511,8 @@ require File::Basename;
     } elsif (DEBUG_LOOKUP) {
       print STDERR "# VFS: created: $folder (path="
         , sorted_dump($folder->{cf_path}), ")\n";
+    } else {
+      # XXX: This is required for perl 5.18 and before.
     }
     # create の直後、 after_create より前に、mark を打つ。そうしないと、 delegate で困る。
     if (ref $vfs) {
