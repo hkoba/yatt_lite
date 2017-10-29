@@ -355,6 +355,9 @@ require File::Basename;
   sub YATT::Lite::VFS::Dir::load {
     (my vfs_dir $in, my VFS $vfs, my $partName) = @_;
     return unless defined $in->{cf_path};
+    print STDERR "# VFS::Dir::load in "
+      , sorted_dump($in->{cf_path}) ," (", sorted_dump($partName), ")\n"
+      if DEBUG_LOOKUP;
     my $vfsname = "$in->{cf_path}/$partName";
     my @opt = (name => $partName, parent => $in);
     my ($kind, $path, @other) = do {
