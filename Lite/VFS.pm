@@ -146,7 +146,9 @@ require File::Basename;
     # XXX: 拡張子をどうしたい？
     my ($name) = $filename =~ m{^(\w+)}
       or croak "Can't extract part name from filename '$filename'";
-    $vfs->{root}->lookup($vfs, $name);
+    my $nameSpec = length($name) == length($filename)
+      ? $name : [$name => $filename];
+    $vfs->{root}->lookup($vfs, $nameSpec);
   }
   sub list_items {
     (my VFS $vfs) = @_;
@@ -235,30 +237,32 @@ require File::Basename;
   }
 
   sub YATT::Lite::VFS::File::lookup_1 {
-    (my vfs_file $file, my VFS $vfs, my $name) = splice @_, 0, 3;
+    (my vfs_file $file, my VFS $vfs, my $nameSpec) = splice @_, 0, 3;
     print STDERR "# VFS:   $file->lookup_1("
-      , sorted_dump($file->{cf_path}) ,")(", sorted_dump($name, @_), ")\n"
+      , sorted_dump($file->{cf_path}) ,")(", sorted_dump($nameSpec, @_), ")\n"
       if DEBUG_LOOKUP;
     unless (@_) {
       # ファイルの中には、深さ 1 の name しか無いはずだから。
       # mtime, refresh
       $file->refresh($vfs) unless $vfs->{cf_mark}{refaddr($file)}++;
+      my ($name) = lexpand($nameSpec);
       my Item $item = $file->{Item}{$name};
       return $item if $item;
     }
     undef;
   }
   sub YATT::Lite::VFS::Dir::lookup_1 {
-    (my vfs_dir $dir, my VFS $vfs, my $name) = splice @_, 0, 3;
+    (my vfs_dir $dir, my VFS $vfs, my $nameSpec) = splice @_, 0, 3;
     print STDERR "# VFS:   $dir->lookup_1("
-      , sorted_dump($dir->{cf_path}) ,")(", sorted_dump($name, @_), ")\n"
+      , sorted_dump($dir->{cf_path}) ,")(", sorted_dump($nameSpec, @_), ")\n"
       if DEBUG_LOOKUP;
     if (my Item $item = $dir->cached_in
-	($dir->{Item} //= {}, $name, $vfs, $vfs->{cf_mark})) {
+	($dir->{Item} //= {}, $nameSpec, $vfs, $vfs->{cf_mark})) {
       if ((not ref $item or not UNIVERSAL::isa($item, Item))
 	  and not $vfs->{cf_no_auto_create}) {
 	# Special case (mostly for test)
 	# data vfs can contain vfs spec (string, array, hash).
+        my ($name) = lexpand($nameSpec);
 	$item = $dir->{Item}{$name} = $vfs->create
 	  (data => $item, parent => $dir, name => $name);
       }
@@ -273,9 +277,9 @@ require File::Basename;
     undef;
   }
   sub YATT::Lite::VFS::Folder::lookup_base {
-    (my Folder $item, my VFS $vfs, my $name) = splice @_, 0, 3;
+    (my Folder $item, my VFS $vfs, my $nameSpec) = splice @_, 0, 3;
     print STDERR "# VFS:      $item->lookup_base("
-      , sorted_dump($item->{cf_path}) ,")(", sorted_dump($name, @_), ")\n"
+      , sorted_dump($item->{cf_path}) ,")(", sorted_dump($nameSpec, @_), ")\n"
       if DEBUG_LOOKUP;
 
     if (not $vfs->{cf_no_mro_c3} and $item->{cf_entns}) {
@@ -284,13 +288,13 @@ require File::Basename;
         my $o = $vfs->{cf_entns2vfs_item}{$_}; $o ? $o : ()
       } @super_ns;
       foreach my $super (@super) {
-	my $ans = $super->lookup_1($vfs, $name, @_) or next;
+	my $ans = $super->lookup_1($vfs, $nameSpec, @_) or next;
 	return $ans;
       }
     } else {
       my @super = $item->list_base;
       foreach my $super (@super) {
-	my $ans = $super->lookup($vfs, $name, @_) or next;
+	my $ans = $super->lookup($vfs, $nameSpec, @_) or next;
 	return $ans;
       }
     }
@@ -353,15 +357,23 @@ require File::Basename;
   }
   #----------------------------------------
   sub YATT::Lite::VFS::Dir::load {
-    (my vfs_dir $in, my VFS $vfs, my $partName) = @_;
+    (my vfs_dir $in, my VFS $vfs, my $nameSpec) = @_;
     return unless defined $in->{cf_path};
     print STDERR "# VFS::Dir::load in "
-      , sorted_dump($in->{cf_path}) ," (", sorted_dump($partName), ")\n"
+      , sorted_dump($in->{cf_path}) ," (", sorted_dump($nameSpec), ")\n"
       if DEBUG_LOOKUP;
-    my $vfsname = "$in->{cf_path}/$partName";
+    my ($partName, $realFile) = lexpand($nameSpec);
+    $realFile ||= $partName;
+
+    my $vfsname = "$in->{cf_path}/$realFile";
     my @opt = (name => $partName, parent => $in);
     my ($kind, $path, @other) = do {
-      if (my $fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_public})) {
+      if (ref $nameSpec) {
+        my $ext = extname($vfsname);
+        (file => $vfsname
+         , ($ext eq $vfs->{cf_ext_public}
+            ? (public => 1) : ()));
+      } elsif (my $fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_public})) {
 	(file => $fn, public => 1);
       } elsif ($fn = $vfs->find_ext($vfsname, $vfs->{cf_ext_private})) {
 	# dir の場合、 new_tmplpkg では？

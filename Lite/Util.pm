@@ -175,10 +175,11 @@ require Scalar::Util;
   }
   use Scalar::Util qw(refaddr);
   sub cached_in {
-    my ($dir, $dict, $name, $sys, $mark, $loader, $refresher) = @_;
+    my ($dir, $dict, $nameSpec, $sys, $mark, $loader, $refresher) = @_;
+    my ($name) = lexpand($nameSpec);
     if (not exists $dict->{$name}) {
-      my $item = $dict->{$name} = $loader ? $loader->($dir, $sys, $name)
-	: $dir->load($sys, $name);
+      my $item = $dict->{$name} = $loader ? $loader->($dir, $sys, $nameSpec)
+	: $dir->load($sys, $nameSpec);
       $mark->{refaddr($item)} = 1 if $item and $mark;
       $item;
     } else {
@@ -187,7 +188,7 @@ require Scalar::Util;
 	      and (not $mark or not $mark->{refaddr($item)}++)) {
 	# nop
       } elsif ($refresher) {
-	$refresher->($item, $sys, $name)
+	$refresher->($item, $sys, $nameSpec)
       } elsif (my $sub = UNIVERSAL::can($item, 'refresh')) {
 	$sub->($item, $sys);
       }
