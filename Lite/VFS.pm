@@ -239,7 +239,7 @@ require File::Basename;
   sub YATT::Lite::VFS::File::lookup_1 {
     (my vfs_file $file, my VFS $vfs, my $nameSpec) = splice @_, 0, 3;
     print STDERR "# VFS:   $file->lookup_1("
-      , sorted_dump($file->{cf_path}) ,")(", sorted_dump($nameSpec, @_), ")\n"
+      , sorted_dump($nameSpec, @_), ") in (", sorted_dump($file->{cf_path}), ")\n"
       if DEBUG_LOOKUP;
     unless (@_) {
       # ファイルの中には、深さ 1 の name しか無いはずだから。
@@ -254,7 +254,7 @@ require File::Basename;
   sub YATT::Lite::VFS::Dir::lookup_1 {
     (my vfs_dir $dir, my VFS $vfs, my $nameSpec) = splice @_, 0, 3;
     print STDERR "# VFS:   $dir->lookup_1("
-      , sorted_dump($dir->{cf_path}) ,")(", sorted_dump($nameSpec, @_), ")\n"
+      , sorted_dump($nameSpec, @_), ") in (", sorted_dump($dir->{cf_path}), ")\n"
       if DEBUG_LOOKUP;
     if (my Item $item = $dir->cached_in
 	($dir->{Item} //= {}, $nameSpec, $vfs, $vfs->{cf_mark})) {
@@ -359,8 +359,7 @@ require File::Basename;
   sub YATT::Lite::VFS::Dir::load {
     (my vfs_dir $in, my VFS $vfs, my $nameSpec) = @_;
     return unless defined $in->{cf_path};
-    print STDERR "# VFS::Dir::load in "
-      , sorted_dump($in->{cf_path}) ," (", sorted_dump($nameSpec), ")\n"
+    print STDERR "# VFS:   Dir::load(", sorted_dump($nameSpec), ") in $in\n"
       if DEBUG_LOOKUP;
     my ($partName, $realFile) = lexpand($nameSpec);
     $realFile ||= $partName;
