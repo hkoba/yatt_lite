@@ -586,7 +586,8 @@ sub mount_psgi {
   }
   my $dict = $self->{loc2psgi_dict} //= +{};
   my $key = K_MOUNT_MATCH() . (keys %$dict);
-  $dict->{$path_prefix} = [$key => $path_prefix => $app, @opts];
+  (my $strip = $path_prefix) =~ s,/\z,,;
+  $dict->{$path_prefix} = [$key => $strip => $app, @opts];
 
   undef $self->{loc2psgi_re};
 
