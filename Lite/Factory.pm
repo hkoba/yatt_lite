@@ -128,6 +128,7 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
                         psgi_dump
                         raise_psgi_dump
                         raise_response
+                        trimleft_length
 		       /;
 
 use YATT::Lite::XHF ();
@@ -620,15 +621,10 @@ sub mount_static {
   $self->mount_psgi
     ($location, sub {
        (my Env $env) = @_;
-       local $env->{PATH_INFO} = _trim_prefix($env->{PATH_INFO}, $location);
+       local $env->{PATH_INFO} = $self->trimleft_length($env->{PATH_INFO}, $location);
        $app->($env);
      });
 }
-
-sub _trim_prefix {
-  substr($_[0], length($_[1]));
-}
-
 
 #========================================
 
