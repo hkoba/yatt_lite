@@ -602,7 +602,7 @@ sub rebuild_psgi_mount {
     push @re, qr{(?<$key>$path_prefix)};
   }
   my $all = join("|", @re);
-  $self->{loc2psgi_re} = qr{^(?:$all)(?:/|$)};
+  $self->{loc2psgi_re} = qr{^(?:$all)};
 }
 
 sub psgi_file_app {
