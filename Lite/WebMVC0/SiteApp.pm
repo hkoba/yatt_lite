@@ -221,8 +221,11 @@ sub call {
   }
 
   if ($self->{loc2psgi_dict}
-      and my $psgi_app = $self->lookup_psgi_mount($env->{PATH_INFO})) {
+      and my ($path_prefix, $psgi_app)
+      = $self->lookup_psgi_mount($env->{PATH_INFO})) {
     require Plack::Util;
+    local $env->{PATH_INFO} = $self->trimleft_length($env->{PATH_INFO}, $path_prefix);
+    local $env->{SCRIPT_NAME} = $self->trimleft_length($env->{SCRIPT_NAME}, $path_prefix);
     return Plack::Util::run_app($psgi_app, $env);
   }
 
