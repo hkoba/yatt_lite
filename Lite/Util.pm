@@ -980,6 +980,12 @@ sub merge_hash_renaming (&@) {
   $result;
 }
 
+sub trimleft_length {
+  shift;
+  return $_[0] unless length $_[0];
+  substr($_[0], length($_[1]));
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #
