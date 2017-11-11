@@ -85,33 +85,41 @@ sub is_or_like($$;$) {
     } GET "/virt?foo=bar";
 
     undef *test_action; # To free $site ref
+  }
 
-    sub test_psgi (&@) {
-      my ($subref, $request, %params) = @_;
+  {
+    # mount_psgi and PATH_INFO test.
+    my $t = sub {
+      my ($mount_path, $req_path, $want_pathinfo, $more_desc) = @_;
 
-      my $path = $request->uri->path;
+      $site->mount_psgi(
+        $mount_path,
+        sub {
+          my ($env) = @_;
+          is $env->{PATH_INFO}, $want_pathinfo
+            , "mount psgi $mount_path, GET $req_path => PT($want_pathinfo)"
+              . ($more_desc // '')
+              ;
+          [200, [], "OK"]
+        }
+      );
 
-      $site->mount_psgi($path => sub {$subref->(@_); [200, [], "OK"]});
+      Plack::Test->create($app)->request(GET $req_path)
+    };
 
-      $client->request($request, %params);
-    }
+    $t->("/mnt"  => "/mnt"  => ""
+           , ": PT maybe '' for root");
 
-    test_psgi {
-      (my Env $env) = @_;
-      is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info";
-    } GET "/mpsgi";
+    $t->("/mnt"  => "/mnt/"  => "/"
+           , ": Nonempty PT must start with /");
 
-    test_psgi {
-      (my Env $env) = @_;
-      is $env->{PATH_INFO}, "/mpsgi2", "mount psgi path_info, 2";
-    } GET "/mpsgi2";
+    $t->("/mnt/" => "/mnt/" => "/"
+           , ": Last / in mount path is not trimmed from PT");
 
-    test_psgi {
-      (my Env $env) = @_;
-      is $env->{PATH_INFO}, "/mpsgi", "mount psgi path_info, overwritten";
-    } GET "/mpsgi";
+    $t->("/mnt2" => "/mnt2"  => ""
+           , ": mnt2, not mnt. Longest must win.");
+  }
 
-    undef *test_psgi; # To free $site ref.
   }
 
   my $hello = sub {
