@@ -64,4 +64,5 @@ on test => sub {
  requires 'HTTP::Cookies';
  requires 'Email::Sender';
  requires 'Email::Simple';
+ requires 'CGI::Emulate::PSGI';
 };
