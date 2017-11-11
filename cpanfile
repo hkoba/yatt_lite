@@ -65,4 +65,5 @@ on test => sub {
  requires 'Email::Sender';
  requires 'Email::Simple';
  requires 'CGI::Emulate::PSGI';
+ requires 'CGI::Compile';
 };
