@@ -598,7 +598,8 @@ sub mount_psgi {
 sub rebuild_psgi_mount {
   (my MY $self) = @_;
   my @re;
-  foreach my $path_prefix (keys %{$self->{loc2psgi_dict} //= +{}}) {
+  foreach my $path_prefix (sort {length($b) <=> length($a)}
+                             keys %{$self->{loc2psgi_dict} //= +{}}) {
     my ($key, undef, $app) = @{$self->{loc2psgi_dict}{$path_prefix}};
     push @re, qr{(?<$key>$path_prefix)};
   }
