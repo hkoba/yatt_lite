@@ -120,6 +120,34 @@ sub is_or_like($$;$) {
            , ": mnt2, not mnt. Longest must win.");
   }
 
+  {
+    use Plack::Test;
+
+    # mount_psgi and PATH_INFO test.
+    use Plack::App::CGIBin;
+    # /cgi-bin outside of doc_root.
+    $site->mount_psgi(
+      "/cgi-bin/",
+      Plack::App::CGIBin->new(root => "$rootname.cgi-bin")
+    );
+
+    test_psgi $site->to_app, sub {
+      my ($cb) = @_;
+      my $res = $cb->(GET "/cgi-bin/test1.cgi?foo=bar");
+      is $res->content, "\nQUERY_STRING: foo=bar\n";
+    };
+
+    # /cgi-bin inside of doc_root.
+    $site->mount_psgi(
+      "/cgi-bin/",
+      Plack::App::CGIBin->new(root => "$rootname.d/cgi-bin")
+    );
+
+    test_psgi $site->to_app, sub {
+      my ($cb) = @_;
+      my $res = $cb->(GET "/cgi-bin/test1.cgi?x=y");
+      is $res->content, "\nUnder doc_root, QUERY_STRING: x=y\n";
+    };
   }
 
   my $hello = sub {
@@ -306,7 +334,7 @@ END
       ->to_app;
 
   is_deeply [$backend->paths]
-    , ['', qw|/beta /test.lib|]
+    , ['', qw|/beta /cgi-bin /test.lib|]
     , "backend startup is called";
 }
 
