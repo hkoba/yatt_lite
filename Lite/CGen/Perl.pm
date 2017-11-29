@@ -7,7 +7,7 @@ require 5.010; # For named capture.
 
 use constant DEBUG_MRO => $ENV{DEBUG_YATT_MRO};
 
-use YATT::Lite::Core qw(Folder Template Part Widget Action);
+use YATT::Lite::Core qw(Folder Template Part Widget Action Entity);
 use YATT::Lite::Constants;
 
 # Naming convention:
@@ -142,6 +142,32 @@ use YATT::Lite::Constants;
       + ($has_nl ? 1 : 0);
     (@src, $src, "}");
   }
+
+  # XXX: As you see, dup code.
+  # XXX: Should define common base class for Action and Entity.
+  sub generate_entity {
+    (my MY $self, my Entity $entity) = @_;
+    # XXX: 改行の調整が必要。
+    my @src = ($self->sync_curline($entity->{cf_startln})
+               , "sub entity_$$entity{cf_name} {");
+    my $src = $self->{curtmpl}->source_substr
+      ($entity->{cf_bodypos}, $entity->{cf_bodylen});
+
+    if (lexpand($entity->{arg_order})
+        or $src !~ m{^([\ \t\r\n]*)my\s*\([^;\)]+\)\s*=\s*\@_\s*;}) {
+      # If an entity has no arguments
+      # and its source doesn't start with my (...) = @_;,
+      # insert preamble and getargs.
+      push @src, q{ my ($this) = shift;}
+        , $self->gen_getargs($entity, not $entity->{cf_implicit});
+    }
+
+    my $has_nl = $src =~ s/\r?\n\Z//;
+    $self->{curline} = $entity->{cf_bodyln} + numLines($src)
+      + ($has_nl ? 1 : 0);
+    (@src, $src, "}");
+  }
+
   #========================================
   sub gen_preamble {q{ my ($this, $CON) = splice @_, 0, 2;}}
   sub gen_getargs {
@@ -671,6 +697,10 @@ use YATT::Lite::Constants;
   sub ensure_entity_is_declared {
     (my MY $self, my ($name)) = @_;
     my Template $tmpl = $self->{curtmpl};
+    if ($tmpl->{Item}{"entity\0$name"}) {
+      # Found embedded entity definition.
+      return;
+    }
     unless ($tmpl->{cf_entns}->can("entity_$name")) {
       die $self->generror(q!No such entity in namespace "%s": %s!
 			  , $tmpl->{cf_entns}, $name);

@@ -49,7 +49,11 @@ use YATT::Lite::Breakpoint ();
       , [Action => (), -constants => [[public => 1],
                                       [item_category => 'do'],
                                     ]]
-      , [Data => ()]]
+      , [Data => ()]
+      , [Entity => ()
+         , -constants => [[item_category => 'entity']]
+       ]
+    ]
 
      , [Template => -base => MY->File
 	, -alias => 'vfs_file'
@@ -86,6 +90,15 @@ use YATT::Lite::Breakpoint ();
   sub YATT::Lite::Core::Action::item_key {
     (my Action $action) = @_;
     "do\0$action->{cf_name}";
+  }
+
+  sub YATT::Lite::Core::Entity::method_name {
+    (my Entity $entity) = @_;
+    "entity_$entity->{cf_name}";
+  }
+  sub YATT::Lite::Core::Entity::item_key {
+    (my Entity $entity) = @_;
+    "entity\0$entity->{cf_name}";
   }
 
   sub YATT::Lite::Core::Part::configure_folder {

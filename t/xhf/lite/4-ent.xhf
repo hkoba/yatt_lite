@@ -368,3 +368,17 @@ PARAM[
 ]
 OUT:
  ok
+
+
+TITLE: Direct entity definitions in yatt
+IN:
+ <h2>&yatt:add(3,8);</h2>
+ &yatt:mul(3,8);
+ <!yatt:entity add x y>
+ $x + $y
+ <!yatt:entity mul x y>
+ $x * $y
+OUT:
+ <h2>11</h2>
+ 24
+

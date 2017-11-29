@@ -36,7 +36,7 @@ use fields qw/re_decl
 	      _original_entpath
 	    /;
 
-use YATT::Lite::Core qw(Part Widget Page Action Data Template);
+use YATT::Lite::Core qw(Part Widget Page Action Data Entity Template);
 use YATT::Lite::VarTypes;
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand);
@@ -557,6 +557,8 @@ sub build_widget { shift->Widget->new(@_) }
 sub build_page { shift->Page->new(@_) }
 sub build_action { shift->Action->new(@_) }
 sub build_data { shift->Data->new(@_) }
+
+sub build_entity { shift->Entity->new(@_) }
 
 #========================================
 # declare
