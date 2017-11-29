@@ -190,7 +190,7 @@ END
         describe "request /?!foo=1", sub {
           my Env $psgi = (GET "/?!foo=1")->to_psgi;
 
-          it "should invoke action foo in .htyattrc.pl", sub {
+          it "should invoke action foo from mount_action", sub {
             expect($site->call($psgi))->to_be([200, $CT, ["action foo from mount_action"]]);
           };
         };
@@ -199,7 +199,7 @@ END
       describe "request /foo", sub {
         my Env $psgi = (GET "/foo")->to_psgi;
 
-        it "should invoke action foo in .htyattrc.pl", sub {
+        it "should invoke action foo from mount_action", sub {
           expect($site->call($psgi))->to_be([200, $CT, ["action foo from mount_action"]]);
         };
       };
