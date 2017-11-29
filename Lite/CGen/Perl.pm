@@ -668,6 +668,14 @@ use YATT::Lite::Constants;
       sprintf(q{YATT::Lite::Util::escape(%s)}, $result);
     }
   }
+  sub ensure_entity_is_declared {
+    (my MY $self, my ($name)) = @_;
+    my Template $tmpl = $self->{curtmpl};
+    unless ($tmpl->{cf_entns}->can("entity_$name")) {
+      die $self->generror(q!No such entity in namespace "%s": %s!
+			  , $tmpl->{cf_entns}, $name);
+    }
+  }
   sub gen_entlist {
     (my MY $self, my ($escape_now)) = splice @_, 0, 2;
     my @list = map {
@@ -707,11 +715,8 @@ use YATT::Lite::Constants;
       return $self->as_expr_call_var($var, $name, @_);
     }
 
-    my Template $tmpl = $self->{curtmpl};
-    unless ($tmpl->{cf_entns}->can("entity_$name")) {
-      die $self->generror(q!No such entity in namespace "%s": %s!
-			  , $tmpl->{cf_entns}, $name);
-    }
+    $self->ensure_entity_is_declared($name);
+
     my $call = sprintf '$this->entity_%s(%s)', $name
       , scalar $self->gen_entlist(undef, @_);
     $call;
