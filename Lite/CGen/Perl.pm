@@ -124,7 +124,7 @@ use YATT::Lite::Constants;
     (my MY $self, my Action $action) = @_;
     # XXX: 改行の調整が必要。
     my @src = ($self->sync_curline($action->{cf_startln})
-               , "sub $$action{cf_name} {");
+               , "sub do_$$action{cf_name} {");
     my $src = $self->{curtmpl}->source_substr
       ($action->{cf_bodypos}, $action->{cf_bodylen});
 

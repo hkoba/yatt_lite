@@ -46,7 +46,9 @@ use YATT::Lite::Breakpoint ();
       , -constants => [[public => 0]]
       , [Widget => -fields => [qw(tree var_dict has_required_arg)]
 	 , [Page => (), -constants => [[public => 1]]]]
-      , [Action => (), -constants => [[public => 1]]]
+      , [Action => (), -constants => [[public => 1],
+                                      [item_category => 'do'],
+                                    ]]
       , [Data => ()]]
 
      , [Template => -base => MY->File
@@ -72,10 +74,6 @@ use YATT::Lite::Breakpoint ();
     (my Part $part) = @_;
     $part->{cf_name};
   }
-  sub YATT::Lite::Core::Action::public_name {
-    (my Action $action) = @_;
-    substr($action->{cf_name}, 3);
-  }
   sub YATT::Lite::Core::Part::method_name {...}
   sub YATT::Lite::Core::Widget::method_name {
     (my Widget $widget) = @_;
@@ -83,7 +81,11 @@ use YATT::Lite::Breakpoint ();
   }
   sub YATT::Lite::Core::Action::method_name {
     (my Action $action) = @_;
-    $action->{cf_name};
+    "do_$action->{cf_name}";
+  }
+  sub YATT::Lite::Core::Action::item_key {
+    (my Action $action) = @_;
+    "do\0$action->{cf_name}";
   }
 
   sub YATT::Lite::Core::Part::configure_folder {
@@ -356,6 +358,7 @@ sub synerror {
 
     if (UNIVERSAL::isa($self->{root}, Template)) {
       # Special case.
+      # XXX: Should add action tests for this case.
       $tmpl = $self->{root};
 
       $part = $tmpl->{Item}{$partName}
@@ -387,7 +390,7 @@ sub synerror {
   }
 
   sub _itemKey_page { shift; ($_[0], "render_$_[0]") }
-  sub _itemKey_action { shift; ("do_$_[0]") x 2; }
+  sub _itemKey_action { shift; ("do\0$_[0]", "do_$_[0]"); }
 
   #
   # Action name => sub {}
@@ -403,7 +406,7 @@ sub synerror {
 
     *{globref($root->{cf_entns}, $action_name)} = $sub;
 
-    $root->{Item}{$action_name}
+    $root->{Item}{"do\0$name"}
       = $self->Action->new(name => $action_name, kind => 'action'
 			   , folder => $root
 			   , startln => $lineno

@@ -552,18 +552,10 @@ sub build {
      , folder => $self->{template}
      , startpos => $self->{startpos}, @_);
 }
-# 今度はこっちが今一ね。
+
 sub build_widget { shift->Widget->new(@_) }
 sub build_page { shift->Page->new(@_) }
-sub build_action {
-  (my MY $self, my (%opts)) = @_;
-
-  # XXX: This is a workaround to have renderers and actions
-  # in the same hash table $template->{Item}.
-  $opts{name} = "do_$opts{name}";
-
-  $self->Action->new(%opts);
-}
+sub build_action { shift->Action->new(@_) }
 sub build_data { shift->Data->new(@_) }
 
 #========================================
@@ -676,7 +668,8 @@ sub namespace {
 #========================================
 sub add_part {
   (my MY $self, my Template $tmpl, my Part $part) = @_;
-  if (defined $tmpl->{Item}{$part->{cf_name}}) {
+  my $itemKey = $part->item_key;
+  if (defined $tmpl->{Item}{$itemKey}) {
     die $self->synerror_at($self->{startln}, q{Conflicting part name! '%s'}, $part->{cf_name});
   }
   if ($tmpl->{partlist} and my Part $prev = $tmpl->{partlist}[-1]) {
@@ -684,7 +677,7 @@ sub add_part {
   }
   $part->{cf_startln} = $self->{startln};
   $part->{cf_bodyln} = $self->{endln};
-  push @{$tmpl->{partlist}}, $tmpl->{Item}{$part->{cf_name}} = $part;
+  push @{$tmpl->{partlist}}, $tmpl->{Item}{$itemKey} = $part;
 }
 
 sub add_text {

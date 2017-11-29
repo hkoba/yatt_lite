@@ -20,7 +20,7 @@ require File::Basename;
   sub MY () {__PACKAGE__}
   use YATT::Lite::Types
     ([Item => -fields => [qw(cf_name cf_public cf_type)]
-      , -constants => [[can_generate_code => 0]]
+      , -constants => [[can_generate_code => 0], [item_category => '']]
       , [Folder => -fields => [qw(Item cf_path cf_parent cf_base
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
@@ -32,6 +32,10 @@ require File::Basename;
 	    , -alias => 'vfs_dir']]]);
 
   sub YATT::Lite::VFS::Item::after_create {}
+  sub YATT::Lite::VFS::Item::item_key {
+    (my Item $item) = @_;
+    $item->{cf_name};
+  }
   sub YATT::Lite::VFS::Folder::configure_parent {
     my MY $self = shift;
     # 循環参照対策
@@ -466,8 +470,9 @@ require File::Basename;
 	(data => {}, name => $name, parent => $folder);
     }
     # XXX: path を足すと、memory 動作の時に困る
-    $folder->{Item}{$lastName} = $vfs->create
-	(data => $data, name => $lastName, parent => $folder);
+    my Item $item = $vfs->create
+      (data => $data, name => $lastName, parent => $folder);
+    $folder->{Item}{$item->item_key} = $item;
   }
   #========================================
   sub root {(my VFS $vfs) = @_; $vfs->{root}}
