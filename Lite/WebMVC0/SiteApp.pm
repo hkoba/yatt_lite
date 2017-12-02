@@ -30,6 +30,7 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_backend
 			   cf_site_config
                            _site_config_cache_entry
+                           cf_site_config_as_entity
 
 			   cf_logfile
 			   cf_overwrite_status_code_for_errors_as
@@ -50,7 +51,9 @@ use YATT::Lite::Util qw(cached_in split_path catch
 			escape
                         trim_common_suffix_from
                         is_done
-			lexpand rootname extname untaint_any terse_dump);
+			lexpand rootname extname untaint_any terse_dump
+                        add_entity_into
+                     );
 use YATT::Lite::Util::CmdLine qw(parse_params);
 use YATT::Lite qw/Entity *SYS *CON/;
 our @EXPORT_OK = qw/*CON/;
@@ -70,10 +73,13 @@ sub after_new {
   $self->{cf_config_dir} //= "$self->{cf_app_root}/config"
     if $self->{cf_app_root};
   $self->{dirapp_config} = +{};
+  $self->{cf_site_config_as_entity} //= $self->default_site_config_as_entity;
 }
 
 sub default_per_role_docroot_key { 'yatt.role' }
 sub default_default_role { 'nobody' }
+
+sub default_site_config_as_entity {1}
 
 sub _cf_delegates {
   (shift->SUPER::_cf_delegates
@@ -748,9 +754,27 @@ sub examine_site_config {
     $self->{cf_site_config} = $self->read_file($cf);
 
     $self->{_site_config_cache_entry} = [-M $cf, $cf];
+
+    $self->site_config_load_hook;
   } else {
 
     $self->{cf_site_config} = {};
+  }
+}
+
+sub site_config_load_hook {
+  (my MY $self) = @_;
+
+  if ($self->{cf_site_config_as_entity}) {
+    my $entns = $self->EntNS;
+
+    foreach my $name (keys %{$self->{cf_site_config}}) {
+
+      $self->add_entity_into($entns, $name, sub {
+        my MY $actual = $SYS; # To avoid directly capturing $self.
+        $actual->{cf_site_config}{$name};
+      }, 1); # Just ignore if already defined.
+    }
   }
 }
 
