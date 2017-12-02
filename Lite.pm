@@ -72,6 +72,7 @@ use YATT::Lite::Util qw/globref lexpand extname ckrequire terse_dump escape
 			secure_text_plain
                         raise_psgi_error
 			define_const
+                        add_entity_into
 		       /;
 
 sub Facade () {__PACKAGE__}
@@ -569,10 +570,9 @@ sub define_Entity {
   unless (*{$ent}{CODE}) {
     *$ent = sub {
       my ($name, $sub) = @_;
-      my $longname = join "::", $destns, "entity_$name";
-      subname($longname, $sub);
-      print STDERR "defining entity_$name in $destns\n" if DEBUG;
-      *{globref($destns, "entity_$name")} = $sub;
+      if ($myPack->add_entity_into($destns, $name, $sub)) {
+        print STDERR "# defined entity $name in $destns\n" if DEBUG;
+      }
     };
   }
 

@@ -403,6 +403,17 @@ require Scalar::Util;
   }
 }
 
+sub add_entity_into {
+  my ($pack, $destns, $name, $sub, $allow_ignore) = @_;
+  my $longname = join "::", $destns, "entity_$name";
+  my $glob = globref($destns, "entity_$name");
+  if (*{$glob}{CODE} and $allow_ignore) {
+    return;
+  }
+  subname($longname, $sub);
+  *$glob = $sub;
+}
+
 sub dofile_in {
   my ($pkg, $file) = @_;
   unless (-e $file) {
