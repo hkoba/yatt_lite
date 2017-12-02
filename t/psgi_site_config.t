@@ -62,23 +62,28 @@ describe "site_config", sub {
     ['xhf', 'yml'],
   );
 
-  describe "&yatt:site_config();", sub {
+  my @delayed;
+  foreach my $test (@test_comb) {
+    my ($prefix, $ext) = @$test;
 
-    my @delayed;
+    my $config_fn = $prefix."site_config.$ext";
 
-    foreach my $test (@test_comb) {
-      my ($prefix, $ext) = @$test;
+    describe "read from $config_fn", sub {
 
-      my $config_fn = $prefix."site_config.$ext";
+      my ($app_root, $html_dir, $site) = $make_siteapp->($make_dirs->());
 
-      describe "read from $config_fn", sub {
-
-        my ($app_root, $html_dir, $site) = $make_siteapp->($make_dirs->());
+      describe "&yatt:site_config();", sub {
 
         MY->mkfile("$html_dir/index.yatt", <<'END');
 app_name=&yatt:site_config(){app_name};
 bar=&yatt:site_config(bar);
 END
+
+        MY->mkfile("$html_dir/enttest.yatt", <<'END');
+app_name is &yatt:app_name();
+bar is &yatt:bar();
+END
+
 
         MY->mkfile("$app_root/$config_fn", <<'END');
 app_name: foo
@@ -112,12 +117,17 @@ END
           };
         };
       };
-    }
 
-    $_->() for @delayed;
+      describe "&yatt:user_defined_config_like_bar();", sub {
+        my Env $psgi = (GET "/enttest")->to_psgi;
 
-  };
+        expect($site->call($psgi))->to_be([200, $CT,
+                                           ["app_name is foo\nbar is baz\n"]]);
+      };
+    };
+  }
 
+  $_->() for @delayed;
 };
 
 #========================================
