@@ -88,6 +88,7 @@ END
         MY->mkfile("$app_root/$config_fn", <<'END');
 app_name: foo
 bar: baz
+xx.yy: zz
 END
 
         it "should get configs", sub {
@@ -105,6 +106,7 @@ END
             MY->mkfile("$app_root/$config_fn", <<'END');
 app_name: FOO
 bar: BAZ
+xx-yy: zz
 END
 
             it "should get updated configs", sub {

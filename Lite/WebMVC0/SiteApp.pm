@@ -770,6 +770,8 @@ sub site_config_load_hook {
 
     foreach my $name (keys %{$self->{cf_site_config}}) {
 
+      next if $name =~ /\W/;
+
       $self->add_entity_into($entns, $name, sub {
         my MY $actual = $SYS; # To avoid directly capturing $self.
         $actual->{cf_site_config}{$name};
