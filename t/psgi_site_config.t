@@ -45,8 +45,11 @@ describe "site_config", sub {
   my $make_siteapp = sub {
     my ($app_root, $html_dir, @args) = @_;
 
-    my $site = YATT::Lite::WebMVC0::SiteApp
-      ->new(app_ns => "Test$TESTNO"
+    my $site_class = "TestFactory$TESTNO";
+    YATT::Lite::WebMVC0::SiteApp->_import_as_base($site_class);
+
+    my $site = $site_class
+      ->new(app_ns => $site_class."::YATT"
             , app_root => $app_root
             , app_rootname => "$app_root/app"
             , doc_root => $html_dir
