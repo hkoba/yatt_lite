@@ -64,6 +64,8 @@ describe "site_config", sub {
 
   describe "&yatt:site_config();", sub {
 
+    my @delayed;
+
     foreach my $test (@test_comb) {
       my ($prefix, $ext) = @$test;
 
@@ -91,21 +93,29 @@ END
 
         };
 
-        # Update config.
-        MY->mkfile("$app_root/$config_fn", <<'END');
+        push @delayed, sub {
+          describe "After update, read from $config_fn", sub {
+
+            # Update config.
+            MY->mkfile("$app_root/$config_fn", <<'END');
 app_name: FOO
 bar: BAZ
 END
 
-        it "should get updated configs", sub {
-          my Env $psgi = (GET "/")->to_psgi;
+            it "should get updated configs", sub {
+              my Env $psgi = (GET "/")->to_psgi;
 
-          expect($site->call($psgi))->to_be([200, $CT,
-                                             ["app_name=FOO\nbar=BAZ\n"]]);
+              expect($site->call($psgi))->to_be([200, $CT,
+                                                 ["app_name=FOO\nbar=BAZ\n"]]);
 
+            };
+          };
         };
       };
     }
+
+    $_->() for @delayed;
+
   };
 
 };
