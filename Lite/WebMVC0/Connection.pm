@@ -16,6 +16,7 @@ use YATT::Lite::MFields
     cf_no_unicode_params
 
     dir_config_cache
+    _site_config_is_examined
 
     current_user
    /);

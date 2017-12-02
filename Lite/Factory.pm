@@ -30,6 +30,12 @@ use YATT::Lite::MFields
  , [cf_doc_root =>
     (doc => "Primary template directory")]
 
+ # Note: Don't confuse 'cf_app_rootname' below with 'cf_app_root'.
+ # 'cf_app_root' is defined in YATT::Lite::Partial::AppPath.
+ #
+ , [cf_app_rootname =>
+    (doc => "rootname() of app.psgi. Used to find app.site_config.yml")]
+
  , [cf_app_base =>
     (doc => "Base dir for this siteapp")]
 
@@ -185,6 +191,8 @@ sub load_factory_for_psgi {
     croak "psgi is not readable: $psgi";
   }
   (my $app_rootname = $pack->rel2abs($psgi)) =~ s/\.psgi$//;
+
+  $default{app_rootname} //= $app_rootname;
 
   #
   # Assume app_root is safe.
@@ -1052,7 +1060,8 @@ sub find_unique_config_file {
   (my MY $self, my $base_path) = @_;
   my @cf = $self->list_config_files($base_path);
   $self->error("Multiple configuration files!", @cf) if @cf > 1;
-  @cf ? $cf[0] : undef;
+  return $cf[0] if @cf;
+  return;
 }
 
 sub list_config_files {

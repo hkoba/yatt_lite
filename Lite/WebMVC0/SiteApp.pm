@@ -29,6 +29,8 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_default_role
 			   cf_backend
 			   cf_site_config
+                           _site_config_cache_entry
+
 			   cf_logfile
 			   cf_overwrite_status_code_for_errors_as
 			   re_handled_ext
@@ -715,11 +717,49 @@ sub dirapp_config_for {
   }
 }
 
+sub examine_site_config {
+  (my MY $self) = @_;
+
+  # Cache should be examined at most once for each request.
+  my ConnProp $prop = $CON->prop;
+  return if $prop->{_site_config_is_examined}++;
+
+  if (my $cache_entry = $self->{_site_config_cache_entry}) {
+    my ($age, $fn) = @$cache_entry;
+    my $cur_age = -M $fn;
+    if (not defined $cur_age) {
+      # Cached file is deleted, so cache should be deleted too.
+      delete $self->{_site_config_cache_entry};
+
+    } elsif ($age == $cur_age) {
+      # Cache is valid.
+      return;
+    }
+  }
+
+  # Examine app.site_config.{yml,xhf} and site_config.{yml,xhf}.
+  my ($cf) = (
+    $self->find_unique_config_file("$self->{cf_app_rootname}.site_config"),
+    $self->find_unique_config_file("$self->{cf_app_root}/site_config"),
+  );
+
+  if ($cf) {
+
+    $self->{cf_site_config} = $self->read_file($cf);
+
+    $self->{_site_config_cache_entry} = [-M $cf, $cf];
+  } else {
+
+    $self->{cf_site_config} = {};
+  }
+}
+
 #========================================
 
 Entity site_config => sub {
   my ($this, $name, $default) = @_;
   my MY $self = $SYS;
+  $SYS->examine_site_config;
   return $self->{cf_site_config} unless defined $name;
   $self->{cf_site_config}{$name} // $default;
 };
