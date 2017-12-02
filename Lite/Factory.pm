@@ -182,6 +182,22 @@ sub configure_offline {
 
 #========================================
 
+#
+# $class->create_factory_class($fresh_classname)
+# Make $fresh_classname inherit Factory.
+# Mainly for tests which create many factory classes in single run.
+#
+sub create_factory_class {
+  my ($pack, $factory_class) = @_;
+
+  define_const(globref($factory_class, 'default_app_ns')
+               , $factory_class."::YATT");
+
+  $pack->_import_as_base($factory_class);
+
+  $factory_class;
+}
+
 sub load_factory_for_psgi {
   my ($pack, $psgi, %default) = @_;
   unless (defined $psgi) {

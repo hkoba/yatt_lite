@@ -36,6 +36,7 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
 
   sub default_subns {'INST'}
   sub default_default_app {'YATT::Lite'}
+  sub default_app_ns {'MyYATT'}
 
   sub init_default_app {
     (my MY $self) = @_;
@@ -48,7 +49,7 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
     (my MY $self) = @_;
     # This usually set 'MyYATT'
     $self->{app_ns} = my $app_ns = $self->{cf_app_ns}
-      // $self->{default_app}->default_app_ns;
+      // $self->default_app_ns;
     try_require($app_ns);
 
     Carp::carp("init_app_ns called") if DEBUG;
