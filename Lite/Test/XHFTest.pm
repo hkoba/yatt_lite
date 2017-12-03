@@ -42,6 +42,7 @@ use Encode;
 		cf_REQUIRE
 
 		cf_TAG
+                cf_CON_CLASS
 	      /;
 
   sub is_runnable { shift->ntests }

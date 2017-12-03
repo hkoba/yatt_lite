@@ -27,11 +27,12 @@ use YATT::Lite::Test::TestUtil;
 #========================================
 use YATT::t::t_preload; # To make Devel::Cover happy.
 
-use YATT::Lite;
+use YATT::Lite qw/*CON/;
 use YATT::Lite::Util qw/
                          lexpand
                          appname
                          is_done
+                         terse_dump
                      /;
 sub myapp {join _ => MyTest => appname($0), @_}
 
@@ -125,41 +126,64 @@ foreach my MY $sect (@section) {
 	breakpoint();
       }
       if ($test->{cf_OUT}) {
-	my $error;
 	unless ($test->{realfile}) {
 	  die "test realfile is undef!";
 	}
-	local $SIG{__DIE__} = sub {$error = @_ > 1 ? [@_] : shift};
-	local $SIG{__WARN__} = sub {$error = @_ > 1 ? [@_] : shift};
-	my ($pkg) = eval {
-	  my $tmpl = $yatt->find_file($test->{realfile});
+	my ($pkg, $compile_error) = do {
+          my $error;
+          local $SIG{__DIE__} = sub {$error = @_ > 1 ? [@_] : shift};
+          local $SIG{__WARN__} = sub {$error = @_ > 1 ? [@_] : shift};
+          my $pkg = eval {
+            my $tmpl = $yatt->find_file($test->{realfile});
 
-	  #
-	  # Workaround for false failure caused by Devel::Cover.
-	  #
-	  local $SIG{__WARN__} = sub {
-	    my ($msg) = @_;
-	    return if $msg =~ /^Devel::Cover: Can't open \S+ for MD5 digest:/;
-	    die $msg;
-	  };
+            #
+            # Workaround for false failure caused by Devel::Cover.
+            #
+            local $SIG{__WARN__} = sub {
+              my ($msg) = @_;
+              return if $msg =~ /^Devel::Cover: Can't open \S+ for MD5 digest:/;
+              die $msg;
+            };
 
-	  $yatt->find_product(perl => $tmpl);
-	};
-	is $error, undef, "$title - compiled.";
-	if ($error) {
+            $yatt->find_product(perl => $tmpl);
+          };
+
+          is $error, undef, "$title - compiled.";
+
+          ($pkg, $error);
+        };
+	if ($compile_error) {
 	  skip "not compiled - $title", 1;
 	} else {
+          my $error;
+          local $SIG{__DIE__} = sub {$error = @_ > 1 ? [@_] : shift};
+          local $SIG{__WARN__} = sub {$error = @_ > 1 ? [@_] : shift};
+
           my $buffer = "";
 	  eval {
             {
-              open my $fh, '>:utf8', \ $buffer;
-              $pkg->render_($fh, lexpand($test->{cf_PARAM}));
+              local $CON = do {
+                if (my $class = $test->{cf_CON_CLASS}) {
+                  YATT::Lite::Util::ckrequire($class);
+                  $class->create(
+                    undef,
+                    noheader => 1,
+                    buffer => \ $buffer,
+                    parameters => YATT::Lite::Util::ixhash(lexpand($test->{cf_PARAM})),
+                  );
+                } else {
+                  open my $fh, '>:utf8', \ $buffer;
+                  $fh;
+                }
+              };
+              $pkg->render_($CON, lexpand($test->{cf_PARAM}));
             }
 	  };
-          eq_or_diff $buffer, encode(utf8 => $test->{cf_OUT}), "$title";
 
-	  if ($@ and not is_done($@)) {
-	    fail "$title: runtime error: $@";
+          if ($error and not is_done($error)) {
+	    fail "$title: runtime error: ".terse_dump($error);
+          } else {
+            eq_or_diff $buffer, encode(utf8 => $test->{cf_OUT}), "$title";
 	  }
 	}
       } elsif ($test->{cf_ERROR} or $test->{cf_ERROR_BODY}) {
