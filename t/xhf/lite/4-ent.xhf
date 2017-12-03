@@ -382,3 +382,19 @@ OUT:
  <h2>11</h2>
  24
 
+
+TITLE: Direct entity with $CON reference
+CON_CLASS: YATT::Lite::WebMVC0::Connection
+IN:
+ <h2>&yatt:foo();</h2>
+ 
+ <!yatt:entity foo>
+ $CON->param('.x') * $CON->param('.y')
+PARAM{
+.x: 3
+.y: 8
+}
+OUT:
+ <h2>24</h2>
+
+

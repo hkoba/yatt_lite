@@ -158,7 +158,7 @@ use YATT::Lite::Constants;
       # If an entity has no arguments
       # and its source doesn't start with my (...) = @_;,
       # insert preamble and getargs.
-      push @src, q{ my ($this) = shift;}
+      push @src, q{ my ($this) = shift; my $CON = $this->CON;}
         , $self->gen_getargs($entity, not $entity->{cf_implicit});
     }
 
