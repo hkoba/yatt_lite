@@ -723,12 +723,22 @@ sub dirapp_config_for {
   }
 }
 
-sub examine_site_config {
+sub site_config {
   (my MY $self) = @_;
+  $self->{cf_site_config} // do {
+    $self->examine_site_config;
+    $self->{cf_site_config};
+  };
+}
 
-  # Cache should be examined at most once for each request.
-  my ConnProp $prop = $CON->prop;
-  return if $prop->{_site_config_is_examined}++;
+sub examine_site_config {
+  (my MY $self, my $con) = @_;
+
+  if ($con) {
+    # Cache should be examined at most once for each request.
+    my ConnProp $prop = $con->prop;
+    return if $prop->{_site_config_is_examined}++;
+  }
 
   if (my $cache_entry = $self->{_site_config_cache_entry}) {
     my ($age, $fn) = @$cache_entry;
@@ -783,7 +793,7 @@ sub site_config_load_hook {
 Entity site_config => sub {
   my ($this, $name, $default) = @_;
   my MY $self = $SYS;
-  $SYS->examine_site_config;
+  $SYS->examine_site_config($CON);
   return $self->{cf_site_config} unless defined $name;
   $self->{cf_site_config}{$name} // $default;
 };
