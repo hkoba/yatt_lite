@@ -354,6 +354,14 @@ sub call {
   }
 }
 
+sub before_dirhandler {
+  (my MY $self, my ($dh, $con, $file)) = @_;
+  if ($self->{cf_site_config_as_entity}) {
+    $self->examine_site_config($con);
+  }
+  &maybe::next::method;
+}
+
 sub make_debug_params {
   (my MY $self, my ($reqrec, $args)) = @_;
 
