@@ -72,16 +72,17 @@ describe "site_config", sub {
 
       my ($app_root, $html_dir, $site) = $make_siteapp->($make_dirs->());
 
-      describe "&yatt:site_config();", sub {
+      describe "&yatt:user_defined_config_like_bar();", sub {
 
         MY->mkfile("$html_dir/index.yatt", <<'END');
-app_name=&yatt:site_config(){app_name};
-bar=&yatt:site_config(bar);
+app_name is &yatt:app_name();
+bar is &yatt:bar();
 END
 
         MY->mkfile("$html_dir/enttest.yatt", <<'END');
-app_name is &yatt:app_name();
-bar is &yatt:bar();
+
+app_name=&yatt:site_config(){app_name};
+bar=&yatt:site_config(bar);
 END
 
 
@@ -95,7 +96,7 @@ END
           my Env $psgi = (GET "/")->to_psgi;
 
           expect($site->call($psgi))->to_be([200, $CT,
-                                             ["app_name=foo\nbar=baz\n"]]);
+                                             ["app_name is foo\nbar is baz\n"]]);
 
         };
 
@@ -113,18 +114,18 @@ END
               my Env $psgi = (GET "/")->to_psgi;
 
               expect($site->call($psgi))->to_be([200, $CT,
-                                                 ["app_name=FOO\nbar=BAZ\n"]]);
+                                                 ["app_name is FOO\nbar is BAZ\n"]]);
 
             };
           };
         };
       };
 
-      describe "&yatt:user_defined_config_like_bar();", sub {
+      describe "&yatt:site_config();", sub {
         my Env $psgi = (GET "/enttest")->to_psgi;
 
         expect($site->call($psgi))->to_be([200, $CT,
-                                           ["app_name is foo\nbar is baz\n"]]);
+                                           ["app_name=foo\nbar=baz\n"]]);
       };
     };
   }
