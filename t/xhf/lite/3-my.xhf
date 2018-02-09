@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+encoding: utf8
 
 TITLE: my varonly
 IN:
@@ -144,6 +145,7 @@ OUT:
 
 
 TITLE: Wide char in my code
+BREAK: 1
 IN:
  <yatt:my x>
    <yatt:foreach my=c list='"\x{6f22}", "\x{5b57}"'>

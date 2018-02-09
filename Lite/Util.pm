@@ -370,10 +370,17 @@ require Scalar::Util;
     $comb->([], @_);
   }
 
-  sub captured (&) {
-    my ($code) = @_;
-    open my $fh, '>:utf8', \ (my $buffer = "") or die "Can't create capture buf:$!";
-    $code->($fh);
+  sub captured (&;$) {
+    my ($code, $keep_utf8) = @_;
+    my $buffer = "";
+    {
+      open my $fh, '>:utf8', \ $buffer
+        or die "Can't create capture buf:$!";
+      $code->($fh);
+    }
+    if ($keep_utf8 // 1) {
+      Encode::_utf8_on($buffer);
+    }
     $buffer;
   }
 
