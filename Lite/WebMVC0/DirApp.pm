@@ -98,7 +98,7 @@ sub prepare_part_handler {
     ($part, $sub, $pkg) = $trans->find_part_handler([$file, $type, $item]);
 
     @args = $trans->reorder_cgi_params($part, $con)
-      unless $self->{cf_dont_map_args} || $part->isa($trans->Action);
+      unless $self->{cf_dont_map_args};
   }
 
   unless ($part->public) {
