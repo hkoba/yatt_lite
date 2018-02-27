@@ -40,6 +40,7 @@ use YATT::Lite::MFields qw/YATT
 	      cf_lcmsg_sink
 	      cf_always_refresh_deps
 	      cf_no_mro_c3
+	      cf_render_as_bytes
 
 	      cf_default_lang
 

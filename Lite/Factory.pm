@@ -62,6 +62,9 @@ use YATT::Lite::MFields
      ." Also this is used to decode incoming request parameters and PATH_INFO."
      ." (default: 'utf-8')")]
 
+ , [cf_render_as_bytes =>
+    (doc => "Force render() to return raw bytes. (default: false)")]
+
  , [cf_offline =>
     (doc => "Whether header should be emitted or not.")]
 
@@ -465,6 +468,7 @@ sub after_new {
       //= ($self->{cf_output_encoding} || $self->default_header_charset);
     $self->{cf_output_encoding}
       //= $self->compat_default_output_encoding;
+    $self->{cf_render_as_bytes} = 1;
   } else {
     $self->{cf_header_charset}
       //= ($self->{cf_output_encoding} // $self->default_header_charset);
@@ -977,6 +981,7 @@ sub _cf_delegates {
      output_encoding
      header_charset
      tmpl_encoding
+     render_as_bytes
      debug_cgen
      at_done
      app_root
