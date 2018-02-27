@@ -537,7 +537,11 @@ sub _after_after_new {
 sub render {
   my MY $self = shift;
   my $raw_bytes = $self->render_encoded(@_);
-  decode(utf8 => $raw_bytes);
+  if ($self->{cf_render_as_bytes}) {
+    $raw_bytes;
+  } else {
+    decode(utf8 => $raw_bytes);
+  }
 }
 
 sub render_encoded {
@@ -560,6 +564,7 @@ sub render_encoded {
   my $con = $self->make_simple_connection
   (
     \@pi, yatt => $dh, noheader => 1, path_info => $path_info
+    , encoding => $self->{cf_output_encoding}
     , $self->make_debug_params($reqrec, $args)
   );
 

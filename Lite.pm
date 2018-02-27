@@ -85,6 +85,7 @@ sub default_ext_public {'yatt'}
 sub default_ext_private {'ytmpl'}
 sub default_body_argument { 'body' }
 sub default_body_argument_type { 'code' }
+sub default_output_encoding { 'utf-8' }
 
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
@@ -99,6 +100,7 @@ sub after_new {
   $self->{cf_ext_private} //= $self->default_ext_private;
   $self->{cf_body_argument} //= $self->default_body_argument;
   $self->{cf_body_argument_type} //= $self->default_body_argument_type;
+  $self->{cf_output_encoding} //= $self->default_output_encoding;
 }
 
 sub _after_after_new {
@@ -187,10 +189,22 @@ sub handle {
 
 sub render {
   my MY $self = shift;
+  my $raw_bytes = $self->render_encoded(@_);
+  if ($self->{cf_render_as_bytes}) {
+    $raw_bytes
+  } else {
+    Encode::decode(utf8 => $raw_bytes);
+  }
+}
+
+sub render_encoded {
+  my MY $self = shift;
   my $buffer; {
+    my $encName = $self->{cf_render_as_bytes} ? undef : $self->{cf_output_encoding};
     my $con = $SYS
-      ? $SYS->make_connection(undef, buffer => \$buffer, yatt => $self)
-	: ostream(\$buffer);
+      ? $SYS->make_connection(undef, buffer => \$buffer, yatt => $self,
+                              encoding => $encName)
+	: ostream(\$buffer, $encName ? ":encoding($encName)" : "");
     $self->render_into($con, @_);
   }
   $buffer;
