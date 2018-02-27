@@ -680,6 +680,41 @@ END
     , "$THEME /base3/other";
 }
 
+++$i;
+{
+  use utf8;
+  my $THEME = "render_as_bytes";
+  my $approot = "$TMP/app$i";
+  my $docroot = "$approot/public";
+
+  MY->mkfile(["$docroot/index.yatt" => ':utf8'] => <<'END');
+<!yatt:args x y>
+漢字&yatt:x;ひらがな&yatt:y;<br>
+END
+
+  {
+    my $F = Factory->new(app_ns => myapp($i),
+                         app_root => $approot,
+                         doc_root => $docroot,
+                         render_as_bytes => 1,
+                         debug_cgen => $ENV{DEBUG});
+
+    my $res = $F->render('', ['かんじ','平仮名']);
+    is Encode::is_utf8($res), '', "[$THEME on] is_utf8 is off";
+    is $res, "\xe6\xbc\xa2\xe5\xad\x97\xe3\x81\x8b\xe3\x82\x93\xe3\x81\x98\xe3\x81\xb2\xe3\x82\x89\xe3\x81\x8c\xe3\x81\xaa\xe5\xb9\xb3\xe4\xbb\xae\xe5\x90\x8d\x3c\x62\x72\x3e\x0a", "[$THEME on] result matches exactly";
+  }
+
+  {
+    my $F = Factory->new(app_ns => myapp(++$i),
+                         app_root => $approot,
+                         doc_root => $docroot,
+                         debug_cgen => $ENV{DEBUG});
+
+    my $res = $F->render('', ['かんじ','平仮名']);
+    is Encode::is_utf8($res), 1, "[$THEME off] is_utf8 is on";
+    is $res, "漢字かんじひらがな平仮名<br>\n", "[$THEME off] result matches exactly";
+  }
+}
 
 #----------------------------------------
 # misc

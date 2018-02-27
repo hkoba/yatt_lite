@@ -547,4 +547,36 @@ END
   is_deeply $f, \%YATT::Lite::FIELDS, "$theme FIELDS hash became same.";
 }
 
+{
+  my $theme = "[render_as_bytes]";
+
+  my $template = <<END;
+<!yatt:args x y>
+漢字&yatt:x;ひらがな&yatt:y;<br>
+END
+
+  {
+    my $yatt_bytes = new YATT::Lite(app_ns => myapp(++$i),
+                                    render_as_bytes => 1,
+                                    vfs => [data => $template, public => 1],
+                                    debug_cgen => $ENV{DEBUG});
+
+    my $res = $yatt_bytes->render('', ['かんじ','平仮名']);
+    is Encode::is_utf8($res), '', "$theme on: is_utf8 is off";
+    is $res, "\xe6\xbc\xa2\xe5\xad\x97\xe3\x81\x8b\xe3\x82\x93\xe3\x81\x98\xe3\x81\xb2\xe3\x82\x89\xe3\x81\x8c\xe3\x81\xaa\xe5\xb9\xb3\xe4\xbb\xae\xe5\x90\x8d\x3c\x62\x72\x3e\x0a", "$theme on: result matches exactly";
+  }
+
+  {
+    use utf8;
+    my $yatt_utf8 = new YATT::Lite(app_ns => myapp(++$i),
+                                   # output_encoding => 'utf8',
+                                   vfs => [data => Encode::decode_utf8($template),
+                                           public => 1],
+                                   debug_cgen => $ENV{DEBUG});
+
+    my $res = $yatt_utf8->render('', ['かんじ','平仮名']);
+    is Encode::is_utf8($res), 1, "$theme off: is_utf8 is on";
+    is $res, "漢字かんじひらがな平仮名<br>\n", "$theme off: result matches exactly";
+  }}
+
 done_testing();
