@@ -203,6 +203,7 @@ sub render_encoded {
     my $encName = $self->{cf_render_as_bytes} ? undef : $self->{cf_output_encoding};
     my $con = $SYS
       ? $SYS->make_connection(undef, buffer => \$buffer, yatt => $self,
+                              noheader => 1,
                               encoding => $encName)
 	: ostream(\$buffer, $encName ? ":encoding($encName)" : "");
     $self->render_into($con, @_);
