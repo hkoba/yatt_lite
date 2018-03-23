@@ -784,6 +784,9 @@ sub load_yatt {
   if (my $yatt = $self->{path2yatt}{$path}) {
     return $yatt;
   }
+  unless (-e $path) {
+    croak "Can't load YATT directory '$path'! No such directory!";
+  }
   if (not $visits) {
     $visits = Visits->start($path);
   } elsif (my $preds = $visits->check_cycle($path, $from)) {
