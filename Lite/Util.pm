@@ -23,6 +23,7 @@ require Scalar::Util;
 		     subname
 		     pkg2pm
 		     globref_default
+                     dumpout
 		   /;
   }
   use Carp;
@@ -882,6 +883,10 @@ sub psgi_dump {
   [200
    , [$self->secure_text_plain]
    , [join("\n", map {terse_dump($_)} @_)."\n"]];
+}
+
+sub dumpout (@) {
+  __PACKAGE__->raise_psgi_dump(@_);
 }
 
 sub ixhash {
