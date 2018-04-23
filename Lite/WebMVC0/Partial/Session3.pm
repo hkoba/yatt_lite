@@ -30,6 +30,7 @@ use YATT::Lite::Partial
                     cf_session_middleware_class
                     cf_session_state
                     cf_session_store
+                    cf_session_serializer
                     _session
                     cf_session_cookie_option
                     _session_in_request
