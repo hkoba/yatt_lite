@@ -9,6 +9,7 @@ use URI::Escape ();
 use Tie::IxHash;
 
 require Scalar::Util;
+require File::Spec;
 
 {
   package YATT::Lite::Util;
@@ -314,19 +315,12 @@ require Scalar::Util;
 
   sub trim_common_suffix_from {
     @_ == 2 or Carp::croak "trim_common_suffix_from(FROM, COMPARE)";
-    my $from = $_[0];
-    my $cmppos = (length $_[1]) - 1;
-    while (length $from and $cmppos >= 0) {
-      (my $slash = rindex($_[1], "/", $cmppos)) >= 0
-        or last;
-      (my $pos = rindex($from, substr($_[1], $slash, $cmppos - $slash))) >= 0
-        or last;
-
-      substr($from, $pos) = "";
-
-      $cmppos = $slash - 1;
+    my @from = File::Spec->splitdir($_[0]);
+    my @comp = File::Spec->splitdir($_[1]);
+    while (@from and @comp and $from[-1] eq $comp[-1]) {
+      pop @from; pop @comp;
     }
-    $from;
+    File::Spec->catfile(@from);
   }
 
   sub dict_order {
