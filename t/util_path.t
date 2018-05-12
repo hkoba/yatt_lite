@@ -210,6 +210,11 @@ $i++;
   $test->('/cgi-bin/dispatch.cgi'
           , '/var/www/cgi-bin/dispatch.cgi'
           => '');
+
+  $test->('/experimental/foobar/1/-/cgi-bin/runplack.cgi'
+          , '/var/www/experimental/apps/foobar/1/cgi-bin/runplack.cgi'
+          => '/experimental/foobar/1/-');
+
 }
 
 done_testing();
