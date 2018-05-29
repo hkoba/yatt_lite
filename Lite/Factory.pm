@@ -1086,8 +1086,9 @@ sub config_filetypes {
 }
 
 sub find_unique_config_file {
-  (my MY $self, my $base_path) = @_;
-  my @cf = $self->list_config_files($base_path);
+  (my MY $self, my ($base_path, @rest)) = @_;
+  return if grep {not defined} $base_path, @rest;
+  my @cf = $self->list_config_files(join("", $base_path, @rest));
   $self->error("Multiple configuration files!", @cf) if @cf > 1;
   return $cf[0] if @cf;
   return;

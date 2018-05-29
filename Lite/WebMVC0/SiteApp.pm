@@ -763,8 +763,10 @@ sub examine_site_config {
 
   # Examine app.site_config.{yml,xhf} and site_config.{yml,xhf}.
   my ($cf) = (
-    ($self->{cf_app_rootname} ? $self->find_unique_config_file("$self->{cf_app_rootname}.site_config") : ()),
-    $self->find_unique_config_file("$self->{cf_app_root}/site_config"),
+    # Note: $self->{cf_app_rootname} and $self->{cf_app_root} can be undef
+    # but find_unique_config_file() can safely ignore undef.
+    $self->find_unique_config_file($self->{cf_app_rootname}, ".site_config"),
+    $self->find_unique_config_file($self->{cf_app_root}, "/site_config"),
   );
 
   if ($cf) {
