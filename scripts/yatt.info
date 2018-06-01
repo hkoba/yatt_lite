@@ -9,6 +9,7 @@ use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
 use mro 'c3'; # XXX: Not fully compatible.
 use parent qw/YATT::Lite::Object/;
 use YATT::Lite::MFields qw/dispatcher
+                           cf_dir
 			   cf_linear/;
 
 use YATT::Lite::Util qw/globref look_for_globref/;
@@ -101,4 +102,39 @@ sub get_class_filename {
   my $sub = *{$fnsym}{CODE}
     or return $default;
   $sub->() // $default;
+}
+
+sub cmd_list_widgets_from {
+  (my MY $self, my ($cwdOrFile, $widgetNamePat, $argPat)) = @_;
+
+  $cwdOrFile ||= Cwd::getcwd;
+
+  my ($dir, $fileName) = do {
+    if (-d $cwdOrFile) {
+      ($cwdOrFile, '');
+    } else {
+      File::Basename::fileparse($cwdOrFile);
+    }
+  };
+
+  my $yatt = $self->{dispatcher}->load_yatt($dir);
+  my $yattCore = $yatt->get_trans;
+
+  my $rootPart = $fileName ? $yattCore->find_file($fileName) : $yattCore;
+
+  if ($widgetNamePat) {
+    
+  } else {
+    foreach my $item ($rootPart->list_items) {
+      print $item, "\n";
+      my $template = $rootPart->find_file($item);
+      foreach my $part ($template->list_parts) {
+        print "\t", $part->cget('name') || "''", "\n";
+      }
+    }
+  }
+
+  # $yatt->get_trans->list_items
+  # $yatt->get_trans->find_file('index')
+  # $yatt->get_trans->find_file('index')->list_parts
 }
