@@ -672,7 +672,8 @@ use YATT::Lite::Constants;
     (my MY $self, my ($escape_now)) = splice @_, 0, 2;
     return '' unless @_;
     local $self->{needs_escaping} = 0;
-    if (@_ == 1 and $_[0][0] eq 'call'
+    if (@_ == 1 and ($_[0][0] eq 'call'
+		       or $_[0][0] eq 'var' and $self->{cf_entity_prefer_call_over_hashref})
 	and my $macro = $self->can("entmacro_$_[0][1]")) {
       return $macro->($self, $_[0]);
     }
