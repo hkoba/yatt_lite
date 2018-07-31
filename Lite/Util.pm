@@ -953,7 +953,9 @@ sub normalize_params {
 # Ported (with API modification) from: Rack::Utils.build_nested_query
 sub build_nested_query {
   my ($self, $hash, $opts) = @_;
-  my $ignore = $opts->{ignore};
+  my $ignore = ref $opts->{ignore} eq 'HASH'
+    ? $opts->{ignore}
+    : +{map {$_ => 1} @{$opts->{ignore}}};
   join $opts->{sep} // '&'
     , map {
       if ($ignore and $ignore->{$_}) {
