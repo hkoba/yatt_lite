@@ -914,6 +914,9 @@ sub parse_nested_query {
 
 sub normalize_params {
   my ($params, $name, $v) = @_;
+  if ($name eq '[]' and defined $v) {
+    return [$v];
+  }
   my ($k) = $name =~ m(\A[\[\]]*([^\[\]]+)\]*)
     or return;
 
