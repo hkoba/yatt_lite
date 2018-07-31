@@ -947,6 +947,45 @@ sub normalize_params {
   $params;
 }
 
+# Ported (with API modification) from: Rack::Utils.build_nested_query
+sub build_nested_query {
+  my ($self, $hash, $opts) = @_;
+  my $ignore = $opts->{ignore};
+  join $opts->{sep} // '&'
+    , map {
+      if ($ignore and $ignore->{$_}) {
+        ()
+      } else {
+	my $v = $hash->{$_};
+	my $k = url_encode($self, $_); # URI::Escape::uri_escape does too much.
+	$k =~ tr/ /+/;
+        build_nested_query_value($self, $v, $k);
+      }
+    } keys %$hash;
+}
+
+sub build_nested_query_value {
+  my ($self, $value, $prefix) = @_;
+  if (not defined $value) {
+    $prefix;
+  } elsif (ref $value eq 'ARRAY') {
+    map {
+      build_nested_query_value($self, $_, $prefix."[]");
+    } @$value;
+  } elsif (ref $value eq 'HASH' or UNIVERSAL::can($value, 'keys')) {
+    map {
+      my $escaped = URI::Escape::uri_escape_utf8($_);
+      my $key = $prefix ? $prefix."[$escaped]" : $escaped;
+      $key =~ tr/ /+/;
+      build_nested_query_value($self, $value->{$_}, $key);
+    } keys %$value;
+  } elsif (not defined $prefix) {
+    Carp::croak "value must be a Hash: ". terse_dump($value);
+  } else {
+    $prefix."=".URI::Escape::uri_escape_utf8($value);
+  }
+}
+
 sub pkg2pm {
   my ($pack) = @_;
   $pack =~ s{::|'}{/}g;
