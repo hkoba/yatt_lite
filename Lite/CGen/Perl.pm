@@ -796,7 +796,9 @@ use YATT::Lite::Constants;
   }
   sub as_expr_prop {
     (my MY $self, my ($esc_later, $name)) = @_;
-    if ($name =~ /^\w+$/) {
+    if ($self->{cf_entity_prefer_call_over_hashref}) {
+      "->$name"
+    } elsif ($name =~ /^\w+$/) {
       "{$name}"
     } else {
       '{'.qtext($name).'}';
