@@ -1157,6 +1157,12 @@ sub entx {
   @{$node}[2..$#$node];
 }
 
+# A skelton for new entmacro
+# sub entmacro_XXX {
+#   (my MY $self, my $node) = @_;
+#   sprintf(q{YATT::Lite::Util::escape(%s)}, terse_dump($node));
+# }
+
 sub entmacro_if {
   (my MY $self, my $node) = @_;
   my ($cond, $then, $else) = $self->gen_entlist(undef, entx($node));
@@ -1215,6 +1221,12 @@ sub entmacro_dispatch_one {
   my ($prefix, $nargs, @list) = $self->gen_entlist(undef, entx($node));
   \ sprintf q{YATT::Lite::Util::dispatch_one($this, $CON, %s, %s, %s)}
     , $prefix, $nargs, join(", ", @list);
+}
+
+sub entmacro___WIDGET__ {
+  (my MY $self, my $node) = @_;
+  my Widget $widget = $self->{curwidget};
+  qtext($widget->{cf_name});
 }
 
 use YATT::Lite::Breakpoint qw(break_load_cgen break_cgen);
