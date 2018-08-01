@@ -32,6 +32,8 @@ recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 recommends 'Sub::Inspector';
 recommends 'B::Utils' => '!= 0.26';
 
+recommends 'Text::Glob';
+
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
 

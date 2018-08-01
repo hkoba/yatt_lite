@@ -10,13 +10,19 @@ use mro 'c3'; # XXX: Not fully compatible.
 use parent qw/YATT::Lite::Object/;
 use YATT::Lite::MFields qw/dispatcher
                            cf_dir
-			   cf_linear/;
+			   cf_linear
+                           cf_from
+                          /;
 
-use YATT::Lite::Util qw/globref look_for_globref/;
+use YATT::Lite::Util qw/globref look_for_globref lexpand/;
 use YATT::Lite::Util::CmdLine qw/run/;
 
 
+use YATT::Lite;
 use YATT::Lite::Factory;
+use YATT::Lite::LRXML;
+use YATT::Lite::Core;
+use YATT::Lite::CGen::Perl;
 
 {
   my $disp = YATT::Lite::Factory->load_factory_offline
@@ -104,36 +110,89 @@ sub get_class_filename {
   $sub->() // $default;
 }
 
-sub cmd_list_widgets_from {
-  (my MY $self, my ($cwdOrFile, $widgetNamePat, $argPat)) = @_;
+sub is_in_template_dir {
+  (my MY $self, my $path) = @_;
+  foreach my $dir (lexpand($self->{dispatcher}->{tmpldirs})) {
+    if (length $dir <= length $path
+        and substr($dir, 0, length $path) eq $path) {
+      return 1;
+    }
+  }
+  return 0;
+}
 
-  $cwdOrFile ||= Cwd::getcwd;
+sub cmd_list_widgets {
+  (my MY $self, my ($widgetNameGlob, $argPat)) = @_;
 
-  my ($dir, $fileName) = do {
+  my $cwdOrFile = $self->{cf_from}
+    ? $self->rel2abs($self->{cf_from})
+    : do {
+    my $cwd = Cwd::getcwd;
+    if ($self->is_in_template_dir($cwd)) {
+      $cwd;
+    } else {
+      $self->{dispatcher}->cget('doc_root') // do {
+        if ($self->{dispatcher}->cget('per_role_docroot')) {
+          die "Currently, list_widgets can't handle per_role_docroot, sorry.\n";
+        }
+      };
+    }
+  };
+
+  my ($dir, $rootName) = do {
     if (-d $cwdOrFile) {
       ($cwdOrFile, '');
     } else {
-      File::Basename::fileparse($cwdOrFile);
+      my ($fn, $dn, $ext) = File::Basename::fileparse($cwdOrFile, qr{\.\w+\z});
+      ($dn, $fn, $ext);
     }
   };
 
   my $yatt = $self->{dispatcher}->load_yatt($dir);
-  my $yattCore = $yatt->get_trans;
+  my $vfs = $yatt->get_trans;
 
-  my $rootPart = $fileName ? $yattCore->find_file($fileName) : $yattCore;
+  my $rootPart = $rootName
+    ? $vfs->find_file($rootName)
+    : $vfs->{root};
 
-  if ($widgetNamePat) {
-    
-  } else {
-    foreach my $item ($rootPart->list_items) {
-      print $item, "\n";
-      my $template = $rootPart->find_file($item);
-      foreach my $part ($template->list_parts) {
-        print "\t", $part->cget('name') || "''", "\n";
+  {
+    my %seen;
+    my $traverse;
+    $traverse = sub {
+      my ($tree, $widgetNamePat, $prefix) = @_;
+      if ($tree->can_generate_code) {
+        # Template
+        $seen{$tree->{cf_path}}++;
+        foreach my $part ($tree->list_parts) {
+          my $partName = $part->cget('name');
+          my @path = (@{$prefix // []}, $partName || ());
+          next unless @path;
+          my $wname = join(":", @path);
+          if ($widgetNamePat and $wname !~ $widgetNamePat) {
+            next;
+          }
+          print ":", $wname, "\n";
+        }
+      } else {
+        # Dir
+        foreach my $itemName ($tree->list_all_names($vfs)) {
+          my $subtree = $tree->lookup_1($vfs, $itemName);
+          next if $seen{$subtree->{cf_path}}++;
+          print "# $subtree->{cf_path}\n";
+          $traverse->($subtree, $widgetNamePat, [@{$prefix // []}, $itemName]);
+        }
+        # これだと subdir が出ない。
       }
-    }
-  }
+      foreach my $superItem ($tree->list_base) {
+        $traverse->($superItem, $widgetNamePat);
+      }
+    };
 
+    use Text::Glob;
+    my $re;
+    $re = Text::Glob::glob_to_regex($widgetNameGlob) if $widgetNameGlob;
+    $traverse->($rootPart, $re);
+  }
   # $yatt->get_trans->list_items
   # $yatt->get_trans->find_file('index')
   # $yatt->get_trans->find_file('index')->list_parts
