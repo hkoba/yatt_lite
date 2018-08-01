@@ -145,13 +145,18 @@ sub list_target_dirs {
 }
 
 sub cmd_list_widgets {
-  (my MY $self, my ($widgetNameGlob, $argPat)) = @_;
+  (my MY $self, my ($widgetNameGlob)) = @_;
 
   my $cwdOrFileList = $self->list_target_dirs($self->{cf_from});
+
+  require Text::Glob;
 
   walk(
     factory => $self->{dispatcher},
     from => $cwdOrFileList,
+    ($widgetNameGlob ? (
+      (name_match => Text::Glob::glob_to_regex($widgetNameGlob))
+    ) : ()),
     widget => sub {
       my ($args) = @_;
       print ":$args->{wname}\n";
