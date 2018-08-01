@@ -15,6 +15,7 @@ use YATT::Lite::Util qw/
                          raise_response
                          secure_text_plain
                          psgi_text
+			 build_nested_query
                        /;
 
 sub default_export { qw(*YATT) }
@@ -258,6 +259,15 @@ sub raise_dump {
 }
 
 sub entity_raise_dump {shift->raise_dump(@_)}
+
+sub entity_query_string {
+  my $this = shift;
+  my $args = (@_ == 1 ? $_[0] : +{@_});
+  # XXX: check unknown options... statically?! ← entmacro?
+  $args->{sep} //= $args->{separator} // ';';
+  my $hash = $args->{of} // $args->{in} // $CON->as_hash;
+  \ $this->build_nested_query($hash, $args);
+}
 
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();

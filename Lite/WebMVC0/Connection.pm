@@ -144,6 +144,17 @@ sub queryobj {
   $prop->{cf_parameters} || $prop->{cf_hmv} || $prop->{cf_cgi};
 }
 
+sub as_hash {
+  my PROP $prop = (my $glob = shift)->prop;
+  $prop->{cf_parameters} // $prop->{cf_hmv} // do {
+    if ($prop->{cf_is_psgi}) {
+      $prop->{cf_cgi}->parameters
+    } else {
+      $prop->{cf_cgi}->Vars
+    }
+  };
+}
+
 *remove_param = *delete_param; *remove_param = *delete_param;
 sub delete_param {
   my PROP $prop = (my $glob = shift)->prop;

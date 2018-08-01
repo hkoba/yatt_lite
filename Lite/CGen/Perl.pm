@@ -672,7 +672,8 @@ use YATT::Lite::Constants;
     (my MY $self, my ($escape_now)) = splice @_, 0, 2;
     return '' unless @_;
     local $self->{needs_escaping} = 0;
-    if (@_ == 1 and $_[0][0] eq 'call'
+    if (@_ == 1 and ($_[0][0] eq 'call'
+		       or $_[0][0] eq 'var' and $self->{cf_entity_prefer_call_over_hashref})
 	and my $macro = $self->can("entmacro_$_[0][1]")) {
       return $macro->($self, $_[0]);
     }
@@ -795,7 +796,9 @@ use YATT::Lite::Constants;
   }
   sub as_expr_prop {
     (my MY $self, my ($esc_later, $name)) = @_;
-    if ($name =~ /^\w+$/) {
+    if ($self->{cf_entity_prefer_call_over_hashref}) {
+      "->$name"
+    } elsif ($name =~ /^\w+$/) {
       "{$name}"
     } else {
       '{'.qtext($name).'}';
@@ -1156,6 +1159,12 @@ sub entx {
   @{$node}[2..$#$node];
 }
 
+# A skelton for new entmacro
+# sub entmacro_XXX {
+#   (my MY $self, my $node) = @_;
+#   sprintf(q{YATT::Lite::Util::escape(%s)}, terse_dump($node));
+# }
+
 sub entmacro_if {
   (my MY $self, my $node) = @_;
   my ($cond, $then, $else) = $self->gen_entlist(undef, entx($node));
@@ -1214,6 +1223,22 @@ sub entmacro_dispatch_one {
   my ($prefix, $nargs, @list) = $self->gen_entlist(undef, entx($node));
   \ sprintf q{YATT::Lite::Util::dispatch_one($this, $CON, %s, %s, %s)}
     , $prefix, $nargs, join(", ", @list);
+}
+
+sub entmacro___WIDGET__ {
+  (my MY $self, my $node) = @_;
+  my Widget $widget = $self->{curwidget};
+  qtext($widget->{cf_name});
+}
+
+sub entmacro_show_expr {
+  (my MY $self, my $node) = @_;
+  require YATT::Lite::LRXML::FormatEntpath;
+  my ($expr) = entx($node);
+  \ sprintf q{$this->YATT->render_into($CON, %s, [%s, %s])}
+    , qtext('show_expr')
+    , qtext(YATT::Lite::LRXML::FormatEntpath::format_entpath($expr))
+    , join(", ", $self->gen_entpath(undef, $expr));
 }
 
 use YATT::Lite::Breakpoint qw(break_load_cgen break_cgen);

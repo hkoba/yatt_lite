@@ -30,7 +30,10 @@ use YATT::Lite::Partial
                     cf_session_middleware_class
                     cf_session_state
                     cf_session_store
+                    cf_session_serializer
                     _session
+                    cf_session_cookie_option
+                    _session_in_request
 		  /]
    , -Entity, -CON
   );
@@ -83,6 +86,12 @@ sub prepare_app {
         ($self->{cf_session_store}
             ? (store => $self->create_session_backend(store => $self->{cf_session_store})) : ()),
   );
+
+    if ( my $opt = $self->{cf_session_cookie_option} ) {
+        for my $attr (qw(session_key path domain expires secure httponly)) {
+            $sef->state->$attr($opt->{$attr}) if exists $opt->{$attr};
+        }
+    }
 
   $self->{_session} = $sef;
 
