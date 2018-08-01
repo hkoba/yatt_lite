@@ -206,6 +206,13 @@ require File::Basename;
     $vfs->{cf_mark} = @_ ? shift : {};
   }
 
+  sub re_ext {
+    (my VFS $vfs) = @_;
+    my $ext = join("|", grep {defined}
+                   $vfs->{cf_ext_public}, $vfs->{cf_ext_private});
+    qr{$ext};
+  }
+
   sub YATT::Lite::VFS::Folder::lookup {
     print STDERR "# VFS: root->lookup(", sorted_dump(@_[2..$#_]), ")\n"
       if DEBUG_LOOKUP;
@@ -340,7 +347,27 @@ require File::Basename;
     }
   }
   sub YATT::Lite::VFS::File::list_items {
-    die "NIMPL";
+    croak "NIMPL";
+  }
+  sub YATT::Lite::VFS::Dir::list_all_names {
+    (my vfs_dir $in, my VFS $vfs) = @_;
+    croak "BUG: vfs is undef!" unless defined $vfs;
+    return unless defined $in->{cf_path};
+    my (@names, %seen);
+    {
+      use 5.012;
+      my $extRe = $vfs->re_ext;
+      local $_;
+      opendir my $dh, "$in->{cf_path}/";
+      while (readdir $dh) {
+        /^(\w+)(?:\.$extRe)?\z/
+          or next;
+        next if $seen{$1}++;
+        push @names, $1;
+      }
+      closedir $dh;
+    }
+    @names;
   }
   sub YATT::Lite::VFS::Dir::list_items {
     (my vfs_dir $in, my VFS $vfs) = @_;
