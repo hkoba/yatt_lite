@@ -144,6 +144,11 @@ sub queryobj {
   $prop->{cf_parameters} || $prop->{cf_hmv} || $prop->{cf_cgi};
 }
 
+sub param_exists {
+  my ($glob, $name) = @_;
+  exists $glob->as_hash->{$name};
+}
+
 sub as_hash {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_parameters} // $prop->{cf_hmv} // do {
