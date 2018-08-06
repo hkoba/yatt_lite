@@ -111,9 +111,24 @@ sub entity_breakpoint {
   &YATT::Lite::Breakpoint::breakpoint();
 }
 
+sub entity_ignore {
+  ();
+}
+
 sub entity_param {
   shift;
   $CON->param(@_);
+}
+
+sub entity_set_param {
+  my ($this, $name, $value) = @_;
+  $CON->param($name, $value);
+  '';
+}
+
+sub entity_delete_param {
+  shift;
+  $CON->delete_param(@_);
 }
 
 sub entity_concat {
