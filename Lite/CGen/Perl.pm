@@ -1165,6 +1165,24 @@ sub entx {
 #   sprintf(q{YATT::Lite::Util::escape(%s)}, terse_dump($node));
 # }
 
+sub entmacro_not {
+  (my MY $self, my $node) = @_;
+  my (@expr) = $self->gen_entlist(undef, entx($node));
+  sprintf q|(not(%s))|, join "", @expr;
+}
+
+sub entmacro_and {
+  (my MY $self, my $node) = @_;
+  my (@expr) = $self->gen_entlist(undef, entx($node));
+  "(".join(" and ", map {"(%s)"} @expr).")";
+}
+
+sub entmacro_or {
+  (my MY $self, my $node) = @_;
+  my (@expr) = $self->gen_entlist(undef, entx($node));
+  "(".join(" or ", map {"(%s)"} @expr).")";
+}
+
 sub entmacro_if {
   (my MY $self, my $node) = @_;
   my ($cond, $then, $else) = $self->gen_entlist(undef, entx($node));
