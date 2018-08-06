@@ -266,7 +266,7 @@ sub entity_query_string {
   # XXX: check unknown options... statically?! ← entmacro?
   $args->{sep} //= $args->{separator} // ';';
   my $hash = $args->{of} // $args->{in} // $CON->as_hash;
-  \ $this->build_nested_query($hash, $args);
+  $this->build_nested_query($hash, $args);
 }
 
 use YATT::Lite::Breakpoint ();
