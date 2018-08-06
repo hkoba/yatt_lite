@@ -1183,6 +1183,12 @@ sub entmacro_or {
   "(".join(" or ", map {"($_)"} @expr).")";
 }
 
+sub entmacro_undef {
+  (my MY $self, my $node) = @_;
+  my (@expr) = $self->gen_entlist(undef, entx($node));
+  sprintf q|(undef(%s))|, join "", @expr;
+}
+
 sub entmacro_if {
   (my MY $self, my $node) = @_;
   my ($cond, $then, $else) = $self->gen_entlist(undef, entx($node));
