@@ -597,7 +597,7 @@ sub named_attr {
     my ($in, $name, $formal_value, $is_default) = @_;
 
     my $actual_value = do {
-      if (my $sub = $in->can("param")) {
+      if (my $sub = UNIVERSAL::can($in, "param")) {
 	$sub->($in, $name);
       } elsif (ref $in eq 'HASH') {
 	$in->{$name};
