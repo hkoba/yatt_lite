@@ -1174,13 +1174,13 @@ sub entmacro_not {
 sub entmacro_and {
   (my MY $self, my $node) = @_;
   my (@expr) = $self->gen_entlist(undef, entx($node));
-  "(".join(" and ", map {"(%s)"} @expr).")";
+  "(".join(" and ", map {"($_)"} @expr).")";
 }
 
 sub entmacro_or {
   (my MY $self, my $node) = @_;
   my (@expr) = $self->gen_entlist(undef, entx($node));
-  "(".join(" or ", map {"(%s)"} @expr).")";
+  "(".join(" or ", map {"($_)"} @expr).")";
 }
 
 sub entmacro_if {
