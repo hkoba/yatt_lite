@@ -596,11 +596,13 @@ sub named_attr {
   sub find_value_in {
     my ($in, $name, $formal_value, $is_default) = @_;
 
+    if (ref $in eq 'HASH') {
+      return $in->{$formal_value};
+    }
+
     my $actual_value = do {
       if (my $sub = UNIVERSAL::can($in, "param")) {
 	$sub->($in, $name);
-      } elsif (ref $in eq 'HASH') {
-	$in->{$name};
       } else {
 	undef;
       }
