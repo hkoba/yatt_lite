@@ -19,7 +19,7 @@ use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_li
               cf_body_argument_type
 
               cf_stash_unknown_params_to
-	      cf_entity_prefer_call_over_hashref
+	      cf_prefer_call_for_entity
 
 	      n_compiles
 	    /;
@@ -451,7 +451,7 @@ sub synerror {
       my $cgen = $cg_class->new
 	(vfs => $self
 	 , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
-				 entity_prefer_call_over_hashref
+				 prefer_call_for_entity
 				 lcmsg_sink))
 	 , parser => $self->get_parser
 	 , sink => $opts{sink} || sub {

@@ -673,7 +673,7 @@ use YATT::Lite::Constants;
     return '' unless @_;
     local $self->{needs_escaping} = 0;
     if (@_ == 1 and ($_[0][0] eq 'call'
-		       or $_[0][0] eq 'var' and $self->{cf_entity_prefer_call_over_hashref})
+		       or $_[0][0] eq 'var' and $self->{cf_prefer_call_for_entity})
 	and my $macro = $self->can("entmacro_$_[0][1]")) {
       return $macro->($self, $_[0]);
     }
@@ -716,12 +716,16 @@ use YATT::Lite::Constants;
   }
   sub as_expr_var {
     (my MY $self, my ($esc_later, $name)) = @_;
-    my $var = $self->find_var($name)
-      or die $self->generror(q{No such variable '%s'}, $name);
-    if (my $sub = $self->can("as_expr_var_" . $var->type->[0])) {
-      $sub->($self, $esc_later, $var, $name);
+    if (my $var = $self->find_var($name)) {
+      if (my $sub = $self->can("as_expr_var_" . $var->type->[0])) {
+	$sub->($self, $esc_later, $var, $name);
+      } else {
+	$self->as_lvalue($var);
+      }
+    } elsif ($self->ensure_entity_is_declared($name)) {
+      $self->gen_entcall($name);
     } else {
-      $self->as_lvalue($var);
+      die $self->generror(q{No such variable '%s'}, $name);
     }
   }
   sub as_expr_var_html {
@@ -748,8 +752,12 @@ use YATT::Lite::Constants;
 
     $self->ensure_entity_is_declared($name);
 
+    $self->gen_entcall($name, @_);
+  }
+  sub gen_entcall {
+    (my MY $self, my ($name, @rest)) = @_;
     my $call = sprintf '$this->entity_%s(%s)', $name
-      , scalar $self->gen_entlist(undef, @_);
+      , scalar $self->gen_entlist(undef, @rest);
     $call;
   }
   sub as_expr_call_var {
@@ -796,8 +804,8 @@ use YATT::Lite::Constants;
   }
   sub as_expr_prop {
     (my MY $self, my ($esc_later, $name)) = @_;
-    if ($self->{cf_entity_prefer_call_over_hashref}) {
-      "->$name"
+    if ($self->{cf_prefer_call_for_entity}) {
+      $name
     } elsif ($name =~ /^\w+$/) {
       "{$name}"
     } else {

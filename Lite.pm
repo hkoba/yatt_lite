@@ -50,7 +50,7 @@ use YATT::Lite::MFields qw/YATT
               cf_stash_unknown_params_to
               cf_body_argument
               cf_body_argument_type
-	      cf_entity_prefer_call_over_hashref
+	      cf_prefer_call_for_entity
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -403,7 +403,7 @@ sub _cf_delegates {
      stash_unknown_params_to
      body_argument
      body_argument_type
-     entity_prefer_call_over_hashref
+     prefer_call_for_entity
     )
 }
 

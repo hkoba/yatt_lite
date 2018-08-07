@@ -14,7 +14,7 @@ use YATT::Lite::MFields qw/curtmpl curwidget curtoks
 	      no_last_newline
 	      cf_vfs cf_parser cf_sink scope
 	      cf_lcmsg_sink
-	      cf_entity_prefer_call_over_hashref
+	      cf_prefer_call_for_entity
 			  /
   ;
 
