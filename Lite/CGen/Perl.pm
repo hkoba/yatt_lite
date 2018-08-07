@@ -1268,11 +1268,11 @@ sub entmacro___WIDGET__ {
 sub entmacro_show_expr {
   (my MY $self, my $node) = @_;
   require YATT::Lite::LRXML::FormatEntpath;
-  my ($expr) = entx($node);
+  my (@pipe) = entx($node);
   \ sprintf q{$this->YATT->render_into($CON, %s, [%s, %s])}
     , qtext('show_expr')
-    , qtext(YATT::Lite::LRXML::FormatEntpath::format_entpath($expr))
-    , join(", ", $self->gen_entpath(undef, $expr));
+    , qtext(YATT::Lite::LRXML::FormatEntpath::format_entpath(@pipe))
+    , join(", ", $self->gen_entpath(undef, @pipe));
 }
 
 use YATT::Lite::Breakpoint qw(break_load_cgen break_cgen);

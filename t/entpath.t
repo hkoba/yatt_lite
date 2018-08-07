@@ -11,10 +11,12 @@ use YATT::Lite::Test::TestUtil;
 
 use YATT::Lite ();
 use YATT::Lite::Util qw(catch terse_dump);
+use YATT::Lite::LRXML::FormatEntpath qw(format_entpath);
+use Test::Differences;
 
 my $parser;
 sub is_entpath (@) {
-  my ($in, $expect) = @_;
+  my ($in, $expect, $formated) = @_;
   local $_ = $in;
   my @entpath = eval {$parser->_parse_entpath};
   if ($@) {
@@ -23,6 +25,9 @@ sub is_entpath (@) {
     is(terse_dump(@entpath)
        , terse_dump(defined $expect ? @$expect : $expect)
        , $in);
+
+    eq_or_diff(format_entpath(@entpath).";", $formated // $in
+		 , ($formated ? " => $formated" : "$in => roundtrip"));
   }
 }
 
@@ -57,7 +62,9 @@ sub Todo {push @test, bless [@_], "TODO"}
     , [[call => foo => [text => 'bar']]];
 
   add q{:foo(bar,);}
-    , [[call => foo => [text => 'bar']]];
+    , [[call => foo => [text => 'bar']]]
+    , q{:foo(bar);}
+    ;
 
   add q{:foo(bar,,);}
     , [[call => foo => [text => 'bar'], [text => '']]];
@@ -74,20 +81,41 @@ sub Todo {push @test, bless [@_], "TODO"}
        , [href => [var => 'y']]];
 
   # break;
-  add q{:foo({key:val});}
+  add q{:foo({key,val});}
     , [[call => foo => , [hash => [text => 'key'], [text => 'val']]]];
+
+  add q{:foo({key:val});}
+    , [[call => foo => , [hash => [text => 'key'], [text => 'val']]]]
+    , q{:foo({key,val});}
+    ;
+
+  add q{:foo(bar,{key,val,k2,v2},,);}
+    , [[call => foo => [text => 'bar']
+	, [hash => [text => 'key'], [text => 'val']
+	   , [text => 'k2'], [text => 'v2']]
+	, [text => '']]];
 
   add q{:foo(bar,{key:val,k2:v2},,);}
     , [[call => foo => [text => 'bar']
 	, [hash => [text => 'key'], [text => 'val']
 	   , [text => 'k2'], [text => 'v2']]
+	, [text => '']]]
+    , q{:foo(bar,{key,val,k2,v2},,);}
+    ;
+
+  add q{:foo(bar,{key,val,k2,:v2:path},,);}
+    , [[call => foo => [text => 'bar']
+	, [hash => [text => 'key'], [text => 'val']
+	   , [text => 'k2'], [[var => 'v2'],[prop => 'path']]]
 	, [text => '']]];
 
   add q{:foo(bar,{key:val,k2,:v2:path},,);}
     , [[call => foo => [text => 'bar']
 	, [hash => [text => 'key'], [text => 'val']
 	   , [text => 'k2'], [[var => 'v2'],[prop => 'path']]]
-	, [text => '']]];
+	, [text => '']]]
+    , q{:foo(bar,{key,val,k2,:v2:path},,);}
+    ;
 
   add q{:yaml(config):title;}
     , [[call => yaml => [text => 'config']]
@@ -144,20 +172,37 @@ sub Todo {push @test, bless [@_], "TODO"}
 
   #----------------------------------------
 
-  add q{:where({user:hkoba,status:[assigned,:status,pending]});}
+  add q{:where({user,hkoba,status,[assigned,:status,pending]});}
     , [[call => 'where'
 	, [hash => [text => 'user'], [text => 'hkoba']
 	   , [text => 'status'], [array => [text => 'assigned']
 				  , [var  => 'status']
 				  , [text => 'pending']]]]];
 
-  add q{:where({user:hkoba,status:{!=,:status}});}
+  add q{:where({user:hkoba,status:[assigned,:status,pending]});}
+    , [[call => 'where'
+	, [hash => [text => 'user'], [text => 'hkoba']
+	   , [text => 'status'], [array => [text => 'assigned']
+				  , [var  => 'status']
+				  , [text => 'pending']]]]]
+    , q{:where({user,hkoba,status,[assigned,:status,pending]});}
+    ;
+
+  add q{:where({user,hkoba,status,{!=,:status}});}
     , [[call => 'where'
 	, [hash => [text => 'user'], [text => 'hkoba']
 	   , [text => 'status'], [hash => [text => '!=']
 				  , [var => 'status']]]]];
 
-  add q{:where({user:hkoba,status:{!=,[assigned,in-progress,pending]}});}
+  add q{:where({user:hkoba,status:{!=,:status}});}
+    , [[call => 'where'
+	, [hash => [text => 'user'], [text => 'hkoba']
+	   , [text => 'status'], [hash => [text => '!=']
+				  , [var => 'status']]]]]
+    , q{:where({user,hkoba,status,{!=,:status}});}
+    ;
+
+  add q{:where({user,hkoba,status,{!=,[assigned,in-progress,pending]}});}
     , [[call => 'where'
 	, [hash => [text => 'user'], [text => 'hkoba']
 	   , [text => 'status'], [hash => [text => '!=']
@@ -165,18 +210,45 @@ sub Todo {push @test, bless [@_], "TODO"}
 				     , [text => 'in-progress']
 				     , [text => 'pending']]]]]];
 
-  add q{:where({user:hkoba,status:{!=,completed,-not_like:pending%}});}
+  add q{:where({user:hkoba,status:{!=,[assigned,in-progress,pending]}});}
+    , [[call => 'where'
+	, [hash => [text => 'user'], [text => 'hkoba']
+	   , [text => 'status'], [hash => [text => '!=']
+				  , [array => [text => 'assigned']
+				     , [text => 'in-progress']
+				     , [text => 'pending']]]]]]
+    , q{:where({user,hkoba,status,{!=,[assigned,in-progress,pending]}});}
+    ;
+
+  add q{:where({user,hkoba,status,{!=,completed,-not_like,pending%}});}
     , [[call => 'where'
 	, [hash => [text => 'user'], [text => 'hkoba']
 	   , [text => 'status']
 	   , [hash => [text => '!='], [text => 'completed']
 	      , [text => -not_like], [text => 'pending%']]]]];
 
-  add q{:where({priority:{<,2},workers:{>=,100}});}
+  add q{:where({user:hkoba,status:{!=,completed,-not_like:pending%}});}
+    , [[call => 'where'
+	, [hash => [text => 'user'], [text => 'hkoba']
+	   , [text => 'status']
+	   , [hash => [text => '!='], [text => 'completed']
+	      , [text => -not_like], [text => 'pending%']]]]]
+    , q{:where({user,hkoba,status,{!=,completed,-not_like,pending%}});}
+    ;
+
+  add q{:where({priority,{<,2},workers,{>=,100}});}
     , [[call => 'where'
 	, ['hash'
 	   , [text => 'priority'], [hash => [text => '<'],  [text => '2']]
 	   , [text => 'workers'],[hash => [text => '>='], [text => '100']]]]];
+
+  add q{:where({priority:{<,2},workers:{>=,100}});}
+    , [[call => 'where'
+	, ['hash'
+	   , [text => 'priority'], [hash => [text => '<'],  [text => '2']]
+	   , [text => 'workers'],[hash => [text => '>='], [text => '100']]]]]
+    , q{:where({priority,{<,2},workers,{>=,100}});}
+    ;
 
   #----------------------------------------
 
@@ -185,7 +257,7 @@ sub Todo {push @test, bless [@_], "TODO"}
        , [invoke => resultset => [text => 'Artist']]
        , [invoke => 'all']];
 
-  add q{:schema:resultset(Artist):search({name:{like:John%}});}
+  add q{:schema:resultset(Artist):search({name,{like:John%}});}
     , [[var => 'schema']
        , [invoke => resultset => [text => 'Artist']]
        , [invoke => 'search'
@@ -193,25 +265,54 @@ sub Todo {push @test, bless [@_], "TODO"}
 	     , [hash => [text => 'like']
 		, [text => 'John%']]]]
 	 ];
+  add q{:schema:resultset(Artist):search({name:{like:John%}});}
+    , [[var => 'schema']
+       , [invoke => resultset => [text => 'Artist']]
+       , [invoke => 'search'
+	  , [hash => [text => 'name']
+	     , [hash => [text => 'like']
+		, [text => 'John%']]]]
+      ]
+    , q{:schema:resultset(Artist):search({name,{like:John%}});}
+    ;
 
   add q{:john_rs:search_related(cds):all();}
     , [[var => 'john_rs']
        , [invoke => search_related => [text => 'cds']]
        , [invoke => 'all']];
 
-  add q{:first_john:cds(=undef,{order_by:title});}
+  add q{:first_john:cds(=undef,{order_by,title});}
     , [[var => 'first_john']
        , [invoke => 'cds'
 	  , [expr => 'undef']
 	  , [hash => [text => 'order_by']
 	     , [text => 'title']]]];
 
-  add q{:schema:resultset(CD):search({year:2000},{prefetch:artist});}
+  add q{:first_john:cds(=undef,{order_by:title});}
+    , [[var => 'first_john']
+       , [invoke => 'cds'
+	  , [expr => 'undef']
+	  , [hash => [text => 'order_by']
+	     , [text => 'title']]]]
+    , q{:first_john:cds(=undef,{order_by,title});}
+    ;
+
+  add q{:schema:resultset(CD):search({year,2000},{prefetch,artist});}
     , [[var => 'schema']
        , [invoke => resultset => [text => 'CD']]
        , [invoke => 'search'
 	  , [hash => [text => 'year'], [text => '2000']]
 	  , [hash => [text => 'prefetch'], [text => 'artist']]]];
+
+  add q{:schema:resultset(CD):search({year:2000},{prefetch:artist});}
+    , [[var => 'schema']
+       , [invoke => resultset => [text => 'CD']]
+       , [invoke => 'search'
+	  , [hash => [text => 'year'], [text => '2000']]
+	  , [hash => [text => 'prefetch'], [text => 'artist']]]]
+    , q{:schema:resultset(CD):search({year,2000},{prefetch,artist});}
+    ;
+
 
   add q{:cd:artist():name();}
     , [[var => 'cd']
@@ -344,14 +445,14 @@ sub detect_entpath_error {
 
 my $class = 'YATT::Lite::LRXML';
 
-plan tests => 2 + grep(defined $_, @test) + @error;
+plan tests => 2 + 2*grep(defined $_, @test) + @error;
 
 require_ok($class);
 ok($parser = $class->new, "new $class");
 
 foreach my $test (@test) {
   unless (defined $test) {
-    YATT::breakpoint();
+    YATT::Lite::Breakpoint::breakpoint();
   } elsif (ref $test eq 'TODO') {
     TODO: {
 	(local $TODO, my ($in, $expect)) = @$test;
