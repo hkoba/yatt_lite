@@ -18,6 +18,8 @@ use YATT::Lite::Util::Enum
    # node item
    # BODY が必ず配列になるが、代わりに @attlist は配列不要に。 空の [] を pad しなくて済む
    # XXX: <:yatt:else /> とかもあったじゃん！
+
+   , ENT_ => [qw(TYPE KEY REST=VALUE=BODY)]
   );
 
 sub cut_first (&@) {
@@ -36,10 +38,6 @@ sub cut_first_att {
   cut_first {$_->[NODE_TYPE] >= TYPE_ATTRIBUTE} $list;
 }
 
-# list expand if nested.
-sub lxnest {
-  ref $_[0][0] ? @{$_[0]} : $_[0]
-}
 # node expand.
 sub nx {
   @{$_[0]}[(NODE_PATH + ($_[1] // 0)) .. $#{$_[0]}];
@@ -114,6 +112,20 @@ sub node_as_hash {
     $hash->{lc($k)} = $node->[$i] if defined $node->[$i];
   }
   $hash;
+}
+
+#========================================
+# Entity entpath related wrappers.
+# Each element in entpath has its own structure.
+
+sub entx {
+  my ($ent) = @_;
+  @{$ent}[ENT_BODY..$#$ent];
+}
+
+# list expand if nested.
+sub lxnest {
+  ref $_[0][0] ? @{$_[0]} : $_[0]
 }
 
 #========================================

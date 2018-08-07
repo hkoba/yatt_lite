@@ -1169,11 +1169,6 @@ sub dump_as_comment_line {
   $str."\n";
 }
 
-sub entx {
-  my ($node) = @_;
-  @{$node}[2..$#$node];
-}
-
 # A skelton for new entmacro
 # sub entmacro_XXX {
 #   (my MY $self, my $node) = @_;
