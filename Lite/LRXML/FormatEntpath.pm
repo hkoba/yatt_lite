@@ -67,7 +67,8 @@ sub format__text {
   my ($name) = @_;
   if ($name eq '') {
     "";
-  } elsif ($name =~ m{^[-\+\*/<>!\w\|\@\$]+\z}) {
+  } elsif ($name =~ m{^[-\+\*/<>!\w\|\@\$%][-\+\*/<>!\w\|\@\$%=]*\z}) {
+    # XXX: matching paren {..}
     $name
   } else {
     "($name)"
@@ -76,7 +77,7 @@ sub format__text {
 
 sub format__expr {
   my ($name) = @_;
-  "(=$name)"
+  "=$name"
 }
 
 1;

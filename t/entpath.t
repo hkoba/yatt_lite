@@ -26,8 +26,16 @@ sub is_entpath (@) {
        , terse_dump(defined $expect ? @$expect : $expect)
        , $in);
 
-    eq_or_diff(format_entpath(@entpath).";", $formated // $in
-		 , ($formated ? " => $formated" : "$in => roundtrip"));
+    if (ref $formated) {
+    TODO: {
+	local $TODO = $$formated;
+	eq_or_diff(format_entpath(@entpath).";", $in
+		     , "$in => roundtrip");
+      }
+    } else {
+      eq_or_diff(format_entpath(@entpath).";", $formated // $in
+		   , ($formated ? " => $formated" : "$in => roundtrip"));
+    }
   }
 }
 
@@ -126,13 +134,17 @@ sub Todo {push @test, bless [@_], "TODO"}
     , [[call => foo => [var => 'config'], [text => 'title']]];
 
   add q{:foo[3][8];}
-    , [[var => 'foo'], [aref => [expr => '3']], [aref => [expr => '8']]];
+    , [[var => 'foo'], [aref => [expr => '3']], [aref => [expr => '8']]]
+    , \"TODO - aref expr"
+    ;
 
   add q{:x[0][:y][1];}
     , [[var => 'x']
        , [aref => [expr => '0']]
        , [aref => [var => 'y']]
-       , [aref => [expr => '1']]];
+       , [aref => [expr => '1']]]
+    , \"TODO - aref expr"
+    ;
 
   add q{:x[:y[0][:z]][1];}
     , [[var => 'x']
@@ -140,17 +152,23 @@ sub Todo {push @test, bless [@_], "TODO"}
 	  [[var => 'y']
 	   , [aref => [expr => '0']]
 	   , [aref => [var => 'z']]]]
-       , [aref => [expr => '1']]];
+       , [aref => [expr => '1']]]
+    , \"TODO - aref expr"
+    ;
 
   add q{:foo([3][8]);}
     , [[call => foo =>
 	[[array => [text => '3']]
-	 , [aref => [expr => '8']]]]];
+	 , [aref => [expr => '8']]]]]
+    , \"TODO - aref expr"
+    ;
 
   add q{:foo([3,5][7]);}
     , [[call => foo =>
 	[[array => [text => '3'], [text => '5']]
-	 , [aref => [expr => '7']]]]];
+	 , [aref => [expr => '7']]]]]
+    , \"TODO - aref expr"
+    ;
 
   add q{:foo([3][8],,[5][4],,);}
     , [[call => foo =>
@@ -160,7 +178,9 @@ sub Todo {push @test, bless [@_], "TODO"}
 	, [[array => [text => '5']]
 	   , [aref => [expr => '4']]]
 	, [text => '']
-       ]];
+       ]]
+    , \"TODO - aref expr"
+    ;
 
   add q{:mkhash(:lexpand(:CON:param(:name)));}
     , [[call => mkhash =>
@@ -257,7 +277,7 @@ sub Todo {push @test, bless [@_], "TODO"}
        , [invoke => resultset => [text => 'Artist']]
        , [invoke => 'all']];
 
-  add q{:schema:resultset(Artist):search({name,{like:John%}});}
+  add q{:schema:resultset(Artist):search({name,{like,John%}});}
     , [[var => 'schema']
        , [invoke => resultset => [text => 'Artist']]
        , [invoke => 'search'
@@ -273,7 +293,7 @@ sub Todo {push @test, bless [@_], "TODO"}
 	     , [hash => [text => 'like']
 		, [text => 'John%']]]]
       ]
-    , q{:schema:resultset(Artist):search({name,{like:John%}});}
+    , q{:schema:resultset(Artist):search({name,{like,John%}});}
     ;
 
   add q{:john_rs:search_related(cds):all();}
@@ -371,11 +391,15 @@ where\tuid = ?),:uid);}
 	, [expr => '$i*($j+$k)']
 	, [text => '']
 	, [expr => '$x[8]{y}{z}']]
-      , [prop => 'hoe']];
+       , [prop => 'hoe']]
+    , \"TODO - paren expr"
+    ;
 
   add q{:foo(bar${q}baz);}
     , [[call => 'foo'
-	, [text => 'bar${q}baz']]];
+	, [text => 'bar${q}baz']]]
+    , \"TODO - matching paren"
+    ;
 
   add q{:foo(bar,baz,[3]);}
     , [[call => 'foo'
@@ -393,12 +417,16 @@ where\tuid = ?),:uid);}
     , [[call => 'if'
 	, [expr => '($$list[0]+$$list[1])==11']
 	, [text => 'yes']
-	, [text => 'no']]];
+	, [text => 'no']]]
+    , \"TODO - paren expr"
+    ;
 
   add q{:if((=($x+$y)==$z),baz);}
     , [[call => 'if'
 	, [expr => '($x+$y)==$z']
-	, [text => 'baz']]];
+	, [text => 'baz']]]
+    , \"TODO - paren expr"
+    ;
     
   add q{:foo(=@bar);}
     , [[call => 'foo'
