@@ -695,6 +695,13 @@ use YATT::Lite::Constants;
       sprintf(q{YATT::Lite::Util::escape(%s)}, $result);
     }
   }
+  # XXX: partial logic dup with ensure_entity_is_declared
+  sub find_entity {
+    (my MY $self, my ($name)) = @_;
+    my Template $tmpl = $self->{curtmpl};
+    $tmpl->{Item}{"entity\0$name"}
+      // $tmpl->{cf_entns}->can("entity_$name");
+  }
   sub ensure_entity_is_declared {
     (my MY $self, my ($name)) = @_;
     my Template $tmpl = $self->{curtmpl};
@@ -722,7 +729,7 @@ use YATT::Lite::Constants;
       } else {
 	$self->as_lvalue($var);
       }
-    } elsif ($self->ensure_entity_is_declared($name)) {
+    } elsif ($self->find_entity($name)) {
       $self->gen_entcall($name);
     } else {
       die $self->generror(q{No such variable '%s'}, $name);
