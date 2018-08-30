@@ -373,13 +373,21 @@ Currently only RHEL is supported."
 		  (t
 		   (error "Invalid argument %s" fn-or-buf)))))
     (if (yatt-lint-is-tramp fn)
-	(let ((vec (tramp-dissect-file-name fn)))
-	  (tramp-make-tramp-file-name
-	   (tramp-file-name-method vec)
-	   (tramp-file-name-user vec)
-	   (tramp-file-name-host vec)
-	   ""))
-      "")))
+	(let ((vec (tramp-dissect-file-name fn))
+              (version (version-to-list tramp-version)))
+          (if (version-list-< version (version-to-list "2.3.2"))
+              (tramp-make-tramp-file-name
+	       (tramp-file-name-method vec)
+	       (tramp-file-name-user vec)
+	       (tramp-file-name-host vec)
+	       "")
+            (tramp-make-tramp-file-name
+	       (tramp-file-name-method vec)
+	       (tramp-file-name-user vec)
+	       (tramp-file-name-domain vec)
+	       (tramp-file-name-host vec)
+	       (tramp-file-name-port vec)
+	       ""))))))
 
 
 (defun yatt-lint-is-tramp (fn)
