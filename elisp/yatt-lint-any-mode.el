@@ -318,8 +318,14 @@ Currently only RHEL is supported."
 ;; Other utils
 ;;========================================
 (defun yatt-lint-cmdfile (cmdfile &optional nocheck)
-  (let ((cmd (concat (or (yatt-lint-any-find-driver)
-			 yatt-lint-any-YATT-dir) cmdfile)))
+  (let ((driver (yatt-lint-any-find-driver))
+        (fn (buffer-file-name (current-buffer)))
+        cmd)
+    (unless driver
+      (if (not (yatt-lint-is-tramp fn))
+          (setq driver yatt-lint-any-YATT-dir)
+        (error "Can't find yatt driver for %s!" fn)))
+    (setq cmd (concat driver cmdfile))
     (if (and (not nocheck)
 	     (not (file-exists-p cmd)))
 	(error "Can't find yatt command: %s" cmd))
