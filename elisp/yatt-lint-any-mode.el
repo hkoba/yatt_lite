@@ -229,8 +229,9 @@ Currently only RHEL is supported."
 	       (not (equal (expand-file-name file)
 			   (yatt-lint-tramp-localname buffer)))
 	       (not (equal file "-")))
-	(message "opening error file: %s" file)
-	(find-file-other-window file))
+      (setq file (concat (yatt-lint-tramp-prefix buffer) file))
+      (message "opening error file: %s" file)
+      (find-file-other-window file))
     (when (and file line)
       (goto-line (string-to-number line)))
     (message "%s"
