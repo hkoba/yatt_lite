@@ -275,6 +275,11 @@ use YATT::Lite::Constants;
 	push @queue, $expr;
 	$flush->() if $expr =~ /\n/;
       }
+      # Following can remove trailing newline from </yatt:foreach>,
+      # but it affects all of yatt tags.
+      # if (@{$self->{curtoks}} and $self->{curtoks}[0] eq "\n") {
+      #   shift @{$self->{curtoks}};
+      # }
     }
     $flush->();
     join " ", @result;
