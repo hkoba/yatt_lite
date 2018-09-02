@@ -145,7 +145,6 @@ OUT:
 
 
 TITLE: Wide char in my code
-BREAK: 1
 IN:
  <yatt:my x>
    <yatt:foreach my=c list='"\x{6f22}", "\x{5b57}"'>
@@ -155,15 +154,10 @@ IN:
  &yatt:x;
 OUT:
  
-   
-     漢
-   
-     字
-   
- 
-
-
-
+      漢
+      字
+  
+  
 TITLE: destructuring bind and spread operator
 IN:
  <yatt:my [x y :::z]="1..8" />

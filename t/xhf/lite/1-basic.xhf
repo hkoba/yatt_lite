@@ -144,7 +144,7 @@ OUT:
    </head>
  <body>
    <h2>foobar</h2>
-   Hello world!
+ Hello world!
  </body>
  </html>
 # XXX: 改行に不満あり
@@ -416,9 +416,9 @@ OUT:
  <div id="foobar">
    <h2><b>B</b>old</h2>
    <div class="article">
-    <span class="emph">foobar</span>  </div>
+ <span class="emph">foobar</span>  </div>
    <div class="footer">
-   <span class="small">myfooter</span>  </div>
+ <span class="small">myfooter</span>  </div>
  </div>
  
 

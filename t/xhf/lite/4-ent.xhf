@@ -177,13 +177,10 @@ PARAM[
 OUT:
  header
  <ol class="ordered">
-  
   <li>apple</li>
-  
   <li>lemon</li>
-  
   <li>orange</li>
-  
+ 
  </ol>
  
  footer

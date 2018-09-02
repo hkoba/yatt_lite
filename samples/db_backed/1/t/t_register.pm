@@ -72,12 +72,12 @@ END
 </head>
 <body>
 <div id="wrapper">
-  <center>
+<center>
 <div id="body">
   <div id="topnav">
     <h2>Registration Form</h2>
   </div>
-      <form method="POST">
+<form method="POST">
   <table>
     <tr>
       <th>User ID:</th>
@@ -128,12 +128,12 @@ END
 </head>
 <body>
 <div id="wrapper">
-  <center>
+<center>
 <div id="body">
   <div id="topnav">
     <h2></h2>
   </div>
-        <h2>Confirmation Email is Sent to you.</h2>
+  <h2>Confirmation Email is Sent to you.</h2>
   <a href="index.yatt">back</a>    
 </div>
 </center>
@@ -177,7 +177,7 @@ please dispose this mail.
 </head>
 <body>
 <div id="wrapper">
-      <div class="login">
+    <div class="login">
       <b>hkoba</b> | <a href="logout.ydo?nx=register.yatt">logout</a>
     </div>
   <center>
@@ -185,7 +185,7 @@ please dispose this mail.
   <div id="topnav">
     <h2></h2>
   </div>
-        <h2>Welcome! Your registration is successfully completed.</h2>
+  <h2>Welcome! Your registration is successfully completed.</h2>
   <a href="./">Top</a>    
 </div>
 </center>
