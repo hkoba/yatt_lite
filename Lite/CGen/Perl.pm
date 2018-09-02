@@ -243,6 +243,13 @@ use YATT::Lite::Constants;
     while (@{$self->{curtoks}}) {
       my $node = shift @{$self->{curtoks}};
       unless (ref $node) {
+        # 次が element な時は、先行する indent を捨てる
+        if (@{$self->{curtoks}} and ref $self->{curtoks}[0]
+              and $self->{curtoks}[0][0] == TYPE_ELEMENT
+              and $node =~ /^[\ \t]+\z/
+          ) {
+          next;
+        }
 	# text node の末尾が改行で終わっている場合、 明示的に "\n" を生成する
 	my $has_nl = $node =~ s/\r?\n\Z//s;
 	push @queue, qtext($node) if $node ne ''; # 削ったら空になるかも。
