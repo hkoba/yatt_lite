@@ -1095,6 +1095,16 @@ sub take_spread_name {
     #                  ↑This newline should be removed.
     $self->cut_next_nl;
 
+    # ___</yatt:foreach>
+    # ↑ This indent is messy too.
+    if (@{$self->{curtoks}} and $self->{curtoks}[-1] =~ /^[\ \t]+\z/) {
+      pop @{$self->{curtoks}};
+    }
+
+    #    ...\n         ← not to remove this newline.
+    # </yatt:foreach>
+    local $self->{no_last_newline} = 0;
+
     local $self->{scope} = $self->mkscope(\%local, $self->{scope});
     my $statements = '{'.$self->as_print('}');
 
