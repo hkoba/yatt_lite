@@ -13,7 +13,7 @@ sub DBIC () { __PACKAGE__ . '::DBIC' }
 use YATT::Lite::WebMVC0::DBSchema::DBIC
   (DBIC, verbose => $ENV{DEBUG_DBSCHEMA}
    , [user => undef
-      , uid => [integer => -primary_key
+      , uid => [integer => -primary_key, -autoincrement
 		, [-has_many
 		   , [address => undef
 		      , addrid => [integer => -primary_key]
@@ -177,6 +177,13 @@ sub cmd_setup {
     ([verbose => $ENV{VERBOSE} // 1, auto_create => 1
       , coltype_map => {text => 'varchar(80)'}]
      , connect_to => $self->dbi_dsn);
+}
+
+sub cmd_schema {
+  (my MY $self) = @_;
+  my $schema = $self->DBIC->YATT_DBSchema;
+  $schema->configure(dbtype => $schema->dbtype_of_dbi_dsn($self->dbi_dsn));
+  print map {"$_;\n"} $schema->sql_schema;
 }
 
 #========================================
