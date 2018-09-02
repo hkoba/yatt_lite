@@ -1090,6 +1090,11 @@ sub take_spread_name {
     };
 
     local $self->{curtoks} = [@{argValue($body)}];
+
+    # <yatt:foreach ..>\n
+    #                  ↑This newline should be removed.
+    $self->cut_next_nl;
+
     local $self->{scope} = $self->mkscope(\%local, $self->{scope});
     my $statements = '{'.$self->as_print('}');
 
