@@ -90,6 +90,7 @@ sub default_output_encoding { 'utf-8' }
 
 sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
+  local $YATT = $self;
   $self->$method(@_);
 }
 

@@ -546,8 +546,8 @@ sub render {
   }
 }
 
-sub render_encoded {
-  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+sub parse_path_info {
+  (my MY $self, my ($reqrec)) = @_;
   # [$path_info, $subpage, $action]
   my ($path_info, @rest) = ref $reqrec ? @$reqrec : $reqrec;
 
@@ -556,29 +556,83 @@ sub render_encoded {
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->lookup_split_path_info($path_info);
   unless (@pi) {
-    die "No such location: $path_info";
+    return;
   }
+
+  ($path_info, $tmpldir, $loc,
+   (@rest ? [$file, @rest] : $file),
+   , $self->pi_to_connection_quad(\@pi)
+   );
+}
+
+sub render_encoded {
+  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+
+  my ($path_info, $tmpldir, $loc, $widgetSpec, @rest)
+    = $self->parse_path_info($reqrec) or do {
+      die "No such location: ".terse_dump($reqrec);
+    };
 
   my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
     die "No such directory: $path_info";
   };
 
-  my $con = $self->make_simple_connection
+  my $con = $self->make_connection
   (
-    \@pi, yatt => $dh, noheader => 1, path_info => $path_info
+    undef, @rest,
+    , yatt => $dh, noheader => 1, path_info => $path_info,
     , encoding => $self->{cf_output_encoding}
     , $self->make_debug_params($reqrec, $args)
   );
 
   $self->invoke_dirhandler
   (
-    $dh, $con
+    $dh,
    , render_into => $con
-   , @rest ? [$file, @rest] : $file
+   , $widgetSpec
    , $args, @opts
   );
 
   $con->buffer;
+}
+
+sub render_into {
+  (my MY $self, my ($con, $reqrec, $args, @opts)) = @_;
+
+  my ($path_info, $tmpldir, $loc, $widgetSpec, @rest)
+    = $self->parse_path_info($reqrec) or do {
+      die "No such location: ".terse_dump($reqrec);
+    };
+
+  my $dh = $self->get_lochandler(map {untaint_any($_)} $loc, $tmpldir) or do {
+    die "No such directory: $path_info";
+  };
+
+  $con->configure(yatt => $dh);
+
+  $self->invoke_dirhandler
+  (
+    $dh,
+   , render_into => $con
+   , $widgetSpec
+   , $args, @opts
+  );
+}
+
+sub make_connection_for {
+  (my MY $self, my ($reqrec, $args, @other)) = @_;
+
+  my ($path_info, $tmpldir, $loc, $widgetSpec, @rest)
+    = $self->parse_path_info($reqrec);
+
+  $self->make_connection
+  (
+    undef, @rest,
+    , noheader => 1, path_info => $path_info,
+    , encoding => $self->{cf_output_encoding},
+    , $self->make_debug_params($reqrec, $args),
+    , @other,
+  );
 }
 
 sub lookup_split_path_info {
@@ -690,11 +744,16 @@ sub Connection () {'YATT::Lite::Connection'};
 
 sub make_simple_connection {
   (my MY $self, my ($quad, @rest)) = @_;
-  my ($tmpldir, $loc, $file, $trailer) = @$quad;
+  my @params = $self->pi_to_connection_quad($quad);
+  $self->make_connection(undef, @params, @rest);
+}
+
+sub pi_to_connection_quad {
+  (my MY $self, my ($pi)) = @_;
+  my ($tmpldir, $loc, $file, $trailer) = @$pi;
   my $virtdir = "$self->{cf_doc_root}$loc";
   my $realdir = "$tmpldir$loc";
-  my @params = $self->connection_quad([$virtdir, $loc, $file, $trailer]);
-  $self->make_connection(undef, @params, @rest);
+  $self->connection_quad([$virtdir, $loc, $file, $trailer]);
 }
 
 sub make_debug_params {
@@ -732,7 +791,7 @@ sub run_dirhandler {
   (my MY $self, my ($dh, $con, $file)) = @_;
   local ($SYS, $YATT, $CON) = ($self, $dh, $con);
   $self->before_dirhandler($dh, $con, $file);
-  $self->invoke_dirhandler($dh, $con
+  $self->invoke_dirhandler($dh,
 			   , handle => $dh->cut_ext($file), $con, $file);
   $self->after_dirhandler($dh, $con, $file);
 }
@@ -741,7 +800,7 @@ sub before_dirhandler { &maybe::next::method; }
 sub after_dirhandler  { &maybe::next::method; }
 
 sub invoke_dirhandler {
-  (my MY $self, my ($dh, $con, $method, @args)) = @_;
+  (my MY $self, my ($dh, $method, @args)) = @_;
   $dh->with_system($self, $method, @args);
 }
 
