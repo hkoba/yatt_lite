@@ -484,6 +484,12 @@ sub set_charset {
 
 #========================================
 
+sub configure_stash {
+  my PROP $prop = prop(my $glob = shift);
+  my ($value) = @_;
+  $prop->{stash} = $value;
+}
+
 sub stash {
   my PROP $prop = prop(my $glob = shift);
   unless (@_) {
