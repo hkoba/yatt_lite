@@ -356,7 +356,12 @@ use YATT::Lite::Constants;
   sub text_from_element {
     (my MY $self, my $node) = @_;
     my $call_ref = $self->from_element($node);
-    sprintf q{YATT::Lite::Util::captured {my ($CON) = @_; %s}}, $$call_ref;
+    sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$call_ref;
+  }
+  sub text_from_pi {
+    (my MY $self, my $node) = @_;
+    my $statements = $self->from_pi($node);
+    sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $statements;
   }
 
   sub gen_call {
