@@ -111,6 +111,17 @@ sub entity_breakpoint {
   &YATT::Lite::Breakpoint::breakpoint();
 }
 
+#
+# Identity. This helps learning about entity path expression.
+#
+sub entity_val {
+  my ($this, $val) = @_;
+  $val;
+}
+
+#
+# Hiding return value is another important idiom.
+#
 sub entity_ignore {
   ();
 }

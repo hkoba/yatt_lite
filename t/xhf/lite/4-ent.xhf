@@ -395,3 +395,19 @@ OUT:
  <h2>24</h2>
 
 
+
+TITLE: :val()
+IN:
+ &yatt:val(1);
+ &yatt:val();
+ &yatt:val(foo,bar);
+ &yatt:val(:val([]));
+ &yatt:val(:val(:val({})));
+OUT:
+ 1
+ 
+ foo
+ []
+ 
+ {}
+ 
