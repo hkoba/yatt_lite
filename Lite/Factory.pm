@@ -480,6 +480,8 @@ sub after_new {
   }
   $self->{cf_use_subpath} //= 1;
 
+  $self->{cf_always_refresh_deps} //= $self->default_always_refresh_deps;
+
   $self->{cf_body_argument} //= $self->default_body_argument;
   $self->{cf_body_argument_type} //= $self->default_body_argument_type;
 
@@ -497,6 +499,8 @@ sub default_index_name { 'index' }
 sub default_ext_public {'yatt'}
 sub default_ext_private {'ytmpl'}
 sub default_stash_unknown_params_to {'yatt.unknown_params'}
+sub default_always_refresh_deps { 1 }
+
 sub default_body_argument { 'body' }
 sub default_body_argument_type { 'code' }
 
