@@ -176,15 +176,30 @@
 	    ;; 新しい section を始める
 	    section (list (yatt-mode-decltype reg) end)))))
 
-(defun yatt-mode-decltype (region)
-  (let* ((min (cadr region)) (max (caddr region))
+;;; mmm-region is usually:
+;;; (yatt-declaration-mode 1 20 #<overlay from 1 to 20 in test1_w_a.yatt>)
+(defun yatt-mode-decltype (mmm-region)
+  (let* ((min (cadr mmm-region)) (max (caddr mmm-region))
+         ;; XXX: rewrite above with seq-let.
 	 (start (next-single-property-change min 'face (current-buffer) max))
 	 (end (next-single-property-change start 'face (current-buffer) max))
-	 (decl (buffer-substring-no-properties start end))
+         decl
 	 pos
 	 )
     ;; XXX: !yatt: で始まらなかったら?
     (save-match-data
+      (when (and (= max end)
+                 (equal (char-after start) ?\n))
+        ;; workaround
+        (goto-char min)
+        (search-forward "<")
+        (setq start (point))
+        (re-search-forward "[ \t]")
+        (setq end (1- (point))))
+      (setq decl (buffer-substring-no-properties start end))
+      ;; decl typically contains "!yatt:widget"
+      ;; In this case, return value is ('widget "yatt")
+      ;; XXX: rewrite below with split-string. (This changes returning structure though).
       (cond ((setq pos (string-match ":" decl))
 	     (list
 	      (intern (substring decl (1+ pos)))
