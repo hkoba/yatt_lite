@@ -69,8 +69,32 @@
     ;; (yatt-mode-multipart-refontify)
     (run-hooks 'yatt-mode-hook)))
 
-(define-derived-mode yatt-declaration-mode html-mode "YATT decl"
-  "yatt:* タグの、宣言部分")
+;;; Below is stolen and modified from recent sgml-mode to revert old behavior
+;;;
+(eval-and-compile
+  (defconst yatt-declaration-syntax-propertize-rules
+    (syntax-propertize-precompile-rules
+     ;; Use the `b' style of comments to avoid interference with the -- ... --
+     ;; comments recognized when `sgml-specials' includes ?-.
+     ;; FIXME: beware of <!--> blabla <!--> !!
+     ("\\(<\\)!--" (1 "< b"))
+     ("--[ \t\n]*\\(>\\)" (1 "> b"))
+     ;; Double quotes outside of tags should not introduce strings.
+     ;; Be careful to call `syntax-ppss' on a position before the one we're
+     ;; going to change, so as not to need to flush the data we just computed.
+     ("\"" (0 (if (prog1 (zerop (car (syntax-ppss (match-beginning 0))))
+                    (goto-char (match-end 0)))
+                  (string-to-syntax ".")))))))
+
+(defun yatt-declaration-syntax-propertize (start end)
+  (funcall
+   (syntax-propertize-rules yatt-declaration-syntax-propertize-rules)
+   start end))
+
+(define-derived-mode yatt-declaration-mode sgml-mode "YATT decl"
+  "yatt:* タグの、宣言部分"
+    (setq-local syntax-propertize-function #'yatt-declaration-syntax-propertize)
+  )
 
 ;;----------------------------------------
 (defface yatt-declaration-submode-face
