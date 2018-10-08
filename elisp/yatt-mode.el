@@ -215,11 +215,12 @@
       (when (and (= max end)
                  (equal (char-after start) ?\n))
         ;; workaround
-        (goto-char min)
-        (search-forward "<")
-        (setq start (point))
-        (re-search-forward "[ \t]")
-        (setq end (1- (point))))
+        (save-excursion
+          (goto-char min)
+          (search-forward "<")
+          (setq start (point))
+          (re-search-forward "[ \t]")
+          (setq end (1- (point)))))
       (setq decl (buffer-substring-no-properties start end))
       ;; decl typically contains "!yatt:widget"
       ;; In this case, return value is ('widget "yatt")
