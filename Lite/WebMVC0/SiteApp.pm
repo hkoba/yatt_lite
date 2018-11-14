@@ -862,6 +862,17 @@ Entity script_name => sub {
   $env->{'yatt.script_name'};
 };
 
+#
+# :abspath_in_siteapp() - extracts absolute path in siteapp's doc_root.
+# Note: since this value is derived from REQUEST_URI, which do not contain
+# index.yatt typically, this is not suitable to get physical filename.
+#
+Entity abspath_in_siteapp => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  substr($env->{REQUEST_URI}, length $env->{'yatt.script_name'});
+};
+
 #========================================
 
 YATT::Lite::Breakpoint::break_load_dispatcher();
