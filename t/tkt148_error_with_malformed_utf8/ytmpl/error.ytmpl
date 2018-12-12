@@ -1,2 +1,2 @@
 <!yatt:args err>
-ERROR: &yatt:HTML(:err:reason());
+あ:ERROR: &yatt:HTML(:err:reason());
