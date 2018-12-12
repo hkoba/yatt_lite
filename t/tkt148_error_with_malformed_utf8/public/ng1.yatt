@@ -1,3 +1,4 @@
+<?perl use utf8; ?>
 <yatt:my utf8_text_longer_than_32bytes="あいうえおかきくけこさしすせそたちつてと"/>
 
 Following line should raise error
