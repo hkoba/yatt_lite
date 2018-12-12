@@ -28,7 +28,10 @@ my $client = do {
   my $site = YATT::Lite::WebMVC0::SiteApp->new(
     app_root => $app_root,
     doc_root => "$app_root/public",
-    , (-d "$app_root/ytmpl" ? (app_base => '@ytmpl') : ())
+    (-d "$app_root/ytmpl" ? (app_base => '@ytmpl') : ()),
+    header_charset => 'utf-8',
+    tmpl_encoding => 'utf-8',
+    output_encoding => 'utf-8',
   );
 
   Plack::Test->create($site->to_app);
