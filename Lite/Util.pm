@@ -1049,6 +1049,14 @@ sub trimleft_length {
   substr($_[0], length($_[1]));
 }
 
+sub reencode_malformed_utf8 {
+  my ($str, $fallback_flag) = @_;
+  Encode::_utf8_off($str);
+  my $bytes = Encode::decode_utf8($str, $fallback_flag // Encode::FB_XMLCREF);
+  Encode::_utf8_on($bytes);
+  $bytes;
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #
