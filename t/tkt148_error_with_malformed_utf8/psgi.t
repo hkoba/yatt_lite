@@ -62,8 +62,7 @@ describe 'Truncated (so malformed) UTF-8 error diag from perl', sub {
   it "should be reported without encoding error", sub {
     my $rc = expect(Encode::decode_utf8($res->content))->to_match(qr!\QERROR: Can't use string ("あいうえおかきくけこ&#xE3;&#x81;"...) as a SCALAR ref while "strict refs"!);
     unless ($rc) {
-      diag([is_utf8 => Encode::is_utf8($res->content),
-            FAILED => YATT::Lite::Util::terse_dump($res)]);
+      diag([CONTENT => Encode::decode_utf8($res->content)]);
     }
   };
 };
