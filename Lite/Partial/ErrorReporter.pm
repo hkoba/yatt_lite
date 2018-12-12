@@ -33,7 +33,7 @@ sub error_with_status {
 
 sub make_error {
   my ($self, $depth, $opts) = splice @_, 0, 3;
-  my ($fmt, @args) = @_;
+  my ($fmtOrReason, @args) = @_;
   my ($pkg, $file, $line) = caller($depth);
   my $bt = do {
     my @bt_opts = (ignore_package => [__PACKAGE__]);
@@ -63,12 +63,28 @@ sub make_error {
     last;
   }
 
+  my @error_diag = do {
+    if (@args) {
+      # Errors from YATT can have arguments for sprintf.
+      (format => $fmtOrReason, args => \@args);
+    } else {
+      # (Possibly) errors from perl runtime itself. Should avoid use of sprintf.
+      (reason => do {
+        if (Encode::is_utf8($fmtOrReason) and not utf8::valid($fmtOrReason)) {
+          # Some errors from perl runtime could be trimmed to 32bytes and
+          # it can be malformed utf8.
+          YATT::Lite::Util::reencode_malformed_utf8($fmtOrReason);
+        } else {
+          $fmtOrReason;
+        }
+      });
+    }
+  };
+
   $self->Error->new
     (file => $opts->{file} // $file, line => $opts->{line} // $line
      , @tmplinfo
-     , (@args
-	? (format => $fmt, args => \@args)
-	: (reason => $fmt))
+     , @error_diag
      , backtrace => $bt
      , $opts ? %$opts : ());
 }
