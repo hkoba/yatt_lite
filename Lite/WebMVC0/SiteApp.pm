@@ -863,15 +863,25 @@ Entity script_name => sub {
 };
 
 #
-# :abspath_in_siteapp() - extracts absolute path in siteapp's doc_root.
+# :abspath() - location + file
+#
+Entity abspath => sub {
+  my ($this) = @_;
+  my ConnProp $prop = $CON->prop;
+  ($prop->{cf_location} // '').($prop->{cf_file} // '');
+};
+
+Entity abspath_in_siteapp => sub {shift->entity_abspath};
+
+# :absrequest() - REQUEST_URI - yatt.script_name
 # Note: since this value is derived from REQUEST_URI, which do not contain
 # index.yatt typically, this is not suitable to get physical filename.
-#
-Entity abspath_in_siteapp => sub {
+Entity absrequest => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
   substr($env->{REQUEST_URI}, length $env->{'yatt.script_name'});
 };
+
 
 #========================================
 
