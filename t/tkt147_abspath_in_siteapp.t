@@ -28,7 +28,7 @@ my $CT = ["Content-Type", q{text/html; charset="utf-8"}];
 
 my $cwd = cwd();
 
-describe ":abspath_in_siteapp() in path_translated_mode", sub {
+describe ":abspath() in path_translated_mode", sub {
 
   my $phys_prefix = "$tempdir/t" . ++$testno;
   my $phys_site_path = "$phys_prefix/test/apps/hkoba/foobar/test1";
@@ -66,8 +66,15 @@ END
     $env->{SCRIPT_FILENAME} = "$phys_site_path$boot_script";
     $env->{SCRIPT_NAME} = "$virt_site_prefix$boot_script";
 
-    describe "when page $env->{REQUEST_URI} is requested, :abspath_in_siteapp()", sub {
+    describe "when page $env->{REQUEST_URI} is requested, :abspath()", sub {
       it "should match to abspath in siteapp($location)", sub {
+        expect($site->call($env))->to_be([200, $CT, ["($location)($file)\n"]]);
+      };
+    };
+
+    describe "when request has trailing query_string, :absrequest()", sub {
+      it "should work as expected still", sub {
+        $env->{REQUEST_URI} .= "?foo=bar&xxx=yyy";
         expect($site->call($env))->to_be([200, $CT, ["($location)($file)\n"]]);
       };
     };

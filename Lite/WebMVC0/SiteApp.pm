@@ -819,7 +819,7 @@ Entity is_debug_allowed_ip => sub {
     $self->guess_client_ip($env);
   };
 
-  $self->is_debug_allowed_ip($remote_addr)
+  $remote_addr && $self->is_debug_allowed_ip($remote_addr)
 };
 
 foreach my $name (qw/
@@ -879,7 +879,9 @@ Entity abspath_in_siteapp => sub {shift->entity_abspath};
 Entity absrequest => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
-  substr($env->{REQUEST_URI}, length $env->{'yatt.script_name'});
+  my $url = substr($env->{REQUEST_URI}, length $env->{'yatt.script_name'});
+  $url =~ s{\?.*}{};
+  $url;
 };
 
 
