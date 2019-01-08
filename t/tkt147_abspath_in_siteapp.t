@@ -52,12 +52,12 @@ describe ":abspath_in_siteapp() in path_translated_mode", sub {
     my ($location, $file) = @$test;
 
     MY->mkfile("$real_dir$file", <<'END');
-(&yatt:abspath_in_siteapp();)
+(&yatt:absrequest();)(&yatt:abspath();)
 END
 
     my Env $env = (GET "$virt_site_prefix$location")->to_psgi;
 
-    $env->{PATH_TRANSLATED} = "$phys_site_path/public/index.yatt";
+    $env->{PATH_TRANSLATED} = "$phys_site_path/public$file";
     $env->{REDIRECT_HANDLER} = 'x-psgi-handler';
     $env->{REDIRECT_STATUS} = 200;
     $env->{REDIRECT_URL} = "$virt_site_prefix$file";
@@ -68,7 +68,7 @@ END
 
     describe "when page $env->{REQUEST_URI} is requested, :abspath_in_siteapp()", sub {
       it "should match to abspath in siteapp($location)", sub {
-        expect($site->call($env))->to_be([200, $CT, ["($location)\n"]]);
+        expect($site->call($env))->to_be([200, $CT, ["($location)($file)\n"]]);
       };
     };
   }
