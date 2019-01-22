@@ -711,12 +711,7 @@ sub mount_static {
   (my MY $self, my ($location, $realpath)) = @_;
   my $app = ref $realpath eq 'CODE' ? $realpath
     : $self->psgi_file_app($realpath);
-  $self->mount_psgi
-    ($location, sub {
-       (my Env $env) = @_;
-       local $env->{PATH_INFO} = $self->trimleft_length($env->{PATH_INFO}, $location);
-       $app->($env);
-     });
+  $self->mount_psgi($location, $app);
 }
 
 #========================================
