@@ -150,6 +150,16 @@ sub is_or_like($$;$) {
     };
   }
 
+  {
+    ;;
+    $site->mount_static("/static" => "$rootname.static");
+    test_psgi $site->to_app, sub {
+      my ($cb) = @_;
+      my $res = $cb->(GET "/static/test.yatt");
+      is $res->content, "<?perl die?>\n";
+    };
+  }
+
   my $hello = sub {
     my ($id, $body, $rest) = @_;
     $rest //= "";
