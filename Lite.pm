@@ -746,7 +746,13 @@ sub YATT::Lite::EntNS::entity_mkhidden {
         _hidden_input(escape($name), $v);
       }
     } $CON->multi_param($name);
-  } @_;
+  } do {
+    if (@_) {
+      @_;
+    } else {
+      $CON->param
+    }
+  };
 };
 
 sub _hidden_input {
