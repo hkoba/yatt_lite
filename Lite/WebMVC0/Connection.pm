@@ -350,7 +350,7 @@ sub convert_array_param_psgi {
   $prop->{cf_parameters} = do {
     if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
       my $body = $glob->parse_nested_query([$req->body_parameters->flatten]);
-      my $qs = $glob->parse_nested_query($env->{QUERY_STRING});
+      my $qs = $glob->parse_nested_query([$req->query_parameters->flatten]);
       foreach my $key (keys %$qs) {
 	if (exists $body->{$key}) {
 	  die $glob->error("Attempt to overwrite post param '%s' by qs"
@@ -360,7 +360,7 @@ sub convert_array_param_psgi {
       }
       $body;
     } else {
-      $glob->parse_nested_query($env->{QUERY_STRING});
+      $glob->parse_nested_query([$req->query_parameters->flatten]);
     }
   };
 }
