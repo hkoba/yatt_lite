@@ -18,6 +18,8 @@ use YATT::Lite::MFields
     dir_config_cache
     _site_config_is_examined
 
+    _sigil_type_item
+
     current_user
    /);
 use YATT::Lite::Util qw(globref url_encode nonempty empty rootname lexpand);
@@ -139,6 +141,114 @@ sub multi_param {
   }
 }
 
+#========================================
+
+sub sigil_type_item {
+  my PROP $prop = (my $glob = shift)->prop;
+
+  @{$prop->{_sigil_type_item} // []};
+}
+
+sub collect_request_sigil_by {
+  my ($glob, $cutter, @list) = @_;
+  my %dict;
+  foreach my $name (grep {defined} @list) {
+    my ($sigil, $word) = $name =~ /^([~!])(\1|\w*)$/
+      or next;
+    defined (my $value = $cutter->($name))
+      or next;
+    push @{$dict{$sigil}}, do {
+      if ($sigil eq $word) {
+        $value;
+      } else {
+        $word;
+      }
+    };
+  };
+  \%dict;
+}
+
+sub parse_request_sigil_psgi {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($req) = @_;
+
+
+  my Env $env = $prop->{cf_env};
+
+  $prop->{_sigil_type_item} = do {
+    if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
+      my @bodyParams = $glob->extract_sigil_from_hmv($req->body_parameters);
+      my @queryParams = $glob->extract_sigil_from_hmv($req->query_parameters);
+      if (@bodyParams) {
+        \@bodyParams
+      } else {
+        \@queryParams
+      }
+    } else {
+      [$glob->extract_sigil_from_hmv($req->parameters)];
+    }
+  };
+}
+
+sub extract_sigil_from_hmv {
+  my ($glob, $hmv) = @_;
+
+  my $sigilsDict = $glob->collect_request_sigil_by(
+    sub {
+      my $value = $hmv->{$_[0]};
+      $hmv->remove($_[0]);
+      $value;
+    }, $hmv->keys);
+  $glob->validate_request_sigils_dict($sigilsDict);
+}
+
+sub parse_request_sigil_cgi {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($cgi) = @_;
+  my $sigilsDict = $glob->collect_request_sigil_by(
+    sub {
+      my $value = $cgi->param($_[0]);
+      $cgi->delete($_[0]);
+      $value;
+    }, $cgi->param());
+  $prop->{_sigil_type_item}
+    = [$glob->validate_request_sigils_dict($sigilsDict)];
+}
+
+sub validate_request_sigils_dict {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($sigilsDict) = @_;
+
+  my ($subpage, $action);
+  if (my $names = $sigilsDict->{'~'}) {
+    if (@$names >= 2) {
+      $glob->error("Multiple subpage sigils in request!: %s"
+                     , join(", ", @$names));
+    }
+    $subpage = $names->[0];
+  }
+  if (my $names = $sigilsDict->{'!'}) {
+    if (@$names >= 2) {
+      $glob->error("Multiple action sigils in request!: %s"
+                     , join(", ", @$names));
+    }
+    $action = $names->[0];
+  }
+  if (defined $subpage and defined $action) {
+    # XXX: Reserved for future use.
+    $glob->error("Can't use subpage and action at one time: %s vs %s"
+		 , $subpage, $action);
+  } elsif (defined $subpage) {
+    (page => $subpage);
+  } elsif (defined $action) {
+    (action => $action);
+  } else {
+    ();
+  }
+}
+
+#========================================
+
 sub queryobj {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{cf_parameters} || $prop->{cf_hmv} || $prop->{cf_cgi};
@@ -191,6 +301,16 @@ sub configure_cgi {
   $prop->{cf_cgi} = my $cgi = shift;
   return unless $glob->is_form_content_type($cgi->content_type);
   return if $prop->{cf_parameters};
+
+  #
+  # parse_request_sigil should be called before parse_nested_query.
+  #
+  if ($prop->{cf_is_psgi}) {
+    $glob->parse_request_sigil_psgi($cgi);
+  } else {
+    $glob->parse_request_sigil_cgi($cgi);
+  }
+
   unless ($prop->{cf_no_nested_query}) {
     if ($prop->{cf_is_psgi}) {
       $glob->convert_array_param_psgi($cgi);

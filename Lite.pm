@@ -255,7 +255,7 @@ sub prepare_part_handler {
 
   my $trans = $self->open_trans;
 
-  my $mapped = [$file, my ($type, $item) = $self->parse_request_sigil($con)];
+  my $mapped = [$file, my ($type, $item) = $con->sigil_type_item()];
   if (not $self->{cf_dont_debug_param}
       and -e ".htdebug_param") {
     $self->dump($mapped, [map {[$_ => $con->param($_)]} $con->param]);
@@ -274,48 +274,10 @@ sub prepare_part_handler {
   ($part, $sub, $pkg, \@args);
 }
 
+# XXX: deprecated
 sub parse_request_sigil {
   (my MY $self, my ($con)) = @_;
-  my ($subpage, $action);
-  # XXX: url_param
-  foreach my $name (grep {defined} $con->param()) {
-    my ($sigil, $word) = $name =~ /^([~!])(\1|\w*)$/
-      or next;
-    # If $name in ('~~', '!!'), use value.
-    my $new = $word eq $sigil ? $con->param($name) : $word;
-    # else use $word from ~$word.
-    # Note: $word may eq ''. This is for render_/action_.
-    given ($sigil) {
-      when ('~') {
-	if (defined $subpage) {
-	  $self->error("Duplicate subpage request! %s vs %s"
-		       , $subpage, $new);
-	}
-	$subpage = $new;
-      }
-      when ('!') {
-	if (defined $action) {
-	  $self->error("Duplicate action! %s vs %s"
-		       , $action, $new);
-	}
-	$action = $new;
-      }
-      default {
-	croak "Really?";
-      }
-    }
-  }
-  if (defined $subpage and defined $action) {
-    # XXX: Reserved for future use.
-    $self->error("Can't use subpage and action at one time: %s vs %s"
-		 , $subpage, $action);
-  } elsif (defined $subpage) {
-    (page => $subpage);
-  } elsif (defined $action) {
-    (action => $action);
-  } else {
-    ();
-  }
+  $con->sigil_type_item();
 }
 
 sub cut_ext {
