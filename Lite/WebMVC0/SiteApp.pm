@@ -42,7 +42,7 @@ use YATT::Lite::MFields qw/cf_noheader
 
                            cf_config_dir
                            dirapp_config
-                           cf_use_outer_config_dir
+                           cf_use_sibling_config_dir
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -74,7 +74,7 @@ sub after_new {
   $self->{cf_config_dir} //= do {
     if (not $self->{cf_app_root}) {
       undef;
-    } elsif ($self->{cf_use_outer_config_dir}) {
+    } elsif ($self->{cf_use_sibling_config_dir}) {
       "$self->{cf_app_root}.config.d"
     } else {
       "$self->{cf_app_root}/config"
@@ -772,7 +772,7 @@ sub examine_site_config {
 
   # Examine app.site_config.{yml,xhf} and site_config.{yml,xhf}.
   my ($cf) = (
-    ($self->{cf_use_outer_config_dir}
+    ($self->{cf_use_sibling_config_dir}
        ? $self->find_unique_config_file($self->{cf_config_dir}, "/site_config")
        : ()),
     # Note: $self->{cf_app_rootname} and $self->{cf_app_root} can be undef
