@@ -699,11 +699,17 @@ sub header_charset {
 sub dirapp_config_for {
   (my MY $self, my $yatt_or_app_name) = @_;
 
+  unless ($self->{cf_config_dir}) {
+    Carp::croak "config_dir is empty!";
+  }
+
   my $app_name = do {
-    if (ref $yatt_or_app_name) {
-      $yatt_or_app_name->app_name
+    if (not ref $yatt_or_app_name) {
+      $yatt_or_app_name;
+    } elsif ($self->{cf_use_sibling_config_dir}) {
+      $yatt_or_app_name->rel_app_name;
     } else {
-      $yatt_or_app_name
+      $yatt_or_app_name->app_name
     }
   };
 

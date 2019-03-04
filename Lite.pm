@@ -110,6 +110,18 @@ sub _after_after_new {
   weaken($self->{cf_factory});
 }
 
+sub rel_app_name {
+  (my MY $self) = @_;
+  unless ($SYS) {
+    Carp::croak "rel_app_name() is called without setting \$SYS!";
+  }
+  # XXX: This assumes $dir is somewhere under $app_root tree.
+  my $rel_app_name = substr($self->{cf_dir}, length($SYS->app_root));
+  # Make sure leading / is removed.
+  $rel_app_name =~ s|^/||;
+  $rel_app_name;
+}
+
 # XXX: kludge!
 sub find_neighbor_yatt {
   (my MY $self, my ($dir)) = @_;
