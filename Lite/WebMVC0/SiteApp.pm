@@ -42,6 +42,7 @@ use YATT::Lite::MFields qw/cf_noheader
 
                            cf_config_dir
                            dirapp_config
+                           cf_use_outer_config_dir
 			 /;
 
 use YATT::Lite::Util qw(cached_in split_path catch
@@ -70,8 +71,16 @@ sub after_new {
   $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
   $self->{cf_per_role_docroot_key} ||= $self->default_per_role_docroot_key;
   $self->{cf_default_role} ||= $self->default_default_role;
-  $self->{cf_config_dir} //= "$self->{cf_app_root}/config"
-    if $self->{cf_app_root};
+  $self->{cf_config_dir} //= do {
+    if (not $self->{cf_app_root}) {
+      undef;
+    } elsif ($self->{cf_use_outer_config_dir}) {
+      "$self->{cf_app_root}.config.d"
+    } else {
+      "$self->{cf_app_root}/config"
+    }
+  };
+
   $self->{dirapp_config} = +{};
   $self->{cf_site_config_as_entity} //= $self->default_site_config_as_entity;
 }
@@ -763,6 +772,9 @@ sub examine_site_config {
 
   # Examine app.site_config.{yml,xhf} and site_config.{yml,xhf}.
   my ($cf) = (
+    ($self->{cf_use_outer_config_dir}
+       ? $self->find_unique_config_file($self->{cf_config_dir}, "/site_config")
+       : ()),
     # Note: $self->{cf_app_rootname} and $self->{cf_app_root} can be undef
     # but find_unique_config_file() can safely ignore undef.
     $self->find_unique_config_file($self->{cf_app_rootname}, ".site_config"),
