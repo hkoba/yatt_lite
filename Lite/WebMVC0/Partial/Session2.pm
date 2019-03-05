@@ -41,6 +41,9 @@ use YATT::Lite::Partial
 Entity psgix_session => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
+  unless ($env->{'psgix.session.options'}) {
+    $CON->cget('system')->session_start($env);
+  }
   $env->{'psgix.session'};
 };
 
