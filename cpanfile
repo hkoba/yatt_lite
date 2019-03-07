@@ -23,6 +23,9 @@ requires 'Devel::StackTrace';
 # YATT::Lite::Partial::Gettext
 requires 'Locale::PO';
 
+# For $CON->cookies_in, $CON->set_cookie
+requires 'Cookie::Baker';
+
 # For perl 5.20. Actually, CGI is not required (I hope).
 requires 'CGI';
 requires 'HTML::Entities';

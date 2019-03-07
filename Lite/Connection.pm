@@ -367,8 +367,8 @@ sub cookies_in {
   my Env $env = $prop->{cf_env};
   $prop->{cookies_in} ||= do {
     if (defined $env->{HTTP_COOKIE}) {
-      require CGI::Cookie;
-      CGI::Cookie->parse($env->{HTTP_COOKIE});
+      require Cookie::Baker;
+      Cookie::Baker::crush_cookie($env->{HTTP_COOKIE});
     } else {
       +{};
     }
@@ -379,8 +379,15 @@ sub set_cookie {
   my PROP $prop = (my $glob = shift)->prop;
   if (@_ == 1 and ref $_[0]) {
     my $cookie = shift;
-    my $name = $cookie->name;
-    $prop->{cookies_out}{$name} = $cookie;
+    if (ref $cookie eq 'HASH') {
+      defined (my $name = $cookie->{name}) or do {
+        Carp::croak "set_cookie: name is undef!";
+      };
+      $prop->{cookies_out}{$name} = $cookie;
+    } else {
+      my $name = $cookie->name;
+      $prop->{cookies_out}{$name} = $cookie;
+    }
   } else {
     my $name = shift;
     $prop->{cookies_out}{$name} = $glob->new_cookie($name, @_);
@@ -389,16 +396,20 @@ sub set_cookie {
 
 sub new_cookie {
   my $glob = shift;		# not used.
-  my ($name, $value) = splice @_, 0, 2;
-  require CGI::Cookie;
-  CGI::Cookie->new(-name => $name, -value => $value, @_);
+  my ($name, $value, @opts) = @_;
+  require Cookie::Baker;
+  my $baked = {value => $value};
+  while (my ($k, $v) = splice @opts, 0, 2) {
+    $k =~ s/^-//; # For backward compatibility with CGI::Cookie style options.
+    $baked->{$k} = $v;
+  }
+  Cookie::Baker::bake_cookie($name, $baked);
 }
 
 sub finalize_cookies {
   my PROP $prop = (my $glob = shift)->prop;
   return unless $prop->{cookies_out};
-  $prop->{headers}{'Set-Cookie'} = [map {$_->as_string}
-				    values %{$prop->{cookies_out}}];
+  $prop->{headers}{'Set-Cookie'} = [values %{$prop->{cookies_out}}];
 }
 #========================================
 
