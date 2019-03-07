@@ -53,12 +53,23 @@ Entity psgix_session_options => sub {
   $env->{'psgix.session.options'};
 };
 
+Entity psgix_session_exists => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  defined $env->{'psgix.session.options'}
+    and $env->{'psgix.session.options'}{'id'};
+};
+
 #----------------------------------------
 Entity session_start => sub {
   my ($this, @opts) = @_;
-  my Env $env = $CON->env;
-  $CON->cget('system')->session_start($env, @opts);
+  $CON->cget('system')->session_start($CON, @opts);
   "";
+};
+
+Entity session_state_id => sub {
+  my ($this) = @_;
+  $CON->cget('system')->session_state_extract_id($CON);
 };
 
 #----------------------------------------
@@ -86,13 +97,16 @@ Entity session => sub {
 # Stolen from the top half of Plack::Middleware::Session->call
 #
 sub session_start {
-  (my MY $self, my ($env, @opts)) = @_;
+  (my MY $self, my ($CON, @opts)) = @_;
 
   my $mw = $self->{_session_middleware} or do {
     Carp::croak("Session middleware is not initialized!");
   };
 
-  my ($id, $session) = $mw->get_session($env);
+  my Env $env = $CON->env;
+
+  my $id = $self->session_state_extract_id($CON);
+  my $session; $session = $self->session_store_fetch($CON, $id) if $id;
 
   if ($id && $session) {
     $env->{'psgix.session'} = $session;
@@ -105,6 +119,24 @@ sub session_start {
 
   $env->{'plack.session'}
     = Plack::Util::load_class($self->default_session_class)->new($env);
+}
+
+sub session_state_extract_id {
+  (my MY $self, my $CON) = @_;
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
+  $CON->cookies_in->{$mw->state->session_key};
+}
+
+sub session_store_fetch {
+  (my MY $self, my ($CON, $id)) = @_;
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
+  $mw->store->fetch($id);
 }
 
 #
@@ -171,7 +203,7 @@ sub prepare_app {
   dputs('DONE') if DEBUG >= 3;
 }
 
-sub default_session_state {'Plack::Session::State'}
+sub default_session_state {'Plack::Session::State::Cookie'}
 sub default_session_store {'Plack::Session::Store'}
 
 # From Session::inflate_backend
