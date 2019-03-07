@@ -360,7 +360,7 @@ sub rewind {
 }
 
 #========================================
-# (Possibly obsoleted) Cookie support, based on CGI::Cookie (works under PSGI mode too)
+# Cookie support, based on Cookie::Baker
 
 sub cookies_in {
   my PROP $prop = (my $glob = shift)->prop;
