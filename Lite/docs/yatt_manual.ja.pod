@@ -997,6 +997,8 @@ X<attr>
 =head2 XXX: C<delegate>
 X<delegate>
 
+XXX: C<[delegate -exclude_var]>
+
 =head1 DEFAULT FLAG
 
 =head2 C<|> - C<undef>, C<"">, C<0>
