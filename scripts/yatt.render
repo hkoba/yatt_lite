@@ -37,6 +37,8 @@ $SYS = my $dispatcher = YATT::Lite::Factory->load_factory_offline || do {
       );
 };
 
+$dispatcher->prepare_app;
+
 # [1] Compile all.
 my @command;
 {
