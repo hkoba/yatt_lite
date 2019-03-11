@@ -72,6 +72,10 @@ Entity session_state_id => sub {
   $CON->cget('system')->session_state_extract_id($CON);
 };
 
+Entity session_state_exists => sub {
+  $CON->cget('system')->session_state_exists($CON);
+};
+
 Entity session_change_id => sub {
   my ($this) = @_;
   $CON->cget('system')->session_change_id($CON);
@@ -124,6 +128,11 @@ sub session_start {
 
   $env->{'plack.session'}
     = Plack::Util::load_class($self->default_session_class)->new($env);
+}
+
+sub session_state_exists {
+  (my MY $self, my $CON) = @_;
+  defined $self->session_state_extract_id($CON);
 }
 
 sub session_state_extract_id {
