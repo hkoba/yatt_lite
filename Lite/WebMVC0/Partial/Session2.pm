@@ -72,6 +72,11 @@ Entity session_state_id => sub {
   $CON->cget('system')->session_state_extract_id($CON);
 };
 
+Entity session_change_id => sub {
+  my ($this) = @_;
+  $CON->cget('system')->session_change_id($CON);
+};
+
 #----------------------------------------
 sub default_session_class {'Plack::Session'}
 
@@ -128,6 +133,16 @@ sub session_state_extract_id {
   };
 
   $CON->cookies_in->{$mw->state->session_key};
+}
+
+sub session_change_id {
+  (my MY $self, my $CON) = @_;
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
+  my Env $env = $CON->env;
+  $mw->change_id($env);
 }
 
 sub session_store_fetch {
