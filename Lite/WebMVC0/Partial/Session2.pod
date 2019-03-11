@@ -55,6 +55,11 @@ Explicitly start session. L<psgix_session> calls this automatically.
 =head2 session_state_id
 
 Extract state id from cookie without starting session.
+Returns undef if not exists.
+
+=head2 session_state_exists
+
+Test if session state id exists.
 
 =head2 Raw C<psgix.session> interface
 
