@@ -151,6 +151,8 @@ use YATT::Lite::Breakpoint ();
 
   sub YATT::Lite::Core::Part::reorder_hash_params {
     (my Widget $widget, my ($orig_params)) = @_;
+    return unless $orig_params;
+    return @$orig_params if ref $orig_params eq 'ARRAY';
     my $params = +{%$orig_params};
     my @params;
     foreach my $name (map($_ ? @$_ : (), $widget->{arg_order})) {
@@ -354,6 +356,33 @@ sub synerror {
     }
     # XXX: それとも、 $part から $tmpl が引けるようにするか? weaken して...
     wantarray ? ($part, $tmpl) : $part;
+  }
+
+  sub find_part_renderer {
+    (my MY $self, my ($widgetPath, %opts)) = @_;
+    my $ignore_error = delete $opts{ignore_error};
+
+    my @wpath = ref $widgetPath ? @$widgetPath : split ":", $widgetPath;
+
+    my $part = $self->find_part_from($self->{root}, @wpath ? @wpath : '')
+      or ($ignore_error and return)
+      or croak "No such widget: ".join(":", @wpath);
+
+    my $tmpl = $part->cget('folder');
+
+    my $path = $tmpl->cget('path');
+
+    my $method = "render_".$part->cget('name');
+
+    my $pkg = $self->find_product(perl => $tmpl)
+      or ($ignore_error and return)
+	or croak "Can't compile template file: $path";
+
+    my $sub = $pkg->can($method)
+      or ($ignore_error and return)
+	or croak "Can't extract $method from file: $path";
+
+    ($part, $sub, $pkg);
   }
 
   sub find_part_handler {

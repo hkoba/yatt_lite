@@ -226,9 +226,25 @@ sub render_encoded {
 }
 
 sub render_into {
-  local ($YATT, $CON) = splice @_, 0, 2;
-  $YATT->open_trans->render_into($CON, @_);
-  try_invoke($CON, 'flush_headers');
+  (my MY $self, my ($con, $file, $args)) = @_;
+  local ($YATT, $CON) = ($self, $con);
+  if (ref $file eq 'ARRAY') {
+    # [$file, $type, $item]
+    $self->open_trans->render_into($CON, $file, $args);
+  } else {
+    $self->raw_render_into(
+      $con,
+      YATT::Lite::Util::rootname($file || $self->{cf_index_name}),
+      $args,
+    );
+  }
+  try_invoke($con, 'flush_headers');
+}
+
+sub raw_render_into {
+  (local ($YATT, $CON), my ($file, $args)) = @_;
+  my ($part, $sub, $pkg) = $YATT->open_trans->find_part_renderer($file);
+  $sub->($pkg, $CON, $part->reorder_hash_params($args));
 }
 
 sub find_handler {
@@ -687,6 +703,11 @@ sub default_lang {
 
 #========================================
 # Delegation to the core(Translator, which is useless for non-templating.)
+#
+# Note: these wrappers do not call YATT::Lite::VFS->reset_refresh_mark.
+# This means once templates is compiled, it is not updated even if
+# they are modified. You can avoid this behavior by
+# directly using $YATT->open_trans->xxx instead.
 #========================================
 foreach
   (qw/find_part
