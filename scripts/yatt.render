@@ -7,6 +7,7 @@ use FindBin; BEGIN {do "$FindBin::RealBin/libdir.pl"}
 #----------------------------------------
 
 use CGI;
+use Hash::MultiValue;
 use YATT::Lite::Factory;
 use YATT::Lite::Entities qw(*YATT *CON *SYS);
 use YATT::Lite::Util::CmdLine qw(parse_opts parse_params);
@@ -44,8 +45,9 @@ my @command;
 {
   while (@ARGV) {
     my $file = shift @ARGV;
-    my %param = %common;
-    MY->parse_params(\@ARGV, \%param);
+    my %params = %common;
+    MY->parse_params(\@ARGV, \%params);
+    my $parameters = Hash::MultiValue->new(%params);
 
     my $dir = dirname($dispatcher->rel2abs($file));
     $dir =~ s,/*$,/,;
@@ -61,7 +63,7 @@ my @command;
 
     my ($part, $sub, $pkg) = $trans->find_part_handler(basename($file));
     # XXX: cgi mode.
-    push @command, [$dirhandler, $file, $sub, $pkg, $part, \%param];
+    push @command, [$dirhandler, $file, $sub, $pkg, $part, $parameters];
   }
 }
 
@@ -69,17 +71,20 @@ my @command;
 
 my $nerror;
 foreach my $cmd (@command) {
-  my ($dirhandler, $file, $sub, $this, $part, $params) = @$cmd;
-  my @args = $part->reorder_hash_params($params);
+  my ($dirhandler, $file, $sub, $this, $part, $parameters) = @$cmd;
   local $YATT = $dirhandler;
   local $dirhandler->{cf_at_done} = sub {};
   # $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $CON = $dispatcher->make_connection
     (\*STDOUT
-     , parameters => +{%$params}
-     , cgi => CGI->new(+{%$params})
+     , parameters => $parameters
+     , cgi => CGI->new(+{%$parameters})
      , file => $file, noheader => 1
      , system => $SYS, yatt => $YATT);
+  $CON->parse_request_sigil_hmv($parameters);
+
+  my @args = $part->reorder_hash_params($parameters);
+
   my $err = catch {
     $sub->($this, $CON, @args);
   };
