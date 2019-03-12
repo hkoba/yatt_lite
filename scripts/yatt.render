@@ -53,17 +53,7 @@ my @command;
     $dir =~ s,/*$,/,;
     my $dirhandler = $dispatcher->get_dirhandler($dir)
       or die "Can't find dirhandler for $dir";
-    # XXX: そもそも、ここでの DONE に疑問が.
-    local $dirhandler->{cf_at_done} = sub {
-      # ここで at_done が呼ばれるのは error_handler からだけ。
-      exit;
-    };
-
-    my $trans = $dirhandler->open_trans;
-
-    my ($part, $sub, $pkg) = $trans->find_part_handler(basename($file));
-    # XXX: cgi mode.
-    push @command, [$dirhandler, $file, $sub, $pkg, $part, $parameters];
+    push @command, [$dirhandler, $file, $parameters];
   }
 }
 
@@ -71,22 +61,28 @@ my @command;
 
 my $nerror;
 foreach my $cmd (@command) {
-  my ($dirhandler, $file, $sub, $this, $part, $parameters) = @$cmd;
+  my ($dirhandler, $file, $parameters) = @$cmd;
+
+    # XXX: そもそも、ここでの DONE に疑問が.
+  local $dirhandler->{cf_at_done} = sub {
+    # ここで at_done が呼ばれるのは error_handler からだけ。
+    exit;
+  };
+
   local $YATT = $dirhandler;
   local $dirhandler->{cf_at_done} = sub {};
   # $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $CON = $dispatcher->make_connection
     (\*STDOUT
      , parameters => $parameters
-     , cgi => CGI->new(+{%$parameters})
      , file => $file, noheader => 1
      , system => $SYS, yatt => $YATT);
-  $CON->parse_request_sigil_hmv($parameters);
 
-  my @args = $part->reorder_hash_params($parameters);
+  my ($part, $sub, $this, $args)
+    = $dirhandler->prepare_part_handler($CON, basename($file));
 
   my $err = catch {
-    $sub->($this, $CON, @args);
+    $sub->($this, $CON, @$args);
   };
 
   try_invoke($CON, 'flush_headers');

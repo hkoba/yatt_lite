@@ -192,7 +192,9 @@ sub parse_request_sigil_psgi {
 
 sub parse_request_sigil_hmv {
   my PROP $prop = (my $glob = shift)->prop;
-  my ($hmv) = @_;
+  my ($hmvOrRawHash) = @_;
+  my $hmv = ref $hmvOrRawHash eq 'HASH' ? Hash::MultiValue->new(%$hmvOrRawHash)
+    : $hmvOrRawHash;
   $prop->{_sigil_type_item} = [$glob->extract_sigil_from_hmv($hmv)];
 }
 
@@ -301,6 +303,18 @@ sub delete_param {
 }
 
 #========================================
+
+sub after_create {
+  my PROP $prop = (my $glob = shift)->prop;
+  $glob->SUPER::after_create();
+
+  # If cf_cgi is empty and cf_parameters is given,
+  # request sigils are collected via parse_request_sigil_hmv.
+  #
+  if (not $prop->{cf_cgi} and $prop->{cf_parameters}) {
+    $glob->parse_request_sigil_hmv($prop->{cf_parameters});
+  }
+}
 
 sub configure_cgi {
   my PROP $prop = (my $glob = shift)->prop;
