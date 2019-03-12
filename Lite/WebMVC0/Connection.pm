@@ -175,8 +175,8 @@ sub parse_request_sigil_psgi {
 
   my Env $env = $prop->{cf_env};
 
-  $prop->{_sigil_type_item} = do {
-    if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
+  if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
+    $prop->{_sigil_type_item} = do {
       my @bodyParams = $glob->extract_sigil_from_hmv($req->body_parameters);
       my @queryParams = $glob->extract_sigil_from_hmv($req->query_parameters);
       if (@bodyParams) {
@@ -184,10 +184,16 @@ sub parse_request_sigil_psgi {
       } else {
         \@queryParams
       }
-    } else {
-      [$glob->extract_sigil_from_hmv($req->parameters)];
-    }
-  };
+    };
+  } else {
+    $glob->parse_request_sigil_hmv($req->parameters);
+  }
+}
+
+sub parse_request_sigil_hmv {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($hmv) = @_;
+  $prop->{_sigil_type_item} = [$glob->extract_sigil_from_hmv($hmv)];
 }
 
 sub extract_sigil_from_hmv {
