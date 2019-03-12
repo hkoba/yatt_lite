@@ -206,11 +206,13 @@ sub prepare_app {
     my $class = $self->{cf_session_middleware_class}
       || $self->default_session_middleware_class;
 
+    my $state = ($self->{cf_session_state}
+                    ? $self->create_session_backend(State => $self->{cf_session_state}) : $self->default_session_state->new());
+
     $class->new({app => sub {[200, [], []]}
-                 , ($self->{cf_session_state}
-                    ? (state => $self->create_session_backend(state => $self->{cf_session_state})) : ())
+                 , state => $state
                  , ($self->{cf_session_store}
-                    ? (store => $self->create_session_backend(store => $self->{cf_session_store})) : ())
+                    ? (store => $self->create_session_backend(Store => $self->{cf_session_store})) : ())
                });
   };
 
@@ -229,6 +231,7 @@ sub prepare_app {
 
 sub default_session_state {'Plack::Session::State::Cookie'}
 sub default_session_store {'Plack::Session::Store'}
+sub default_session_class_prefix {'Plack::Session'}
 
 # From Session::inflate_backend
 sub create_session_backend {
@@ -237,17 +240,13 @@ sub create_session_backend {
   # When $spec is not [$backend => @opts], just return it.
   return $spec if defined $spec and ref $spec ne 'ARRAY';
 
-  my $prefix = $self->can("default_session_$kind")->();
-
   my ($backend, @args) = lexpand($spec);
+
+  my $prefix = join("::", $self->default_session_class_prefix, $kind);
 
   my $class = Plack::Util::load_class($backend, $prefix);
 
-  if (my $sub = $self->can("create_session_${kind}_$backend")) {
-    $sub->($self, $class, @args);
-  } else {
-    $class->new(@args);
-  }
+  $class->new(@args);
 }
 
 1;
