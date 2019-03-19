@@ -242,9 +242,9 @@ sub render_into {
 }
 
 sub raw_render_into {
-  (local ($YATT, $CON), my ($file, $args)) = @_;
+  (local ($YATT), my ($con, $file, $args)) = @_;
   my ($part, $sub, $pkg) = $YATT->open_trans->find_part_renderer($file);
-  $sub->($pkg, $CON, $part->reorder_hash_params($args));
+  $sub->($pkg, $con, $part->reorder_hash_params($args));
 }
 
 sub find_handler {
