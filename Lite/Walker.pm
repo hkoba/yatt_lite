@@ -19,6 +19,7 @@ sub walk {
   my $self = delete $opts{factory} or Carp::croak "factory is missing!";
   my $fromList = delete $opts{from} // $self->{cf_doc_root};
   my $nameRe = delete $opts{name_match};
+  my $noSymlink = delete $opts{ignore_symlink};
 
   my ($forWidget) = grep {defined} (delete $opts{widget}, delete $opts{part});
   $forWidget //= sub {
@@ -38,18 +39,26 @@ sub walk {
   my $walk; $walk = sub {
     my ($vfs, $tree, $prefix) = @_;
     $forItem->({tree => $tree, vfs => $vfs});
+    my $path = $tree->cget('path');
+    return if -l $path and $noSymlink;
     if ($tree->can_generate_code) {
       # Template
-      $seen{$tree->cget('path')}++;
+      $seen{$path}++;
       foreach my $part ($tree->list_parts) {
         my $partName = $part->cget('name');
         my @path = (@{$prefix // []}, $partName || ());
         next unless @path;
-        my $wname = join(":", @path);
+        my $wname = do {
+          if (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
+            join(":", @path);
+          } else {
+            $partName;
+          }
+        };
         if ($nameRe and $wname !~ $nameRe) {
           next;
         }
-        $forWidget->({widget => $part, wname => $wname});
+        $forWidget->({part => $part, wname => $wname, kind => $part->{cf_kind}});
       }
     } else {
       # Dir
