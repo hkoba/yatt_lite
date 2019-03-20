@@ -19,6 +19,7 @@ my %prereq
   = ('YATT::Lite::WebMVC0::DBSchema::DBIC' => [qw/DBIx::Class::Schema/]
      , 'YATT::Lite::Test::TestFCGI' => [qw/HTTP::Response/]
      , 'YATT::Lite::WebMVC0::Partial::Session3' => [qw/Session::ExpiryFriendly/]
+     , 'YATT::Lite::Inspector' => [qw/Text::Glob File::AddInc MOP4Import::Declare/]
     );
 
 my %ignore; map ++$ignore{$_}, ();

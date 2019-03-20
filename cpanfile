@@ -37,6 +37,9 @@ recommends 'B::Utils' => '!= 0.26';
 
 recommends 'Text::Glob';
 
+recommends 'File::AddInc';
+recommends 'MOP4Import::Declare';
+
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
 
