@@ -94,6 +94,7 @@ sub clean_path {
 #
 sub emit_ctags {
   (my MY $self, my ($kind, $name, $fileName, $lineNo, $colNo)) = @_;
+  # XXX: symbolKind mapping.
   printf "%s:%d:%d:%s!%s\n", $self->clean_path($fileName)
     , $lineNo, $colNo // 1, $kind, $name;
 }
