@@ -1,6 +1,6 @@
 package YATT::Lite::LanguageServer::Protocol;
 use strict;
-use warnings;
+use warnings qw(FATAL all NONFATAL misc);
 
 # Import 'import' to make types exportable.
 use MOP4Import::Declare::Type -as_base;

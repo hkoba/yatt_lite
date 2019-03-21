@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 package YATT::Lite::LanguageServer::Generic;
 use strict;
-use warnings;
+use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>

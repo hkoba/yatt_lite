@@ -15,11 +15,17 @@ my $dist_root = "$FindBin::Bin/..";
 
 use File::Find;
 
+my @M4I = qw/File::AddInc MOP4Import::Declare/;
+
 my %prereq
   = ('YATT::Lite::WebMVC0::DBSchema::DBIC' => [qw/DBIx::Class::Schema/]
      , 'YATT::Lite::Test::TestFCGI' => [qw/HTTP::Response/]
      , 'YATT::Lite::WebMVC0::Partial::Session3' => [qw/Session::ExpiryFriendly/]
-     , 'YATT::Lite::Inspector' => [qw/Text::Glob File::AddInc MOP4Import::Declare/]
+
+     , 'YATT::Lite::Inspector' => [@M4I, qw/Text::Glob/]
+     , 'YATT::Lite::LanguageServer' => [@M4I]
+     , 'YATT::Lite::LanguageServer::Generic' => [@M4I]
+     , 'YATT::Lite::LanguageServer::Protocol' => [@M4I]
     );
 
 my %ignore; map ++$ignore{$_}, ();
