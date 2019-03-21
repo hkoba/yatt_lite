@@ -58,7 +58,7 @@ sub walk {
         if ($nameRe and $wname !~ $nameRe) {
           next;
         }
-        $forWidget->({part => $part, wname => $wname, kind => $part->{cf_kind}});
+        $forWidget->({part => $part, name => $wname, kind => $part->{cf_kind}});
       }
     } else {
       # Dir

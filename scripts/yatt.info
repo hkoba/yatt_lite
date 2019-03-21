@@ -159,7 +159,7 @@ sub cmd_list_widgets {
     ) : ()),
     widget => sub {
       my ($args) = @_;
-      print ":$args->{wname}\n";
+      print ":$args->{name}\n";
     },
     item => sub {
       my ($args) = @_;

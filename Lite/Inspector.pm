@@ -64,7 +64,7 @@ sub cmd_ctags_symbols {
       my Part $widget = $args->{part};
       my Template $tmpl = $widget->{cf_folder};
       my $path = $tmpl->{cf_path};
-      $self->emit_ctags($args->{kind}, $args->{wname}, $path, $widget->{cf_startln});
+      $self->emit_ctags($args->{kind}, $args->{name}, $path, $widget->{cf_startln});
     },
     item => sub {
       my ($args) = @_;
