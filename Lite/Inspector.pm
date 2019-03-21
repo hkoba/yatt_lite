@@ -7,7 +7,7 @@ use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
        qw/_SITE _app_root/,
      [dir => doc => "starting directory to search app.psgi upward"],
-     [emit_relative_path => doc => "emit \$app_root-relative path"],
+     [emit_absolute_path => doc => "emit absolute path instead of \$app_root-relative"],
      [site_class => doc => "class name for SiteApp (to load app.psgi)", default => "YATT::Lite::WebMVC0::SiteApp"],
      [ignore_symlink => doc => "ignore symlinked templates"],
      [detail => doc => "show argument details"],
@@ -84,7 +84,7 @@ sub cmd_ctags_symbols {
 
 sub clean_path {
   (my MY $self, my $path) = @_;
-  if ($self->{emit_relative_path}) {
+  if (not $self->{emit_absolute_path}) {
     $path =~ s,^$self->{_app_root}/*,,;
   }
   $path;
@@ -100,12 +100,38 @@ sub emit_ctags {
     , $lineNo, $colNo // 1, $kind, $name;
 }
 
+#========================================
+
 sub cmd_list_widgets {
   (my MY $self, my @args) = @_;
   $self->configure($self->parse_opts(\@args));
-  my ($widgetNameGlob, $from) = @args;
+  my $widgetNameGlob = shift @args;
+  my %opts = @args == 1 ? %{$args[0]} : @args;
+  $opts{kind} = ['widget', 'page'];
+  $self->cmd_list_parts($widgetNameGlob, \%opts);
+}
 
-  my $cwdOrFileList = $self->list_target_dirs($from);
+sub cmd_list_actions {
+  (my MY $self, my @args) = @_;
+  $self->configure($self->parse_opts(\@args));
+  my $widgetNameGlob = shift @args;
+  my %opts = @args == 1 ? %{$args[0]} : @args;
+  $opts{kind} = ['action'];
+  $self->cmd_list_parts($widgetNameGlob, \%opts);
+}
+
+sub cmd_list_parts {
+  (my MY $self, my @args) = @_;
+  $self->configure($self->parse_opts(\@args));
+  my $widgetNameGlob = shift @args;
+  my %opts = @args == 1 ? %{$args[0]} : @args;
+  my $searchFrom = delete $opts{from};
+  my $onlyKind = delete $opts{kind};
+  if (%opts) {
+    Carp::croak "Unknown options: ". join(", ", sort keys %opts);
+  }
+
+  my $cwdOrFileList = $self->list_target_dirs($searchFrom);
 
   walk(
     factory => $self->{_SITE},
@@ -117,13 +143,17 @@ sub cmd_list_widgets {
     widget => sub {
       my ($found) = @_;
       my Part $widget = delete $found->{part};
+      if ($onlyKind and not grep {$found->{kind} eq $_} lexpand($onlyKind)) {
+        # XXX: 
+        return;
+      }
       my Template $tmpl = $widget->{cf_folder};
       my $path = $tmpl->{cf_path};
       my $args = $self->{detail}
         ? [$self->list_part_args_internal($widget)]
         : $widget->{arg_order};
       my @result = ((map {$_ => $found->{$_}} sort keys %$found)
-                      , , args => $args);
+                      , args => $args, path => $self->clean_path($path));
       # Emit as an array for readability in normal mode.
       my $result = $self->{detail} ? +{@result} : \@result;
       $self->cli_output($result);
