@@ -15,7 +15,8 @@ use MOP4Import::Base::CLI_JSON -as_base
 use MOP4Import::Types
   (Header => [[fields => qw/Content-Length/]]);
 
-use YATT::Lite::LanguageServer::Protocol;
+use YATT::Lite::LanguageServer::Protocol
+  qw/Request Response Error/;
 
 # Most logics are shamelessly stolen from Perl::LanguageServer
 
@@ -23,7 +24,7 @@ use Coro ;
 use Coro::AIO ;
 use AnyEvent;
 
-use Scope::Guard;
+use Scope::Guard qw/guard/;
 
 #========================================
 
@@ -45,17 +46,30 @@ sub call_method {
 sub translate_method_name {
   (my MY $self, my $method) = @_;
   $method =~ s,/,__,g;
-  $method =~ s,^\$,__ext__,;
+  $method =~ s,^\$,__ext,;
   $method;
 }
 
-sub server {
-  (my MY $self) = @_;
-  my %request; # XXX: should be an instance member?
-  while (1) {
-    my $reqRaw = $self->read_raw_request;
-    my Request $request = JSON::decode_json($reqRaw);
+sub cmd_server {
+  (my MY $self, my @args) = @_;
+  my $cv = AnyEvent::CondVar->new;
 
+  async {
+    $self->mainloop(@args);
+    $cv->send;
+  };
+
+  $cv->recv;
+  "";
+}
+
+sub mainloop {
+  (my MY $self) = @_;
+  my %request; # XXX: should this be an instance member?
+  while (1) {
+    my $reqRaw = $self->read_raw_request
+      or return;
+    my Request $request = JSON::decode_json($reqRaw);
     if (my $id = $request->{id}) {
       $request{$id} = async {
         my $guard = guard {
@@ -66,6 +80,8 @@ sub server {
     } else {
       # XXX: notification
     }
+
+    cede;
   }
 }
 
@@ -89,16 +105,16 @@ sub process_request {
 
 sub emit_response {
   (my MY $self, my Response $response, my $id) = @_;
-  $response->{id} = $id;
+  $response->{id} = $id if defined $id;
   $response->{jsonrpc} = $self->{jsonrpc_version};
 
-  my $wdata = $self->make_response($self->cli_encode_json($response));
+  my $wdata = $self->format_response($self->make_response($response, $id));
 
   my $guard = $self->{_out_semaphore}->guard;
   my $sum = 0;
   use bytes;
-  while ($sum < length $wdata) {
-    my $cnt = aio_write $self->{write_fd}, undef, undef, $wdata, $sum;
+  while ((my $diff = length($wdata) - $sum) > 0) {
+    my $cnt = aio_write $self->{write_fd}, undef, $diff, $wdata, $sum;
     die "write_error ($!)" if $cnt <= 0;
     $sum += $cnt;
   }
@@ -107,7 +123,15 @@ sub emit_response {
 }
 
 sub make_response {
-  (my MY $self, my $outdata) = @_;
+  (my MY $self, my Response $response, my $id) = @_;
+  $response->{id} = $id if defined $id;
+  $response->{jsonrpc} = $self->{jsonrpc_version};
+  $response;
+}
+
+sub format_response {
+  (my MY $self, my Response $response) = @_;
+  my $outdata = $self->cli_encode_json($response);
   if (Encode::is_utf8($outdata)) {
     Encode::_utf8_off($outdata);
   }
@@ -122,8 +146,10 @@ sub make_response {
 
 sub read_raw_request {
   (my MY $self) = @_;
-  my Header $header = $self->read_header;
-  my $len = $header->{'Content-Length'};
+  my Header $header = $self->read_header
+    or return;
+  defined (my $len = $header->{'Content-Length'})
+    or return;
   while ((my $diff = $len - length $self->{_buffer}) > 0) {
     print STDERR "# start aio read.\n" unless $self->{quiet};
     my $cnt = aio_read $self->{read_fd}, undef, $diff
@@ -131,7 +157,8 @@ sub read_raw_request {
     print STDERR "# end aio read. cnt=$cnt\n" unless $self->{quiet};
     return if $cnt == 0;
   }
-  substr($self->{_buffer}, 0, $len, '');
+  my $data = substr($self->{_buffer}, 0, $len, '');
+  wantarray ? ($data, $header) : $data;
 }
 
 sub read_header {
