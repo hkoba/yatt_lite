@@ -10,6 +10,7 @@ use MOP4Import::Base::CLI_JSON -as_base
      [emit_relative_path => doc => "emit \$app_root-relative path"],
      [site_class => doc => "class name for SiteApp (to load app.psgi)", default => "YATT::Lite::WebMVC0::SiteApp"],
      [ignore_symlink => doc => "ignore symlinked templates"],
+     [detail => doc => "show argument details"],
    ];
 
 use MOP4Import::Util qw/lexpand/;
@@ -114,12 +115,22 @@ sub cmd_list_widgets {
       (name_match => Text::Glob::glob_to_regex($widgetNameGlob))
     ) : ()),
     widget => sub {
-      my ($args) = @_;
-      print ":$args->{wname}\n";
+      my ($found) = @_;
+      my Part $widget = delete $found->{part};
+      my Template $tmpl = $widget->{cf_folder};
+      my $path = $tmpl->{cf_path};
+      my $args = $self->{detail}
+        ? [$self->list_part_args_internal($widget)]
+        : $widget->{arg_order};
+      my @result = ((map {$_ => $found->{$_}} sort keys %$found)
+                      , , args => $args);
+      # Emit as an array for readability in normal mode.
+      my $result = $self->{detail} ? +{@result} : \@result;
+      $self->cli_output($result);
     },
     item => sub {
       my ($args) = @_;
-      print "# ", $args->{tree}->cget('path'), "\n";
+      # print "# ", $args->{tree}->cget('path'), "\n";
     },
   );
 
@@ -128,6 +139,21 @@ sub cmd_list_widgets {
   # $yatt->get_trans->find_file('index')->list_parts
 }
 
+sub list_part_args_internal {
+  (my MY $self, my Part $part, my $nameRe) = @_;
+  my @result;
+  my @fields = YATT::Lite::VarTypes->list_field_names;
+  foreach my $argName ($part->{arg_order} ? @{$part->{arg_order}} : ()) {
+    next if $nameRe and not $argName =~ $nameRe;
+    my $argObj = $part->{arg_dict}{$argName};
+    push @result, my $spec = {};
+    foreach my $i (0 .. $#fields) {
+      my $val = $argObj->[$i];
+      $spec->{$fields[$i]} = $val;
+    }
+  }
+  @result;
+}
 
 #========================================
 
