@@ -41,6 +41,10 @@ BEGIN {
   # our @EXPORT = our @EXPORT_OK;
 }
 
+sub list_field_names {
+  our @fields;
+}
+
 {
   # new(\@type
   #    , $varname, $argno
