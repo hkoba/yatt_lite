@@ -6,7 +6,7 @@ use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base;
 
 use MOP4Import::Types
-  (Annotated => [[fields => qw/comment body/]
+  (Annotated => [[fields => qw/comment body deprecated/]
                  , [subtypes =>
                     Decl => [[fields => qw/kind name exported/]
                              , [subtypes =>
@@ -21,7 +21,7 @@ sub parse_statement_list {
     my ($declarator, $comment, $bodyTokList) = @$_;
     #
     my Decl $decl = $self->parse_declarator($declarator);
-    $decl->{comment} = $comment;
+    $self->parse_comment_into_decl($decl, $comment);
 
     if (my $sub = $self->can("parse_$decl->{kind}_declbody")) {
       $decl->{body} = \ my @body;
@@ -40,6 +40,15 @@ sub parse_statement_list {
   } @$statementTokList;
 }
 
+sub parse_comment_into_decl {
+  (my MY $self, my Decl $decl, my $comment) = @_;
+  return unless defined $comment;
+  if ($comment =~ s/\@deprecated(?:\s+(?<by>\S[^\n]*))?//) {
+    $decl->{deprecated} = $+{by};
+  }
+  $decl->{comment} = $comment;
+}
+
 sub parse_interface_declbody {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   my @result;
@@ -48,20 +57,20 @@ sub parse_interface_declbody {
       . MOP4Import::Util::terse_dump($decl). ": "
       . MOP4Import::Util::terse_dump($bodyTokList);
   }
-  my Annotated $ast;
+  my Annotated $ast = +{};
   while (@$bodyTokList and $bodyTokList->[0] ne '}') {
     my $tok = shift @$bodyTokList;
     if ($tok eq '{') {
       $ast->{body} = [$self->parse_interface_declbody($decl, $bodyTokList)];
     } elsif ($tok =~ m{^/\*\*}) {
-      $ast->{comment} = $self->tokenize_comment_block($tok);
+      $self->parse_comment_into_decl($ast, $self->tokenize_comment_block($tok));
     } elsif ($tok =~ s{^(?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x) {
       # slot
       $ast->{body} = my $slotDef = [$+{slotName}];
       unshift @$bodyTokList, $tok if $tok =~ /\S/;
       push @$slotDef, $self->parse_typeunion($decl, $bodyTokList);
       push @result, defined $ast->{comment} ? $ast : $ast->{body};
-      undef $ast;
+      $ast = +{};
     } else {
       die "HOEHOE? "
         .MOP4Import::Util::terse_dump($bodyTokList, [decl => $decl]);
@@ -80,7 +89,7 @@ sub parse_interface_declbody {
   # Found after TextDocumentClientCapabilities.completion.completionItemKind
   $self->match_token(',', $bodyTokList);
 
-  if (defined $ast) {
+  if (%$ast) {
     Carp::croak "Something went wrong for declbody of "
       . MOP4Import::Util::terse_dump($decl). ": "
       . MOP4Import::Util::terse_dump($ast);
