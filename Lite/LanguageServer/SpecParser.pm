@@ -69,6 +69,53 @@ sub parse_comment_into_decl {
   $decl->{comment} = $comment;
 }
 
+sub parse_type_declbody {
+  (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+  $self->parse_typeunion($decl, $bodyTokList);
+}
+
+sub parse_namespace_declbody {
+  (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+  $self->parse_declbody(
+    $decl, $bodyTokList, [], sub {
+      (my $tok, my Annotated $ast) = @_;
+      # Currently only something like `export const Error = 1;` are supported.
+      my ($name, $type, $value)
+        = $tok =~ m{^export\s+const\s+(\w+)\s*
+                    (?: : \s* ([^\s=]+) \s*)?
+                    (?: = \s* (\S+))?
+                 }x or do {
+                   $self->tokerror(["Unsupported namespace statement: ", $tok
+                                    , decl => $decl], $bodyTokList);
+                 };
+      # enum assignment.
+      $ast->{body} = [$name, $value];
+      $self->match_token(';', $bodyTokList);
+      return defined $ast->{comment} ? $ast : $ast->{body};
+    }
+  );
+}
+
+sub parse_enum_declbody {
+  (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+  $self->parse_declbody(
+    $decl, $bodyTokList, [], sub {
+      (my $tok, my Annotated $ast) = @_;
+      $tok =~ s{^(?<ident>\w+)\s*=\s*}{}x
+        or return;
+      # enum assignment.
+      $ast->{body} = [$+{ident}, $tok];
+      # ',' may not exist
+      $self->match_token(',', $bodyTokList);
+      return defined $ast->{comment} ? $ast : $ast->{body};
+    }
+  );
+}
+
+sub parse_class_declbody {
+  shift->parse_interface_declbody(@_);
+}
+
 sub parse_interface_declbody {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
 
@@ -78,8 +125,10 @@ sub parse_interface_declbody {
   $self->parse_declbody(
     $decl, $bodyTokList, [';', ','], sub {
       (my $tok, my Annotated $ast) = @_;
-      $tok =~ s{^(?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x
+      $tok =~ s{^(?:(?<ro>readonly)\s+)?
+                (?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x
         or return;
+      # Drop 'readonly' for now.
       # slot
       $ast->{body} = my $slotDef = [$+{slotName}];
       unshift @$bodyTokList, $tok if $tok =~ /\S/;
@@ -99,9 +148,11 @@ sub parse_declbody {
   while (@$bodyTokList and $bodyTokList->[0] ne '}') {
     my $tok = shift @$bodyTokList;
     if ($tok eq '{') {
-      $ast->{body} = [$self->parse_interface_declbody($decl, $bodyTokList)];
+      $ast->{body} = [$self->parse_declbody($decl, $bodyTokList, $terminators, $elemParser)];
     } elsif ($tok =~ m{^/\*\*}) {
       $self->parse_comment_into_decl($ast, $self->tokenize_comment_block($tok));
+    } elsif ($tok =~ m{^//}) {
+      # Just ignored.
     } elsif (my $elem = $elemParser->($tok, $ast)) {
       push @result, $elem;
       $ast = +{};
@@ -159,9 +210,17 @@ sub parse_typeconj {
     my $expr = [\ my @union];
     until ($self->match_token(')', $bodyTokList)) {
       do {
-        push @union, $self->parse_typeconj($decl, $bodyTokList);
+        my $e = $self->parse_typeconj($decl, $bodyTokList);
+        if ($self->match_token('&', $bodyTokList)) {
+          $e = ['&', $e];
+          do {
+            push @$e, $self->parse_typeconj($decl, $bodyTokList);
+          } while ($self->match_token('&', $bodyTokList));
+        }
+        push @union, $e;
       } while ($self->match_token('|', $bodyTokList));
     }
+    # For ()[] <-- this.
     if (my $bracket = $self->match_token('[]', $bodyTokList)) {
       push @$expr, $bracket;
     }
@@ -212,7 +271,7 @@ sub tokenize_declbody {
   (my MY $self, my $declString) = @_;
   [map {s/\s*\z//; $_}
    grep {/\S/}
-   split m{(; | [{}(),\|] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
+   split m{(; | [{}(),\|&] | /\*\*\n(?:.*?)\*/ | //[^\n]*\n) \s*}xs, $declString];
 }
 
 sub tokenize_comment_block {
@@ -244,7 +303,9 @@ sub extract_statement_list {
   my @result;
   foreach (@$codeList) {
     while (m{
-              \G(?<comment>$commentRe)?
+              \G
+              \s*
+              (?<comment>$commentRe)?
               (?<decl>(?:$wordRe\s+)+)
               (?: (?<body> $groupRe )
                 | = \s* (?<type>
