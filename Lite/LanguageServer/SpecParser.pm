@@ -40,15 +40,24 @@ sub parse_statement_list {
         push @body, $sub->($self, $decl, $bodyTokList);
       }
       if (@$bodyTokList) {
-        Carp::croak "Invalid trailing token(s) for declbody of "
-          . MOP4Import::Util::terse_dump($decl). ": "
-          . MOP4Import::Util::terse_dump($bodyTokList);
+        $self->tokerror(["Invalid trailing token(s) for declbody of ", $decl]
+                        , $bodyTokList);
       }
+    } else {
+      print STDERR "# Not yet supported: "
+        . MOP4Import::Util::terse_dump($_), "\n"
+        unless $self->{quiet};
     }
 
     $decl;
 
   } @$statementTokList;
+}
+
+sub tokerror {
+  (my MY $self, my $diag, my $bodyTokList) = @_;
+  Carp::croak MOP4Import::Util::terse_dump($diag)
+    . ": " . MOP4Import::Util::terse_dump($bodyTokList);
 }
 
 sub parse_comment_into_decl {
@@ -64,9 +73,7 @@ sub parse_interface_declbody {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   my @result;
   unless ($self->match_token('{', $bodyTokList)) {
-    Carp::croak "Invalid leading token for declbody of "
-      . MOP4Import::Util::terse_dump($decl). ": "
-      . MOP4Import::Util::terse_dump($bodyTokList);
+    $self->tokerror(["Invalid leading token for declbody of ", $decl], $bodyTokList);
   }
   my Annotated $ast = +{};
   while (@$bodyTokList and $bodyTokList->[0] ne '}') {
@@ -88,9 +95,7 @@ sub parse_interface_declbody {
     }
   }
   unless ($self->match_token('}', $bodyTokList)) {
-    Carp::croak "Invalid closing token for declbody of "
-      . MOP4Import::Util::terse_dump($decl). ": "
-      . MOP4Import::Util::terse_dump($bodyTokList);
+    $self->tokerror(["Invalid closing token for declbody of ", $decl], $bodyTokList);
   }
 
   # optional
@@ -101,9 +106,7 @@ sub parse_interface_declbody {
   $self->match_token(',', $bodyTokList);
 
   if (%$ast) {
-    Carp::croak "Something went wrong for declbody of "
-      . MOP4Import::Util::terse_dump($decl). ": "
-      . MOP4Import::Util::terse_dump($ast);
+    $self->tokerror(["Something went wrong for declbody of ", $decl], $bodyTokList);
   }
   @result;
 }
@@ -157,7 +160,8 @@ sub parse_typeconj {
 }
 
 sub parse_declarator {
-  (my MY $self, my $declTok) = @_;
+  (my MY $self, my $declTokIn) = @_;
+  my $declTok = [@$declTokIn];
   my Decl $decl = {};
   if ($self->match_token(export => $declTok)) {
     $decl->{exported} = 1;
