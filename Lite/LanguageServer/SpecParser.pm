@@ -6,10 +6,14 @@ use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base;
 
 use MOP4Import::Types
-  (Decl => [[fields => qw/kind name body exported comment/]
-            , [subtypes =>
-               Interface => [[fields => qw/extends/]]
-             ]]);
+  (Annotated => [[fields => qw/comment body/]
+                 , [subtypes =>
+                    Decl => [[fields => qw/kind name exported/]
+                             , [subtypes =>
+                                Interface => [[fields => qw/extends/]]
+                              ]]
+                  ]]
+ );
 
 sub parse_statement_list {
   (my MY $self, my $statementTokList) = @_;
@@ -44,27 +48,23 @@ sub parse_interface_declbody {
       . MOP4Import::Util::terse_dump($decl). ": "
       . MOP4Import::Util::terse_dump($bodyTokList);
   }
-  my $current;
+  my Annotated $ast;
   while (@$bodyTokList and $bodyTokList->[0] ne '}') {
     my $tok = shift @$bodyTokList;
     if ($tok eq '{') {
-      $current->[0] = [$self->parse_interface_declbody($decl, $bodyTokList)];
+      $ast->{body} = [$self->parse_interface_declbody($decl, $bodyTokList)];
     } elsif ($tok =~ m{^/\*\*}) {
-      $current->[1] = $self->tokenize_comment_block($tok);
+      $ast->{comment} = $self->tokenize_comment_block($tok);
     } elsif ($tok =~ s{^(?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x) {
       # slot
-      $current->[0] = my $slotDef = [$+{slotName}];
+      $ast->{body} = my $slotDef = [$+{slotName}];
       unshift @$bodyTokList, $tok if $tok =~ /\S/;
       push @$slotDef, $self->parse_typeunion($decl, $bodyTokList);
-      unless ($self->match_token(';', $bodyTokList)) {
-        Carp::croak "Can't find slot terminator ';' for declbody of "
-          . MOP4Import::Util::terse_dump($decl). ": "
-          . MOP4Import::Util::terse_dump($bodyTokList);
-      }
-      push @result, $current;
-      undef $current;
+      push @result, defined $ast->{comment} ? $ast : $ast->{body};
+      undef $ast;
     } else {
-      die "HOEHE";
+      die "HOEHOE? "
+        .MOP4Import::Util::terse_dump($bodyTokList, [decl => $decl]);
     }
   }
   unless ($self->match_token('}', $bodyTokList)) {
@@ -72,10 +72,18 @@ sub parse_interface_declbody {
       . MOP4Import::Util::terse_dump($decl). ": "
       . MOP4Import::Util::terse_dump($bodyTokList);
   }
-  if (defined $current) {
+
+  # optional
+  $self->match_token(';', $bodyTokList);
+
+  # I'm not sure why this.
+  # Found after TextDocumentClientCapabilities.completion.completionItemKind
+  $self->match_token(',', $bodyTokList);
+
+  if (defined $ast) {
     Carp::croak "Something went wrong for declbody of "
       . MOP4Import::Util::terse_dump($decl). ": "
-      . MOP4Import::Util::terse_dump($current);
+      . MOP4Import::Util::terse_dump($ast);
   }
   @result;
 }
@@ -90,6 +98,9 @@ sub parse_typeunion {
       push @union, $self->parse_interface_declbody($decl, $bodyTokList);
     } else {
       push @union, $self->parse_typeconj($decl, $bodyTokList);
+      if ($self->match_token(';', $bodyTokList)) {
+        last;
+      }
     }
     if (not $self->match_token('|', $bodyTokList)) {
       last;
@@ -191,8 +202,8 @@ sub extract_statement_list {
   (my MY $self, my ($codeList)) = @_;
   local $_;
   my $wordRe = qr{[^\s{}=\|]+};
-  my $groupRe = qr{( \{ (?: (?> [^{}]+) | (?-1) )* \} )}x;
   my $commentRe = qr{/\*\*\n(?:.*?)\*/\n?}sx;
+  my $groupRe = qr{( \{ (?: (?> [^{}/]+) | $commentRe | /[^\*] | (?-1) )* \} )}x;
   my $typeElemRe = qr{$wordRe | $groupRe}sx;
   my @result;
   foreach (@$codeList) {
