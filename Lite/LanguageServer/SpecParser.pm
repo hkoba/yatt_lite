@@ -6,10 +6,124 @@ use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base;
 
 use MOP4Import::Types
-  (Decl => [[fields => qw/kind name body exported/]
+  (Decl => [[fields => qw/kind name body exported comment/]
             , [subtypes =>
                Interface => [[fields => qw/extends/]]
              ]]);
+
+sub parse_statement_list {
+  (my MY $self, my $statementTokList) = @_;
+  map {
+    my ($declarator, $comment, $bodyTokList) = @$_;
+    #
+    my Decl $decl = $self->parse_declarator($declarator);
+    $decl->{comment} = $comment;
+
+    if (my $sub = $self->can("parse_$decl->{kind}_declbody")) {
+      $decl->{body} = \ my @body;
+      while (@$bodyTokList) {
+        push @body, $sub->($self, $decl, $bodyTokList);
+      }
+      if (@$bodyTokList) {
+        Carp::croak "Invalid trailing token(s) for declbody of "
+          . MOP4Import::Util::terse_dump($decl). ": "
+          . MOP4Import::Util::terse_dump($bodyTokList);
+      }
+    }
+
+    $decl;
+
+  } @$statementTokList;
+}
+
+sub parse_interface_declbody {
+  (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+  my @result;
+  unless ($self->match_token('{', $bodyTokList)) {
+    Carp::croak "Invalid leading token for declbody of "
+      . MOP4Import::Util::terse_dump($decl). ": "
+      . MOP4Import::Util::terse_dump($bodyTokList);
+  }
+  my $current;
+  while (@$bodyTokList and $bodyTokList->[0] ne '}') {
+    my $tok = shift @$bodyTokList;
+    if ($tok eq '{') {
+      $current->[0] = [$self->parse_interface_declbody($decl, $bodyTokList)];
+    } elsif ($tok =~ m{^/\*\*}) {
+      $current->[1] = $self->tokenize_comment_block($tok);
+    } elsif ($tok =~ s{^(?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x) {
+      # slot
+      $current->[0] = my $slotDef = [$+{slotName}];
+      unshift @$bodyTokList, $tok if $tok =~ /\S/;
+      push @$slotDef, $self->parse_typeunion($decl, $bodyTokList);
+      unless ($self->match_token(';', $bodyTokList)) {
+        Carp::croak "Can't find slot terminator ';' for declbody of "
+          . MOP4Import::Util::terse_dump($decl). ": "
+          . MOP4Import::Util::terse_dump($bodyTokList);
+      }
+      push @result, $current;
+      undef $current;
+    } else {
+      die "HOEHE";
+    }
+  }
+  unless ($self->match_token('}', $bodyTokList)) {
+    Carp::croak "Invalid closing token for declbody of "
+      . MOP4Import::Util::terse_dump($decl). ": "
+      . MOP4Import::Util::terse_dump($bodyTokList);
+  }
+  if (defined $current) {
+    Carp::croak "Something went wrong for declbody of "
+      . MOP4Import::Util::terse_dump($decl). ": "
+      . MOP4Import::Util::terse_dump($current);
+  }
+  @result;
+}
+
+# typeunion -> typeconj -> typeunion
+
+sub parse_typeunion {
+  (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+  my @union;
+  while (@$bodyTokList and $bodyTokList->[0] ne ';') {
+    if ($bodyTokList->[0] eq '{') {
+      push @union, $self->parse_interface_declbody($decl, $bodyTokList);
+    } else {
+      push @union, $self->parse_typeconj($decl, $bodyTokList);
+    }
+    if (not $self->match_token('|', $bodyTokList)) {
+      last;
+    }
+  }
+  @union;
+}
+
+#
+# parse conjunctive? type expression.
+#
+sub parse_typeconj {
+  (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+  if (my ($ident, $bracket) = $bodyTokList->[0] =~ /^(\w+(?:<[^>]+>)?)(\[\])?\z/) {
+    shift @$bodyTokList;
+    return defined $bracket ? [$ident, $bracket] : $ident;
+  } elsif (my ($string) = $bodyTokList->[0] =~ /^('[^']*' | "[^"]*" )\z/x) {
+    shift @$bodyTokList;
+    return [constant => $string];
+  } elsif ($self->match_token('(', $bodyTokList)) {
+    my $expr = [\ my @union];
+    until ($self->match_token(')', $bodyTokList)) {
+      do {
+        push @union, $self->parse_typeconj($decl, $bodyTokList);
+      } while ($self->match_token('|', $bodyTokList));
+    }
+    if (my $bracket = $self->match_token('[]', $bodyTokList)) {
+      push @$expr, $bracket;
+    }
+    return $expr;
+  } else {
+    die "Really? ".MOP4Import::Util::terse_dump($bodyTokList, [decl => $decl]);
+  }
+}
 
 sub parse_declarator {
   (my MY $self, my $declTok) = @_;
@@ -51,7 +165,7 @@ sub tokenize_declbody {
   (my MY $self, my $declString) = @_;
   [map {s/\s*\z//; $_}
    grep {/\S/}
-   split m{(; | [{}\|] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
+   split m{(; | [{}()\|] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
 }
 
 sub tokenize_comment_block {
