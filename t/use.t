@@ -27,6 +27,7 @@ my %prereq
      , 'YATT::Lite::LanguageServer::Generic' => [@M4I]
      , 'YATT::Lite::LanguageServer::Protocol' => [@M4I]
      , 'YATT::Lite::LanguageServer::SpecParser' => [@M4I]
+     , 'YATT::Lite::LanguageServer::Spec2Types' => [@M4I]
     );
 
 my %ignore; map ++$ignore{$_}, ();
