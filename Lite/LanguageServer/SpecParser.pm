@@ -17,7 +17,9 @@ sub tokenize_statement_list {
 
 sub tokenize_declbody {
   (my MY $self, my $declString) = @_;
-  [grep {/\S/} split m{(; | [{}] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
+  [map {s/\s*\z//; $_}
+   grep {/\S/}
+   split m{(; | [{}\|] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
 }
 
 sub tokenize_comment_block {
@@ -42,17 +44,23 @@ sub tokenize_declarator {
 sub extract_statement_list {
   (my MY $self, my ($codeList)) = @_;
   local $_;
-  my $wordRe = qr{[^\s{}]+};
+  my $wordRe = qr{[^\s{}=\|]+};
   my $groupRe = qr{( \{ (?: (?> [^{}]+) | (?-1) )* \} )}x;
   my $commentRe = qr{/\*\*\n(?:.*?)\*/\n?}sx;
+  my $typeElemRe = qr{$wordRe | $groupRe}sx;
   my @result;
   foreach (@$codeList) {
     while (m{
               \G(?<comment>$commentRe)?
               (?<decl>(?:$wordRe\s+)+)
-              (?<body> $groupRe )
+              (?: (?<body> $groupRe )
+                | = \s* (?<type>
+                    $typeElemRe \s*(?: \| \s*$typeElemRe)*
+                  )
+                  \s*;
+              )
           }sgx) {
-      push @result, [$+{decl}, $+{comment}, $+{body}];
+      push @result, [$+{decl}, $+{comment}, $+{body} // $+{type}];
     }
   }
   @result;
