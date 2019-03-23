@@ -4,6 +4,8 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base;
+use utf8;
+use open qw/:std :locale/;
 
 use MOP4Import::Types
   (Annotated => [[fields => qw/comment body deprecated/]
