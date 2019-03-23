@@ -5,6 +5,38 @@ use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base;
 
+use MOP4Import::Types
+  (Decl => [[fields => qw/kind name body exported/]
+            , [subtypes =>
+               Interface => [[fields => qw/extends/]]
+             ]]);
+
+sub parse_declarator {
+  (my MY $self, my $declTok) = @_;
+  my Decl $decl = {};
+  if ($self->match_token(export => $declTok)) {
+    $decl->{exported} = 1;
+  }
+  $decl->{kind} = shift @$declTok;
+  $decl->{name} = shift @$declTok;
+  if ($decl->{kind} eq 'interface') {
+    if ($self->match_token(extends => $declTok)) {
+      my Interface $if = $decl;
+      $if->{extends} = shift @$declTok;
+    }
+  }
+  $decl;
+}
+
+sub match_token {
+  (my MY $self, my ($tokString, $tokList)) = @_;
+  if (@$tokList and $tokList->[0] eq $tokString) {
+    shift @$tokList;
+  }
+}
+
+#----------------------------------------
+
 sub tokenize_statement_list {
   (my MY $self, my $statementList) = @_;
   map {
