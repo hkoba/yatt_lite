@@ -5,6 +5,40 @@ use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base;
 
+sub tokenize_statement_list {
+  (my MY $self, my $statementList) = @_;
+  map {
+    my ($declarator, $comment, $body) = @$_;
+    [$self->tokenize_declarator($declarator)
+     , $self->tokenize_comment_block($comment)
+     , $self->tokenize_declbody($body)];
+  } @$statementList;
+}
+
+sub tokenize_declbody {
+  (my MY $self, my $declString) = @_;
+  [grep {/\S/} split m{(; | [{}] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
+}
+
+sub tokenize_comment_block {
+  (my MY $self, my $commentString) = @_;
+  return undef unless defined $commentString;
+  unless ($commentString =~ s,^\s*/\*\*\n,,s) {
+    Carp::croak "Comment doesn't start with /**\\n: '$commentString";
+  }
+  unless ($commentString =~ s,\*/\n?\z,,s) {
+    Carp::croak "Comment doesn't end with */: '$commentString";
+  }
+  $commentString =~ s/^\s+\*\ //mg;
+  $commentString =~ s/\s+\z//;
+  $commentString;
+}
+
+sub tokenize_declarator {
+  (my MY $self, my $declString) = @_;
+  [split " ", $declString];
+}
+
 sub extract_statement_list {
   (my MY $self, my ($codeList)) = @_;
   local $_;
