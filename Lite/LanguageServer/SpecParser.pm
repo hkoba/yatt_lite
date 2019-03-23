@@ -71,6 +71,26 @@ sub parse_comment_into_decl {
 
 sub parse_interface_declbody {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
+
+  # I'm not sure why this requires ',' too.
+  # Found after TextDocumentClientCapabilities.completion.completionItemKind
+
+  $self->parse_declbody(
+    $decl, $bodyTokList, [';', ','], sub {
+      (my $tok, my Annotated $ast) = @_;
+      $tok =~ s{^(?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x
+        or return;
+      # slot
+      $ast->{body} = my $slotDef = [$+{slotName}];
+      unshift @$bodyTokList, $tok if $tok =~ /\S/;
+      push @$slotDef, $self->parse_typeunion($decl, $bodyTokList);
+      return defined $ast->{comment} ? $ast : $ast->{body};
+    }
+  );
+}
+
+sub parse_declbody {
+  (my MY $self, my Decl $decl, my ($bodyTokList, $terminators, $elemParser)) = @_;
   my @result;
   unless ($self->match_token('{', $bodyTokList)) {
     $self->tokerror(["Invalid leading token for declbody of ", $decl], $bodyTokList);
@@ -82,12 +102,8 @@ sub parse_interface_declbody {
       $ast->{body} = [$self->parse_interface_declbody($decl, $bodyTokList)];
     } elsif ($tok =~ m{^/\*\*}) {
       $self->parse_comment_into_decl($ast, $self->tokenize_comment_block($tok));
-    } elsif ($tok =~ s{^(?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x) {
-      # slot
-      $ast->{body} = my $slotDef = [$+{slotName}];
-      unshift @$bodyTokList, $tok if $tok =~ /\S/;
-      push @$slotDef, $self->parse_typeunion($decl, $bodyTokList);
-      push @result, defined $ast->{comment} ? $ast : $ast->{body};
+    } elsif (my $elem = $elemParser->($tok, $ast)) {
+      push @result, $elem;
       $ast = +{};
     } else {
       die "HOEHOE? "
@@ -98,12 +114,8 @@ sub parse_interface_declbody {
     $self->tokerror(["Invalid closing token for declbody of ", $decl], $bodyTokList);
   }
 
-  # optional
-  $self->match_token(';', $bodyTokList);
-
-  # I'm not sure why this.
-  # Found after TextDocumentClientCapabilities.completion.completionItemKind
-  $self->match_token(',', $bodyTokList);
+  # trailing terminators after '}' is eaten here.
+  $self->match_token($_, $bodyTokList) for @$terminators;
 
   if (%$ast) {
     $self->tokerror(["Something went wrong for declbody of ", $decl], $bodyTokList);
@@ -200,7 +212,7 @@ sub tokenize_declbody {
   (my MY $self, my $declString) = @_;
   [map {s/\s*\z//; $_}
    grep {/\S/}
-   split m{(; | [{}()\|] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
+   split m{(; | [{}(),\|] | /\*\*\n(?:.*?)\*/) \s*}xs, $declString];
 }
 
 sub tokenize_comment_block {
