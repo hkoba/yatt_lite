@@ -15,6 +15,17 @@ use MOP4Import::Types
                   ]]
  );
 
+sub parse_files {
+  (my MY $self, my @files) = @_;
+  $self->parse_statement_list(
+    [$self->tokenize_statement_list(
+      [$self->extract_statement_list(
+        [$self->extract_codeblock(typescript => @files)]
+      )]
+    )]
+  );
+}
+
 sub parse_statement_list {
   (my MY $self, my $statementTokList) = @_;
   map {
