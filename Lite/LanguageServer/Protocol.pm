@@ -14,15 +14,9 @@ use MOP4Import::Types
               ]],
    Error => [[fields => qw/code message data/]],
 
-   CancelParams => [[fields => qw/id/]],
-   Position => [[fields => qw/line character/]],
-   Range => [[fields => qw/start end/]],
-   Location => [[fields => qw/uri range/]],
-   LocationLink => [[fields => qw/originSectionRange targetUri targetRange targetSelectionRange/]],
+   #==BEGIN_GENERATED
+   #==END_GENERATED
 
-   SignatureHelp => [[fields => qw/signatures activeSignature activeParameter/]],
-   SignatureInformation => [[fields => qw/label documentation parameters/]],
-   ParameterInformation => [[fields => qw/label documentation/]],
   );
 
 
