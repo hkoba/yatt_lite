@@ -7,13 +7,15 @@ use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
      [with_field_docs => doc => "generate field documents too"],
    ]
-  , [output_format => indented => sub {
+  , [output_format => pairlist => sub {
     my ($self, $outFH, @args) = @_;
     require Data::Dumper;
     foreach my $list (@args) {
-      foreach my $item (@$list) {
-        print $outFH Data::Dumper->new([$item])->Indent(1)->Terse(1)
-          ->Dump =~ s/\n\z/,\n/r;
+      my @list = @$list;
+      while (my ($k, $v) = splice @list, 0, 2) {
+        my $vd = Data::Dumper->new([$v])->Indent(1)->Terse(1)->Dump;
+        $vd =~ s/\n\z//;
+        print $outFH MOP4Import::Util::terse_dump($k), " => $vd,\n";
       }
     }
   }];
