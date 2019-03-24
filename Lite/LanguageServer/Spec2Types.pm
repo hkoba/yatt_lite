@@ -15,6 +15,23 @@ use MOP4Import::Base::CLI_JSON -as_base
 use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/
   , [as => 'SpecParser'];
 
+# % parser=./Lite/LanguageServer/SpecParser.pm
+# % ./Lite/LanguageServer/Spec2Types.pm --output=indented make_typespec_from  "$(
+# $parser extract_codeblock typescript $specFn|
+# $parser cli_xargs_json extract_statement_list|
+# grep -v 'interface ParameterInformation'|
+# $parser cli_xargs_json --slurp tokenize_statement_list|
+# $parser --flatten=0 cli_xargs_json --slurp parse_statement_list
+# )" Message
+# 'Message'
+# [
+#   [
+#     'fields',
+#     'jsonrpc'
+#   ]
+# ]
+
+
 sub make_typespec_from {
   (my MY $self, my ($typeDictOrArrayOrFile, @names)) = @_;
   my $typeDict = do {
