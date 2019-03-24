@@ -46,7 +46,38 @@ sub make_typedefs_from {
 }
 
 use MOP4Import::Types
-  CollectedItem => [[fields => qw/name spec fields dependency/]];
+  CollectedItem => [[fields => qw/name spec fields extends dependency/]];
+
+sub reorder_collected_specs {
+  (my MY $self, my ($collectedDict)) = @_;
+  my (@result, %seen, $lastKeys);
+  $lastKeys = keys %$collectedDict;
+  while (keys %$collectedDict) {
+    my @ready = grep {
+      my CollectedItem $item = $collectedDict->{$_};
+      not $item->{extends}
+        or $seen{$item->{extends}};
+    } keys %$collectedDict;
+    push @result, map {
+      delete $collectedDict->{$seen{$_} = $_};
+    } @ready;
+    if ($lastKeys == keys %$collectedDict) {
+      die "OOPS:". join(",", keys %$collectedDict);
+    }
+    $lastKeys = keys %$collectedDict;
+  }
+  @result;
+}
+
+sub collect_spec_from {
+  (my MY $self, my ($specDictOrArrayOrFile, @names)) = @_;
+  my $specDict = $self->specdict_from($specDictOrArrayOrFile);
+  my $collectedDict = {};
+  foreach my $name (@names) {
+    $self->spec_dependency_of($name, $specDict, $collectedDict);
+  }
+  $collectedDict;
+}
 
 sub spec_dependency_of {
   (my MY $self, my ($declOrName, $specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
@@ -68,7 +99,8 @@ sub spec_dependency_of__interface {
   if (my $nm = $decl->{extends}) {
     my Decl $super = $specDict->{$nm}
       or Carp::croak "Unknown base type for $decl->{name}: $nm";
-    $from->{dependency}{$nm} = $self->intern_collected_item_in($collectedDict, $super, $opts);
+    $from->{extends} = $self->intern_collected_item_in($collectedDict, $super, $opts);
+    $from->{dependency}{$nm} = $from->{extends};
   }
   foreach my Annotated $slot (@{$decl->{body}}) {
     my $slotDesc = ref $slot eq 'HASH' ? $slot->{body} : $slot;
@@ -129,7 +161,7 @@ sub specdict_from {
   }
 }
 
-sub spec_of__interface {
+sub typedef_of__interface {
   (my MY $self, my Interface $if, my $specDict) = @_;
   # Type is not used currently.
   my @spec = [fields => map {
