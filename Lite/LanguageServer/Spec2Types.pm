@@ -171,9 +171,15 @@ sub extract_spec_from {
 sub specdict_from {
   (my MY $self, my ($specDictOrArrayOrFile)) = @_;
   if (not ref $specDictOrArrayOrFile) {
-    $self->gather_by_name(
-      $self->SpecParser->new->parse_files($specDictOrArrayOrFile)
-    );
+    my @decls = do {
+      if ($specDictOrArrayOrFile =~ /\.md\z/) {
+        $self->SpecParser->new->parse_files($specDictOrArrayOrFile)
+      } else {
+        # $self->cli_read_file__json($specDictOrArrayOrFile);
+        $self->cli_slurp_xargs_json($specDictOrArrayOrFile);
+      }
+    };
+    $self->gather_by_name(@decls);
   } elsif (ref $specDictOrArrayOrFile eq 'ARRAY') {
     $self->gather_by_name(
       @$specDictOrArrayOrFile
