@@ -214,7 +214,12 @@ sub specdict_from {
 sub typedefs_of_collected_item {
   (my MY $self, my CollectedItem $item, my $seen) = @_;
   $seen->{$item->{name}}++;
+
   # Type is not used currently.
+
+  # If item has no fields, no need to generate field specs.
+  return unless $item->{fields};
+
   my @defs = ([fields => @{$item->{fields}}]);
   if ($item->{subtypes}) {
     push @defs, [subtypes => map {
