@@ -65,11 +65,11 @@ sub reorder_collected_items {
   my (@result, %seen, $lastKeys);
   $lastKeys = keys %$collectedDict;
   while (keys %$collectedDict) {
-    my @ready = grep {
+    my @ready = sort(grep {
       my CollectedItem $item = $collectedDict->{$_};
       not $item->{parent}
         or $seen{$item->{parent}};
-    } keys %$collectedDict;
+    } keys %$collectedDict);
     push @result, map {
       delete $collectedDict->{$seen{$_} = $_};
     } @ready;
