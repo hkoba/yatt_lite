@@ -15,6 +15,127 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
+'CompletionOptions' => [
+  [
+    'fields',
+    'resolveProvider',
+    'triggerCharacters',
+  ],
+],
+'ExecuteCommandOptions' => [
+  [
+    'fields',
+    'commands',
+  ],
+],
+'CodeLensOptions' => [
+  [
+    'fields',
+    'resolveProvider',
+  ],
+],
+'ServerCapabilities' => [
+  [
+    'fields',
+    'textDocumentSync',
+    'hoverProvider',
+    'completionProvider',
+    'signatureHelpProvider',
+    'definitionProvider',
+    'typeDefinitionProvider',
+    'implementationProvider',
+    'referencesProvider',
+    'documentHighlightProvider',
+    'documentSymbolProvider',
+    'workspaceSymbolProvider',
+    'codeActionProvider',
+    'codeLensProvider',
+    'documentFormattingProvider',
+    'documentRangeFormattingProvider',
+    'documentOnTypeFormattingProvider',
+    'renameProvider',
+    'documentLinkProvider',
+    'colorProvider',
+    'foldingRangeProvider',
+    'executeCommandProvider',
+    'workspace',
+    'experimental',
+  ],
+],
+'RenameOptions' => [
+  [
+    'fields',
+    'prepareProvider',
+  ],
+],
+'DocumentOnTypeFormattingOptions' => [
+  [
+    'fields',
+    'firstTriggerCharacter',
+    'moreTriggerCharacter',
+  ],
+],
+'SignatureHelpOptions' => [
+  [
+    'fields',
+    'triggerCharacters',
+  ],
+],
+'CodeActionOptions' => [
+  [
+    'fields',
+    'codeActionKinds',
+  ],
+],
+'WorkspaceClientCapabilities' => [
+  [
+    'fields',
+    'applyEdit',
+    'workspaceEdit',
+    'didChangeConfiguration',
+    'didChangeWatchedFiles',
+    'symbol',
+    'executeCommand',
+    'workspaceFolders',
+    'configuration',
+  ],
+],
+'ClientCapabilities' => [
+  [
+    'fields',
+    'workspace',
+    'textDocument',
+    'experimental',
+  ],
+],
+'TextDocumentSyncOptions' => [
+  [
+    'fields',
+    'openClose',
+    'change',
+    'willSave',
+    'willSaveWaitUntil',
+    'save',
+  ],
+],
+'DocumentLinkOptions' => [
+  [
+    'fields',
+    'resolveProvider',
+  ],
+],
+'InitializeResult' => [
+  [
+    'fields',
+    'capabilities',
+  ],
+],
+'SaveOptions' => [
+  [
+    'fields',
+    'includeText',
+  ],
+],
 'InitializeParams' => [
   [
     'fields',
@@ -50,27 +171,6 @@ use MOP4Import::Types
     'rename',
     'publishDiagnostics',
     'foldingRange',
-  ],
-],
-'WorkspaceClientCapabilities' => [
-  [
-    'fields',
-    'applyEdit',
-    'workspaceEdit',
-    'didChangeConfiguration',
-    'didChangeWatchedFiles',
-    'symbol',
-    'executeCommand',
-    'workspaceFolders',
-    'configuration',
-  ],
-],
-'ClientCapabilities' => [
-  [
-    'fields',
-    'workspace',
-    'textDocument',
-    'experimental',
   ],
 ],
 
