@@ -23,6 +23,44 @@ use MOP4Import::Types
     'experimental',
   ],
 ],
+'CodeActionOptions' => [
+  [
+    'fields',
+    'codeActionKinds',
+  ],
+],
+'CodeLensOptions' => [
+  [
+    'fields',
+    'resolveProvider',
+  ],
+],
+'CompletionOptions' => [
+  [
+    'fields',
+    'resolveProvider',
+    'triggerCharacters',
+  ],
+],
+'DocumentLinkOptions' => [
+  [
+    'fields',
+    'resolveProvider',
+  ],
+],
+'DocumentOnTypeFormattingOptions' => [
+  [
+    'fields',
+    'firstTriggerCharacter',
+    'moreTriggerCharacter',
+  ],
+],
+'ExecuteCommandOptions' => [
+  [
+    'fields',
+    'commands',
+  ],
+],
 'InitializeParams' => [
   [
     'fields',
@@ -34,21 +72,10 @@ use MOP4Import::Types
     'workspaceFolders',
   ],
 ],
-'TextDocumentSyncOptions' => [
+'InitializeResult' => [
   [
     'fields',
-    'openClose',
-    'change',
-    'willSave',
-    'willSaveWaitUntil',
-    'save',
-  ],
-],
-'CompletionOptions' => [
-  [
-    'fields',
-    'resolveProvider',
-    'triggerCharacters',
+    'capabilities',
   ],
 ],
 'Location' => [
@@ -58,22 +85,30 @@ use MOP4Import::Types
     'range',
   ],
 ],
+'Position' => [
+  [
+    'fields',
+    'line',
+    'character',
+  ],
+],
+'Range' => [
+  [
+    'fields',
+    'start',
+    'end',
+  ],
+],
 'RenameOptions' => [
   [
     'fields',
     'prepareProvider',
   ],
 ],
-'DocumentLinkOptions' => [
+'SaveOptions' => [
   [
     'fields',
-    'resolveProvider',
-  ],
-],
-'CodeLensOptions' => [
-  [
-    'fields',
-    'resolveProvider',
+    'includeText',
   ],
 ],
 'ServerCapabilities' => [
@@ -102,32 +137,6 @@ use MOP4Import::Types
     'executeCommandProvider',
     'workspace',
     'experimental',
-  ],
-],
-'InitializeResult' => [
-  [
-    'fields',
-    'capabilities',
-  ],
-],
-'DocumentOnTypeFormattingOptions' => [
-  [
-    'fields',
-    'firstTriggerCharacter',
-    'moreTriggerCharacter',
-  ],
-],
-'Range' => [
-  [
-    'fields',
-    'start',
-    'end',
-  ],
-],
-'CodeActionOptions' => [
-  [
-    'fields',
-    'codeActionKinds',
   ],
 ],
 'SignatureHelpOptions' => [
@@ -162,17 +171,10 @@ use MOP4Import::Types
     'foldingRange',
   ],
 ],
-'Position' => [
+'TextDocumentIdentifier' => [
   [
     'fields',
-    'line',
-    'character',
-  ],
-],
-'ExecuteCommandOptions' => [
-  [
-    'fields',
-    'commands',
+    'uri',
   ],
 ],
 'TextDocumentPositionParams' => [
@@ -182,10 +184,14 @@ use MOP4Import::Types
     'position',
   ],
 ],
-'SaveOptions' => [
+'TextDocumentSyncOptions' => [
   [
     'fields',
-    'includeText',
+    'openClose',
+    'change',
+    'willSave',
+    'willSaveWaitUntil',
+    'save',
   ],
 ],
 'WorkspaceClientCapabilities' => [
@@ -199,12 +205,6 @@ use MOP4Import::Types
     'executeCommand',
     'workspaceFolders',
     'configuration',
-  ],
-],
-'TextDocumentIdentifier' => [
-  [
-    'fields',
-    'uri',
   ],
 ],
 
