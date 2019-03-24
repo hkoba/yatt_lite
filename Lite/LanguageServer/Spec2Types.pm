@@ -34,25 +34,36 @@ use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/
 
 sub make_typespec_from {
   (my MY $self, my ($typeDictOrArrayOrFile, @names)) = @_;
-  my $typeDict = do {
-    if (not ref $typeDictOrArrayOrFile) {
-      $self->gather_interfaces(
-        $self->SpecParser->new->parse_files($typeDictOrArrayOrFile)
-      );
-    } elsif (ref $typeDictOrArrayOrFile eq 'ARRAY') {
-      $self->gather_interfaces(
-        @$typeDictOrArrayOrFile
-      );
-    } elsif (ref $typeDictOrArrayOrFile eq 'HASH') {
-      $typeDictOrArrayOrFile;
-    } else {
-      Carp::croak "Unsupported typeDict: "
-        . MOP4Import::Util::terse_dump($typeDictOrArrayOrFile);
-    }
-  };
+  my $typeDict = $self->typedict_from($typeDictOrArrayOrFile);
   map {
     $self->interface2typespec($typeDict->{$_}, $typeDict);
   } @names;
+}
+
+sub extract_interface_from {
+  (my MY $self, my ($typeDictOrArrayOrFile, @names)) = @_;
+  my $typeDict = $self->typedict_from($typeDictOrArrayOrFile);
+  map {
+    $typeDict->{$_}
+  } @names;
+}
+
+sub typedict_from {
+  (my MY $self, my ($typeDictOrArrayOrFile)) = @_;
+  if (not ref $typeDictOrArrayOrFile) {
+    $self->gather_interfaces(
+      $self->SpecParser->new->parse_files($typeDictOrArrayOrFile)
+    );
+  } elsif (ref $typeDictOrArrayOrFile eq 'ARRAY') {
+    $self->gather_interfaces(
+      @$typeDictOrArrayOrFile
+    );
+  } elsif (ref $typeDictOrArrayOrFile eq 'HASH') {
+    $typeDictOrArrayOrFile;
+  } else {
+    Carp::croak "Unsupported typeDict: "
+      . MOP4Import::Util::terse_dump($typeDictOrArrayOrFile);
+  }
 }
 
 sub interface2typespec {
