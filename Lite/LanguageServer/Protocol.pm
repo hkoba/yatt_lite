@@ -15,6 +15,65 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
+'InitializeParams' => [
+  [
+    'fields',
+    'processId',
+    'rootUri',
+    'initializationOptions',
+    'capabilities',
+    'trace',
+    'workspaceFolders',
+  ],
+],
+'TextDocumentClientCapabilities' => [
+  [
+    'fields',
+    'synchronization',
+    'completion',
+    'hover',
+    'signatureHelp',
+    'references',
+    'documentHighlight',
+    'documentSymbol',
+    'formatting',
+    'rangeFormatting',
+    'onTypeFormatting',
+    'declaration',
+    'definition',
+    'typeDefinition',
+    'implementation',
+    'codeAction',
+    'codeLens',
+    'documentLink',
+    'colorProvider',
+    'rename',
+    'publishDiagnostics',
+    'foldingRange',
+  ],
+],
+'WorkspaceClientCapabilities' => [
+  [
+    'fields',
+    'applyEdit',
+    'workspaceEdit',
+    'didChangeConfiguration',
+    'didChangeWatchedFiles',
+    'symbol',
+    'executeCommand',
+    'workspaceFolders',
+    'configuration',
+  ],
+],
+'ClientCapabilities' => [
+  [
+    'fields',
+    'workspace',
+    'textDocument',
+    'experimental',
+  ],
+],
+
    #==END_GENERATED
 
   );
