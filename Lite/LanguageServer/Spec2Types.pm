@@ -3,7 +3,14 @@ package YATT::Lite::LanguageServer::Spec2Types;
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
-use MOP4Import::Base::CLI_JSON -as_base;
+use MOP4Import::Base::CLI_JSON -as_base
+  , [output_format => indented => sub {
+    my ($self, $outFH, @items) = @_;
+    require Data::Dumper;
+    foreach my $item (@items) {
+      print $outFH Data::Dumper->new($item)->Indent(1)->Terse(1)->Dump, "\n";
+    }
+  }];
 
 use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/;
 
