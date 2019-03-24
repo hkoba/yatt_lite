@@ -17,6 +17,20 @@ use MOP4Import::Types
                   ]]
  );
 
+# SpecParser.pm --flatten extract_codeblock typescript specification.md|
+# SpecParser.pm cli_xargs_json --slurp extract_statement_list|
+# grep -v 'interface ParameterInformation'|
+# SpecParser.pm cli_xargs_json --slurp tokenize_statement_list|
+# SpecParser.pm --flatten=0 cli_xargs_json --slurp parse_statement_list |
+# jq .
+
+# SpecParser.pm extract_codeblock typescript specification.md|
+# SpecParser.pm cli_xargs_json extract_statement_list|
+# grep -v 'interface ParameterInformation'|
+# SpecParser.pm cli_xargs_json --slurp tokenize_statement_list|
+# SpecParser.pm cli_xargs_json --slurp parse_statement_list |
+# jq --slurp .
+
 sub parse_files {
   (my MY $self, my @files) = @_;
   $self->parse_statement_list(
@@ -280,10 +294,12 @@ sub tokenize_comment_block {
   (my MY $self, my $commentString) = @_;
   return undef unless defined $commentString;
   unless ($commentString =~ s,^\s*/\*\*\n,,s) {
-    Carp::croak "Comment doesn't start with /**\\n: '$commentString";
+    Carp::croak "Comment doesn't start with /**\\n: "
+      . MOP4Import::Util::terse_dump($commentString);
   }
   unless ($commentString =~ s,\*/\n?\z,,s) {
-    Carp::croak "Comment doesn't end with */: '$commentString";
+    Carp::croak "Comment doesn't end with */: "
+      . MOP4Import::Util::terse_dump($commentString);
   }
   $commentString =~ s/^\s+\*\ //mg;
   $commentString =~ s/\s+\z//;
