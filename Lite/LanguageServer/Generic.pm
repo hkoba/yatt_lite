@@ -73,8 +73,10 @@ sub mainloop {
   (my MY $self) = @_;
   my %request; # XXX: should this be an instance member?
   while (1) {
-    my $reqRaw = $self->read_raw_request
-      or return;
+    my $reqRaw = $self->read_raw_request or do {
+      print STDERR "# empty request, skipped\n" unless $self->{quiet};
+      return;
+    };
     my Request $request = JSON::decode_json($reqRaw);
     if (my $id = $request->{id}) {
       $request{$id} = async {
