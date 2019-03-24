@@ -13,7 +13,8 @@ use MOP4Import::Base::CLI_JSON -as_base
     foreach my $list (@args) {
       my @list = @$list;
       while (my ($k, $v) = splice @list, 0, 2) {
-        my $vd = Data::Dumper->new([$v])->Indent(1)->Terse(1)->Dump;
+        my $vd = Data::Dumper->new([$v])->Indent(1)->Terse(1)
+          ->Trailingcomma(1)->Dump;
         $vd =~ s/\n\z//;
         print $outFH MOP4Import::Util::terse_dump($k), " => $vd,\n";
       }
@@ -96,8 +97,11 @@ sub spec_dependency_of {
   $collectedDict //= {};
   my $specDict = $self->specdict_from($specDictOrArrayOrFile);
   my Decl $decl = ref $declOrName ? $declOrName : $specDict->{$declOrName};
+  unless (defined $decl) {
+    Carp::croak "No such type: ". MOP4Import::Util::terse_dump($declOrName);
+  }
   my $sub = $self->can("spec_dependency_of__$decl->{kind}") or do {
-    print STDERR "Not yet supported find spec_dependency: $decl->{kind}"
+    print STDERR "Skipped: not yet supported in spec_dependency_of(): $decl->{kind}"
       . MOP4Import::Util::terse_dump($decl), "\n" unless $self->{quiet};
     return;
   };
