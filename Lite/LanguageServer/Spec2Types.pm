@@ -16,7 +16,7 @@ use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/
   , [as => 'SpecParser'];
 
 # % parser=./Lite/LanguageServer/SpecParser.pm
-# % ./Lite/LanguageServer/Spec2Types.pm --output=indented make_typespec_from  "$(
+# % ./Lite/LanguageServer/Spec2Types.pm --output=indented make_spec_from  "$(
 # $parser extract_codeblock typescript $specFn|
 # $parser cli_xargs_json extract_statement_list|
 # grep -v 'interface ParameterInformation'|
@@ -32,42 +32,47 @@ use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/
 # ]
 
 
-sub make_typespec_from {
-  (my MY $self, my ($typeDictOrArrayOrFile, @names)) = @_;
-  my $typeDict = $self->typedict_from($typeDictOrArrayOrFile);
+sub make_typedefs_from {
+  (my MY $self, my ($specDictOrArrayOrFile, @names)) = @_;
+  my $specDict = $self->specdict_from($specDictOrArrayOrFile);
   map {
-    $self->interface2typespec($typeDict->{$_}, $typeDict);
+    my Decl $decl = $specDict->{$_};
+    if (my $sub = $self->can("spec_of__$decl->{kind}")) {
+      $sub->($self, $decl, $specDict);
+    } else {
+      ();
+    }
   } @names;
 }
 
-sub extract_interface_from {
-  (my MY $self, my ($typeDictOrArrayOrFile, @names)) = @_;
-  my $typeDict = $self->typedict_from($typeDictOrArrayOrFile);
+sub extract_spec_from {
+  (my MY $self, my ($specDictOrArrayOrFile, @names)) = @_;
+  my $specDict = $self->specdict_from($specDictOrArrayOrFile);
   map {
-    $typeDict->{$_}
+    $specDict->{$_}
   } @names;
 }
 
-sub typedict_from {
-  (my MY $self, my ($typeDictOrArrayOrFile)) = @_;
-  if (not ref $typeDictOrArrayOrFile) {
-    $self->gather_interfaces(
-      $self->SpecParser->new->parse_files($typeDictOrArrayOrFile)
+sub specdict_from {
+  (my MY $self, my ($specDictOrArrayOrFile)) = @_;
+  if (not ref $specDictOrArrayOrFile) {
+    $self->gather_by_name(
+      $self->SpecParser->new->parse_files($specDictOrArrayOrFile)
     );
-  } elsif (ref $typeDictOrArrayOrFile eq 'ARRAY') {
-    $self->gather_interfaces(
-      @$typeDictOrArrayOrFile
+  } elsif (ref $specDictOrArrayOrFile eq 'ARRAY') {
+    $self->gather_by_name(
+      @$specDictOrArrayOrFile
     );
-  } elsif (ref $typeDictOrArrayOrFile eq 'HASH') {
-    $typeDictOrArrayOrFile;
+  } elsif (ref $specDictOrArrayOrFile eq 'HASH') {
+    $specDictOrArrayOrFile;
   } else {
-    Carp::croak "Unsupported typeDict: "
-      . MOP4Import::Util::terse_dump($typeDictOrArrayOrFile);
+    Carp::croak "Unsupported specDict: "
+      . MOP4Import::Util::terse_dump($specDictOrArrayOrFile);
   }
 }
 
-sub interface2typespec {
-  (my MY $self, my Interface $if, my $typeDict) = @_;
+sub spec_of__interface {
+  (my MY $self, my Interface $if, my $specDict) = @_;
   # Type is not used currently.
   my @spec = [fields => map {
     my Decl $slotDecl = $_;
@@ -90,19 +95,18 @@ sub interface2typespec {
   } @{$if->{body}}];
   if ($if->{extends}) {
     my ($superName, $superSpec)
-      = $self->interface2typespec($typeDict->{$if->{extends}}, $typeDict);
+      = $self->spec_of__interface($specDict->{$if->{extends}}, $specDict);
     ($superName, [@$superSpec, [subtypes => $if->{name}, \@spec]]);
   } else {
     ($if->{name}, \@spec);
   }
 }
 
-sub gather_interfaces {
+sub gather_by_name {
   (my MY $self, my @decls) = @_;
   my %dict;
   foreach my Interface $if (@decls) {
     next unless ref $if eq 'HASH';
-    next unless $if->{kind} eq 'interface';
     $dict{$if->{name}} = $if;
   }
   \%dict;
