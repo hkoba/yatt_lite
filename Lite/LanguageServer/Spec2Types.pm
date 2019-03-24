@@ -4,11 +4,17 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base
+  , [fields =>
+     [with_field_docs => doc => "generate field documents too"],
+   ]
   , [output_format => indented => sub {
-    my ($self, $outFH, @items) = @_;
+    my ($self, $outFH, @args) = @_;
     require Data::Dumper;
-    foreach my $item (@items) {
-      print $outFH Data::Dumper->new($item)->Indent(1)->Terse(1)->Dump, "\n";
+    foreach my $list (@args) {
+      foreach my $item (@$list) {
+        print $outFH Data::Dumper->new([$item])->Indent(1)->Terse(1)
+          ->Dump =~ s/\n\z/,\n/r;
+      }
     }
   }];
 
@@ -31,38 +37,42 @@ use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl Annotated/
 #   ]
 # ]
 
+use MOP4Import::Types
+  CollectedItem => [[fields => qw/name spec fields parent subtypes dependency/]];
 
 sub make_typedefs_from {
   (my MY $self, my ($specDictOrArrayOrFile, @names)) = @_;
   my $specDict = $self->specdict_from($specDictOrArrayOrFile);
-  map {
-    my Decl $decl = $specDict->{$_};
-    if (my $sub = $self->can("spec_of__$decl->{kind}")) {
-      $sub->($self, $decl, $specDict);
+  my $collectedDict = $self->collect_spec_from($specDict, @names);
+  my %seen;
+  my @result = map {
+    my CollectedItem $item = $_;
+    if ($seen{$item->{name}}++) {
+      ()
     } else {
-      ();
+      $self->typedefs_of_collected_item($item, \%seen);
     }
-  } @names;
+  } $self->reorder_collected_items($collectedDict);
+  wantarray ? @result : \@result;
 }
 
-use MOP4Import::Types
-  CollectedItem => [[fields => qw/name spec fields extends dependency/]];
-
-sub reorder_collected_specs {
+sub reorder_collected_items {
   (my MY $self, my ($collectedDict)) = @_;
   my (@result, %seen, $lastKeys);
   $lastKeys = keys %$collectedDict;
   while (keys %$collectedDict) {
     my @ready = grep {
       my CollectedItem $item = $collectedDict->{$_};
-      not $item->{extends}
-        or $seen{$item->{extends}};
+      not $item->{parent}
+        or $seen{$item->{parent}};
     } keys %$collectedDict;
     push @result, map {
       delete $collectedDict->{$seen{$_} = $_};
     } @ready;
     if ($lastKeys == keys %$collectedDict) {
-      die "OOPS:". join(",", keys %$collectedDict);
+      die "Can't reorder types. Possibly circular deps? "
+        . MOP4Import::Util::terse_dump([remains => sort keys %$collectedDict]
+                                       , [ok => @result]);
     }
     $lastKeys = keys %$collectedDict;
   }
@@ -97,20 +107,25 @@ sub spec_dependency_of__interface {
   my $specDict = $self->specdict_from($specDictOrArrayOrFile);
   my CollectedItem $from = $self->intern_collected_item_in($collectedDict, $decl);
   if (my $nm = $decl->{extends}) {
-    my Decl $super = $specDict->{$nm}
+    $from->{parent} = $nm;
+    my Decl $superSpec = $specDict->{$nm}
       or Carp::croak "Unknown base type for $decl->{name}: $nm";
-    $from->{extends} = $self->intern_collected_item_in($collectedDict, $super, $opts);
-    $from->{dependency}{$nm} = $from->{extends};
+    my CollectedItem $superItem
+      = $self->spec_dependency_of($superSpec, $specDict, $collectedDict, $opts);
+    push @{$superItem->{subtypes}}, $from;
   }
   foreach my Annotated $slot (@{$decl->{body}}) {
+    next if ref $slot eq 'HASH' and $slot->{deprecated};
     my $slotDesc = ref $slot eq 'HASH' ? $slot->{body} : $slot;
-    unless (ref $slotDesc eq 'ARRAY') {
-      die "reall";
-    }
     my ($slotName, @typeUnion) = @$slotDesc;
     $slotName =~ s/\?\z//;
-    push @{$from->{fields}}, (ref $slot eq 'HASH' ? [$slotName, doc => $slot->{comment}]
-                              : $slotName);
+    push @{$from->{fields}}, do {
+      if ($self->{with_field_docs} and ref $slot eq 'HASH') {
+        [$slotName, doc => $slot->{comment}]
+      } else {
+        $slotName;
+      }
+    };
     foreach my $typeExprString (@typeUnion) {
       $typeExprString =~ /[A-Z]/
         or next;
@@ -161,35 +176,17 @@ sub specdict_from {
   }
 }
 
-sub typedef_of__interface {
-  (my MY $self, my Interface $if, my $specDict) = @_;
+sub typedefs_of_collected_item {
+  (my MY $self, my CollectedItem $item, my $seen) = @_;
+  $seen->{$item->{name}}++;
   # Type is not used currently.
-  my @spec = [fields => map {
-    my Decl $slotDecl = $_;
-    if (ref $slotDecl eq 'ARRAY') {
-      my ($name, @typeunion) = @$slotDecl;
-      $name;
-    } elsif ($slotDecl->{kind}) {
-      Carp::croak "Not implemented for interface body: $slotDecl->{kind}";
-    } elsif ($slotDecl->{deprecated}) {
-      ();
-    } else {
-      my $name = $slotDecl->{body}[0];
-      $name =~ s/\?\z//;
-      if ($slotDecl->{comment}) {
-        [$name => doc => $slotDecl->{comment}];
-      } else {
-        $name
-      }
-    }
-  } @{$if->{body}}];
-  if ($if->{extends}) {
-    my ($superName, $superSpec)
-      = $self->spec_of__interface($specDict->{$if->{extends}}, $specDict);
-    ($superName, [@$superSpec, [subtypes => $if->{name}, \@spec]]);
-  } else {
-    ($if->{name}, \@spec);
+  my @defs = ([fields => @{$item->{fields}}]);
+  if ($item->{subtypes}) {
+    push @defs, [subtypes => map {
+      $self->typedefs_of_collected_item($_, $seen)
+    } @{$item->{subtypes}}]
   }
+  ($item->{name}, \@defs);
 }
 
 sub gather_by_name {
