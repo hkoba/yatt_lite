@@ -5,7 +5,8 @@ use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
-     [with_field_docs => doc => "generate field documents too"],
+     [with_field_docs => doc => "generate field document too"],
+     [with_field_typeinfos => doc => "generate field typeinfo too"],
    ]
   , [output_format => pairlist => sub {
     my ($self, $outFH, @args) = @_;
@@ -111,6 +112,22 @@ sub spec_dependency_of {
   wantarray ? ($item, $collectedDict) : $item;
 }
 
+sub unwrap_annotation {
+  (my Annotated $rec) = @_;
+  if (not ref $rec) {
+    $rec;
+  } elsif (ref $rec eq 'ARRAY') {
+    [map {unwrap_annotation($_)} @$rec];
+  } elsif (ref $rec eq 'HASH') {
+    my $body = $rec->{body};
+    if (not ref $body) {
+      $body;
+    } else {
+      [map {unwrap_annotation($_)} @$body];
+    }
+  }
+}
+
 sub spec_dependency_of__interface {
   (my MY $self, my Interface $decl, my ($specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
   $collectedDict //= {};
@@ -129,13 +146,15 @@ sub spec_dependency_of__interface {
     my $slotDesc = ref $slot eq 'HASH' ? $slot->{body} : $slot;
     my ($slotName, @typeUnion) = @$slotDesc;
     $slotName =~ s/\?\z//;
-    push @{$from->{fields}}, do {
-      if ($self->{with_field_docs} and ref $slot eq 'HASH') {
-        [$slotName, doc => $slot->{comment}]
-      } else {
-        $slotName;
-      }
-    };
+    my @fieldOpts;
+    if ($self->{with_field_docs} and ref $slot eq 'HASH') {
+      push @fieldOpts, doc => $slot->{comment};
+    }
+    if ($self->{with_field_typeinfos}) {
+      my @tu = map { unwrap_annotation($_) } @typeUnion;
+      push @fieldOpts, typeinfo => (@tu == 1 ? $tu[0] : \@tu);
+    }
+    push @{$from->{fields}}, @fieldOpts ? [$slotName, @fieldOpts] : $slotName;
     foreach my $typeExprString (@typeUnion) {
       $typeExprString =~ /[A-Z]/
         or next;
