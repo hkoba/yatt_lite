@@ -15,6 +15,35 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
+'ClientCapabilities' => [
+  [
+    'fields',
+    'workspace',
+    'textDocument',
+    'experimental',
+  ],
+],
+'InitializeParams' => [
+  [
+    'fields',
+    'processId',
+    'rootUri',
+    'initializationOptions',
+    'capabilities',
+    'trace',
+    'workspaceFolders',
+  ],
+],
+'TextDocumentSyncOptions' => [
+  [
+    'fields',
+    'openClose',
+    'change',
+    'willSave',
+    'willSaveWaitUntil',
+    'save',
+  ],
+],
 'CompletionOptions' => [
   [
     'fields',
@@ -22,10 +51,23 @@ use MOP4Import::Types
     'triggerCharacters',
   ],
 ],
-'ExecuteCommandOptions' => [
+'Location' => [
   [
     'fields',
-    'commands',
+    'uri',
+    'range',
+  ],
+],
+'RenameOptions' => [
+  [
+    'fields',
+    'prepareProvider',
+  ],
+],
+'DocumentLinkOptions' => [
+  [
+    'fields',
+    'resolveProvider',
   ],
 ],
 'CodeLensOptions' => [
@@ -62,10 +104,10 @@ use MOP4Import::Types
     'experimental',
   ],
 ],
-'RenameOptions' => [
+'InitializeResult' => [
   [
     'fields',
-    'prepareProvider',
+    'capabilities',
   ],
 ],
 'DocumentOnTypeFormattingOptions' => [
@@ -75,10 +117,11 @@ use MOP4Import::Types
     'moreTriggerCharacter',
   ],
 ],
-'SignatureHelpOptions' => [
+'Range' => [
   [
     'fields',
-    'triggerCharacters',
+    'start',
+    'end',
   ],
 ],
 'CodeActionOptions' => [
@@ -87,64 +130,10 @@ use MOP4Import::Types
     'codeActionKinds',
   ],
 ],
-'WorkspaceClientCapabilities' => [
+'SignatureHelpOptions' => [
   [
     'fields',
-    'applyEdit',
-    'workspaceEdit',
-    'didChangeConfiguration',
-    'didChangeWatchedFiles',
-    'symbol',
-    'executeCommand',
-    'workspaceFolders',
-    'configuration',
-  ],
-],
-'ClientCapabilities' => [
-  [
-    'fields',
-    'workspace',
-    'textDocument',
-    'experimental',
-  ],
-],
-'TextDocumentSyncOptions' => [
-  [
-    'fields',
-    'openClose',
-    'change',
-    'willSave',
-    'willSaveWaitUntil',
-    'save',
-  ],
-],
-'DocumentLinkOptions' => [
-  [
-    'fields',
-    'resolveProvider',
-  ],
-],
-'InitializeResult' => [
-  [
-    'fields',
-    'capabilities',
-  ],
-],
-'SaveOptions' => [
-  [
-    'fields',
-    'includeText',
-  ],
-],
-'InitializeParams' => [
-  [
-    'fields',
-    'processId',
-    'rootUri',
-    'initializationOptions',
-    'capabilities',
-    'trace',
-    'workspaceFolders',
+    'triggerCharacters',
   ],
 ],
 'TextDocumentClientCapabilities' => [
@@ -171,6 +160,51 @@ use MOP4Import::Types
     'rename',
     'publishDiagnostics',
     'foldingRange',
+  ],
+],
+'Position' => [
+  [
+    'fields',
+    'line',
+    'character',
+  ],
+],
+'ExecuteCommandOptions' => [
+  [
+    'fields',
+    'commands',
+  ],
+],
+'TextDocumentPositionParams' => [
+  [
+    'fields',
+    'textDocument',
+    'position',
+  ],
+],
+'SaveOptions' => [
+  [
+    'fields',
+    'includeText',
+  ],
+],
+'WorkspaceClientCapabilities' => [
+  [
+    'fields',
+    'applyEdit',
+    'workspaceEdit',
+    'didChangeConfiguration',
+    'didChangeWatchedFiles',
+    'symbol',
+    'executeCommand',
+    'workspaceFolders',
+    'configuration',
+  ],
+],
+'TextDocumentIdentifier' => [
+  [
+    'fields',
+    'uri',
   ],
 ],
 
