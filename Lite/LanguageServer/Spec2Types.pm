@@ -91,6 +91,7 @@ sub collect_spec_from {
 
 sub spec_dependency_of {
   (my MY $self, my ($declOrName, $specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
+  $collectedDict //= {};
   my $specDict = $self->specdict_from($specDictOrArrayOrFile);
   my Decl $decl = ref $declOrName ? $declOrName : $specDict->{$declOrName};
   my $sub = $self->can("spec_dependency_of__$decl->{kind}") or do {
@@ -98,7 +99,10 @@ sub spec_dependency_of {
       . MOP4Import::Util::terse_dump($decl), "\n" unless $self->{quiet};
     return;
   };
-  $sub->($self, $decl, $specDict, $collectedDict, $opts)
+  my CollectedItem $item = $collectedDict->{$decl->{name}}
+    //= $sub->($self, $decl, $specDict, $collectedDict, $opts);
+
+  wantarray ? ($item, $collectedDict) : $item;
 }
 
 sub spec_dependency_of__interface {
@@ -135,7 +139,7 @@ sub spec_dependency_of__interface {
         //= $self->spec_dependency_of($typeSpec, $specDict, $collectedDict, $opts);
     }
   }
-  wantarray ? ($from, $collectedDict) : $from;
+  $from;
 }
 
 sub intern_collected_item_in {
