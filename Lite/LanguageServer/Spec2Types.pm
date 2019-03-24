@@ -12,7 +12,7 @@ use MOP4Import::Base::CLI_JSON -as_base
     }
   }];
 
-use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/
+use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl Annotated/
   , [as => 'SpecParser'];
 
 # % parser=./Lite/LanguageServer/SpecParser.pm
@@ -43,6 +43,64 @@ sub make_typedefs_from {
       ();
     }
   } @names;
+}
+
+use MOP4Import::Types
+  CollectedItem => [[fields => qw/name spec fields dependency/]];
+
+sub spec_dependency_of {
+  (my MY $self, my ($declOrName, $specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
+  my $specDict = $self->specdict_from($specDictOrArrayOrFile);
+  my Decl $decl = ref $declOrName ? $declOrName : $specDict->{$declOrName};
+  my $sub = $self->can("spec_dependency_of__$decl->{kind}") or do {
+    print STDERR "Not yet supported find spec_dependency: $decl->{kind}"
+      . MOP4Import::Util::terse_dump($decl), "\n" unless $self->{quiet};
+    return;
+  };
+  $sub->($self, $decl, $specDict, $collectedDict, $opts)
+}
+
+sub spec_dependency_of__interface {
+  (my MY $self, my Interface $decl, my ($specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
+  $collectedDict //= {};
+  my $specDict = $self->specdict_from($specDictOrArrayOrFile);
+  my CollectedItem $from = $self->intern_collected_item_in($collectedDict, $decl);
+  if (my $nm = $decl->{extends}) {
+    my Decl $super = $specDict->{$nm}
+      or Carp::croak "Unknown base type for $decl->{name}: $nm";
+    $from->{dependency}{$nm} = $self->intern_collected_item_in($collectedDict, $super, $opts);
+  }
+  foreach my Annotated $slot (@{$decl->{body}}) {
+    my $slotDesc = ref $slot eq 'HASH' ? $slot->{body} : $slot;
+    unless (ref $slotDesc eq 'ARRAY') {
+      die "reall";
+    }
+    my ($slotName, @typeUnion) = @$slotDesc;
+    $slotName =~ s/\?\z//;
+    push @{$from->{fields}}, (ref $slot eq 'HASH' ? [$slotName, doc => $slot->{comment}]
+                              : $slotName);
+    foreach my $typeExprString (@typeUnion) {
+      $typeExprString =~ /[A-Z]/
+        or next;
+      my Decl $typeSpec = $specDict->{$typeExprString}
+        or next;
+      $from->{dependency}{$typeExprString}
+        //= $self->spec_dependency_of($typeSpec, $specDict, $collectedDict, $opts);
+    }
+  }
+  wantarray ? ($from, $collectedDict) : $from;
+}
+
+sub intern_collected_item_in {
+  (my MY $self, my $collectedDict, my Decl $decl, my $opts) = @_;
+  $collectedDict->{$decl->{name}} //= do {
+    my CollectedItem $item = {};
+    $item->{name} = $decl->{name};
+    if ($opts->{spec}) {
+      $item->{spec} = $decl;
+    }
+    $item;
+  };
 }
 
 sub extract_spec_from {
