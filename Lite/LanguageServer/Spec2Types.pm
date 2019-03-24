@@ -12,10 +12,27 @@ use MOP4Import::Base::CLI_JSON -as_base
     }
   }];
 
-use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/;
+use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl/
+  , [as => 'SpecParser'];
 
 sub make_typespec_from {
-  (my MY $self, my ($typeDict, @names)) = @_;
+  (my MY $self, my ($typeDictOrArrayOrFile, @names)) = @_;
+  my $typeDict = do {
+    if (not ref $typeDictOrArrayOrFile) {
+      $self->gather_interfaces(
+        $self->SpecParser->new->parse_files($typeDictOrArrayOrFile)
+      );
+    } elsif (ref $typeDictOrArrayOrFile eq 'ARRAY') {
+      $self->gather_interfaces(
+        @$typeDictOrArrayOrFile
+      );
+    } elsif (ref $typeDictOrArrayOrFile eq 'HASH') {
+      $typeDictOrArrayOrFile;
+    } else {
+      Carp::croak "Unsupported typeDict: "
+        . MOP4Import::Util::terse_dump($typeDictOrArrayOrFile);
+    }
+  };
   map {
     $self->interface2typespec($typeDict->{$_}, $typeDict);
   } @names;
