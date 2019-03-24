@@ -26,6 +26,8 @@ use AnyEvent;
 
 use Scope::Guard qw/guard/;
 
+use IO::Handle;
+
 #========================================
 
 sub after_after_new {
@@ -52,6 +54,10 @@ sub translate_method_name {
 
 sub cmd_server {
   (my MY $self, my @args) = @_;
+
+  autoflush STDERR 1;
+  print STDERR "# server started\n" unless $self->{quiet};
+
   my $cv = AnyEvent::CondVar->new;
 
   async {
