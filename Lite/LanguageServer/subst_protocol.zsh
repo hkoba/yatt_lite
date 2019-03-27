@@ -51,6 +51,7 @@ function emit_body {
     () {
         local defsFn=$1; shift
         
+        print "# make_typedefs_from: $*"
         perl $o_debug $cgen --output=pairlist make_typedefs_from $defsFn "$@"
 
     } =(

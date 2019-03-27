@@ -15,6 +15,7 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
+# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location
 'ClientCapabilities' => [
   [
     'fields',
