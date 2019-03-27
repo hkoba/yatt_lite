@@ -9,6 +9,8 @@ use YATT::Lite::LanguageServer::Generic -as_base
                  /
    ];
 
+use MOP4Import::Util qw/terse_dump/;
+
 use YATT::Lite::LanguageServer::Protocol;
 
 sub lspcall__initialize {
@@ -22,11 +24,24 @@ sub lspcall__initialize {
 
 sub lspcall__textDocument__definition {
   (my MY $self, my TextDocumentPositionParams $params) = @_;
-  die "ANOTHERRRRR";
+  # print STDERR "# definition: ".terse_dump($params), "\n";
   my TextDocumentIdentifier $docId = $params->{textDocument};
   my Position $pos = $params->{position};
-  
-  undef;
+  my Location $res = {};
+  $res->{uri} = $docId->{uri};
+  $res->{range} = my Range $range = {};
+  $range->{start} = do {
+    my Position $p = {};
+    $p->{line} = 0; $p->{character} = 0;
+    $p;
+  };
+  $range->{end} = do {
+    my Position $p = {};
+    $p->{line} = 0; $p->{character} = 0;
+    $p;
+  };
+
+  $res;
 }
 
 MY->run(\@ARGV) unless caller;
