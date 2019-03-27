@@ -33,9 +33,9 @@ use YATT::Lite::Walker;
 
 #========================================
 
-sub after_after_new {
+sub after_configure_default {
   (my MY $self) = @_;
-  $self->SUPER::after_after_new;
+  $self->SUPER::after_configure_default;
 
   $self->{_SITE} = do {
     my $class = Plack::Util::load_class($self->{site_class});

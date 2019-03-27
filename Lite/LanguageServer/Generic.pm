@@ -30,7 +30,7 @@ use IO::Handle;
 
 #========================================
 
-sub after_after_new {
+sub after_configure_default {
   (my MY $self) = @_;
   $self->{_out_semaphore} = Coro::Semaphore->new;
 }
