@@ -39,7 +39,9 @@ sub call_method {
   (my MY $self, my Request $request) = @_;
   my $method = $self->translate_method_name($request->{method});
   if (my $sub = $self->can($method)) {
-    $sub->($self, $request);
+    print STDERR "# call_method '$method': ", $self->cli_encode_json($request), "\n";
+    my $params = $request->{params};
+    $sub->($self, $params);
   } else {
     print STDERR "# Not implemented: ", $self->cli_encode_json($request), "\n";
     undef;
@@ -116,6 +118,9 @@ sub emit_response {
   (my MY $self, my Response $response, my $id) = @_;
   $response->{id} = $id if defined $id;
   $response->{jsonrpc} = $self->{jsonrpc_version};
+
+  print STDERR "# sending response: ", $self->cli_encode_json($response), "\n"
+    unless $self->{quiet};
 
   my $wdata = $self->format_response($self->make_response($response, $id));
 
