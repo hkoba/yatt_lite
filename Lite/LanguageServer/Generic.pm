@@ -42,6 +42,7 @@ sub call_method {
     $sub->($self, $request);
   } else {
     print STDERR "# Not implemented: ", $self->cli_encode_json($request), "\n";
+    undef;
   }
 }
 
@@ -49,7 +50,7 @@ sub translate_method_name {
   (my MY $self, my $method) = @_;
   $method =~ s,/,__,g;
   $method =~ s,^\$,__ext,;
-  $method;
+  'lspcall__'.$method;
 }
 
 sub cmd_server {

@@ -11,7 +11,7 @@ use YATT::Lite::LanguageServer::Generic -as_base
 
 use YATT::Lite::LanguageServer::Protocol;
 
-sub initialize {
+sub lspcall__initialize {
   (my MY $self, my InitializeParams $params) = @_;
   $self->{_client_cap} = $params->{capabilities};
   my InitializeResult $res = {};
@@ -20,7 +20,7 @@ sub initialize {
   $res;
 }
 
-sub textDocument__definition {
+sub lspcall__textDocument__definition {
   (my MY $self, my TextDocumentPositionParams $params) = @_;
   die "ANOTHERRRRR";
   my TextDocumentIdentifier $docId = $params->{textDocument};
