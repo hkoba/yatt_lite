@@ -12,10 +12,6 @@
 (require 'lsp-mode)
 (require 'yatt-lint-any-mode)
 
-(defconst lsp-yatt--get-root
-  (lsp-make-traverser #'(lambda (dir)
-                          (directory-files dir nil "app.psgi"))))
-
 (defun lsp-yatt--ls-command ()
   "Generate the language server startup command."
   (let* ((app-dir (locate-dominating-file "." "app.psgi"))
@@ -25,12 +21,10 @@
                           yatt-lint-any-YATT-dir))))
     (list (concat yatt-lib "Lite/LanguageServer.pm") "server")))
 
-(lsp-define-stdio-client
- lsp-yatt "yatt"
- lsp-yatt--get-root
- nil
- ;; :initialize 'lsp-yatt--initialize-client
- :command-fn 'lsp-yatt--ls-command)
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-stdio-connection 'lsp-yatt--ls-command)
+                  :major-modes '(yatt-mode)
+                  :server-id 'yatt))
 
 (provide 'lsp-yatt)
 ;;; lsp-yatt.el ends here
