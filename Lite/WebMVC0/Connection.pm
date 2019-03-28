@@ -413,7 +413,6 @@ sub location {
   (my $loc = ($prop->{cf_location} // '')) =~ s,/*$,/,;
   $loc;
 }
-*dir_location = *location; *dir_location = *location;
 
 sub _invoke_or {
   my ($default, $obj, $method, @args) = @_;
@@ -557,6 +556,11 @@ sub mkquery {
   }
 }
 
+sub dir_location {
+  my PROP $prop = (my $glob = shift)->prop;
+  my Env $env = $prop->{cf_env};
+  ($env->{'yatt.script_name'} // '').($prop->{cf_location} // "/");
+}
 
 # script_name + path_info - subpage
 # (script_name == location of this dir (DirApp))
@@ -564,13 +568,7 @@ sub mkquery {
 sub file_location {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{cf_env};
-  my $loc = do {
-    if (my $sn = $env->{'yatt.script_name'}) {
-      "$sn/"
-    } else {
-      $prop->{cf_location} // "/";
-    }
-  };
+  my $loc = $glob->dir_location;
   if (not $prop->{cf_is_index}
       and my $fn = $prop->{cf_file}) {
     $fn =~ s/\..*//;
