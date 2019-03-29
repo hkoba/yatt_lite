@@ -1207,6 +1207,12 @@ sub dump_as_comment_line {
 #   sprintf(q{YATT::Lite::Util::escape(%s)}, terse_dump($node));
 # }
 
+sub entmacro_scalar {
+  (my MY $self, my $node) = @_;
+  my (@expr) = $self->gen_entlist(undef, entx($node));
+  sprintf q|scalar(%s)|, join "", @expr;
+}
+
 sub entmacro_not {
   (my MY $self, my $node) = @_;
   my (@expr) = $self->gen_entlist(undef, entx($node));
