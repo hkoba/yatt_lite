@@ -102,6 +102,54 @@ sub emit_ctags {
 
 #========================================
 
+sub dump_tokens_at_file_position {
+  (my MY $self, my ($fileName, $line, $column)) = @_;
+  my Part $part = $self->find_part_of_file_line($fileName, $line)
+    or return;
+  if ($line < $part->{cf_bodyln}) {
+    # At declaration
+    [$part->{cf_kind}, decllist => $part->{decllist}];
+  } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
+    # At body of widget, page, args...
+    my Widget $widget = $part;
+    $self->find_yatt_for_template($fileName)->get_trans->ensure_parsed($widget);
+    [$part->{cf_kind}, body => $widget->{tree}];
+  } else {
+    # At body of action, entity, ...
+    # XXX: TODO extract tokens for host language.
+    [$part->{cf_kind}, body_string => $part->{toks}];
+  }
+}
+
+sub find_part_of_file_line {
+  (my MY $self, my ($fileName, $line)) = @_;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  my Part $prev;
+  foreach my Part $part ($tmpl->list_parts) {
+    last if $line < $part->{cf_startln};
+    $prev = $part;
+  }
+  $prev;
+}
+
+sub find_template {
+  (my MY $self, my $fileName) = @_;
+  my ($fn, $dir) = File::Basename::fileparse($fileName);
+  my $yatt = $self->find_yatt_for_template($fileName);
+  my $core = $yatt->get_trans;
+  my $tmpl = $core->find_file($fn);
+  # XXX: force refresh?
+  wantarray ? ($tmpl, $core) : $tmpl;
+}
+
+sub find_yatt_for_template {
+  (my MY $self, my $fileName) = @_;
+  my ($fn, $dir) = File::Basename::fileparse($fileName);
+  $self->{_SITE}->load_yatt($dir);
+}
+
+#========================================
+
 sub cmd_list_widgets {
   (my MY $self, my @args) = @_;
   $self->configure($self->parse_opts(\@args));
