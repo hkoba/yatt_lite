@@ -23,6 +23,7 @@ package YATT::Lite::LRXML; use YATT::Lite::LRXML;
 sub _parse_text_entities {
   (my MY $self, local $_, my $proceed) = @_;
   my ($curpos, $endpos) = ($self->{curpos});
+  my $offset = $curpos;
   my @result;
   {
     local $self->{curpos};
@@ -35,7 +36,7 @@ sub _parse_text_entities {
       }
       push @result, my $node = $self->mkentity($curpos, undef, $self->{endln});
       $curpos = $total - length $_;
-      $node->[NODE_END] = $curpos;
+      $node->[NODE_END] = $curpos + $offset;
     }
     $endpos = $self->{curpos};
   }
