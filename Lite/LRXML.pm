@@ -248,6 +248,7 @@ sub parse_decl {
     if ($self->can("build_$kind")) {
       # yatt:widget, action
       my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
+      my $saved_attlist = [@args];
       my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
 	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}
 			       , $ns, $kind
@@ -271,6 +272,11 @@ sub parse_decl {
 			       , $ns, $kind);
       }
       $self->add_part($tmpl, $part = $self->build($ns, $kind, $partName));
+
+      # $part decllist may contain not only attributes but also others
+      # like argmacrosand possible future items.
+      $part->{decllist} = $saved_attlist;
+
       if ($mapping) {
 	$mapping->configure(item => $part);
 	$self->{subroutes}->append($mapping);
@@ -281,8 +287,11 @@ sub parse_decl {
     } elsif (my $sub = $self->can("declare_$kind")) {
       # yatt:base, yatt:args vs perl:base, perl:args...
       # 戻り値が undef なら、同じ $part を用いつづける。
-      $part = $sub->($self, $tmpl, $ns, $self->parse_attlist(\$str, 1))
+      my @args = $self->parse_attlist(\$str, 1);
+      $part = $sub->($self, $tmpl, $ns, @args)
 	// $part;
+
+      $part->{decllist} = \@args;
     } else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
     }

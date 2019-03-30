@@ -38,6 +38,7 @@ use YATT::Lite::Breakpoint ();
   use YATT::Lite::Types
     ([Part => -base => MY->Item
       , -fields => [qw(toks arg_dict arg_order
+                       decllist
 		       cf_namespace cf_kind cf_folder cf_data
 		       cf_implicit cf_suppressed
 		       cf_startln cf_bodyln cf_endln
