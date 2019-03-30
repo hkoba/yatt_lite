@@ -242,7 +242,8 @@ sub parse_decl {
       $self->{startln} = $self->{endln} += $nlines;
       next;
     }
-    my ($ns, $kind) = split /:/, $+{declname}, 2;
+    my $declkind = $+{declname};
+    my ($ns, $kind) = split /:/, $declkind, 2;
     # XXX: build と declare の順序が逆ではないか? 気にしなくていい?
     my $is_new;
     if ($self->can("build_$kind")) {
@@ -273,6 +274,7 @@ sub parse_decl {
       }
       $self->add_part($tmpl, $part = $self->build($ns, $kind, $partName));
 
+      $part->{declkind} = $declkind;
       # $part decllist may contain not only attributes but also others
       # like argmacrosand possible future items.
       $part->{decllist} = $saved_attlist;
@@ -291,6 +293,7 @@ sub parse_decl {
       $part = $sub->($self, $tmpl, $ns, @args)
 	// $part;
 
+      $part->{declkind} = $declkind;
       $part->{decllist} = \@args;
     } else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
