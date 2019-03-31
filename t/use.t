@@ -15,7 +15,7 @@ my $dist_root = "$FindBin::Bin/..";
 
 use File::Find;
 
-my @M4I = qw/File::AddInc MOP4Import::Declare/;
+my @M4I = qw/File::AddInc MOP4Import::Base::CLI_JSON/;
 
 my %prereq
   = ('YATT::Lite::WebMVC0::DBSchema::DBIC' => [qw/DBIx::Class::Schema/]
