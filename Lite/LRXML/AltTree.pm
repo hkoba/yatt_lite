@@ -37,7 +37,7 @@ sub convert_tree {
       $_;
     } elsif (not ref $_->[NODE_TYPE]) {
       my $source;
-      if ($_->[NODE_BEGIN] and $_->[NODE_END]
+      if (defined $_->[NODE_BEGIN] and defined $_->[NODE_END]
           and $_->[NODE_BEGIN] < length($self->{string})
           and $_->[NODE_END] < length($self->{string})) {
         $source = substr($self->{string}, $_->[NODE_BEGIN]
