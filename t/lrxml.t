@@ -12,6 +12,8 @@ use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Util qw(catch);
 use YATT::Lite::Constants;
 
+use YATT::Lite::LRXML::ParseBody;
+
 use Test::Differences;
 use YATT::Lite::XHF::Dumper;
 use YATT::Lite::LRXML::AltTree;
