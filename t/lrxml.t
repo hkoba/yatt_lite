@@ -12,6 +12,18 @@ use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Util qw(catch);
 use YATT::Lite::Constants;
 
+use Test::Differences;
+use YATT::Lite::XHF::Dumper;
+use YATT::Lite::LRXML::AltTree;
+sub alt_tree_for {
+  my ($string, $tree) = @_;
+  YATT::Lite::LRXML::AltTree->new(string => $string)->convert_tree($tree);
+}
+sub alt_tree_xhf_for {
+  YATT::Lite::XHF::Dumper->dump_strict_xhf(alt_tree_for(@_))."\n";
+}
+
+
 my $CLASS = 'YATT::Lite::LRXML';
 use_ok($CLASS);
 
@@ -58,7 +70,42 @@ BAZ
       , '<yatt:foo x y>', "render_$name node $i";
     is $w->{tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n が嬉しくない
 
-    is_deeply $w->{tree}, [
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+-
+ FOO
+ 
+{
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo x y>
+ bar
+ </yatt:foo>
+subtree[
+-
+ 
+ 
+- bar
+-
+ 
+ 
+]
+}
+-
+ 
+ BAZ
+-
+ 
+ 
+]
+END
+
+  # XXX: to be removed
+  is_deeply $w->{tree}, [
 'FOO
 ', [TYPE_ELEMENT, 27, 41, 3, [qw(yatt foo)]
 , [TYPE_ATTRIBUTE, undef, undef, 3, body => [
@@ -70,7 +117,7 @@ BAZ
 , '
 BAZ', '
 '
-], "nodetree $name";
+], "nodetree $name" if 0;
   }
 
   {
@@ -94,10 +141,40 @@ BAZ', '
     is_deeply $tmpl->node_source($w->{tree}[++$i])
       , '&yatt:y;', "render_$name node $i";
 
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+- <h2>
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:x;
+subtree[
+var: x
+]
+}
+-
+ </h2>
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:y;
+subtree[
+var: y
+]
+}
+-
+ 
+ 
+]
+END
+
+    # XXX: to be removed
     is_deeply $w->{tree}, [
 '<h2>', [TYPE_ENTITY, 90, 98, 9, 'yatt', [var => 'x']], '</h2>
 ', [TYPE_ENTITY, 104, 112, 10, 'yatt', [var => 'y']], '
-'], "nodetree $name";
+'], "nodetree $name" if 0;
   }
 }
 
@@ -168,6 +245,100 @@ BAZ
 	, "render_$name node $i ($want)";
     }
 
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+-
+ FOO
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 1 -->
+value: 1
+}
+{
+kind: TYPE_PI
+path[
+- yatt
+]
+source: <?yatt A ?>
+value:
+  A 
+}
+-
+ 
+ 
+{
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo x y>
+  <!--#yatt 2 -->
+   <yatt:bar x y/>
+ <!--#yatt 3 -->
+ </yatt:foo>
+subtree[
+-
+ 
+ 
+-
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 2 -->
+value: 2
+}
+-
+   
+{
+kind: TYPE_ELEMENT
+path[
+yatt: bar
+]
+source: <yatt:bar x y/>
+value= #null
+}
+-
+ 
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 3 -->
+value: 3
+}
+]
+}
+-
+ 
+ BAZ
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 4 -->
+value: 4
+}
+{
+kind: TYPE_PI
+path[
+- yatt
+]
+source: <?yatt B ?>
+value:
+  B 
+}
+-
+ 
+ 
+]
+END
+
+    # XXX: to be removed
     is_deeply $w->{tree}, [
 'FOO
 ', [TYPE_COMMENT, 37, 53, 3, yatt => 1, ' 1 ']
@@ -193,7 +364,7 @@ BAZ
 , '
 '
 ]
-, "nodetree $name";
+, "nodetree $name" if 0;
   }
 
   {
@@ -230,6 +401,98 @@ BAZ
 	, "render_$name node $i ($want)";
     }
 
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+-
+ FOO
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 1 -->
+value: 1
+}
+{
+kind: TYPE_PI
+path[
+- yatt
+]
+source: <?yatt A ?>
+value:
+  A 
+}
+-
+ 
+ 
+{
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo x y>
+  <!--#yatt 2 -->
+   <yatt:bar x y/>
+ <!--#yatt 3 -->
+ </yatt:foo>
+subtree[
+-
+ 
+ 
+-
+  
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 2 -->
+value: 2
+}
+-
+   
+{
+kind: TYPE_ELEMENT
+path[
+yatt: bar
+]
+source: <yatt:bar x y/>
+value= #null
+}
+-
+ 
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 3 -->
+value: 3
+}
+]
+}
+-
+ 
+ BAZ
+ 
+{
+kind: TYPE_COMMENT
+path: yatt
+source: <!--#yatt 4 -->
+value: 4
+}
+{
+kind: TYPE_PI
+path[
+- yatt
+]
+source: <?yatt B ?>
+value:
+  B 
+}
+-
+ 
+ 
+]
+END
+
     is_deeply $w->{tree}, [
 'FOO
 ', [TYPE_COMMENT, 220, 236, 17, yatt => 1, ' 1 ']
@@ -255,7 +518,7 @@ BAZ
 , [TYPE_PI, 346, 357, 26, ['yatt'], ' B ']
 , '
 '
-], "nodetree $name";
+], "nodetree $name" if 0;
   }
 }
 
@@ -275,6 +538,35 @@ END
     , "tmpl Item '$name'";
 
   {
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+-
+ <h2>Hello</h2>
+ 
+{
+kind: TYPE_ELEMENT
+path[
+yatt: if
+]
+source: <yatt:if "not defined &yatt:x;"> space!
+ <:yatt:else if="&yatt:x; >= 2"/> world!
+ <:yatt:else/> decades!
+ </yatt:if>
+subtree[
+-
+  space!
+ 
+]
+}
+-
+ 
+ 
+]
+END
+
+    # XXX:
     is_deeply $w->{tree}
 , ['<h2>Hello</h2>
 ', [TYPE_ELEMENT, 30, 62, 3, [qw(yatt if)]
@@ -300,7 +592,7 @@ END
     , 62, 132
    ]
    , '
-'], "[Inline attelem bug] nodetree $name";
+'], "[Inline attelem bug] nodetree $name" if 0;
   }
 }
 
@@ -320,6 +612,37 @@ END
     , "tmpl Item '$name'";
 
   {
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+{
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo a='
+ ' b="
+ " />
+value= #null
+}
+-
+ 
+ 
+{
+kind: TYPE_PI
+path[
+- perl
+]
+source: <?perl===undef?>
+value: ===undef
+}
+-
+ 
+ 
+]
+END
+
     is_deeply $w->{tree}
 , [[TYPE_ELEMENT, 13, 37, 2, [qw(yatt foo)], undef
    , [[TYPE_ATT_TEXT, 23, 28, 2, 'a', '
@@ -331,7 +654,7 @@ END
  , '
 '
    ]
-   , "[long widget call bug] nodetree $name";;
+   , "[long widget call bug] nodetree $name" if 0;
   }
 }
 
@@ -351,13 +674,46 @@ END
     , "tmpl Item '$name'";
 
   {
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+{
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo
+ 
+ --  foo ---
+ 
+ />
+value= #null
+}
+-
+ 
+ 
+{
+kind: TYPE_PI
+path[
+- perl
+]
+source: <?perl===undef?>
+value: ===undef
+}
+-
+ 
+ 
+]
+END
+
     is_deeply $w->{tree}
 , [[TYPE_ELEMENT, 0, 26, 1, [qw(yatt foo)], undef, undef, undef, undef, 27]
 , '
 ', [TYPE_PI, 27, 43, 6, ['perl'], '===undef']
 , '
 '
-], "newline and comment in call."
+], "newline and comment in call." if 0;
 }
 }
 
@@ -380,6 +736,62 @@ END
   is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
+  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+{
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo>
+ <yatt:bar>
+ &yatt:x;
+ </yatt:bar>
+ </yatt:foo>
+subtree[
+-
+ 
+ 
+{
+kind: TYPE_ELEMENT
+path[
+yatt: bar
+]
+source: <yatt:bar>
+ &yatt:x;
+ </yatt:bar>
+subtree[
+-
+ 
+ 
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:x;
+subtree[
+var: x
+]
+}
+- 
+-
+ 
+ 
+]
+}
+- 
+-
+ 
+ 
+]
+}
+-
+ 
+ 
+]
+END
+
   is_deeply $w->{tree}
 , [[TYPE_ELEMENT, 0, 10, 1, [qw(yatt foo)]
     , [TYPE_ATTRIBUTE, undef, undef, 1, body => ['
@@ -391,7 +803,7 @@ END
 ']]
     , undef, undef, undef, 11, 42], '
 '
-], "var in nested body."
+], "var in nested body." if 0;
 }
 
 {
@@ -406,6 +818,58 @@ END
   my $name = '';
   is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
+
+  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+{
+kind: TYPE_ELEMENT
+path[
+yatt: my
+]
+source: <yatt:my [code:code src:source]>
+   <h2>&yatt:x;</h2>
+   &yatt:y;
+ </yatt:my>
+subtree[
+-
+ 
+ 
+-
+   <h2>
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:x;
+subtree[
+var: x
+]
+}
+-
+ </h2>
+ 
+-
+   
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:y;
+subtree[
+var: y
+]
+}
+- 
+-
+ 
+ 
+]
+}
+-
+ 
+ 
+]
+END
 
   # print "# ", YATT::Lite::Util::terse_dump($w->{tree}), "\n";
   is_deeply $w->{tree}
@@ -424,7 +888,7 @@ END
           ]]
         , undef,undef,33,63]
        ,'
-'];
+'] if 0;
 
 }
 
@@ -443,6 +907,85 @@ END
   my $name = '';
   is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
+
+  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+- <h2>
+{
+kind: TYPE_LCMSG
+path[
+- yatt
+]
+source: &yatt[[;Hello &yatt:world;!&yatt]];
+subtree[
+-
+ Hello 
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:world;
+subtree[
+var: world
+]
+}
+- !
+]
+}
+-
+ </h2>
+ 
+-
+ 
+ 
+- <p>
+{
+kind: TYPE_LCMSG
+path[
+yatt: num
+]
+source: &yatt#num[[;
+   &yatt:n; file removed from directory &yatt:dir;
+ &yatt||;
+   &yatt:n; files removed from directory &yatt:dir;
+ &yatt]];
+subtree[
+-
+ 
+ 
+-
+   
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:n;
+subtree[
+var: n
+]
+}
+-
+  file removed from directory 
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:dir;
+subtree[
+var: dir
+]
+}
+-
+ 
+ 
+]
+}
+- </p>
+-
+ 
+ 
+]
+END
+
 
   is_deeply $w->{tree}
 , ['<h2>'
@@ -471,7 +1014,7 @@ END
      ]
    , "</p>"
    , "\n"
-], "Embeded l10n message.";
+], "Embeded l10n message." if 0;
 }
 
 {
@@ -487,7 +1030,60 @@ END
   is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
-  print "# ", YATT::Lite::Util::terse_dump($w->{tree}), "\n";
+  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+
+  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+[
+{
+kind: TYPE_ELEMENT
+path[
+yatt: my
+]
+source: <yatt:my [x y :::z]="1..8" />
+value= #null
+}
+-
+ 
+ 
+- x=
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:x;
+subtree[
+var: x
+]
+}
+-
+ 
+ 
+- y=
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:y;
+subtree[
+var: y
+]
+}
+-
+ 
+ 
+- z=
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:z;
+subtree[
+var: z
+]
+}
+-
+ 
+ 
+]
+END
+
   is_deeply $w->{tree}
     , [[5,0,29,1
         , ['yatt','my']
@@ -501,7 +1097,7 @@ END
        , "\n"
        , 'x=',[3,32,40,2,'yatt',['var','x']],"\n"
        , 'y=',[3,43,51,3,'yatt',['var','y']],"\n"
-       , 'z=',[3,54,62,4,'yatt',['var','z']],"\n"];
+       , 'z=',[3,54,62,4,'yatt',['var','z']],"\n"] if 0;
 
 }
 
