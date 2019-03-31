@@ -69,7 +69,9 @@ BAZ
     my $i = -1;
     is $w->{tree}[++$i], "FOO\n", "render_$name node $i";
     is_deeply $tmpl->node_source($w->{tree}[++$i])
-      , '<yatt:foo x y>', "render_$name node $i";
+      , q{<yatt:foo x y>
+bar
+</yatt:foo>}, "render_$name node $i";
     is $w->{tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n が嬉しくない
 
     # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n"; exit;
@@ -172,6 +174,7 @@ var: x
 }
 -
  </h2>
+ 
 {
 kind: TYPE_ENTITY
 path: yatt
@@ -251,7 +254,11 @@ BAZ
 
     my @test
       = ([2, q|<?yatt A ?>|]
-	 , [4, q|<yatt:foo x y>|]
+	 , [4, q{<yatt:foo x y>
+ <!--#yatt 2 -->
+  <yatt:bar x y/>
+<!--#yatt 3 -->
+</yatt:foo>}]
 	 , [7, q|<?yatt B ?>|]
 	);
 
@@ -271,8 +278,11 @@ BAZ
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 1 -->
-value: 1
+source:
+ <!--#yatt 1 -->
+ 
+value:
+  1 
 }
 {
 kind: TYPE_PI
@@ -315,16 +325,33 @@ subtree[
  
  
 -
- 
+  
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 2 -->
-value: 2
+source:
+ <!--#yatt 2 -->
+ 
+value:
+  2 
 }
 -
    
 {
+attlist[
+{
+kind: TYPE_ATTRIBUTE
+path: x
+source: x
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path: y
+source: y
+value= #null
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: bar
@@ -338,8 +365,11 @@ value= #null
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 3 -->
-value: 3
+source:
+ <!--#yatt 3 -->
+ 
+value:
+  3 
 }
 ]
 }
@@ -350,8 +380,11 @@ value: 3
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 4 -->
-value: 4
+source:
+ <!--#yatt 4 -->
+ 
+value:
+  4 
 }
 {
 kind: TYPE_PI
@@ -421,7 +454,11 @@ BAZ
 
     my @test
       = ([2, q|<?yatt A ?>|]
-	 , [4, q|<yatt:foo x y>|]
+	 , [4, q{<yatt:foo x y>
+ <!--#yatt 2 -->
+  <yatt:bar x y/>
+<!--#yatt 3 -->
+</yatt:foo>}]
 	 , [7, q|<?yatt B ?>|]
 	);
 
@@ -440,8 +477,11 @@ BAZ
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 1 -->
-value: 1
+source:
+ <!--#yatt 1 -->
+ 
+value:
+  1 
 }
 {
 kind: TYPE_PI
@@ -488,12 +528,29 @@ subtree[
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 2 -->
-value: 2
+source:
+ <!--#yatt 2 -->
+ 
+value:
+  2 
 }
 -
    
 {
+attlist[
+{
+kind: TYPE_ATTRIBUTE
+path: x
+source: x
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path: y
+source: y
+value= #null
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: bar
@@ -507,8 +564,11 @@ value= #null
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 3 -->
-value: 3
+source:
+ <!--#yatt 3 -->
+ 
+value:
+  3 
 }
 ]
 }
@@ -519,8 +579,11 @@ value: 3
 {
 kind: TYPE_COMMENT
 path: yatt
-source: <!--#yatt 4 -->
-value: 4
+source:
+ <!--#yatt 4 -->
+ 
+value:
+  4 
 }
 {
 kind: TYPE_PI
@@ -634,9 +697,7 @@ kind: TYPE_ATT_NESTED
 path[
 yatt: else
 ]
-source:
- <:yatt:else if="&yatt:x; >= 2"/> world!
- 
+source: <:yatt:else if="&yatt:x; >= 2"/>
 subtree[
 -
   world!
@@ -648,9 +709,7 @@ kind: TYPE_ATT_NESTED
 path[
 yatt: else
 ]
-source:
- <:yatt:else/> decades!
- 
+source: <:yatt:else/>
 subtree[
 -
   decades!
