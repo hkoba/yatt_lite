@@ -15,6 +15,7 @@ use YATT::Lite::Constants
      TYPE_ELEMENT TYPE_LCMSG
      TYPE_ATT_NESTED
      TYPE_COMMENT
+     TYPE_ENTITY
 
      node_unwrap_attlist
     /;
@@ -47,6 +48,8 @@ sub convert_tree {
       my @rest = do {
         if ($_->[NODE_TYPE] == TYPE_COMMENT) {
           (value => $_->[NODE_ATTLIST]);
+        } elsif ($_->[NODE_TYPE] == TYPE_ENTITY) {
+          (subtree => $_->[NODE_BODY]);
         } elsif (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
           (subtree => $self->convert_tree(
             $self->node_body_slot($_))
@@ -78,7 +81,7 @@ sub convert_tree {
       };
     } else {
       # XXX: Is this ok?
-      print "# really?: ".YATT::Lite::Util::terse_dump($tree), "\n";
+      print STDERR "# really?: ".YATT::Lite::Util::terse_dump($tree), "\n";
       ...;
       # $self->convert_tree($_);
     }

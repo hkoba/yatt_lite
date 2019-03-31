@@ -194,6 +194,34 @@ sub parse_body {
   $tmpl->{parse_ok} = 1;
 }
 
+#
+# parse_decllist_entities updates all decllists in given template.
+# This method is for inspector and not used from normal code generation pass.
+#
+sub parse_decllist_entities {
+  (my MY $self, my Template $tmpl) = @_;
+  foreach my Part $part ($tmpl->list_parts) {
+    # $self->{startln} = $self->{endln} = $part->{cf_bodyln};
+    # ($self->{startpos}, $self->{curpos}) = ($part->{cf_startpos}) x 2;
+    my $decllist = $part->{decllist} or next;
+    foreach my $node (@$decllist) {
+      $node->[NODE_TYPE] == TYPE_ATT_TEXT
+        or next;
+      $self->{endln} = $node->[NODE_LNO];
+      my ($type, $dflag, $default)
+        = $self->parse_type_dflag_default($node->[NODE_BODY]);
+      if (ref $node->[NODE_PATH]) {
+        ...
+      }
+      $node->[NODE_BODY] = [
+        $type, $dflag,
+        (defined $default
+         ? lexpand($self->_parse_text_entities_at($node->[NODE_BODY_BEGIN], $default))
+         : ())];
+    }
+  }
+}
+
 sub posinfo {
   (my MY $self) = shift;
   ($self->{startpos}, $self->{curpos});
@@ -418,31 +446,35 @@ sub parse_attlist_with_lvalue {
                 , \@result];
       }
 
-      push @result, do {
-        if ($m->{bare} and is_ident($m->{bare})) {
-          if (@lvalue) {
-            [TYPE_ATT_BARENAME, splice(@lvalue), $m->{bare}]
-          } else {
-            [TYPE_ATT_NAMEONLY, @common, split_ns($m->{bare})];
-          }
-        }
-        elsif ($m->{nest}) {
+      my $bodyStart = $self->{curpos};
+      if ($m->{nest}) {
+        # [ 〜 ]
+        push @result,
           $self->parse_attlist_with_lvalue($start, \@lvalue, $strref, @opt);
-        }
-        elsif ($+{entity} or $+{special}) {
-          # XXX: 間に space が入ってたら?
-          if ($m->{lcmsg}) {
-            die $self->synerror_at($self->{startln}
-                                   , q{l10n msg is not allowed here});
+      } else {
+        push @result, my $node = do {
+          if ($m->{bare} and is_ident($m->{bare})) {
+            if (@lvalue) {
+              [TYPE_ATT_BARENAME, splice(@lvalue), $m->{bare}]
+            } else {
+              [TYPE_ATT_NAMEONLY, @common, split_ns($m->{bare})];
+            }
+          } elsif ($+{entity} or $+{special}) {
+            # XXX: 間に space が入ってたら?
+            if ($m->{lcmsg}) {
+              die $self->synerror_at($self->{startln}
+                                     , q{l10n msg is not allowed here});
+            }
+            [TYPE_ATT_TEXT, $mklval->(), [$self->mkentity(@common)]];
+          } else {
+            my ($quote, $value) = oneof($m, qw(bare sq dq));
+            [TYPE_ATT_TEXT, $mklval->()
+             , $for_decl ? $value : $self->_parse_text_entities_at($start, $value)];
           }
-          [TYPE_ATT_TEXT, $mklval->(), [$self->mkentity(@common)]];
-        }
-        else {
-          my ($quote, $value) = oneof($m, qw(bare sq dq));
-          [TYPE_ATT_TEXT, $mklval->()
-           , $for_decl ? $value : $self->_parse_text_entities($value)];
-        }
-      };
+        };
+        $node->[NODE_BODY_BEGIN] = $bodyStart;
+        $node->[NODE_BODY_END] = $self->{curpos};
+      }
     }
     elsif (
       # m->{equal} and
@@ -714,9 +746,8 @@ sub add_lineinfo {
 
 sub parse_arg_spec_for_part {
   (my MY $self, my Part $part, my $attNode) = @_;
-    my ($node_type, $lno, $argName, $desc, @rest)
-      = @{$attNode}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY
-		    , NODE_BODY+1 .. $#$attNode];
+    my ($node_type, $lno, $argName, $desc)
+      = @{$attNode}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY];
   my ($type, $dflag, $default);
   if ($node_type == TYPE_ATT_NESTED) {
     $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
@@ -736,16 +767,16 @@ sub add_args {
     # XXX: Rewrite this with parse_arg_spec_for_part!
 
     # XXX: text もあるし、 %yatt:argmacro; もある。
-    my ($node_type, $lno, $argName, $desc, @rest)
-      = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY
-		    , NODE_BODY+1 .. $#$argSpec];
+    my ($node_type, $lno, $argName, $desc)
+      = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY];
     unless (defined $argName) {
       die $self->synerror_at($self->{startln}, 'Invalid argument spec');
     }
 
     my ($type, $dflag, $default);
     if ($node_type == TYPE_ATT_NESTED) {
-      $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
+      my $headDesc = $desc->[0];
+      $type = $headDesc->[NODE_PATH] || $headDesc->[NODE_BODY];
       # primary of [primary key=val key=val] # delegate:foo の時は BODY に入る？
     } else {
       ($type, $dflag, $default) = $self->parse_type_dflag_default($desc);
@@ -774,7 +805,7 @@ sub add_args {
         my $t = $var->type->[0];
         my $sub = $self->can("add_arg_of_type_$t")
           or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $t);
-        $sub->($self, $part, $var, \@rest);
+        $sub->($self, $part, $var, $desc);
       } else {
         push @{$part->{arg_order}}, $argName;
         $part->{arg_dict}{$argName} = $var;
@@ -943,6 +974,7 @@ sub shortened_original_entpath {
 
 sub _parse_body;
 
+sub _parse_text_entities_at;
 sub _parse_text_entities;
 sub _parse_entpath;
 sub _parse_pipeline;

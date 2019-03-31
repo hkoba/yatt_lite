@@ -29,6 +29,8 @@ use YATT::Lite::LRXML;
 use YATT::Lite::Core qw/Part Widget Template/;
 use YATT::Lite::CGen::Perl;
 
+use YATT::Lite::LRXML::AltTree;
+
 use YATT::Lite::Walker;
 
 #========================================
@@ -102,27 +104,42 @@ sub emit_ctags {
 
 #========================================
 
+sub alttree {
+  (my MY $self, my ($tmpl, $tree)) = @_;
+  YATT::Lite::LRXML::AltTree->new(string => $tmpl->cget('string'))
+    ->convert_tree($tree)
+}
+
 sub dump_tokens_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
+  $line //= 1;
   my Part $part = $self->find_part_of_file_line($fileName, $line)
     or return;
+
+  my ($tmpl, $core) = $self->find_template($fileName);
+
+  # my $yatt = $self->find_yatt_for_template($fileName);
+  $core->ensure_parsed($part);
+
+  my $declkind = defined $part->{declkind}
+    ? [split /:/, $part->{declkind}] : [];
   if ($line < $part->{cf_bodyln}) {
     # At declaration
-    [$part->{cf_kind}, decllist => $part->{decllist}];
+    [$declkind, decllist => $self->alttree($tmpl, $part->{decllist})];
   } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
     # At body of widget, page, args...
     my Widget $widget = $part;
-    $self->find_yatt_for_template($fileName)->get_trans->ensure_parsed($widget);
-    [$part->{cf_kind}, body => $widget->{tree}];
+    [$declkind, body => $self->alttree($tmpl, $widget->{tree})];
   } else {
     # At body of action, entity, ...
     # XXX: TODO extract tokens for host language.
-    [$part->{cf_kind}, body_string => $part->{toks}];
+    [$declkind, body_string => $part->{toks}];
   }
 }
 
 sub find_part_of_file_line {
   (my MY $self, my ($fileName, $line)) = @_;
+  $line //= 1;
   my ($tmpl, $core) = $self->find_template($fileName);
   my Part $prev;
   foreach my Part $part ($tmpl->list_parts) {

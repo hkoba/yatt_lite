@@ -21,12 +21,17 @@ package YATT::Lite::LRXML; use YATT::Lite::LRXML;
 #   [aref => [[var => i], [var => j]]
 
 sub _parse_text_entities {
-  (my MY $self, local $_, my $proceed) = @_;
+  my MY $self = shift;
+  $self->_parse_text_entities_at($self->{curpos}, @_);
+}
+sub _parse_text_entities_at {
+  my MY $self = $_[0];
+  local ($self->{curpos}, $_) = @_[1,2];
   my ($curpos, $endpos) = ($self->{curpos});
   my $offset = $curpos;
   my @result;
   {
-    local $self->{curpos};
+
     my $total = length $_;
     while (s{^(.*?)$$self{re_entopn}}{}xs) {
       if (length $1) {
@@ -39,9 +44,6 @@ sub _parse_text_entities {
       $node->[NODE_END] = $curpos + $offset;
     }
     $endpos = $self->{curpos};
-  }
-  if ($proceed) {
-    $self->{curpos} = $endpos;
   }
   if (@result) {
     push @result, $_ if length $_;

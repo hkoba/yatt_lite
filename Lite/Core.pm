@@ -302,10 +302,12 @@ sub synerror {
 	 , @_);
   }
   sub ensure_parsed {
-    (my MY $self, my Widget $widget) = @_;
-    $self->get_parser->parse_body($widget->{cf_folder});
-    # $self->get_parser->parse_widget($widget)
-    @{$widget->{tree}};
+    (my MY $self, my Part $part) = @_;
+    my $parser = $self->get_parser;
+    my Template $tmpl = $part->{cf_folder};
+    return if $tmpl->{parse_ok};
+    $parser->parse_decllist_entities($tmpl);
+    $parser->parse_body($tmpl);
   }
   sub render {
     my MY $self = shift;
