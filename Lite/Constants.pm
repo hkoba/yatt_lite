@@ -22,6 +22,11 @@ use YATT::Lite::Util::Enum
    , ENT_ => [qw(TYPE KEY REST=VALUE=BODY)]
   );
 
+# Not worked. why?
+# BEGIN {
+#   push our @EXPORT_OK, qw/*TYPE_ *NODE_/;
+# }
+
 sub cut_first (&@) {
   my ($code, $list) = @_;
   local $_;
