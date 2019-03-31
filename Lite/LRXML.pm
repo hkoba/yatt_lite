@@ -409,7 +409,7 @@ sub parse_attlist_with_lvalue {
         };
         return [TYPE_ATT_NESTED
                 , $outer_start, $self->{curpos}, $l, $n
-                , @result];
+                , \@result];
       }
 
       push @result, do {

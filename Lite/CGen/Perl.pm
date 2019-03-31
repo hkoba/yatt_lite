@@ -928,7 +928,7 @@ sub take_spread_name {
 {
   sub macro_my {
     (my MY $self, my $node) = @_;
-    my ($path, $body, $primary, $head, $foot) = nx($node);
+    my ($path, $body, $maybeWrappedAttlist, $head, $foot) = nx($node);
 
     my $has_body = $body && @$body ? 1 : 0;
     my $simple_adder = sub {
@@ -998,6 +998,7 @@ sub take_spread_name {
         $simple_adder->(@_)
       }
     };
+    my $primary = $self->node_unwrap_attlist($maybeWrappedAttlist);
     my @assign;
     foreach my $arg (@{$primary}[0 .. $#$primary-$has_body]) {
       push @assign, $adder->(text => $arg, $arg);

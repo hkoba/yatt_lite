@@ -94,6 +94,19 @@ sub node_body_slot {
   }
 }
 
+sub node_unwrap_attlist {
+  my ($self, $maybeWrappedAttlist) = @_;
+  if ($maybeWrappedAttlist
+      and @$maybeWrappedAttlist == 1
+      and ref $maybeWrappedAttlist->[0] eq 'ARRAY'
+      and @{$maybeWrappedAttlist->[0]} == 1
+      and ref $maybeWrappedAttlist->[0][0] eq 'ARRAY') {
+    $maybeWrappedAttlist->[0]
+  } else {
+    $maybeWrappedAttlist;
+  }
+}
+
 sub node_value {
   my ($self, $node) = @_;
   wantarray ? YATT::Lite::Util::lexpand($node->[NODE_VALUE])
