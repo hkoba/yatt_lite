@@ -49,8 +49,9 @@ sub _dump_value {
 
 sub escape {
   my ($str) = @_;
+  my $use_verbatim = $str =~ /^\s+|\s+$/s;
   my $sep = do {
-    if ($str =~ s/\n$// or $str =~ /^\s+|\s+$/s) {
+    if ($use_verbatim) {
       "\n "
     } else {
       " "

@@ -28,7 +28,6 @@ END
 - foo
 END
      #
-     , undef
      , [<<END, '' => 'bar']
 - 
 - bar
@@ -54,18 +53,22 @@ foo: bar
 baz: qux
 END
 
+     , undef
      , [<<END, foo => "bar\nbaz\n"]
 foo:
  bar
  baz
+ 
 END
 
      , [<<END, foo => "bar\n\n", baz => "qux\n\n\n"]
 foo:
  bar
  
+ 
 baz:
  qux
+ 
  
  
 END
@@ -153,23 +156,28 @@ use_ok($DUMPER);
 
 sub breakpoint {}
 
+my $T = 0;
 foreach my $data (@tests) {
   unless (defined $data) {
     breakpoint();
     next;
   }
 
+  ++$T;
+
   my ($exp, @data) = @$data;
   my $title = join(", ", Data::Dumper->new(\@data)->Terse(1)->Indent(0)->Dump);
-  eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "dump: $title";
-  is_deeply [$LOADER->new(string => $got)->read], \@data, "read: $title";
-  is_deeply [$LOADER->new(string => $exp)->read], \@data, "read_exp: $title";
+  eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "<T$T> dump: $title";
+  is_deeply [$LOADER->new(string => $got)->read], \@data, "<T$T> read: $title";
+  is_deeply [$LOADER->new(string => $exp)->read], \@data, "<T$T> read_exp: $title";
 }
 
+my $D = 0;
 foreach my $data (@dumponly) {
+  ++$D;
   my ($exp, @data) = @$data;
   my $title = join(", ", Data::Dumper->new(\@data)->Terse(1)->Indent(0)->Dump);
-  eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "dump: $title";
+  eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "<D$D> dump: $title";
 }
 
 {
