@@ -1006,8 +1006,8 @@ sub take_spread_name {
     if ($has_body) {
       my $arg = $primary->[-1];
       # XXX: ここは統合できるはず。ただし、NESTED の時に name が無いことを確認すべき。
-      if ($$arg[NODE_TYPE] == TYPE_ATT_NESTED) {
-	foreach my $each (nx($arg, 1)) {
+      if ($arg->[NODE_TYPE] == TYPE_ATT_NESTED) {
+	foreach my $each (@{$arg->[NODE_BODY]}) {
 	  push @assign, $adder->(html => $each, $body);
 	}
       } else {
