@@ -11,7 +11,12 @@ use MOP4Import::Base::CLI_JSON -as_base
 
 use YATT::Lite::Constants
   qw/NODE_TYPE NODE_BEGIN NODE_END NODE_PATH NODE_BODY NODE_VALUE
-     TYPE_ELEMENT TYPE_LCMSG/;
+     NODE_ATTLIST NODE_AELEM_HEAD NODE_AELEM_FOOT
+     TYPE_ELEMENT TYPE_LCMSG
+     TYPE_ATT_NESTED
+
+     node_unwrap_attlist
+    /;
 # XXX: Adding *TYPE_ / @TYPE_ to @YATT::Lite::Constants::EXPORT_OK didn't work
 # Why?
 *TYPES = *YATT::Lite::Constants::TYPE_;*TYPES = *YATT::Lite::Constants::TYPE_;
@@ -46,18 +51,30 @@ sub convert_tree {
           (value => $_->[NODE_BODY]);
         }
       };
-      # if ($_->[NODE_TYPE] == TYPE_ELEMENT) {
-      # ATTLIST AELEM_HEAD AELEM_FOOT
-      # }
+      if ($_->[NODE_TYPE] == TYPE_ELEMENT) {
+        if (my $attlist = $self->node_unwrap_attlist($_->[NODE_ATTLIST])) {
+          push @rest, attlist => $self->convert_tree($attlist);
+        }
+        foreach my $item ([head => NODE_AELEM_HEAD], [foot => NODE_AELEM_FOOT]) {
+          my ($key, $ix) = @$item;
+          if ($_->[$ix]) {
+            push @rest, $key, $self->convert_tree($_->[$ix]);
+          }
+        }
+      }
       unless (@rest % 2 == 0) {
         die "XXX";
       }
-      +{kind => $TYPES[$_->[NODE_TYPE]], path => $_->[NODE_PATH]
+      +{kind => $TYPES[$_->[NODE_TYPE]]
+        , path => $self->convert_path_of($_)
         , source => $source
         , @rest
       };
     } else {
-      ...
+      # XXX: Is this ok?
+      print "# really?: ".YATT::Lite::Util::terse_dump($tree), "\n";
+      ...;
+      # $self->convert_tree($_);
     }
   } @$tree];
 }
@@ -73,7 +90,15 @@ sub node_body_slot {
   }
 }
 
-
+sub convert_path_of {
+  my ($self, $node) = @_;
+  my $path = $node->[NODE_PATH];
+  if ($path and ref $path and @$path and ref $path->[0]) {
+    $self->convert_tree($path)
+  } else {
+    $path;
+  }
+}
 
 sub list_types {
   @TYPES;

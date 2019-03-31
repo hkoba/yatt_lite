@@ -70,14 +70,28 @@ BAZ
       , '<yatt:foo x y>', "render_$name node $i";
     is $w->{tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n が嬉しくない
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
-
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n"; exit;
+    
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 -
  FOO
  
 {
+attlist[
+{
+kind: TYPE_ATTRIBUTE
+path: x
+source: x
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path: y
+source: y
+value= #null
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: foo
@@ -245,7 +259,7 @@ BAZ
 	, "render_$name node $i ($want)";
     }
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
 
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
@@ -271,6 +285,20 @@ value:
  
  
 {
+attlist[
+{
+kind: TYPE_ATTRIBUTE
+path: x
+source: x
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path: y
+source: y
+value= #null
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: foo
@@ -401,7 +429,7 @@ BAZ
 	, "render_$name node $i ($want)";
     }
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 -
@@ -426,6 +454,20 @@ value:
  
  
 {
+attlist[
+{
+kind: TYPE_ATTRIBUTE
+path: x
+source: x
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path: y
+source: y
+value= #null
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: foo
@@ -538,7 +580,7 @@ END
     , "tmpl Item '$name'";
 
   {
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
 
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
@@ -546,6 +588,76 @@ END
  <h2>Hello</h2>
  
 {
+attlist[
+{
+kind: TYPE_ATT_TEXT
+path= #null
+source: "not defined &yatt:x;"
+subtree[
+-
+ not defined 
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:x;
+subtree[
+var: x
+]
+}
+]
+}
+]
+foot[
+{
+attlist[
+{
+kind: TYPE_ATT_TEXT
+path: if
+source: if="&yatt:x; >= 2"
+subtree[
+{
+kind: TYPE_ENTITY
+path: yatt
+source: &yatt:x;
+subtree[
+var: x
+]
+}
+-
+  >= 2
+]
+}
+]
+kind: TYPE_ATT_NESTED
+path[
+yatt: else
+]
+source:
+ <:yatt:else if="&yatt:x; >= 2"/> world!
+ 
+subtree[
+-
+  world!
+ 
+]
+}
+{
+kind: TYPE_ATT_NESTED
+path[
+yatt: else
+]
+source:
+ <:yatt:else/> decades!
+ 
+subtree[
+-
+  decades!
+-
+ 
+ 
+]
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: if
@@ -612,11 +724,31 @@ END
     , "tmpl Item '$name'";
 
   {
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
 
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
+attlist[
+{
+kind: TYPE_ATT_TEXT
+path: a
+source: a='
+ '
+value:
+ 
+ 
+}
+{
+kind: TYPE_ATT_TEXT
+path: b
+source: b="
+ "
+value:
+ 
+ 
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: foo
@@ -819,11 +951,36 @@ END
   is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
-  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+  #print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
 
   eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
+attlist[
+{
+kind: TYPE_ATT_NESTED
+path= #null
+source: [code:code src:source]
+subtree[
+{
+kind: TYPE_ATTRIBUTE
+path[
+code: code
+]
+source: code:code
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path[
+src: source
+]
+source: src:source
+value= #null
+}
+]
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: my
@@ -1035,6 +1192,39 @@ END
   eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
+attlist[
+{
+kind: TYPE_ATT_TEXT
+path[
+{
+kind: TYPE_ATTRIBUTE
+path: x
+source: x
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path: y
+source: y
+value= #null
+}
+{
+kind: TYPE_ATTRIBUTE
+path[
+- 
+- 
+- 
+- z
+]
+source: :::z
+ x=
+value= #null
+}
+]
+source: [x y :::z]="1..8"
+value: 1..8
+}
+]
 kind: TYPE_ELEMENT
 path[
 yatt: my
@@ -1088,11 +1278,11 @@ END
     , [[5,0,29,1
         , ['yatt','my']
         , undef
-        , [[8,18,26,1
+        , [[[8,18,26,1
            , [[6,10,11,1,'x']
               , [6,12,13,1,'y']
               , [6,14,18,1, ['','','','z']]]
-           , '1..8']]
+           , '1..8']]]
         ,undef,undef,30]
        , "\n"
        , 'x=',[3,32,40,2,'yatt',['var','x']],"\n"
