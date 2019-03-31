@@ -16,6 +16,16 @@ use YATT::Lite::LRXML::ParseBody;
 
 use Test::Differences;
 use YATT::Lite::XHF::Dumper;
+
+
+BEGIN {
+  foreach my $req (qw(File::AddInc MOP4Import::Base::CLI_JSON)) {
+    unless (eval qq{require $req}) {
+      plan skip_all => "$req is not installed."; exit;
+    }
+  }
+}
+
 use YATT::Lite::LRXML::AltTree;
 sub alt_tree_for {
   my ($string, $tree) = @_;
