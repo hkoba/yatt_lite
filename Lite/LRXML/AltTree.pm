@@ -40,7 +40,8 @@ sub convert_tree {
       if ($_->[NODE_BEGIN] and $_->[NODE_END]
           and $_->[NODE_BEGIN] < length($self->{string})
           and $_->[NODE_END] < length($self->{string})) {
-        $source = substr($self->{string}, $_->[NODE_BEGIN], $_->[NODE_END]);
+        $source = substr($self->{string}, $_->[NODE_BEGIN]
+                         , $_->[NODE_END] - $_->[NODE_BEGIN]);
       }
       my @rest = do {
         if (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
