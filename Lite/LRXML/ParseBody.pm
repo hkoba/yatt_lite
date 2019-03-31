@@ -78,9 +78,9 @@ sub _parse_body {
 	if not $is_opt and $elem->[NODE_VALUE];
 
       $self->{curpos} += 1 + ($1 ? length($1) : 0); # $& じゃないので注意。
-      $elem->[NODE_END] = $self->{curpos};
-      $self->{curpos} += length $2 if $2;
-      $elem->[NODE_BODY_BEGIN] = $self->{curpos};
+      $elem->[NODE_END] = $self->{curpos} if $+{empty_elem};
+      $self->{curpos} += length $2 if $2; # XXX: swap with below
+      $elem->[NODE_BODY_BEGIN] = $self->{curpos}; # XXX
 
       $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
 
@@ -119,6 +119,12 @@ sub _parse_body {
 	$self->_parse_body($widget, $body
 			   , $+{empty_elem} ? $close : $formal_path
 			   , $elem, $bodyStartRef);
+        #
+        # x substr($widget->{cf_folder}->{cf_string}, $elem->[NODE_BEGIN], $self->{curpos} - $elem->[NODE_BEGIN])
+        # x $widget->{cf_folder}->source_region($elem->[NODE_BEGIN], $self->{curpos})
+
+        #
+        $elem->[NODE_END] = $self->{curpos};
 	$$bodyStartRef //= $bodystartln;
       } elsif ($is_opt) {
 	# ee style option.

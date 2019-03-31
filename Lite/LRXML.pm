@@ -236,6 +236,12 @@ sub parse_decl {
       }
       my $nlines = numLines($1) + ($2 ? 1 : 0);
       $self->{curpos} += length $&;
+      #
+      # Yet another illegular.
+      # TYPE_COMMENT:
+      #  - NODE_BODY is $nlines
+      #  - NODE_ATTLIST is payload.
+      #
       push @{$part->{toks}}, [TYPE_COMMENT, $self->posinfo($str)
 			      , $self->{startln}
 			      , $comment_ns, $nlines, $1];
