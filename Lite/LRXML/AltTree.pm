@@ -55,7 +55,9 @@ sub convert_tree {
           (value => $_->[NODE_BODY]);
         }
       };
-      if ($_->[NODE_TYPE] == TYPE_ELEMENT) {
+      if ($_->[NODE_TYPE] == TYPE_ELEMENT
+          || $_->[NODE_TYPE] == TYPE_ATT_NESTED
+        ) {
         if (my $attlist = $self->node_unwrap_attlist($_->[NODE_ATTLIST])) {
           push @rest, attlist => $self->convert_tree($attlist);
         }
