@@ -58,17 +58,14 @@ END
 foo:
  bar
  baz
- 
 END
 
      , [<<END, foo => "bar\n\n", baz => "qux\n\n\n"]
 foo:
  bar
  
- 
 baz:
  qux
- 
  
  
 END
@@ -149,7 +146,15 @@ END
 
   );
 
-plan tests => 2 + 3*grep(defined $_, @tests) + @dumponly;
+my @no_trailing_nl = (
+  [<<END, [foo => "bar\n"]]
+foo:
+ bar
+ 
+END
+);
+
+plan tests => 2 + 3*grep(defined $_, @tests) + @dumponly + @no_trailing_nl;
 
 use_ok($LOADER);
 use_ok($DUMPER);
@@ -178,6 +183,20 @@ foreach my $data (@dumponly) {
   my ($exp, @data) = @$data;
   my $title = join(", ", Data::Dumper->new(\@data)->Terse(1)->Indent(0)->Dump);
   eq_or_diff my $got = $DUMPER->dump_xhf(@data)."\n", $exp, "<D$D> dump: $title";
+}
+
+{
+  my $O = 0;
+  my $test = sub {
+    my ($exp, $data) = @_;
+    my $title = join(", ", Data::Dumper->new($data)->Terse(1)->Indent(0)->Dump);
+    ++$O;
+    eq_or_diff $DUMPER->dump_strict_xhf(@$data)."\n", $exp, "<O$O> dump: $title";
+  };
+
+  foreach my $t (@no_trailing_nl) {
+    $test->(@$t);
+  }
 }
 
 {
