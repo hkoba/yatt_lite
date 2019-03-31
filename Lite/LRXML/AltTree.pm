@@ -14,6 +14,7 @@ use YATT::Lite::Constants
      NODE_ATTLIST NODE_AELEM_HEAD NODE_AELEM_FOOT
      TYPE_ELEMENT TYPE_LCMSG
      TYPE_ATT_NESTED
+     TYPE_COMMENT
 
      node_unwrap_attlist
     /;
@@ -44,7 +45,9 @@ sub convert_tree {
                          , $_->[NODE_END] - $_->[NODE_BEGIN]);
       }
       my @rest = do {
-        if (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
+        if ($_->[NODE_TYPE] == TYPE_COMMENT) {
+          (value => $_->[NODE_ATTLIST]);
+        } elsif (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
           (subtree => $self->convert_tree(
             $self->node_body_slot($_))
          )
