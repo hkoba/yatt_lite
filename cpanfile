@@ -37,9 +37,6 @@ recommends 'B::Utils' => '!= 0.26';
 
 recommends 'Text::Glob';
 
-recommends 'File::AddInc';
-recommends 'MOP4Import::Declare';
-
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
 
@@ -74,4 +71,7 @@ on test => sub {
  requires 'Email::Simple';
  requires 'CGI::Emulate::PSGI';
  requires 'CGI::Compile';
+
+ requires 'File::AddInc';
+ requires 'MOP4Import::Declare';
 };
