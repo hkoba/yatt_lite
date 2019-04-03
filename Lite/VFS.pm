@@ -154,9 +154,26 @@ require File::Basename;
       ? $name : [$name => $filename];
     $vfs->{root}->lookup($vfs, $nameSpec);
   }
+  sub list_all_names {
+    (my VFS $vfs) = @_;
+    $vfs->{root}->list_all_names($vfs);
+  }
   sub list_items {
     (my VFS $vfs) = @_;
     $vfs->{root}->list_items($vfs);
+  }
+  sub list_base {
+    (my VFS $vfs) = @_;
+    map {
+      my Folder $folder = $_; # Actually, only folders can be a 'base'.
+      $folder->{cf_path};
+    } $vfs->list_internal_base_folders;
+  }
+
+  # XXX: Incontrast to list_items, list_internal_base_items returns internal VFS items
+  sub list_internal_base_folders {
+    (my VFS $vfs) = @_;
+    $vfs->{root}->list_base($vfs);
   }
   sub resolve_path_from {
     (my VFS $vfs, my Folder $from, my $fn) = @_;

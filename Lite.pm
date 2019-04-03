@@ -719,6 +719,8 @@ foreach
       ensure_parsed
 
       list_items
+      list_base
+      list_internal_base_folders
 
       add_to
     /
