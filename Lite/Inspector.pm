@@ -5,15 +5,16 @@ use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
-       qw/_SITE _app_root/,
+       qw/_SITE _app_root _file_line_cache/,
      [dir => doc => "starting directory to search app.psgi upward"],
      [emit_absolute_path => doc => "emit absolute path instead of \$app_root-relative"],
      [site_class => doc => "class name for SiteApp (to load app.psgi)", default => "YATT::Lite::WebMVC0::SiteApp"],
      [ignore_symlink => doc => "ignore symlinked templates"],
      [detail => doc => "show argument details"],
+     [line_base => default => 1],
    ];
 
-use MOP4Import::Util qw/lexpand/;
+use MOP4Import::Util qw/lexpand symtab/;
 
 use parent qw/File::Spec/;
 
@@ -168,6 +169,98 @@ sub find_yatt_for_template {
 #========================================
 
 #*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
+
+sub cmd_show_file_line {
+  (my MY $self, my @desc) = @_;
+  $self->cli_output($self->show_file_line(@desc));
+  ();
+}
+sub show_file_line {
+  (my MY $self, my @desc) = @_;
+  my ($file, $line) = do {
+    if (@desc == 1 and ref $desc[0] eq 'HASH') {
+      @{$desc[0]}{'file', 'line'}
+    } else {
+      @desc;
+    }
+  };
+
+  my $lines = $self->{_file_line_cache}{$file} //= do {
+    open my $fh, "<:utf8", $file or Carp::croak "Can't open $file: $!";
+    chomp(my @lines = <$fh>);
+    \@lines;
+  };
+
+  unless (defined $line) {
+    Carp::croak "line is undef!";
+  }
+
+  [@desc, $lines->[$line - $self->{line_base}]];
+}
+
+sub cmd_list_entities {
+  (my MY $self, my @args) = @_;
+  $self->configure($self->parse_opts(\@args));
+  my $widgetNameGlob = shift @args;
+
+  require Sub::Identify;
+
+  my %opts = @args == 1 ? %{$args[0]} : @args;
+
+  my $searchFrom = delete $opts{from};
+  if (%opts) {
+    Carp::croak "Unknown options: ". join(", ", sort keys %opts);
+  }
+
+  my $cwdOrFileList = $self->list_target_dirs($searchFrom);
+
+  my $emit_entities_in_entns; $emit_entities_in_entns = sub {
+    my ($entns, $path) = @_;
+    my $symtab = symtab($entns);
+    foreach my $meth (sort grep {/^entity_/ and *{$symtab->{$_}}{CODE}}
+                        keys %$symtab) {
+      my ($file, $line) = Sub::Identify::get_code_location(*{$symtab->{$meth}}{CODE});
+      $meth =~ s/^entity_//;
+      my @result = (name => $meth, entns => $entns
+                      , file => $file // $path, line => $line);
+      $self->cli_output(
+        $self->{detail} ? +{@result} : \@result
+      );
+    }
+  };
+
+  my %seen;
+  my @superNS;
+  walk_vfs_folders(
+    factory => $self->{_SITE},
+    from => $cwdOrFileList,
+    ignore_symlink => $self->{ignore_symlink},
+    dir => sub {
+      my ($dir, $yatt) = @_;
+      my $entns = $yatt->EntNS;
+      return if $seen{$entns}++;
+      push @superNS, grep {not $seen{$_}++} $dir->get_linear_isa_of_entns;
+    },
+    file => sub {
+      my ($tmpl, $yatt) = @_;
+      my $entns = $tmpl->cget('entns');
+      foreach my $part ($tmpl->list_parts(YATT::Lite::Core->Entity)) {
+        my @result = (name => $part->cget('name'), file => $tmpl->cget('path')
+                        , line => $part->cget('startln'), entns => $entns);
+        $self->cli_output(
+          $self->{detail} ? +{@result} : \@result
+        );
+      }
+      push @superNS, grep {not $seen{$_}++} $tmpl->get_linear_isa_of_entns;
+    },
+  );
+
+  foreach my $superNS (@superNS) {
+    my $path = YATT::Lite::Util::try_invoke($superNS, 'filename');
+    $emit_entities_in_entns->($superNS, $path);
+  }
+}
+
 sub cmd_list_vfs_folders {
   (my MY $self, my @args) = @_;
   $self->configure($self->parse_opts(\@args));

@@ -30,6 +30,9 @@ requires 'Cookie::Baker';
 requires 'CGI';
 requires 'HTML::Entities';
 
+recommends 'Sub::Identify';
+recommends 'Sub::Inspector';
+
 recommends 'YAML::Tiny';
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 recommends 'Sub::Inspector';

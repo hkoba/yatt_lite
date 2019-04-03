@@ -42,6 +42,11 @@ require File::Basename;
     # XXX: Item に移すべきかもしれない。そうすれば、 Widget->parent が引ける。
     weaken($self->{cf_parent} = shift);
   }
+  sub YATT::Lite::VFS::Folder::get_linear_isa_of_entns {
+    (my Folder $folder) = @_;
+    my $isa = mro::get_linear_isa($folder->{cf_entns});
+    wantarray ? @$isa : $isa;
+  }
 
   package YATT::Lite::VFS; BEGIN {$INC{"YATT/Lite/VFS.pm"} = 1}
   sub VFS () {__PACKAGE__}
