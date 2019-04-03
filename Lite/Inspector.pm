@@ -31,7 +31,7 @@ use YATT::Lite::CGen::Perl;
 
 use YATT::Lite::LRXML::AltTree;
 
-use YATT::Lite::Walker;
+use YATT::Lite::Walker qw/walk walk_vfs_folders/;
 
 #========================================
 
@@ -164,6 +164,44 @@ sub find_yatt_for_template {
   my ($fn, $dir) = File::Basename::fileparse($fileName);
   $self->{_SITE}->load_yatt($dir);
 }
+
+#========================================
+
+#*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
+sub cmd_list_vfs_folders {
+  (my MY $self, my @args) = @_;
+  $self->configure($self->parse_opts(\@args));
+  my $widgetNameGlob = shift @args;
+
+  my %opts = @args == 1 ? %{$args[0]} : @args;
+
+  my $searchFrom = delete $opts{from};
+  if (%opts) {
+    Carp::croak "Unknown options: ". join(", ", sort keys %opts);
+  }
+
+  my $cwdOrFileList = $self->list_target_dirs($searchFrom);
+
+  walk_vfs_folders(
+    factory => $self->{_SITE},
+    from => $cwdOrFileList,
+    ignore_symlink => $self->{ignore_symlink},
+    dir => sub {
+      my ($dir, $yatt) = @_;
+      # print join("\t", dir => $yatt->cget('dir'), $yatt->EntNS), "\n";
+      my @result = (kind => 'dir', path => $dir->cget('path'),
+                    entns => $dir->cget('entns'));
+      $self->cli_output(\@result);
+    },
+    file => sub {
+      my ($tmpl, $yatt) = @_;
+      my @result = (kind => 'dir', path => $tmpl->cget('path'),
+                    entns => $tmpl->cget('entns'));
+      $self->cli_output(\@result);
+    },
+  );
+}
+
 
 #========================================
 

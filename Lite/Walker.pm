@@ -7,8 +7,8 @@ sub MY () {__PACKAGE__}
 use mro 'c3';
 
 use Exporter qw/import/;
-our @EXPORT_OK = qw/walk/;
-our @EXPORT = @EXPORT_OK;
+our @EXPORT = qw/walk/;
+our @EXPORT_OK = (@EXPORT, qw/walk_vfs_folders/);
 
 use YATT::Lite::Factory;
 use YATT::Lite::Util qw/lexpand/;
@@ -96,6 +96,60 @@ sub walk {
 
     $walk->($vfs, $rootPart);
   }
+}
+
+sub walk_vfs_folders {
+  (my %opts) = @_;
+
+  my $self = delete $opts{factory} or Carp::croak "factory is missing!";
+  my $fromList = delete $opts{from} // $self->{tmpldirs};
+  my $noSymlink = delete $opts{ignore_symlink};
+
+  my $dirAction = delete $opts{dir} // sub {
+    my ($dir, $vfs) = @_;
+    # print join("\t", dir => $yatt->cget('dir'), $yatt->EntNS), "\n";
+    print join("\t", dir => $dir->cget('path'), $dir->cget('entns')), "\n";
+  };
+
+  my $fileAction = delete $opts{file} // sub {
+    my ($tmpl) = @_;
+    print join("\t", file => $tmpl->cget('path'), $tmpl->cget('entns')), "\n";
+  };
+
+  if (%opts) {
+    Carp::croak "Unknown options for traverse: ".join(", ", sort keys %opts);
+  }
+
+  my %seen;
+  my $walk; $walk = sub {
+    my (@dirName) = @_;
+    foreach my $dirName (@dirName) {
+      next if $seen{$dirName}++;
+      next if -l $dirName and $noSymlink;
+      my $yatt = $self->load_yatt($dirName);
+      my $vfs = $yatt->get_vfs;
+      $dirAction->($vfs->root, $yatt);
+      my @subDir;
+      foreach my $name ($vfs->list_all_names) {
+        my $path = "$dirName/$name";
+        if (-d $path) {
+          push @subDir, $path;
+        } else {
+          next if $seen{$path}++;
+          my $tmpl = $yatt->find_part($name);
+          my $realFn = $tmpl->cget('path');
+          next if -l $realFn and $noSymlink;
+          $fileAction->($tmpl, $yatt);
+        }
+      }
+
+      $walk->(@subDir) if @subDir;
+
+      $walk->($yatt->list_base);
+    }
+  };
+
+  $walk->(lexpand($fromList));
 }
 
 1;
