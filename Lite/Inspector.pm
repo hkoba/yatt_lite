@@ -238,7 +238,7 @@ sub cmd_list_entities {
     dir => sub {
       my ($dir, $yatt) = @_;
       my $entns = $yatt->EntNS;
-      return if $seen{$entns}++;
+      return if $seen{$entns};
       push @superNS, grep {not $seen{$_}++} $dir->get_linear_isa_of_entns;
     },
     file => sub {
