@@ -643,7 +643,8 @@ sub lookup_split_path_info {
   (my MY $self, my $path_info) = @_;
   lookup_path($path_info
 	      , $self->{tmpldirs}
-	      , $self->{cf_index_name}, ".$self->{cf_ext_public}"
+	      , $self->{cf_index_name}
+              , $self->{cf_ext_public}
 	      , $self->{cf_use_subpath});
 }
 

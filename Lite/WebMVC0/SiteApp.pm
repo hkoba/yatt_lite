@@ -35,10 +35,13 @@ use YATT::Lite::MFields qw/cf_noheader
 			   cf_logfile
 			   cf_overwrite_status_code_for_errors_as
 			   re_handled_ext
+                           handled_ext_list
 
                            cf_progname
 
                            cf_no_trim_script_name
+
+                           cf_ext_public_action
 
                            cf_config_dir
                            dirapp_config
@@ -62,13 +65,21 @@ our @EXPORT_OK = qw/*CON/;
 use YATT::Lite::WebMVC0::DirApp ();
 sub DirApp () {'YATT::Lite::WebMVC0::DirApp'}
 sub default_default_app () {'YATT::Lite::WebMVC0::DirApp'}
+sub default_ext_public_action {'ydo'}
 
 use File::Basename;
 
 sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new();
-  $self->{re_handled_ext} = qr{\.($self->{cf_ext_public}|ydo)$};
+  $self->{cf_ext_public_action} //= $self->default_ext_public_action;
+  $self->{handled_ext_list} = [
+    $self->{cf_ext_public}, $self->{cf_ext_public_action}
+  ];
+  $self->{re_handled_ext} = do {
+    my $str = join("|", @{$self->{handled_ext_list}});
+    qr{\.($str)$};
+  };
   $self->{cf_per_role_docroot_key} ||= $self->default_per_role_docroot_key;
   $self->{cf_default_role} ||= $self->default_default_role;
   $self->{cf_config_dir} //= do {
@@ -512,7 +523,8 @@ sub split_path_info {
 
     lookup_path($env->{PATH_INFO}
 		, $tmpldirs
-		, $self->{cf_index_name}, ".$self->{cf_ext_public}"
+		, $self->{cf_index_name}
+                , $self->{handled_ext_list}
 		, $self->{cf_use_subpath});
   } else {
     # or die

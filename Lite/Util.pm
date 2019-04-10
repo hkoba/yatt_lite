@@ -263,10 +263,11 @@ require File::Spec;
   }
 
   sub lookup_path {
-    my ($path_info, $dirlist, $index_name, $want_ext, $use_subpath) = @_;
+    my ($path_info, $dirlist, $index_name, $ext_list, $use_subpath) = @_;
     $index_name //= 'index';
-    $want_ext //= '.yatt';
-    my $ixfn = $index_name . $want_ext;
+    my ($ext1, @ext) = lexpand($ext_list);
+    $ext1 //= "yatt";
+    my $ixfn = $index_name . ".$ext1";
     my @dirlist = grep {defined $_ and -d $_} @$dirlist;
     print STDERR "dirlist" => terse_dump(@dirlist), "\n" if DEBUG_LOOKUP_PATH;
     my $pi = $path_info;
@@ -284,16 +285,21 @@ require File::Spec;
 	} elsif ($pi =~ m{^/} and -d $base) {
 	  # path_info has '/' and directory exists.
 	  next; # candidate
-	} elsif (-r (my $fn = "$base$want_ext")) {
-	  return ($dir, "$loc/", "$cur$want_ext", $pi);
-	} elsif ($use_subpath
-		 and -r (my $alt = "$dir$loc/$ixfn")) {
-	  $ext //= "";
-	  return ($dir, "$loc/", $ixfn, "/$cur$ext$pi", 1);
 	} else {
-	  # Neither dir nor $cur$want_ext exists, it should be ignored.
-	  undef $dir;
-	}
+          foreach my $want_ext ($ext1, @ext) {
+            if (-r (my $fn = "$base.$want_ext")) {
+              return ($dir, "$loc/", "$cur.$want_ext", $pi);
+            }
+          }
+          if ($use_subpath
+              and -r (my $alt = "$dir$loc/$ixfn")) {
+            $ext //= "";
+            return ($dir, "$loc/", $ixfn, "/$cur$ext$pi", 1);
+          } else {
+            # Neither dir nor $cur$want_ext exists, it should be ignored.
+            undef $dir;
+          }
+        }
       }
     } continue {
       $loc .= "/$cur";

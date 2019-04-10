@@ -62,7 +62,7 @@ foreach my $has_index (1, 0) {
 
   describe $with_or_without->($has_index)." index.yatt", sub {
 
-    describe "action.ydo", sub {
+    describe "foo.ydo", sub {
       my ($app_root, $html_dir, $site) = $make_siteapp->($make_dirs->());
 
       MY->mkfile("$html_dir/index.yatt", <<'END') if $has_index;
@@ -93,7 +93,7 @@ END
       };
 
       # TODO:
-      if ($TODO) {
+      if (1) {
         describe "request /foo", sub {
           my Env $psgi = (GET "/foo")->to_psgi;
 
