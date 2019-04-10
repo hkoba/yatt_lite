@@ -6,7 +6,8 @@ use warnings qw(FATAL all NONFATAL misc);
 use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
-use Test::Kantan;
+#use Test::Kantan;
+use Test::More;
 use File::Temp qw/tempdir/;
 
 use Plack::Request;
@@ -23,12 +24,27 @@ use Cwd;
 
 use YATT::Lite::PSGIEnv;
 
+{
+  package
+    t_call_tester;
+  sub new {
+    my ($pack, $app) = @_;
+    bless [$app], $pack;
+  }
+
+  sub psgi_returns {
+    my ($self, $psgi, $expect, $it_should) = @_;
+    my $got = $self->[0]->call($psgi);
+    Test::More::is_deeply($got, $expect, $it_should);
+  }
+}
+
 my $TEMPDIR = tempdir(CLEANUP => 1);
 my $CWD = cwd();
 my $TESTNO = 0;
 my $CT = ["Content-Type", q{text/html; charset="utf-8"}];
 
-my $TODO = $ENV{TEST_TODO};
+my $TEST_TODO = $ENV{TEST_TODO};
 
 #----------------------------------------
 
@@ -60,10 +76,12 @@ my $with_or_without = sub {$_[0] ? "With" : "Without"};
 
 foreach my $has_index (1, 0) {
 
-  describe $with_or_without->($has_index)." index.yatt", sub {
+  subtest $with_or_without->($has_index)." index.yatt", sub {
 
-    describe "foo.ydo", sub {
+    subtest "foo.ydo", sub {
       my ($app_root, $html_dir, $site) = $make_siteapp->($make_dirs->());
+
+      my $tester = t_call_tester->new($site);
 
       MY->mkfile("$html_dir/index.yatt", <<'END') if $has_index;
 <h2>Hello</h2>
@@ -84,37 +102,38 @@ return sub {
 };
 END
 
-      describe "request /foo.ydo", sub {
+      subtest "request /foo.ydo", sub {
         my Env $psgi = (GET "/foo.ydo")->to_psgi;
 
-        it "should invoke action in foo.ydo", sub {
-          expect($site->call($psgi))->to_be([200, $CT, ["action in foo.ydo"]]);
-        };
+        $tester->psgi_returns($psgi, [200, $CT, ["action in foo.ydo"]]
+                              , "it should invoke action in foo.ydo");
       };
 
       # TODO:
       if (1) {
-        describe "request /foo", sub {
+        subtest "request /foo", sub {
           my Env $psgi = (GET "/foo")->to_psgi;
 
-          it "should invoke action in foo.ydo", sub {
-            expect($site->call($psgi))->to_be([200, $CT, ["action in foo.ydo"]]);
-          };
+          $tester->psgi_returns($psgi, [200, $CT, ["action in foo.ydo"]]
+                                , "it should invoke action in foo.ydo");
         };
       }
 
       if ($has_index) {
-        describe "request /bar (for sanity check)", sub {
+        subtest "request /bar (for sanity check)", sub {
           my Env $psgi = (GET "/bar")->to_psgi;
 
-          it "should invoke action bar in index.yatt", sub {
-            expect($site->call($psgi))->to_be([200, $CT, ["action bar in index.yatt"]]);
-          };
+          $tester->psgi_returns($psgi, [200, $CT, ["action bar in index.yatt"]]
+                                , "it should invoke action bar in index.yatt");
         };
       }
     };
 
-    describe "Action in .htyattrc.pl", sub {
+    TODO:
+    $TEST_TODO
+      and
+    subtest "Action in .htyattrc.pl", sub {
+      local $TODO = $TEST_TODO ? undef : "Not yet solved";
       my ($app_root, $html_dir) = $make_dirs->();
 
       make_path(my $tmpl_dir = "$app_root/ytmpl");
@@ -140,31 +159,32 @@ Action foo => sub {
 END
 
       my $site = $make_siteapp->($app_root, $html_dir, app_base => '@ytmpl');
+      my $tester = t_call_tester->new($site);
 
-      if ($has_index or $TODO) {
-        describe "request /?!foo=1", sub {
+      if ($has_index or $TEST_TODO) {
+        subtest "request /?!foo=1", sub {
           my Env $psgi = (GET "/?!foo=1")->to_psgi;
 
-          it "should invoke action foo in .htyattrc.pl", sub {
-            expect($site->call($psgi))->to_be([200, $CT, ["action foo in .htyattrc.pl"]]);
-          };
+          $tester->psgi_returns($psgi, [200, $CT, ["action foo in .htyattrc.pl"]]
+                                , "it should invoke action foo in .htyattrc.pl");
         };
       }
 
-      if ($TODO) {
-        describe "request /foo", sub {
+      if ($TEST_TODO) {
+        subtest "request /foo", sub {
           my Env $psgi = (GET "/foo")->to_psgi;
 
-          it "should invoke action foo in .htyattrc.pl", sub {
-            expect($site->call($psgi))->to_be([200, $CT, ["action foo in .htyattrc.pl"]]);
-          };
+          $tester->psgi_returns($psgi, [200, $CT, ["action foo in .htyattrc.pl"]]
+                                , "it should invoke action foo in .htyattrc.pl");
         };
       }
     };
 
-    ($has_index or $TODO)
+    TODO:
+    ($has_index)
       and
-    describe "site->mount_action(URL, subref)", sub {
+    subtest "site->mount_action(URL, subref)", sub {
+      local $TODO = $TEST_TODO ? undef : "Not yet solved";
       my ($app_root, $html_dir) = $make_dirs->();
 
       make_path($html_dir);
@@ -177,6 +197,7 @@ page bar in index.yatt
 END
 
       my $site = $make_siteapp->($app_root, $html_dir, app_base => '@ytmpl');
+      my $tester = t_call_tester->new($site);
 
       $site->mount_action(
         '/foo',
@@ -186,22 +207,20 @@ END
         }
       );
 
-      if ($TODO) {
-        describe "request /?!foo=1", sub {
+      if ($TEST_TODO) {
+        subtest "request /?!foo=1", sub {
           my Env $psgi = (GET "/?!foo=1")->to_psgi;
 
-          it "should invoke action foo from mount_action", sub {
-            expect($site->call($psgi))->to_be([200, $CT, ["action foo from mount_action"]]);
-          };
+          $tester->psgi_returns($psgi, [200, $CT, ["action foo from mount_action"]]
+                                , "it should invoke action foo from mount_action");
         };
       }
 
-      describe "request /foo", sub {
+      subtest "request /foo", sub {
         my Env $psgi = (GET "/foo")->to_psgi;
 
-        it "should invoke action foo from mount_action", sub {
-          expect($site->call($psgi))->to_be([200, $CT, ["action foo from mount_action"]]);
-        };
+        $tester->psgi_returns($psgi, [200, $CT, ["action foo from mount_action"]]
+                              , "it should invoke action foo from mount_action");
       };
     };
   };
@@ -211,4 +230,3 @@ END
 chdir($CWD);
 
 done_testing();
-
