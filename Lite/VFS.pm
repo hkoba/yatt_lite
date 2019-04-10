@@ -415,6 +415,15 @@ require File::Basename;
     print STDERR "# VFS:   Dir::load(", sorted_dump($nameSpec), ") in $in\n"
       if DEBUG_LOOKUP;
     my ($partName, $realFile) = lexpand($nameSpec);
+
+    # When $partName contains NUL like 'do\0action',
+    # we should avoid filesystem testings.
+    if ($partName =~ /\0/) {
+      print STDERR "# VFS:   -> avoid fs lookup for \\0 in $in\n"
+        if DEBUG_LOOKUP;
+      return;
+    }
+
     $realFile ||= $partName;
 
     my $vfsname = "$in->{cf_path}/$realFile";
