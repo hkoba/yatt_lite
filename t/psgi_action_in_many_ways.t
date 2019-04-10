@@ -34,8 +34,14 @@ use YATT::Lite::PSGIEnv;
 
   sub psgi_returns {
     my ($self, $psgi, $expect, $it_should) = @_;
-    my $got = $self->[0]->call($psgi);
-    Test::More::is_deeply($got, $expect, $it_should);
+    my $got;
+    if (my $err = YATT::Lite::Util::catch {
+      $got = $self->[0]->call($psgi);
+    }) {
+      Test::More::fail("$it_should: $err");
+    } else {
+      Test::More::is_deeply($got, $expect, $it_should);
+    }
   }
 }
 
@@ -130,7 +136,7 @@ END
     };
 
     TODO:
-    $TEST_TODO
+    ($has_index or $TEST_TODO)
       and
     subtest "Action in .htyattrc.pl", sub {
       local $TODO = $TEST_TODO ? undef : "Not yet solved";
