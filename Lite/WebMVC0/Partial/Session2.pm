@@ -126,6 +126,10 @@ sub session_start {
 
   $env->{'psgix.session.options'} = { id => $id, @opts };
 
+  if ($env->{HTTPS}) {
+    $env->{'psgix.session.options'}{secure} //= 1;
+  }
+
   $env->{'plack.session'}
     = Plack::Util::load_class($self->default_session_class)->new($env);
 }
