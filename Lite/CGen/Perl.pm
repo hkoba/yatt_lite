@@ -414,9 +414,21 @@ use YATT::Lite::Constants;
       $self->sync_curline($_->[NODE_LNO]), ", ", $self->add_curline(do {
 	my $name = argName($_);
 	unless (defined $name) {
-	  defined($name = $widget->{arg_order}[$posArgs++])
-	    or die $self->generror("Too many args");
+	  defined($name = $widget->{arg_order}[$posArgs //= 0])
+	    or die $self->generror("Too many arguments for widget <%s>"); # This may not be called.
+
+          # Positional arguments should not be treated as body argument.
+          if ($widget->{arg_dict}{$name}->is_body_argument) {
+            die $self->generror(
+              "Too many arguments for widget <%s>: %s", $wname
+              , $self->{curtmpl}->source_region($primary->[$posArgs][NODE_BEGIN],
+                                                $primary->[$#$primary][NODE_END])
+            );
+          }
+
+          $posArgs++;
 	}
+
 	my $formal = $add_arg->($name);
 	unless (my $passThruVar = passThruVar($_)) {
 	  $self->as_cast_to($formal, argValue($_));

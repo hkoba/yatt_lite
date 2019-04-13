@@ -701,3 +701,9 @@ OUT:
  quux
  
 
+TITLE: [GH #167] Too many arguments error
+IN:
+ <yatt:foo "xxx" 'yyy'   "zzz"/>
+ 
+ <!yatt:widget foo>
+ERROR: Too many arguments for widget <yatt:foo>: "xxx" 'yyy'   "zzz"
