@@ -1103,7 +1103,7 @@ sub take_spread_name {
 	}
 	'@'.$self->as_lvalue($found_var);
       } else {
-	die $self->generror("Unknown list=");
+	die die $self->generror("Unknown variable for foreach list: '%s'", $passThruVarName);
       }
     };
 
