@@ -99,7 +99,7 @@ sub format_error {
   my @lineinfo = ("[file] ".default($err->{cf_tmpl_file}, '-')
 		  , "[line] ".default($err->{cf_tmpl_line}, '-'));
   my $msg = $type . " [@lineinfo]\n "
-    .sprintf($err->{cf_format}, @{$err->{cf_args}});
+    . ($err->{cf_reason} // sprintf($err->{cf_format}, @{$err->{cf_args}}));
   $msg .= "\n" unless $msg =~ m{\n\Z};
   $msg;
 };

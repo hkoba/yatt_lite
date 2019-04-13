@@ -1054,7 +1054,7 @@ sub take_spread_name {
     my ($path, $body, $primary, $head, $foot) = nx($node);
     $self->feed_arg_spec($primary, \%args, \@args
 			 , my ($list, $my, $nth))
-      or die $self->generror("Not enough arguments!");
+      or die $self->generror("Not enough arguments for <yatt:foreach>!");
 
     my ($prologue, $continue, $epilogue) = ('', '', '');
 
