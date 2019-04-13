@@ -400,7 +400,7 @@ use YATT::Lite::Constants;
     my $add_arg = sub {
       my ($name) = @_;
       my $formal = $widget->{arg_dict}{$name} or do {
-	die $self->generror(q{Unknown arg '%s' in widget %s}, $name, $wname);
+	die $self->generror(q{Unknown arg '%s' in widget <%s>}, $name, $wname);
       };
       if (defined $argOrder[my $argno = $formal->argno]) {
 	die $self->generror(q{Duplicate arg '%s'}, $name);
