@@ -546,6 +546,9 @@ use YATT::Lite::Constants;
   }
   sub as_cast_to_code {
     (my MY $self, my ($var, $value)) = @_;
+    unless (ref $value eq 'ARRAY') {
+      die $self->generror(q{Invalid text expression for variable '%s': %s}, $var->varname, $value);
+    }
     local $self->{curtoks} = [@$value];
     my Widget $virtual = $var->widget;
     local $self->{scope} = $self->mkscope

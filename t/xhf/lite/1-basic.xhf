@@ -707,3 +707,12 @@ IN:
  
  <!yatt:widget foo>
 ERROR: Too many arguments for widget <yatt:foo>: "xxx" 'yyy'   "zzz"
+
+
+TITLE: (prohibited use of) positional code argument should raise (somewhat) understandable error
+IN:
+ <yatt:foo "print $CON 'bar'"/>
+ 
+ <!yatt:widget foo mycode="code">
+ <yatt:mycode/>
+ERROR: Invalid text expression for variable 'mycode': print \$CON 'bar'
