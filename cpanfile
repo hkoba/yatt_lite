@@ -69,7 +69,7 @@ on test => sub {
 
  requires 'Pod::Simple::SimpleTree';
  requires 'HTTP::Headers';
- requires 'HTTP::Cookies';
+ requires 'HTTP::Cookies', '>= 6.02';
  requires 'Email::Sender';
  requires 'Email::Simple';
  requires 'CGI::Emulate::PSGI';
