@@ -488,21 +488,21 @@ IN:
  <yatt:foo x/>
  <!yatt:widget foo x=value>
  &yatt:x;
-ERROR: ^valueless arg 'x' 
+ERROR: ^argument 'x' requires value expression like '=...'
 
 TITLE: valueless value for list => error.
 IN:
  <yatt:foo x/>
  <!yatt:widget foo x=list>
  &yatt:x;
-ERROR: ^valueless arg 'x' 
+ERROR: ^argument 'x' requires value expression like '=...'
 
 TITLE: valueless arg for text => error.
 IN:
  <yatt:foo x/>
  <!yatt:widget foo x>
  &yatt:x;
-ERROR: ^valueless arg 'x'
+ERROR: ^argument 'x' requires value expression like '=...'
 
 
 TITLE: valueless arg pass thru (text -> html)

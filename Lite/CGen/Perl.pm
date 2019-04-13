@@ -443,7 +443,7 @@ use YATT::Lite::Constants;
 	  # フラグ立てとして扱って良い型の場合。
 	  $v;
 	} else {
-	  die $self->generror(q{valueless arg '%s'}, $passThruVar);
+	  die $self->generror(q{argument '%s' requires value expression like '=...'}, $passThruVar);
 	}
       });
     } @$primary;
