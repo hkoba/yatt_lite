@@ -81,6 +81,12 @@ Entity session_change_id => sub {
   $CON->cget('system')->session_change_id($CON);
 };
 
+Entity session_expire => sub {
+  my ($this) = @_;
+  $CON->cget('system')->session_expire($CON);
+  "";
+};
+
 #----------------------------------------
 sub default_session_class {'Plack::Session'}
 
@@ -91,11 +97,19 @@ Entity session => sub {
 };
 
 {
-  foreach my $meth (qw(id get set remove keys expire)) {
+  foreach my $meth (qw(id get keys)) {
     Entity "session_$meth" => sub {
       my $this = shift;
       my Env $env = $CON->env;
       $env->{'plack.session'}->$meth(@_);
+    };
+  }
+  foreach my $meth (qw(set remove)) {
+    Entity "session_$meth" => sub {
+      my $this = shift;
+      my Env $env = $CON->env;
+      $env->{'plack.session'}->$meth(@_);
+      "";
     };
   }
 }
@@ -117,6 +131,36 @@ sub session_start {
   my $id = $self->session_state_extract_id($CON);
   my $session; $session = $self->session_store_fetch($CON, $id) if $id;
 
+  $self->session_init_env($env, $session, $id, @opts);
+}
+
+sub session_expire {
+  (my MY $self, my ($CON)) = @_;
+
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
+  my Env $env = $CON->env;
+
+  if (my $options = $env->{'psgix.session.options'}) {
+
+    $options->{expire} = 1;
+
+  } else {
+    my $id = $self->session_state_extract_id($CON);
+    $self->session_init_env($env, {}, $id, expire => 1);
+  }
+
+}
+
+sub session_init_env {
+  (my MY $self, my Env $env, my ($session, $id, @opts)) = @_;
+
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
   if ($id && $session) {
     $env->{'psgix.session'} = $session;
   } else {
@@ -132,6 +176,7 @@ sub session_start {
 
   $env->{'plack.session'}
     = Plack::Util::load_class($self->default_session_class)->new($env);
+
 }
 
 sub session_state_exists {
@@ -148,6 +193,10 @@ sub session_state_extract_id {
   $CON->cookies_in->{$mw->state->session_key};
 }
 
+#
+# In some case, you may want to clear previous session explicitly
+# even when previous cookie state exists.
+#
 sub session_change_id {
   (my MY $self, my $CON) = @_;
   my $mw = $self->{_session_middleware} or do {
@@ -155,7 +204,18 @@ sub session_change_id {
   };
 
   my Env $env = $CON->env;
-  $mw->change_id($env);
+
+  if (not $env->{'psgix.session'}) {
+    if (my $prev_sid = $self->session_state_extract_id($CON)) {
+      $self->session_store_remove($CON, $prev_sid);
+    }
+
+    $self->session_init_env($env);
+
+    return $env->{'psgix.session.options'}{'id'};
+  } else {
+    $mw->change_id($env);
+  }
 }
 
 sub session_store_fetch {
@@ -165,6 +225,15 @@ sub session_store_fetch {
   };
 
   $mw->store->fetch($id);
+}
+
+sub session_store_remove {
+  (my MY $self, my ($CON, $id)) = @_;
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+
+  $mw->store->remove($id);
 }
 
 #
