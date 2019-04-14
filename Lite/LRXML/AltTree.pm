@@ -7,6 +7,7 @@ use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
      [string => doc => "source template string"],
      [all_source => doc => "include all source for intermediate nodes instead of leaf only"],
+     [with_text => doc => "include all text node"],
    ];
 
 use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
@@ -14,8 +15,7 @@ use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
 use MOP4Import::Types
   AltNode => [[fields => qw/
                              kind path source range
-                             attlist
-                             head subtree foot
+                             subtree
                              value
                            /]];
 
@@ -45,10 +45,10 @@ sub cli_write_fh_as_xhf {
 }
 
 sub convert_tree {
-  (my MY $self, my ($tree)) = @_;
-  [map {
+  (my MY $self, my ($tree, $with_text)) = @_;
+  map {
     if (not ref $_) {
-      $_;
+      ($with_text || $self->{with_text}) ? $_ : ();
     } elsif (not ref $_->[NODE_TYPE]) {
       my AltNode $altnode = +{};
       $altnode->{kind} = $TYPES[$_->[NODE_TYPE]];
@@ -73,30 +73,35 @@ sub convert_tree {
           $p;
         };
       }
-      do {
+
+      if ($_->[NODE_TYPE] == TYPE_ELEMENT || $_->[NODE_TYPE] == TYPE_ATT_NESTED) {
+        my @origSubTree;
+        if (my $attlist = $self->node_unwrap_attlist($_->[NODE_ATTLIST])) {
+          push @origSubTree, $attlist;
+        }
+        if (my $subtree = $_->[NODE_AELEM_HEAD]) {
+          push @origSubTree, $subtree;
+        }
+        if (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
+          push @origSubTree, $self->node_body_slot($_);
+        }
+        if (my $subtree = $_->[NODE_AELEM_FOOT]) {
+          push @origSubTree, $subtree;
+        }
+        $altnode->{subtree} = [map {
+          $self->convert_tree($_, $with_text);
+        } @origSubTree];
+      } else {
         if ($_->[NODE_TYPE] == TYPE_COMMENT) {
           $altnode->{value} = $_->[NODE_ATTLIST];
         } elsif ($_->[NODE_TYPE] == TYPE_ENTITY) {
           $altnode->{value} = $_->[NODE_BODY];
         } elsif (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
-          $altnode->{subtree} = $self->convert_tree(
-            $self->node_body_slot($_)
-          )
+          $altnode->{subtree} = [$self->convert_tree(
+            $self->node_body_slot($_), $with_text
+          )];
         } else {
           $altnode->{value} = $_->[NODE_BODY];
-        }
-      };
-      if ($_->[NODE_TYPE] == TYPE_ELEMENT
-          || $_->[NODE_TYPE] == TYPE_ATT_NESTED
-        ) {
-        if (my $attlist = $self->node_unwrap_attlist($_->[NODE_ATTLIST])) {
-          $altnode->{attlist} = $self->convert_tree($attlist);
-        }
-        foreach my $item ([head => NODE_AELEM_HEAD], [foot => NODE_AELEM_FOOT]) {
-          my ($key, $ix) = @$item;
-          if ($_->[$ix]) {
-            $altnode->{$key} = $self->convert_tree($_->[$ix]);
-          }
         }
       }
       $altnode;
@@ -106,7 +111,7 @@ sub convert_tree {
       ...;
       # $self->convert_tree($_);
     }
-  } @$tree];
+  } @$tree;
 }
 
 sub column_of_source_pos {
@@ -133,7 +138,7 @@ sub convert_path_of {
   my ($self, $node) = @_;
   my $path = $node->[NODE_PATH];
   if ($path and ref $path and @$path and ref $path->[0]) {
-    $self->convert_tree($path)
+    [$self->convert_tree($path, 1)]; # with_text
   } else {
     $path;
   }
