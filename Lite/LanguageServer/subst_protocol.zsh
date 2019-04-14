@@ -58,8 +58,8 @@ function emit_body {
         $parser extract_codeblock typescript $specFn|
             $parser cli_xargs_json extract_statement_list|
             grep -v 'interface ParameterInformation'|
-            $parser cli_xargs_json --slurp tokenize_statement_list|
-            $parser cli_xargs_json --slurp parse_statement_list
+            $parser cli_xargs_json --slurp --single tokenize_statement_list|
+            $parser cli_xargs_json --slurp --single parse_statement_list
     ) "$@"
 
 }
