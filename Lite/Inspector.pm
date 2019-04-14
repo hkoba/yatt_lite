@@ -14,7 +14,10 @@ use MOP4Import::Base::CLI_JSON -as_base
      [line_base => default => 1],
    ];
 
-use MOP4Import::Util qw/lexpand symtab/;
+use MOP4Import::Util qw/lexpand symtab terse_dump/;
+
+use MOP4Import::Types
+  Zipper => [[fields => qw/array index path/]];
 
 use parent qw/File::Spec/;
 
@@ -30,9 +33,11 @@ use YATT::Lite::LRXML;
 use YATT::Lite::Core qw/Part Widget Template/;
 use YATT::Lite::CGen::Perl;
 
-use YATT::Lite::LRXML::AltTree;
+use YATT::Lite::LRXML::AltTree qw/column_of_source_pos AltNode/;
 
 use YATT::Lite::Walker qw/walk walk_vfs_folders/;
+
+use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
 
 #========================================
 
@@ -107,44 +112,158 @@ sub emit_ctags {
 
 sub alttree {
   (my MY $self, my ($tmpl, $tree)) = @_;
-  YATT::Lite::LRXML::AltTree->new(string => $tmpl->cget('string'))
-    ->convert_tree($tree)
+  [YATT::Lite::LRXML::AltTree->new(string => $tmpl->cget('string'))
+   ->convert_tree($tree)];
+}
+
+sub locate_node_at_file_position {
+  (my MY $self, my ($fileName, $line, $column)) = @_;
+  $line //= 0;
+  $column //= 0;
+
+  my $treeSpec = $self->dump_tokens_at_file_position($fileName, $line, $column)
+    or return;
+
+  my Position $pos;
+  $pos->{line} = $line;
+  $pos->{character} = $column;
+
+  my ($kind, $path, $range, $tree) = @$treeSpec;
+  unless ($self->is_in_range($range, $pos)) {
+    Carp::croak "BUG: Not in range! range=".terse_dump($range)." line=$line col=$column";
+  }
+
+  my Zipper $cursor = $self->locate_node($tree, $pos);
+  $cursor;
+}
+
+sub locate_node {
+  (my MY $self, my $tree, my Position $pos, my Zipper $parent) = @_;
+
+  my Zipper $current = +{};
+  $current->{path} = $parent;
+  $current->{array} = $tree;
+  my $ix = $current->{index} = $self->lsearch_node_pos($pos, $tree);
+
+  my AltNode $node = $tree->[$ix];
+  if ($node and $node->{subtree}) {
+
+    $self->locate_node($node->{subtree}, $pos, $current);
+  } else {
+
+    $current;
+  }
+}
+
+sub lsearch_node_pos {
+  (my MY $self, my Position $pos, my $tree) = @_;
+  my $i = 0;
+  foreach my AltNode $node (@$tree) {
+    if ($self->compare_position($self->range_end($node->{range}), $pos) > 0) {
+      return $i;
+    }
+  } continue {
+    $i++;
+  }
+}
+
+sub range_start { (my MY $self, my Range $range) = @_; $range->{start}; }
+sub range_end { (my MY $self, my Range $range) = @_; $range->{end}; }
+
+sub is_in_range {
+  (my MY $self, my Range $range, my Position $pos) = @_;
+  $self->compare_position($range->{start}, $pos) <= 0
+    && $self->compare_position($range->{end}, $pos) >= 0;
+}
+
+sub compare_position {
+  (my MY $self, my Position $leftPos, my Position $rightPos) = @_;
+  $leftPos->{line} <=> $rightPos->{line}
+    || $leftPos->{character} <=> $rightPos->{character};
 }
 
 sub dump_tokens_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
-  $line //= 1;
+  $line //= 0;
   my Part $part = $self->find_part_of_file_line($fileName, $line)
     or return;
 
-  my ($tmpl, $core) = $self->find_template($fileName);
+  (my Template $tmpl, my $core) = $self->find_template($fileName);
+
+  unless ($line < $tmpl->{cf_nlines} - 1) {
+    # warn?
+    return;
+  }
 
   # my $yatt = $self->find_yatt_for_template($fileName);
   $core->ensure_parsed($part);
 
   my $declkind = defined $part->{declkind}
     ? [split /:/, $part->{declkind}] : [];
-  if ($line < $part->{cf_bodyln}) {
+
+  if ($line < $part->{cf_bodyln} - 1) {
     # At declaration
-    [$declkind, decllist => $self->alttree($tmpl, $part->{decllist})];
+    [decllist => $declkind
+     , $self->part_decl_range($tmpl, $part)
+     , $self->alttree($tmpl, $part->{decllist})];
   } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
     # At body of widget, page, args...
     my Widget $widget = $part;
-    [$declkind, body => $self->alttree($tmpl, $widget->{tree})];
+    [body => $declkind
+     , $self->part_body_range($tmpl, $part)
+     , $self->alttree($tmpl, $widget->{tree})];
   } else {
     # At body of action, entity, ...
     # XXX: TODO extract tokens for host language.
-    [$declkind, body_string => $part->{toks}];
+    [body_string => $declkind
+     , $self->part_body_range($tmpl, $part)
+     , $part->{toks}];
   }
+}
+
+sub part_decl_range {
+  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  my Range $range;
+  $range->{start} = do {
+    my Position $p;
+    $p->{character} = 0;
+    $p->{line} = $part->{cf_startln} - 1;
+    $p;
+  };
+  $range->{end} = do {
+    my Position $p;
+    $p->{character} = 0;
+    $p->{line} = $part->{cf_bodyln} - 1;
+    $p;
+  };
+  $range;
+}
+
+sub part_body_range {
+  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  my Range $range;
+  $range->{start} = do {
+    my Position $p;
+    $p->{character} = 0;
+    $p->{line} = $part->{cf_bodyln} - 1;
+    $p;
+  };
+  $range->{end} = do {
+    my Position $p;
+    $p->{character} = 0;
+    $p->{line} = $part->{cf_endln} - 1;
+    $p;
+  };
+  $range;
 }
 
 sub find_part_of_file_line {
   (my MY $self, my ($fileName, $line)) = @_;
-  $line //= 1;
+  $line //= 0;
   my ($tmpl, $core) = $self->find_template($fileName);
   my Part $prev;
   foreach my Part $part ($tmpl->list_parts) {
-    last if $line < $part->{cf_startln};
+    last if $line < $part->{cf_startln} - 1;
     $prev = $part;
   }
   $prev;
