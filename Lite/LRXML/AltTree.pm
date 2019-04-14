@@ -95,7 +95,7 @@ sub convert_tree {
         if ($_->[NODE_TYPE] == TYPE_COMMENT) {
           $altnode->{value} = $_->[NODE_ATTLIST];
         } elsif ($_->[NODE_TYPE] == TYPE_ENTITY) {
-          $altnode->{value} = $_->[NODE_BODY];
+          $altnode->{value} = [@{$_}[NODE_BODY .. $#$_]];
         } elsif (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
           $altnode->{subtree} = [$self->convert_tree(
             $self->node_body_slot($_), $with_text
