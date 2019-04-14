@@ -381,6 +381,8 @@ sub parse_decl {
     $prev->{cf_bodylen} = length($tmpl->{cf_string}) - $prev->{cf_bodypos};
   }
 
+  $tmpl->{cf_nlines} = $self->{endln};
+
   $self->finalize_template($tmpl);
 }
 

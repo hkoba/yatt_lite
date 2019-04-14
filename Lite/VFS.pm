@@ -25,6 +25,7 @@ require File::Basename;
 				  cf_entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
 	 , [File => -fields => [qw(partlist cf_string cf_overlay cf_imported
+                                   cf_nlines
 				   dependency
 				)]
 	    , -alias => 'vfs_file']
