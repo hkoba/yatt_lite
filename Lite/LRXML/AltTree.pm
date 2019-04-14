@@ -9,8 +9,20 @@ use MOP4Import::Base::CLI_JSON -as_base
      [all_source => doc => "include all source for intermediate nodes instead of leaf only"],
    ];
 
+use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
+
+use MOP4Import::Types
+  AltNode => [[fields => qw/
+                             kind path source range
+                             attlist
+                             head subtree foot
+                             value
+                           /]];
+
 use YATT::Lite::Constants
-  qw/NODE_TYPE NODE_BEGIN NODE_END NODE_PATH NODE_BODY NODE_VALUE
+  qw/NODE_TYPE
+     NODE_BEGIN NODE_END NODE_LNO
+     NODE_PATH NODE_BODY NODE_VALUE
      NODE_ATTLIST NODE_AELEM_HEAD NODE_AELEM_FOOT
      TYPE_ELEMENT TYPE_LCMSG
      TYPE_ATT_NESTED
@@ -38,47 +50,56 @@ sub convert_tree {
     if (not ref $_) {
       $_;
     } elsif (not ref $_->[NODE_TYPE]) {
-      my $source;
+      my AltNode $altnode = +{};
+      $altnode->{kind} = $TYPES[$_->[NODE_TYPE]];
+      $altnode->{path} = $self->convert_path_of($_);
+
       if (defined $_->[NODE_BEGIN] and defined $_->[NODE_END]
           and $_->[NODE_BEGIN] < length($self->{string})
           and $_->[NODE_END] < length($self->{string})) {
-        $source = substr($self->{string}, $_->[NODE_BEGIN]
-                         , $_->[NODE_END] - $_->[NODE_BEGIN]);
+        $altnode->{range} = my Range $range = +{};
+        $altnode->{source} = my $source = substr($self->{string}, $_->[NODE_BEGIN]
+                                                 , $_->[NODE_END] - $_->[NODE_BEGIN]);
+        $range->{start} = do {
+          my Position $p;
+          $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_BEGIN])-1;
+          $p->{line} = $_->[NODE_LNO] - 1;
+          $p;
+        };
+        $range->{end} = do {
+          my Position $p;
+          $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_END]-1);
+          $p->{line} = $_->[NODE_LNO] - 1 + ($source =~ tr|\n||);
+          $p;
+        };
       }
-      my @rest = do {
+      do {
         if ($_->[NODE_TYPE] == TYPE_COMMENT) {
-          (value => $_->[NODE_ATTLIST]);
+          $altnode->{value} = $_->[NODE_ATTLIST];
         } elsif ($_->[NODE_TYPE] == TYPE_ENTITY) {
-          (subtree => $_->[NODE_BODY]);
+          $altnode->{value} = $_->[NODE_BODY];
         } elsif (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
-          (subtree => $self->convert_tree(
-            $self->node_body_slot($_))
-         )
+          $altnode->{subtree} = $self->convert_tree(
+            $self->node_body_slot($_)
+          )
         } else {
-          (value => $_->[NODE_BODY]);
+          $altnode->{value} = $_->[NODE_BODY];
         }
       };
       if ($_->[NODE_TYPE] == TYPE_ELEMENT
           || $_->[NODE_TYPE] == TYPE_ATT_NESTED
         ) {
         if (my $attlist = $self->node_unwrap_attlist($_->[NODE_ATTLIST])) {
-          push @rest, attlist => $self->convert_tree($attlist);
+          $altnode->{attlist} = $self->convert_tree($attlist);
         }
         foreach my $item ([head => NODE_AELEM_HEAD], [foot => NODE_AELEM_FOOT]) {
           my ($key, $ix) = @$item;
           if ($_->[$ix]) {
-            push @rest, $key, $self->convert_tree($_->[$ix]);
+            $altnode->{$key} = $self->convert_tree($_->[$ix]);
           }
         }
       }
-      unless (@rest % 2 == 0) {
-        die "XXX";
-      }
-      +{kind => $TYPES[$_->[NODE_TYPE]]
-        , path => $self->convert_path_of($_)
-        , source => $source
-        , @rest
-      };
+      $altnode;
     } else {
       # XXX: Is this ok?
       print STDERR "# really?: ".YATT::Lite::Util::terse_dump($tree), "\n";
@@ -86,6 +107,15 @@ sub convert_tree {
       # $self->convert_tree($_);
     }
   } @$tree];
+}
+
+sub column_of_source_pos {
+  my $pos = $_[2];
+  if ((my $found = rindex($_[1], "\n", $pos)) >= 0) {
+    $pos - $found;
+  } else {
+    $pos;
+  }
 }
 
 sub node_body_slot {
