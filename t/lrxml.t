@@ -29,7 +29,11 @@ BEGIN {
 use YATT::Lite::LRXML::AltTree;
 sub alt_tree_for {
   my ($string, $tree) = @_;
-  YATT::Lite::LRXML::AltTree->new(string => $string)->convert_tree($tree);
+  [YATT::Lite::LRXML::AltTree->new(
+    string => $string,
+    with_text => 1,
+    with_range => 0,
+  )->convert_tree($tree)];
 }
 sub alt_tree_xhf_for {
   YATT::Lite::XHF::Dumper->dump_strict_xhf(alt_tree_for(@_))."\n";
@@ -92,7 +96,14 @@ bar
  FOO
  
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo x y>
+ bar
+ </yatt:foo>
+subtree[
 {
 kind: TYPE_ATTRIBUTE
 path: x
@@ -105,15 +116,6 @@ path: y
 source: y
 value= #null
 }
-]
-kind: TYPE_ELEMENT
-path[
-yatt: foo
-]
-source: <yatt:foo x y>
- bar
- </yatt:foo>
-subtree[
 -
  
  
@@ -178,8 +180,10 @@ BAZ', '
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:x;
-subtree[
+value[
+[
 var: x
+]
 ]
 }
 -
@@ -189,8 +193,10 @@ var: x
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:y;
-subtree[
+value[
+[
 var: y
+]
 ]
 }
 -
@@ -307,7 +313,16 @@ value:
  
  
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo x y>
+  <!--#yatt 2 -->
+   <yatt:bar x y/>
+ <!--#yatt 3 -->
+ </yatt:foo>
+subtree[
 {
 kind: TYPE_ATTRIBUTE
 path: x
@@ -320,17 +335,6 @@ path: y
 source: y
 value= #null
 }
-]
-kind: TYPE_ELEMENT
-path[
-yatt: foo
-]
-source: <yatt:foo x y>
-  <!--#yatt 2 -->
-   <yatt:bar x y/>
- <!--#yatt 3 -->
- </yatt:foo>
-subtree[
 -
  
  
@@ -348,7 +352,12 @@ value:
 -
    
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: bar
+]
+source: <yatt:bar x y/>
+subtree[
 {
 kind: TYPE_ATTRIBUTE
 path: x
@@ -362,12 +371,6 @@ source: y
 value= #null
 }
 ]
-kind: TYPE_ELEMENT
-path[
-yatt: bar
-]
-source: <yatt:bar x y/>
-value= #null
 }
 -
  
@@ -506,7 +509,16 @@ value:
  
  
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo x y>
+  <!--#yatt 2 -->
+   <yatt:bar x y/>
+ <!--#yatt 3 -->
+ </yatt:foo>
+subtree[
 {
 kind: TYPE_ATTRIBUTE
 path: x
@@ -519,17 +531,6 @@ path: y
 source: y
 value= #null
 }
-]
-kind: TYPE_ELEMENT
-path[
-yatt: foo
-]
-source: <yatt:foo x y>
-  <!--#yatt 2 -->
-   <yatt:bar x y/>
- <!--#yatt 3 -->
- </yatt:foo>
-subtree[
 -
  
  
@@ -547,7 +548,12 @@ value:
 -
    
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: bar
+]
+source: <yatt:bar x y/>
+subtree[
 {
 kind: TYPE_ATTRIBUTE
 path: x
@@ -561,12 +567,6 @@ source: y
 value= #null
 }
 ]
-kind: TYPE_ELEMENT
-path[
-yatt: bar
-]
-source: <yatt:bar x y/>
-value= #null
 }
 -
  
@@ -664,7 +664,15 @@ END
  <h2>Hello</h2>
  
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: if
+]
+source: <yatt:if "not defined &yatt:x;"> space!
+ <:yatt:else if="&yatt:x; >= 2"/> world!
+ <:yatt:else/> decades!
+ </yatt:if>
+subtree[
 {
 kind: TYPE_ATT_TEXT
 path= #null
@@ -675,17 +683,26 @@ subtree[
 {
 kind: TYPE_ENTITY
 path: yatt
-source: &yatt:x;
-subtree[
+source:
+  &yatt:x
+value[
+[
 var: x
 ]
-}
 ]
 }
 ]
-foot[
+}
+-
+  space!
+ 
 {
-attlist[
+kind: TYPE_ATT_NESTED
+path[
+yatt: else
+]
+source: <:yatt:else if="&yatt:x; >= 2"/>
+subtree[
 {
 kind: TYPE_ATT_TEXT
 path: if
@@ -694,22 +711,17 @@ subtree[
 {
 kind: TYPE_ENTITY
 path: yatt
-source: &yatt:x;
-subtree[
+source: "&yatt:x
+value[
+[
 var: x
+]
 ]
 }
 -
   >= 2
 ]
 }
-]
-kind: TYPE_ATT_NESTED
-path[
-yatt: else
-]
-source: <:yatt:else if="&yatt:x; >= 2"/>
-subtree[
 -
   world!
  
@@ -729,19 +741,6 @@ subtree[
  
 ]
 }
-]
-kind: TYPE_ELEMENT
-path[
-yatt: if
-]
-source: <yatt:if "not defined &yatt:x;"> space!
- <:yatt:else if="&yatt:x; >= 2"/> world!
- <:yatt:else/> decades!
- </yatt:if>
-subtree[
--
-  space!
- 
 ]
 }
 -
@@ -801,7 +800,14 @@ END
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: foo
+]
+source: <yatt:foo a='
+ ' b="
+ " />
+subtree[
 {
 kind: TYPE_ATT_TEXT
 path: a
@@ -821,14 +827,6 @@ value:
  
 }
 ]
-kind: TYPE_ELEMENT
-path[
-yatt: foo
-]
-source: <yatt:foo a='
- ' b="
- " />
-value= #null
 }
 -
  
@@ -892,7 +890,9 @@ source: <yatt:foo
  --  foo ---
  
  />
-value= #null
+subtree[
+
+]
 }
 -
  
@@ -974,8 +974,10 @@ subtree[
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:x;
-subtree[
+value[
+[
 var: x
+]
 ]
 }
 - 
@@ -1028,7 +1030,15 @@ END
   eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: my
+]
+source: <yatt:my [code:code src:source]>
+   <h2>&yatt:x;</h2>
+   &yatt:y;
+ </yatt:my>
+subtree[
 {
 kind: TYPE_ATT_NESTED
 path= #null
@@ -1052,16 +1062,6 @@ value= #null
 }
 ]
 }
-]
-kind: TYPE_ELEMENT
-path[
-yatt: my
-]
-source: <yatt:my [code:code src:source]>
-   <h2>&yatt:x;</h2>
-   &yatt:y;
- </yatt:my>
-subtree[
 -
  
  
@@ -1071,8 +1071,10 @@ subtree[
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:x;
-subtree[
+value[
+[
 var: x
+]
 ]
 }
 -
@@ -1084,8 +1086,10 @@ var: x
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:y;
-subtree[
+value[
+[
 var: y
+]
 ]
 }
 - 
@@ -1155,8 +1159,10 @@ subtree[
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:world;
-subtree[
+value[
+[
 var: world
+]
 ]
 }
 - !
@@ -1189,8 +1195,10 @@ subtree[
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:n;
-subtree[
+value[
+[
 var: n
+]
 ]
 }
 -
@@ -1199,8 +1207,10 @@ var: n
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:dir;
-subtree[
+value[
+[
 var: dir
+]
 ]
 }
 -
@@ -1266,7 +1276,12 @@ END
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
-attlist[
+kind: TYPE_ELEMENT
+path[
+yatt: my
+]
+source: <yatt:my [x y :::z]="1..8" />
+subtree[
 {
 kind: TYPE_ATT_TEXT
 path[
@@ -1291,20 +1306,13 @@ path[
 - z
 ]
 source: :::z
- x=
 value= #null
 }
 ]
-source: [x y :::z]="1..8"
+source: "1..8"
 value: 1..8
 }
 ]
-kind: TYPE_ELEMENT
-path[
-yatt: my
-]
-source: <yatt:my [x y :::z]="1..8" />
-value= #null
 }
 -
  
@@ -1314,8 +1322,10 @@ value= #null
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:x;
-subtree[
+value[
+[
 var: x
+]
 ]
 }
 -
@@ -1326,8 +1336,10 @@ var: x
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:y;
-subtree[
+value[
+[
 var: y
+]
 ]
 }
 -
@@ -1338,8 +1350,10 @@ var: y
 kind: TYPE_ENTITY
 path: yatt
 source: &yatt:z;
-subtree[
+value[
+[
 var: z
+]
 ]
 }
 -

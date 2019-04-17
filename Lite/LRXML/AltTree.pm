@@ -6,8 +6,9 @@ use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
      [string => doc => "source template string"],
-     [all_source => doc => "include all source for intermediate nodes instead of leaf only"],
+     [with_source => default => 1, doc => "include source for intermediate nodes"],
      [with_text => doc => "include all text node"],
+     [with_range => default => 1, doc => "include range for LSP"],
    ];
 
 use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
@@ -57,21 +58,26 @@ sub convert_tree {
       if (defined $_->[NODE_BEGIN] and defined $_->[NODE_END]
           and $_->[NODE_BEGIN] < length($self->{string})
           and $_->[NODE_END] < length($self->{string})) {
-        $altnode->{range} = my Range $range = +{};
-        $altnode->{source} = my $source = substr($self->{string}, $_->[NODE_BEGIN]
-                                                 , $_->[NODE_END] - $_->[NODE_BEGIN]);
-        $range->{start} = do {
-          my Position $p;
-          $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_BEGIN])-1;
-          $p->{line} = $_->[NODE_LNO] - 1;
-          $p;
-        };
-        $range->{end} = do {
-          my Position $p;
-          $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_END]-1);
-          $p->{line} = $_->[NODE_LNO] - 1 + ($source =~ tr|\n||);
-          $p;
-        };
+        my $source = substr($self->{string}, $_->[NODE_BEGIN]
+                            , $_->[NODE_END] - $_->[NODE_BEGIN]);
+        if ($self->{with_source}) {
+          $altnode->{source} = $source;
+        }
+        if ($self->{with_range}) {
+          $altnode->{range} = my Range $range = +{};
+          $range->{start} = do {
+            my Position $p;
+            $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_BEGIN])-1;
+            $p->{line} = $_->[NODE_LNO] - 1;
+            $p;
+          };
+          $range->{end} = do {
+            my Position $p;
+            $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_END]-1);
+            $p->{line} = $_->[NODE_LNO] - 1 + ($source =~ tr|\n||);
+            $p;
+          };
+        }
       }
 
       if ($_->[NODE_TYPE] == TYPE_ELEMENT || $_->[NODE_TYPE] == TYPE_ATT_NESTED) {
