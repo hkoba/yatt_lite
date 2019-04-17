@@ -15,7 +15,7 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
-# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location
+# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover
 'ClientCapabilities' => [
   [
     'fields',
@@ -62,6 +62,13 @@ use MOP4Import::Types
     'commands',
   ],
 ],
+'Hover' => [
+  [
+    'fields',
+    'contents',
+    'range',
+  ],
+],
 'InitializeParams' => [
   [
     'fields',
@@ -84,6 +91,13 @@ use MOP4Import::Types
     'fields',
     'uri',
     'range',
+  ],
+],
+'MarkupContent' => [
+  [
+    'fields',
+    'kind',
+    'value',
   ],
 ],
 'Position' => [

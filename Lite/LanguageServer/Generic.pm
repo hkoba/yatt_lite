@@ -28,6 +28,8 @@ use Scope::Guard qw/guard/;
 
 use IO::Handle;
 
+use URI;
+
 #========================================
 
 sub after_configure_default {
@@ -192,6 +194,15 @@ sub read_header {
   }
   substr($self->{_buffer}, 0, $sepPos+4, '');
   $header;
+}
+
+#----------------------------------------
+
+sub uri2localpath {
+  (my MY $self, my $uri) = @_;
+  return undef unless defined $uri;
+  return undef unless $uri =~ m{^file://};
+  URI->new($uri)->path;
 }
 
 MY->run(\@ARGV) unless caller;

@@ -112,7 +112,10 @@ sub emit_ctags {
 
 sub alttree {
   (my MY $self, my ($tmpl, $tree)) = @_;
-  [YATT::Lite::LRXML::AltTree->new(string => $tmpl->cget('string'))
+  [YATT::Lite::LRXML::AltTree->new(
+    string => $tmpl->cget('string'),
+    with_source => 0,
+  )
    ->convert_tree($tree)];
 }
 
@@ -134,7 +137,35 @@ sub locate_node_at_file_position {
   }
 
   my Zipper $cursor = $self->locate_node($tree, $pos);
-  $cursor;
+
+  $self->node_path_of_zipper($cursor);
+}
+
+sub node_path_of_zipper {
+  (my MY $self, my Zipper $cursor) = @_;
+  my @trail;
+  my Zipper $cur = $cursor;
+  while ($cur) {
+    push @trail, do {
+      if (my AltNode $node = $cur->{array}[$cur->{index}]) {
+        $self->minimize_altnode($node);
+      } else {
+        [map {$self->minimize_altnode($_)} @{$cur->{array}}];
+      }
+    };
+    $cur = $cur->{path};
+  }
+
+  @trail;
+}
+
+sub minimize_altnode {
+  (my MY $self, my AltNode $node) = @_;
+  my AltNode $min = {};
+  $min->{kind} = $node->{kind};
+  $min->{path} = $node->{path};
+  $min->{range} = $node->{range};
+  $min;
 }
 
 sub locate_node {
@@ -165,6 +196,8 @@ sub lsearch_node_pos {
   } continue {
     $i++;
   }
+  # Point outside of the tree.
+  return scalar @$tree;
 }
 
 sub range_start { (my MY $self, my Range $range) = @_; $range->{start}; }
