@@ -20,9 +20,9 @@ sub import {
     foreach my $item (@$enumList) {
       my $primary;
       foreach my $name (split /=/, $item) {
+        $primary //= $name;
 	my $shortName = $prefix . $name;
 	my $fullName = $callpack . "::" . $shortName;
-        $primary //= $shortName;
 	# print STDERR "$fullName\n";
 	my $glob = do {no strict 'refs'; \*$fullName};
 	my $i = $offset;
