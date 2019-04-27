@@ -92,7 +92,7 @@ sub mainloop {
         my $guard = guard {
           delete $request{$id};
         };
-        $self->process_request($id, $request);
+        $self->process_request($request);
       };
     } else {
       print STDERR "# got notification: "
@@ -102,7 +102,7 @@ sub mainloop {
         my $guard = guard {
           delete $notification{$notificationNo};
         };
-        $self->process_request(undef, $request);
+        $self->process_request($request);
       };
     }
 
@@ -113,17 +113,21 @@ sub mainloop {
 #========================================
 
 sub process_request {
-  (my MY $self, my $id, my Request $request) = @_;
+  (my MY $self, my Request $request) = @_;
   my Response $outdata;
+  my $result;
   eval {
-    $outdata->{result} = $self->call_method($request);
+    $result = $self->call_method($request);
   };
   if (my $msg = $@) {
     $outdata->{error} = my Error $error = {};
     $error->{code} = -32001;
     $error->{message} = $msg;
   }
-  if ($outdata) {
+  elsif (defined $result) {
+    $outdata->{result} = $result;
+  }
+  if (defined($request->{id}) and $outdata) {
     $self->emit_response($outdata, $request->{id});
   }
 }
