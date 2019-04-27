@@ -85,7 +85,9 @@ sub mainloop {
       return;
     };
     my Request $request = JSON::decode_json($reqRaw);
-    if (my $id = $request->{id}) {
+    if (defined (my $id = $request->{id})) {
+      print STDERR "# processing request: "
+        , $self->cli_encode_json($request), "\n" unless $self->{quiet};
       $request{$id} = async {
         my $guard = guard {
           delete $request{$id};
@@ -93,6 +95,8 @@ sub mainloop {
         $self->process_request($id, $request);
       };
     } else {
+      print STDERR "# got notification: "
+        , $self->cli_encode_json($request), "\n" unless $self->{quiet};
       ++$notificationNo;
       $notification{$notificationNo} = async {
         my $guard = guard {
