@@ -81,7 +81,7 @@ sub _parse_body {
         };
       }
 
-      my $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO]
+      my $bodyStartRef; $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO]
 	if not $is_opt and $elem->[NODE_VALUE];
 
       $self->{curpos} += 1 + ($1 ? length($1) : 0); # $& じゃないので注意。
