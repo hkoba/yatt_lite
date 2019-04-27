@@ -270,9 +270,16 @@ sub parse_decl {
       #  - NODE_BODY is $nlines
       #  - NODE_ATTLIST is payload.
       #
-      push @{$part->{toks}}, [TYPE_COMMENT, $self->posinfo($str)
-			      , $self->{startln}
-			      , $comment_ns, $nlines, $1];
+      push @{$part->{toks}}, do {
+        my $node = [];
+        $node->[NODE_TYPE] = TYPE_COMMENT;
+        @{$node}[NODE_BEGIN, NODE_END] = $self->posinfo($str);
+        $node->[NODE_LNO] = $self->{startln};
+        $node->[NODE_PATH] = $comment_ns;
+        $node->[NODE_BODY] = $nlines;
+        $node->[NODE_ATTLIST] = $1;
+        $node;
+      };
       $self->{startln} = $self->{endln} += $nlines;
       next;
     }
@@ -443,9 +450,14 @@ sub parse_attlist_with_lvalue {
             (@common, undef)
           }
         };
-        return [TYPE_ATT_NESTED
-                , $outer_start, $self->{curpos}, $l, $n
-                , \@result];
+        my $node = [];
+        $node->[NODE_TYPE] = TYPE_ATT_NESTED;
+        $node->[NODE_BEGIN] = $outer_start;
+        $node->[NODE_END] = $self->{curpos};
+        $node->[NODE_LNO] = $l;
+        $node->[NODE_PATH] = $n;
+        $node->[NODE_BODY] = \@result;
+        return $node;
       }
 
       my $bodyStart = $self->{curpos};
@@ -454,12 +466,17 @@ sub parse_attlist_with_lvalue {
         push @result,
           $self->parse_attlist_with_lvalue($start, \@lvalue, $strref, @opt);
       } else {
-        push @result, my $node = do {
+        push @result, my $node = [];
+        {
           if ($m->{bare} and is_ident($m->{bare})) {
             if (@lvalue) {
-              [TYPE_ATT_BARENAME, splice(@lvalue), $m->{bare}]
+              $node->[NODE_TYPE] = TYPE_ATT_BARENAME;
+              @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = splice(@lvalue);
+              $node->[NODE_BODY] = $m->{bare};
             } else {
-              [TYPE_ATT_NAMEONLY, @common, split_ns($m->{bare})];
+              $node->[NODE_TYPE] = TYPE_ATT_NAMEONLY;
+              @{$node}[NODE_BEGIN, NODE_END, NODE_LNO] = @common;
+              $node->[NODE_PATH] = split_ns($m->{bare});
             }
           } elsif ($+{entity} or $+{special}) {
             # XXX: 間に space が入ってたら?
@@ -467,11 +484,16 @@ sub parse_attlist_with_lvalue {
               die $self->synerror_at($self->{startln}
                                      , q{l10n msg is not allowed here});
             }
-            [TYPE_ATT_TEXT, $mklval->(), [$self->mkentity(@common)]];
+            $node->[NODE_TYPE] = TYPE_ATT_TEXT;
+            @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = $mklval->();
+            $node->[NODE_BODY] = [$self->mkentity(@common)];
           } else {
             my ($quote, $value) = oneof($m, qw(bare sq dq));
-            [TYPE_ATT_TEXT, $mklval->()
-             , $for_decl ? $value : $self->_parse_text_entities_at($start, $value)];
+            $node->[NODE_TYPE] = TYPE_ATT_TEXT;
+            @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = $mklval->();
+            splice @$node, NODE_BODY, 0, (
+              $for_decl ? $value : $self->_parse_text_entities_at($start, $value)
+            );
           }
         };
         $node->[NODE_BODY_BEGIN] = $bodyStart;
@@ -510,16 +532,19 @@ sub parse_attlist_with_lvalue {
 sub mkentity {
   (my MY $self) = shift;
   # assert @_ == 3;
-  [TYPE_ENTITY, @_, do {
-    if (my $ns = $+{entity}) {
-      ($ns, $self->_parse_entpath);
-    } elsif (my $special = $+{special}) {
-      (undef, [call => $special
-	       , $self->_parse_entpath(_parse_entgroup => ')')]);
-    } else {
-      die "mkentity called without entity or special";
-    }
-  }];
+  my $node = [];
+  $node->[NODE_TYPE] = TYPE_ENTITY;
+  @{$node}[NODE_BEGIN, NODE_END, NODE_LNO] = @_;
+  if (my $ns = $+{entity}) {
+    $node->[NODE_PATH] = $ns;
+    splice @$node, NODE_BODY, 0, $self->_parse_entpath;
+  } elsif (my $special = $+{special}) {
+    $node->[NODE_BODY] = [call => $special
+                          , $self->_parse_entpath(_parse_entgroup => ')')];
+  } else {
+    die "mkentity called without entity or special";
+  }
+  $node;
 }
 
 sub split_ns {
