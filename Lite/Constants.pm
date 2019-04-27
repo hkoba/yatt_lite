@@ -13,8 +13,10 @@ use YATT::Lite::Util::Enum
 		  ENTITY PI ELEMENT
 		  ATTRIBUTE=ATT_NAMEONLY ATT_BARENAME ATT_TEXT ATT_NESTED
 		  ATT_MACRO=DECL_ENTITY)]
-   , NODE_ => [qw(TYPE BEGIN END LNO PATH REST=VALUE=BODY ATTLIST
-		  AELEM_HEAD AELEM_FOOT BODY_BEGIN BODY_END)]
+   , NODE_ => [qw(TYPE BEGIN END LNO
+                  BODY_BEGIN BODY_END
+                  PATH REST=VALUE=BODY ATTLIST
+		  AELEM_HEAD AELEM_FOOT)]
    # node item
    # BODY が必ず配列になるが、代わりに @attlist は配列不要に。 空の [] を pad しなくて済む
    # XXX: <:yatt:else /> とかもあったじゃん！
