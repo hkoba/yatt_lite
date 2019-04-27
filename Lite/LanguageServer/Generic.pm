@@ -5,12 +5,13 @@ use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
 use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
-       , qw/_buffer _out_semaphore/
-       , [read_fd => default => 0]
-       , [write_fd => default => 1]
-       , [read_length => default => 8192]
-       , [jsonrpc_version => default => '2.0']
-     ];
+     , qw/_buffer _out_semaphore/
+     , [read_fd => default => 0]
+     , [write_fd => default => 1]
+     , [read_length => default => 8192]
+     , [jsonrpc_version => default => '2.0']
+     , [dump_request => default => 0]
+   ];
 
 use MOP4Import::Types
   (Header => [[fields => qw/Content-Length/]]);
@@ -76,7 +77,8 @@ sub cmd_server {
 
 sub mainloop {
   (my MY $self) = @_;
-  my %request; # XXX: should this be an instance member?
+  my (%request, %notification); # XXX: should this be an instance member?
+  my $notificationNo;
   while (1) {
     my $reqRaw = $self->read_raw_request or do {
       print STDERR "# empty request, skipped\n" unless $self->{quiet};
@@ -91,7 +93,13 @@ sub mainloop {
         $self->process_request($id, $request);
       };
     } else {
-      # XXX: notification
+      ++$notificationNo;
+      $notification{$notificationNo} = async {
+        my $guard = guard {
+          delete $notification{$notificationNo};
+        };
+        $self->process_request(undef, $request);
+      };
     }
 
     cede;
@@ -164,15 +172,19 @@ sub read_raw_request {
   (my MY $self) = @_;
   my Header $header = $self->read_header
     or return;
-  defined (my $len = $header->{'Content-Length'})
-    or return;
+  defined (my $len = $header->{'Content-Length'}) or do {
+    print STDERR "# No Content-Length, skippped.\n" unless $self->{quiet};
+    return;
+  };
+  print STDERR "# enter read body.\n" unless $self->{quiet};
   while ((my $diff = $len - length $self->{_buffer}) > 0) {
-    print STDERR "# start aio read.\n" unless $self->{quiet};
+    print STDERR "# start aio read body.\n" unless $self->{quiet};
     my $cnt = aio_read $self->{read_fd}, undef, $diff
       , $self->{_buffer}, length $self->{_buffer};
-    print STDERR "# end aio read. cnt=$cnt\n" unless $self->{quiet};
+    print STDERR "# end aio read body. cnt=$cnt\n" unless $self->{quiet};
     return if $cnt == 0;
   }
+  print STDERR "# finished read body. len=$len.\n" unless $self->{quiet};
   my $data = substr($self->{_buffer}, 0, $len, '');
   wantarray ? ($data, $header) : $data;
 }
@@ -182,18 +194,34 @@ sub read_header {
   $self->{_buffer} //= "";
   my $sepPos;
   do {
-    print STDERR "# start aio read.\n" unless $self->{quiet};
+    print STDERR "# start aio read header.\n" unless $self->{quiet};
     my $cnt = aio_read $self->{read_fd}, undef, $self->{read_length}
       , $self->{_buffer}, length $self->{_buffer};
-    print STDERR "# end aio read. cnt=$cnt\n" unless $self->{quiet};
+    print STDERR "# end aio read header."
+      , " is_utf8=", (Encode::is_utf8($self->{_buffer}) ? "yes" : "no")
+      , " cnt=$cnt\n"
+      , ($self->{dump_request} ? $self->dump_buffer : ())
+      , "\n"
+      unless $self->{quiet};
+    $sepPos = index($self->{_buffer}, "\r\n\r\n");
+    print STDERR "sepPos=", $sepPos // "null", "\n" unless $self->{quiet};
     return if $cnt == 0;
-  } until (($sepPos = index($self->{_buffer}, "\r\n\r\n")) >= 0);
+  } until ($sepPos >= 0);
   foreach my $line (split "\r\n", substr($self->{_buffer}, 0, $sepPos)) {
     my ($k, $v) = split ": ", $line, 2;
     $header->{$k} = $v;
   }
   substr($self->{_buffer}, 0, $sepPos+4, '');
+  print STDERR "# got header: "
+    , $self->cli_encode_json($header), "\n" unless $self->{quiet};
   $header;
+}
+
+sub dump_buffer {
+  (my MY $self) = @_;
+  require Data::HexDump::XXD;
+
+  join("\n", Data::HexDump::XXD::xxd($self->{_buffer}));
 }
 
 #----------------------------------------
