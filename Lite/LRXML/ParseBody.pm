@@ -72,7 +72,7 @@ sub _parse_body {
       # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
       my $body = [];
       if (not $+{empty_elem} or $is_opt) {
-        $elem->[NODE_VALUE] = $is_opt ? $body : do {
+        $elem->[NODE_BODY] = $is_opt ? $body : do {
           my $att_node = [];
           $att_node->[NODE_TYPE] = TYPE_ATTRIBUTE;
           $att_node->[NODE_PATH] = $self->{cf_body_argument};
@@ -82,7 +82,7 @@ sub _parse_body {
       }
 
       my $bodyStartRef; $bodyStartRef = \ $elem->[NODE_BODY][NODE_LNO]
-	if not $is_opt and $elem->[NODE_VALUE];
+	if not $is_opt and $elem->[NODE_BODY];
 
       $self->{curpos} += 1 + ($1 ? length($1) : 0); # $& じゃないので注意。
       $elem->[NODE_END] = $self->{curpos} if $+{empty_elem};
@@ -181,7 +181,7 @@ sub _parse_body {
   }
 
   # To make body-less element easily detected.
-  if ($parent and $parent->[NODE_VALUE]) {
+  if ($parent and $parent->[NODE_BODY]) {
     _undef_if_empty($self->node_body_slot($parent));
   }
 }
