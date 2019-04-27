@@ -44,30 +44,16 @@ sub lspcall__textDocument__hover {
   my $fn = $self->uri2localpath($docId->{uri});
   my Position $pos = $params->{position};
 
-  my ($innerMost, @parent) = $self->inspector->locate_node_at_file_position(
+  my AltNode $node = $self->inspector->locate_symbol_at_file_position(
     $fn, $pos->{line}, $pos->{character}
-  );
+  ) or return;
 
   my $lineInfo = "line $pos->{line} col $pos->{character}";
 
-  (my AltNode $next, my $note) = do {
-    if (ref $innerMost eq 'HASH') {
-      ($innerMost, '');
-    } elsif (ref $innerMost eq 'ARRAY' and @parent and
-             ref $parent[0] eq 'HASH') {
-      ($parent[0], '(not a leaf)');
-    } else {
-      ();
-    }
-  };
-
-  if ($next) {
-    $result->{range} = $next->{range};
-    $result->{contents} = "$lineInfo: "
-      .terse_dump($next->{kind}, $next->{path})." $note";
-  } else {
-    $result->{contents} = "$lineInfo: (none)";
-  }
+  $result->{range} = $node->{symbol_range}; # XXX: symbol_range
+  $result->{contents} = "$lineInfo: "
+    .terse_dump($node->{kind}, $node->{path})
+    ;
 
   $result;
 }

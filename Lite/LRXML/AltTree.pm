@@ -15,7 +15,8 @@ use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
 
 use MOP4Import::Types
   AltNode => [[fields => qw/
-                             kind path source range
+                             kind path source
+                             symbol_range tree_range
                              subtree
                              value
                            /]];
@@ -23,6 +24,7 @@ use MOP4Import::Types
 use YATT::Lite::Constants
   qw/NODE_TYPE
      NODE_BEGIN NODE_END NODE_LNO
+     NODE_BODY_BEGIN
      NODE_PATH NODE_BODY NODE_VALUE
      NODE_ATTLIST NODE_AELEM_HEAD NODE_AELEM_FOOT
      TYPE_ELEMENT TYPE_LCMSG
@@ -64,19 +66,19 @@ sub convert_tree {
           $altnode->{source} = $source;
         }
         if ($self->{with_range}) {
-          $altnode->{range} = my Range $range = +{};
-          $range->{start} = do {
-            my Position $p;
-            $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_BEGIN])-1;
-            $p->{line} = $_->[NODE_LNO] - 1;
-            $p;
-          };
-          $range->{end} = do {
-            my Position $p;
-            $p->{character} = $self->column_of_source_pos($self->{string}, $_->[NODE_END]-1);
-            $p->{line} = $_->[NODE_LNO] - 1 + ($source =~ tr|\n||);
-            $p;
-          };
+          $altnode->{tree_range} = $self->make_range(
+            $_->[NODE_BEGIN],
+            $_->[NODE_END],
+            $_->[NODE_LNO],
+            ($source =~ tr|\n||)
+          );
+          if ($_->[NODE_BODY_BEGIN]) {
+            $altnode->{symbol_range} = $self->make_range(
+              $_->[NODE_BEGIN],
+              $_->[NODE_BODY_BEGIN] - 1,
+              $_->[NODE_LNO],
+            );
+          }
         }
       }
 
@@ -118,6 +120,24 @@ sub convert_tree {
       # $self->convert_tree($_);
     }
   } @$tree;
+}
+
+sub make_range {
+  (my MY $self, my ($begin, $end, $lineno, $nlines)) = @_;
+  my Range $range = +{};
+  $range->{start} = do {
+    my Position $p;
+    $p->{character} = $self->column_of_source_pos($self->{string}, $begin)-1;
+    $p->{line} = $lineno - 1;
+    $p;
+  };
+  $range->{end} = do {
+    my Position $p;
+    $p->{character} = $self->column_of_source_pos($self->{string}, $end-1);
+    $p->{line} = $lineno - 1 + ($nlines // 0);
+    $p;
+  };
+  $range;
 }
 
 sub column_of_source_pos {

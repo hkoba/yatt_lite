@@ -119,6 +119,23 @@ sub alttree {
    ->convert_tree($tree)];
 }
 
+sub locate_symbol_at_file_position {
+  (my MY $self, my ($fileName, $line, $column)) = @_;
+  $line //= 0;
+  $column //= 0;
+
+  my Position $pos;
+  $pos->{line} = $line;
+  $pos->{character} = $column;
+
+  my Zipper $cursor = $self->locate_node_at_file_position(
+    $fileName, $line, $column
+  ) or return;
+
+  my AltNode $node = $cursor->{array}[$cursor->{index}]
+    or return;
+}
+
 sub locate_node_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
   $line //= 0;
@@ -136,9 +153,7 @@ sub locate_node_at_file_position {
     Carp::croak "BUG: Not in range! range=".terse_dump($range)." line=$line col=$column";
   }
 
-  my Zipper $cursor = $self->locate_node($tree, $pos);
-
-  $self->node_path_of_zipper($cursor);
+  $self->locate_node($tree, $pos);
 }
 
 sub node_path_of_zipper {
@@ -164,7 +179,7 @@ sub minimize_altnode {
   my AltNode $min = {};
   $min->{kind} = $node->{kind};
   $min->{path} = $node->{path};
-  $min->{range} = $node->{range};
+  $min->{tree_range} = $node->{tree_range};
   $min;
 }
 
@@ -176,21 +191,26 @@ sub locate_node {
   $current->{array} = $tree;
   my $ix = $current->{index} = $self->lsearch_node_pos($pos, $tree);
 
-  my AltNode $node = $tree->[$ix];
-  if ($node and $node->{subtree}) {
+  if (my AltNode $node = $tree->[$ix]) {
 
-    $self->locate_node($node->{subtree}, $pos, $current);
-  } else {
+    if ($node->{symbol_range}
+        and $self->is_in_range($node->{symbol_range}, $pos)) {
+      return $current;
+    }
 
-    $current;
+    if ($node->{subtree}) {
+      return $self->locate_node($node->{subtree}, $pos, $current);
+    }
   }
+
+  $current;
 }
 
 sub lsearch_node_pos {
   (my MY $self, my Position $pos, my $tree) = @_;
   my $i = 0;
   foreach my AltNode $node (@$tree) {
-    if ($self->compare_position($self->range_end($node->{range}), $pos) > 0) {
+    if ($self->compare_position($self->range_end($node->{tree_range}), $pos) > 0) {
       return $i;
     }
   } continue {
