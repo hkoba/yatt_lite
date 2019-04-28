@@ -479,34 +479,39 @@ sub synerror {
     my ($type, $kind) = ref $spec ? @$spec : $spec;
     # local $YATT = $self;
     unless ($tmpl->{product}{$type}) {
-      my $cg_class = $self->get_cgen_class($type);
-      my $cgen = $cg_class->new
-	(vfs => $self
-	 , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
-				 prefer_call_for_entity
-				 lcmsg_sink))
-	 , parser => $self->get_parser
-	 , sink => $opts{sink} || sub {
-	   my ($info, @script) = @_;
-	   if (not $self->{cf_debug_cgen}) {
-	   } else {
-	     my Template $real = $info->{folder};
-	     print STDERR "# compiling @{[$type//'undef']} code of @{[$real->{cf_path}//'undef']}\n";
-	     if ($self->{cf_debug_cgen} >= 2) {
-	       print STDERR "#--BEGIN--\n";
-	       print STDERR @script, "\n";
-	       print STDERR "#--END--\n\n"
-	     }
-	   }
-	   #
-	   $self->{n_compiles}++;
-
-	   ckeval(@script);
-	 });
+      my $cgen = $self->build_cgen_of($type, \%opts);
       # 二重生成防止のため、代入自体は ensure_generated の中で行う。
       $cgen->ensure_generated($spec => $tmpl);
     };
     $tmpl->{product}{$type};
+  }
+
+  sub build_cgen_of {
+    (my MY $self, my $cgenSpec, my $opts) = @_;
+    my ($type, $cg_class) = lexpand($cgenSpec);
+    $cg_class //= $self->get_cgen_class($type);
+    $cg_class->new
+      (vfs => $self
+       , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
+                               prefer_call_for_entity
+                               lcmsg_sink))
+       , parser => $self->get_parser
+       , sink => $opts->{sink} || sub {
+         my ($info, @script) = @_;
+         if ($self->{cf_debug_cgen}) {
+           my Template $real = $info->{folder};
+           print STDERR "# compiling @{[$type//'undef']} code of @{[$real->{cf_path}//'undef']}\n";
+           if ($self->{cf_debug_cgen} >= 2) {
+             print STDERR "#--BEGIN--\n";
+             print STDERR @script, "\n";
+             print STDERR "#--END--\n\n"
+           }
+         }
+         #
+         $self->{n_compiles}++;
+
+         ckeval(@script);
+       })
   }
 
   #
