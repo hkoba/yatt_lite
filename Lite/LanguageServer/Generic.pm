@@ -11,6 +11,7 @@ use MOP4Import::Base::CLI_JSON -as_base
      , [read_length => default => 8192]
      , [jsonrpc_version => default => '2.0']
      , [dump_request => default => 0]
+     , qw/_is_shutting_down/
    ];
 
 use MOP4Import::Types
@@ -107,6 +108,21 @@ sub mainloop {
     }
 
     cede;
+  }
+}
+
+#========================================
+
+sub lspcall__shutdown {
+  (my MY $self, my $nullParam) = @_;
+  $self->{_is_shutting_down} = 1;
+  undef;
+}
+
+sub lspcall__exit {
+  (my MY $self, my $nullParam) = @_;
+  if ($self->{_is_shutting_down}) {
+    exit;
   }
 }
 
