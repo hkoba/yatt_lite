@@ -115,19 +115,21 @@ sub mainloop {
 sub process_request {
   (my MY $self, my Request $request) = @_;
   my Response $outdata;
-  my $result;
-  eval {
-    $result = $self->call_method($request);
-  };
+  if (defined $request->{id}) {
+    eval {
+      $outdata->{result} = $self->call_method($request);
+    };
+  } else {
+    eval {
+      $self->call_method($request);
+    };
+  }
   if (my $msg = $@) {
     $outdata->{error} = my Error $error = {};
     $error->{code} = -32001;
     $error->{message} = $msg;
   }
-  elsif (defined $result) {
-    $outdata->{result} = $result;
-  }
-  if (defined($request->{id}) and $outdata) {
+  if ($outdata) {
     $self->emit_response($outdata, $request->{id});
   }
 }
