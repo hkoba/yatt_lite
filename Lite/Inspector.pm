@@ -124,16 +124,42 @@ sub locate_symbol_at_file_position {
   $line //= 0;
   $column //= 0;
 
-  my Position $pos;
-  $pos->{line} = $line;
-  $pos->{character} = $column;
-
   my Zipper $cursor = $self->locate_node_at_file_position(
     $fileName, $line, $column
   ) or return;
 
   my AltNode $node = $cursor->{array}[$cursor->{index}]
     or return;
+
+  my Position $pos;
+  $pos->{line} = $line;
+  $pos->{character} = $column;
+
+  my $resolver = $self->can("resolve_$node->{kind}")
+    or return;
+  $resolver->($self, $node, $fileName, $pos);
+}
+
+sub resolve_ELEMENT {
+  (my MY $self, my AltNode $node, my $fileName, my Position $pos) = @_;
+
+  my $wname = join(":", lexpand($node->{path}));
+
+  my Part $widget = $self->lookup_widget_from($node->{path}, $fileName, $pos->{line})
+    or return;
+
+  (widget => $wname, $widget->{cf_folder}{cf_path}, $widget->{arg_order});
+}
+
+sub lookup_widget_from {
+  (my MY $self, my ($wpath, $fileName, $line)) = @_;
+
+  (my Part $part, my Template $tmpl, my $core)
+    = $self->find_part_of_file_line($fileName, $line)
+    or return;
+
+  $core->build_cgen_of('perl')
+    ->with_template($tmpl, lookup_widget => lexpand($wpath));
 }
 
 sub locate_node_at_file_position {
@@ -238,10 +264,10 @@ sub compare_position {
 sub dump_tokens_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
   $line //= 0;
-  my Part $part = $self->find_part_of_file_line($fileName, $line)
-    or return;
 
-  (my Template $tmpl, my $core) = $self->find_template($fileName);
+  (my Part $part, my Template $tmpl, my $core)
+    = $self->find_part_of_file_line($fileName, $line)
+    or return;
 
   unless ($line < $tmpl->{cf_nlines} - 1) {
     # warn?
@@ -319,7 +345,8 @@ sub find_part_of_file_line {
     last if $line < $part->{cf_startln} - 1;
     $prev = $part;
   }
-  $prev;
+
+  wantarray ? ($prev, $tmpl, $core) : $prev;
 }
 
 sub find_template {
