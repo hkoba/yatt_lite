@@ -57,10 +57,22 @@ sub ensure_generated {
   $pkg;
 }
 
+sub with_template {
+  (my MY $self, my Template $tmpl, my ($task, @args)) = @_;
+  local $self->{curtmpl} = $tmpl;
+  local $self->{curline} = 1;
+  if (ref $task eq 'CODE') {
+    $task->($self, @args);
+  } else {
+    my ($meth, @rest) = YATT::Lite::Util::lexpand($task);
+    $self->$meth(@rest, @args);
+  }
+}
+
 sub generate {
   (my MY $self, my Template $tmpl) = splice @_, 0, 2;
-  # XXX: localize した方がいいかも。 というか、 curtmpl との区別が紛らわしいか。
   my $kind = shift if @_;
+  # XXX: Rewrite this with with_template
   local $self->{curtmpl} = $tmpl;
   local $self->{curline} = 1;
   ($self->generate_preamble($self->{curtmpl})
