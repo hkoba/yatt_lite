@@ -24,7 +24,7 @@ use MOP4Import::Types
 use YATT::Lite::Constants
   qw/NODE_TYPE
      NODE_BEGIN NODE_END NODE_LNO
-     NODE_BODY_BEGIN
+     NODE_SYM_END
      NODE_PATH NODE_BODY NODE_VALUE
      NODE_ATTLIST NODE_AELEM_HEAD NODE_AELEM_FOOT
      TYPE_ELEMENT TYPE_LCMSG
@@ -72,10 +72,10 @@ sub convert_tree {
             $_->[NODE_LNO],
             ($source =~ tr|\n||)
           );
-          if ($_->[NODE_BODY_BEGIN]) {
+          if ($_->[NODE_SYM_END]) {
             $altnode->{symbol_range} = $self->make_range(
               $_->[NODE_BEGIN],
-              $_->[NODE_BODY_BEGIN] - 1,
+              $_->[NODE_SYM_END] - 1,
               $_->[NODE_LNO],
             );
           }

@@ -60,6 +60,7 @@ sub _parse_body {
       $elem->[NODE_TYPE] = $is_opt ? TYPE_ATT_NESTED : TYPE_ELEMENT;
       $elem->[NODE_BEGIN] = $self->{startpos};
       $elem->[NODE_LNO] = $self->{endln};
+      $elem->[NODE_SYM_END] = $self->{curpos};
       $elem->[NODE_PATH] = [split /:/, $path];
       $elem->[NODE_BODY] = undef;
 
