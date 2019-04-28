@@ -15,6 +15,8 @@ sub _parse_body {
   my $has_nonspace; # 非空白文字が出現したか。 <:opt>HEAD</:opt> と BODY の間に
   my $is_closed; # tag が閉じたか。
 
+  my $last_foot; # last foot 
+
   while (s{^(.*?)$$self{re_body}}{}xs or my $retry = $self->_get_chunk($sink)) {
     next if $retry;
 
@@ -36,6 +38,9 @@ sub _parse_body {
     } elsif (my $path = $+{elem}) {
       my $formal_path = ($+{opt} // '') . $+{elem};
       if ($+{clo}) {
+        if ($last_foot) {
+          $last_foot->[NODE_END] = $self->{curpos};
+        }
 	$parent->[NODE_BODY_END] = $self->{startpos};
 	if (defined $parent->[NODE_BODY_BEGIN]
 	    and $self->{template}->node_body_source($parent) =~ /(\r?\n)\Z/) {
@@ -137,6 +142,10 @@ sub _parse_body {
 	# ee style option.
 	# <:yatt:foo/>bar 出現後は、以後の要素を att に加える。
 	$sink = $body;
+        if ($last_foot) {
+          $last_foot->[NODE_END] = $self->{curpos};
+        }
+        $last_foot = $elem;
       } else {
       } # simple call.
       $self->_verify_token($self->{curpos}, $_) if $self->{cf_debug};
@@ -178,6 +187,10 @@ sub _parse_body {
 
   if ($close and not $is_closed) {
     die $self->synerror_at($self->{startln}, q{Missing close tag '%s'}, $close);
+  }
+
+  if ($last_foot) {
+    $last_foot->[NODE_END] = $self->{curpos};
   }
 
   # To make body-less element easily detected.
