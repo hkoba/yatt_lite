@@ -44,16 +44,24 @@ sub lspcall__textDocument__hover {
   my $fn = $self->uri2localpath($docId->{uri});
   my Position $pos = $params->{position};
 
-  my AltNode $node = $self->inspector->locate_symbol_at_file_position(
-    $fn, $pos->{line}, $pos->{character}
-  ) or return;
+  my ($kind, $name, $realpath, $arglist)
+    = $self->inspector->locate_symbol_at_file_position(
+      $fn, $pos->{line}, $pos->{character}
+    ) or return;
 
   my $lineInfo = "line $pos->{line} col $pos->{character}";
 
-  $result->{range} = $node->{symbol_range}; # XXX: symbol_range
-  $result->{contents} = "$lineInfo: "
-    .terse_dump($node->{kind}, $node->{path})
-    ;
+  # $result->{range} = $node->{symbol_range}; # XXX: symbol_range
+
+
+  $result->{contents} = my MarkupContent $md = +{};
+  $md->{kind} = 'markdown';
+  $md->{value} = <<END;
+($kind) $name : $realpath<br>
+- - - - -
+@$arglist
+END
+
 
   $result;
 }
