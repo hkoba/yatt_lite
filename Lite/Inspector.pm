@@ -17,7 +17,9 @@ use MOP4Import::Base::CLI_JSON -as_base
 use MOP4Import::Util qw/lexpand symtab terse_dump/;
 
 use MOP4Import::Types
-  Zipper => [[fields => qw/array index path/]];
+  Zipper => [[fields => qw/array index path/]]
+  , SymbolInfo => [[fields => qw/kind symbol filename range/]]
+  ;
 
 use parent qw/File::Spec/;
 
@@ -37,7 +39,7 @@ use YATT::Lite::LRXML::AltTree qw/column_of_source_pos AltNode/;
 
 use YATT::Lite::Walker qw/walk walk_vfs_folders/;
 
-use YATT::Lite::LanguageServer::Protocol qw/Position Range/;
+use YATT::Lite::LanguageServer::Protocol qw/Position Range MarkupContent/;
 
 #========================================
 
@@ -119,6 +121,52 @@ sub alttree {
    ->convert_tree($tree)];
 }
 
+sub describe_symbol {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my $resolver = $self->can("describe_symbol_of_$sym->{kind}")
+    or return;
+  $resolver->($self, $sym, $cursor);
+}
+
+sub describe_symbol_of_ELEMENT {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  # assert($node);
+
+  my Position $pos = $self->range_start($sym->{range});
+
+  my $wname = join(":", lexpand($node->{path}));
+
+  # XXX: yatt:if, yatt:foreach, ... macro
+  # XXX: calllable_vars like <yatt:body/>
+
+  my Part $widget = $self->lookup_widget_from(
+    $node->{path}, $sym->{filename}, $pos->{line}
+  ) or return;
+
+  my MarkupContent $md = +{};
+  $md->{kind} = 'markdown';
+  $md->{value} = <<END;
+(widget) <$wname
+@{[map {"  $_=".$widget->{arg_dict}{$_}->type->[0]."\n"} @{$widget->{arg_order}}]}
+/>
+END
+
+  $md;
+}
+
+sub lookup_widget_from {
+  (my MY $self, my ($wpath, $fileName, $line)) = @_;
+
+  (my Part $part, my Template $tmpl, my $core)
+    = $self->find_part_of_file_line($fileName, $line)
+    or return;
+
+  $core->build_cgen_of('perl')
+    ->with_template($tmpl, lookup_widget => lexpand($wpath));
+}
+
 sub locate_symbol_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
   $line //= 0;
@@ -131,35 +179,12 @@ sub locate_symbol_at_file_position {
   my AltNode $node = $cursor->{array}[$cursor->{index}]
     or return;
 
-  my Position $pos;
-  $pos->{line} = $line;
-  $pos->{character} = $column;
+  my SymbolInfo $info = {};
+  $info->{kind} = $node->{kind};
+  $info->{range} = $node->{symbol_range};
+  $info->{filename} = $fileName;
 
-  my $resolver = $self->can("resolve_$node->{kind}")
-    or return;
-  $resolver->($self, $node, $fileName, $pos);
-}
-
-sub resolve_ELEMENT {
-  (my MY $self, my AltNode $node, my $fileName, my Position $pos) = @_;
-
-  my $wname = join(":", lexpand($node->{path}));
-
-  my Part $widget = $self->lookup_widget_from($node->{path}, $fileName, $pos->{line})
-    or return;
-
-  (widget => $wname, $widget->{cf_folder}{cf_path}, $widget->{arg_order});
-}
-
-sub lookup_widget_from {
-  (my MY $self, my ($wpath, $fileName, $line)) = @_;
-
-  (my Part $part, my Template $tmpl, my $core)
-    = $self->find_part_of_file_line($fileName, $line)
-    or return;
-
-  $core->build_cgen_of('perl')
-    ->with_template($tmpl, lookup_widget => lexpand($wpath));
+  wantarray ? ($info, $cursor) : $info;
 }
 
 sub locate_node_at_file_position {
@@ -178,6 +203,9 @@ sub locate_node_at_file_position {
   unless ($self->is_in_range($range, $pos)) {
     Carp::croak "BUG: Not in range! range=".terse_dump($range)." line=$line col=$column";
   }
+
+  # <!yatt:action>, <!yatt:entity>...
+  return if $kind eq 'body_string';
 
   $self->locate_node($tree, $pos);
 }
