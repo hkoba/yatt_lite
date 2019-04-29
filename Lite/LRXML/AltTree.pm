@@ -39,6 +39,8 @@ use YATT::Lite::Constants
 *TYPES = *YATT::Lite::Constants::TYPE_;*TYPES = *YATT::Lite::Constants::TYPE_;
 our @TYPES;
 
+use YATT::Lite::LRXML::FormatEntpath qw/format_entpath/;
+
 use YATT::Lite::XHF::Dumper qw/dump_xhf/;
 sub cli_write_fh_as_xhf {
   (my MY $self, my ($outFH, @args)) = @_;
@@ -52,35 +54,14 @@ sub convert_tree {
   map {
     if (not ref $_) {
       ($with_text || $self->{with_text}) ? $_ : ();
+    } elsif (not ref $_->[NODE_TYPE] and my $sub = $self->can("convert_node__$TYPES[$_->[NODE_TYPE]]")) {
+      $sub->($self, $_, $with_text);
     } elsif (not ref $_->[NODE_TYPE]) {
       my AltNode $altnode = +{};
       $altnode->{kind} = $TYPES[$_->[NODE_TYPE]];
       $altnode->{path} = $self->convert_path_of($_);
 
-      if (defined $_->[NODE_BEGIN] and defined $_->[NODE_END]
-          and $_->[NODE_BEGIN] < length($self->{string})
-          and $_->[NODE_END] < length($self->{string})) {
-        my $source = substr($self->{string}, $_->[NODE_BEGIN]
-                            , $_->[NODE_END] - $_->[NODE_BEGIN]);
-        if ($self->{with_source}) {
-          $altnode->{source} = $source;
-        }
-        if ($self->{with_range}) {
-          $altnode->{tree_range} = $self->make_range(
-            $_->[NODE_BEGIN],
-            $_->[NODE_END],
-            $_->[NODE_LNO],
-            ($source =~ tr|\n||)
-          );
-          if ($_->[NODE_SYM_END]) {
-            $altnode->{symbol_range} = $self->make_range(
-              $_->[NODE_BEGIN],
-              $_->[NODE_SYM_END] - 1,
-              $_->[NODE_LNO],
-            );
-          }
-        }
-      }
+      $self->fill_source_range_of($altnode, $_);
 
       if ($_->[NODE_TYPE] == TYPE_ELEMENT || $_->[NODE_TYPE] == TYPE_ATT_NESTED) {
         my @origSubTree;
@@ -120,6 +101,128 @@ sub convert_tree {
       # $self->convert_tree($_);
     }
   } @$tree;
+}
+
+sub fill_source_range_of {
+  (my MY $self, my AltNode $altnode, my $orig) = @_;
+  if (defined $orig->[NODE_BEGIN] and defined $orig->[NODE_END]
+      and $orig->[NODE_BEGIN] < length($self->{string})
+      and $orig->[NODE_END] < length($self->{string})) {
+    my $source = substr($self->{string}, $orig->[NODE_BEGIN]
+                        , $orig->[NODE_END] - $orig->[NODE_BEGIN]);
+    if ($self->{with_source}) {
+      $altnode->{source} = $source;
+    }
+    if ($self->{with_range}) {
+      $altnode->{tree_range} = $self->make_range(
+        $orig->[NODE_BEGIN],
+        $orig->[NODE_END],
+        $orig->[NODE_LNO],
+        ($source =~ tr|\n||)
+      );
+      if ($orig->[NODE_SYM_END]) {
+        $altnode->{symbol_range} = $self->make_range(
+          $orig->[NODE_BEGIN],
+          $orig->[NODE_SYM_END] - 1,
+          $orig->[NODE_LNO],
+        );
+      }
+    }
+  }
+}
+
+sub convert_node__ENTITY {
+  (my MY $self, my ($node, $with_text)) = @_;
+  my AltNode $entpathNode = {};
+  $entpathNode->{kind} = 'entpath';
+  $self->fill_source_range_of($entpathNode, $node);
+  my $pos = $node->[NODE_BEGIN] + length($node->[NODE_PATH]) + 1;
+  $entpathNode->{subtree} = [$self->convert_node_entpath(
+    $with_text, $pos, $node->[NODE_LNO],
+    @{$node}[NODE_BODY .. $#$node],
+  )];
+  $entpathNode;
+}
+
+sub convert_node_entpath {
+  (my MY $self, my ($with_text, $pos, $line, @pathItems)) = @_;
+  my (@subtree);
+  foreach my $item (@pathItems) {
+    my ($kind, @args) = @$item;
+    if (my $sub = $self->can("convert_node_entpath__$kind")) {
+      if (my AltNode $subtree = $sub->($self, $with_text, $pos, $line, $item)) {
+        push @subtree, $subtree;
+        $pos += length $subtree->{source};
+      } else {
+        $pos += length format_entpath($item);
+      }
+    } else {
+      my $begin = $pos;
+      my $str = format_entpath($item);
+      my AltNode $entNode;
+      push @subtree, $entNode = {};
+      $entNode->{kind} = $kind;
+      $entNode->{path} = $str;
+      if (@args) {
+        $self->convert_entpath_args($entNode, $with_text, $pos, $line, @args);
+      }
+      my $end = $pos += length $str;
+      if ($entNode) {
+        $entNode->{tree_range} = $self->make_range($begin, $end, $line);
+      }
+    }
+  }
+  @subtree;
+}
+
+sub convert_node_entpath__text {
+  (my MY $self, my ($with_text, $pos, $line, $item)) = @_;
+  return unless $with_text;
+  ...;
+}
+
+sub convert_node_entpath__call {
+  (my MY $self, my ($with_text, $pos, $line, $item)) = @_;
+  my ($kind, $funcName, @args) = @$item;
+  my $begin = $pos;
+  my AltNode $entNode = {};
+  $entNode->{kind} = $kind;
+  $entNode->{path} = $funcName;
+  $pos += length(":$funcName(");
+  $entNode->{source} = my $str = format_entpath($item);
+  if (@args) {
+    $self->convert_entpath_args($entNode, $with_text, $pos, $line, @args);
+  }
+  my $end = $begin + length $str;
+  $entNode->{tree_range} = $self->make_range($begin, $end, $line);
+  $entNode;
+}
+
+*convert_node_entpath__invoke = *convert_node_entpath__call;
+*convert_node_entpath__invoke = *convert_node_entpath__call;
+
+sub convert_entpath_args {
+  (my MY $self, my AltNode $entNode, my ($with_text, $pos, $line, @args)) = @_;
+  foreach my $arg (@args) {
+    if (not ref $arg) {
+      $pos += length $arg;
+    } else {
+      if (ref $arg eq 'ARRAY' and ref $arg->[0] eq 'ARRAY') {
+        # pipeline
+        push @{$entNode->{subtree}}
+          , $self->convert_node_entpath($with_text, $pos, $line, @$arg);
+      } elsif (ref $arg eq 'ARRAY') {
+        # single item
+        push @{$entNode->{subtree}}
+          , $self->convert_node_entpath($with_text, $pos, $line, $arg);
+      } else {
+        die "Really?";
+      }
+      $pos += length format_entpath($arg);
+    }
+  } continue {
+    $pos += length(",");
+  }
 }
 
 sub make_range {
