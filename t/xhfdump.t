@@ -130,6 +130,17 @@ bang= #null
 foo: bar
 }
 END
+
+   , [<<END, []]
+[
+]
+END
+
+   , [<<END, {}]
+{
+}
+END
+
     );
 
 my @dumponly =
