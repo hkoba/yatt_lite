@@ -20,6 +20,8 @@ sub _parse_body {
   while (s{^(.*?)$$self{re_body}}{}xs or my $retry = $self->_get_chunk($sink)) {
     next if $retry;
 
+    my $startPos = $self->{curpos} + length($1);
+
     $self->accept_leading_text($sink, $parent, $par_ln, \$has_nonspace);
 
     if ($+{lcmsg}) {
@@ -39,7 +41,7 @@ sub _parse_body {
       my $formal_path = ($+{opt} // '') . $+{elem};
       if ($+{clo}) {
         if ($last_foot) {
-          $last_foot->[NODE_END] = $self->{curpos};
+          $last_foot->[NODE_END] = $startPos;
         }
 	$parent->[NODE_BODY_END] = $self->{startpos};
 	if (defined $parent->[NODE_BODY_BEGIN]
@@ -135,6 +137,7 @@ sub _parse_body {
         #
         # x substr($widget->{cf_folder}->{cf_string}, $elem->[NODE_BEGIN], $self->{curpos} - $elem->[NODE_BEGIN])
         # x $widget->{cf_folder}->source_region($elem->[NODE_BEGIN], $self->{curpos})
+        # x $self->{template}->...
 
         #
         $elem->[NODE_END] = $self->{curpos};
@@ -144,7 +147,7 @@ sub _parse_body {
 	# <:yatt:foo/>bar 出現後は、以後の要素を att に加える。
 	$sink = $body;
         if ($last_foot) {
-          $last_foot->[NODE_END] = $self->{curpos};
+          $last_foot->[NODE_END] = $startPos;
         }
         $last_foot = $elem;
       } else {
@@ -190,9 +193,10 @@ sub _parse_body {
     die $self->synerror_at($self->{startln}, q{Missing close tag '%s'}, $close);
   }
 
-  if ($last_foot) {
-    $last_foot->[NODE_END] = $self->{curpos};
-  }
+  # if ($last_foot) {
+  #   die "??really??" if not defined $last_foot->[NODE_END];
+  #   $last_foot->[NODE_END] //= $self->{curpos};
+  # }
 
   # To make body-less element easily detected.
   if ($parent and $parent->[NODE_BODY]) {

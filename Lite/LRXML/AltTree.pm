@@ -162,12 +162,12 @@ sub convert_node_entpath {
       my AltNode $entNode;
       push @subtree, $entNode = {};
       $entNode->{kind} = $kind;
-      $entNode->{path} = $str;
+      $entNode->{source} = $str;
       if (@args) {
         $self->convert_entpath_args($entNode, $with_text, $pos, $line, @args);
       }
       my $end = $pos += length $str;
-      if ($entNode) {
+      if ($self->{with_range}) {
         $entNode->{tree_range} = $self->make_range($begin, $end, $line);
       }
     }
@@ -189,17 +189,42 @@ sub convert_node_entpath__call {
   $entNode->{kind} = $kind;
   $entNode->{path} = $funcName;
   $pos += length(":$funcName(");
+  if ($self->{with_range}) {
+    $entNode->{symbol_range}
+      = $self->make_range($begin, $pos, $line);
+  }
   $entNode->{source} = my $str = format_entpath($item);
   if (@args) {
     $self->convert_entpath_args($entNode, $with_text, $pos, $line, @args);
   }
   my $end = $begin + length $str;
-  $entNode->{tree_range} = $self->make_range($begin, $end, $line);
+  if ($self->{with_range}) {
+    $entNode->{tree_range} = $self->make_range($begin, $end, $line);
+  }
   $entNode;
 }
 
 *convert_node_entpath__invoke = *convert_node_entpath__call;
 *convert_node_entpath__invoke = *convert_node_entpath__call;
+*convert_node_entpath__prop = *convert_node_entpath__call;
+*convert_node_entpath__prop = *convert_node_entpath__call;
+
+sub convert_node_entpath__var {
+  (my MY $self, my ($with_text, $pos, $line, $item)) = @_;
+  my ($kind, $varName) = @$item;
+  my $begin = $pos;
+  my AltNode $entNode = {};
+  $entNode->{kind} = $kind;
+  $entNode->{path} = $varName;
+  $entNode->{source} = my $str = format_entpath($item);
+  $pos += length($str);
+  my $end = $begin + length $str;
+  if ($self->{with_range}) {
+    $entNode->{symbol_range}
+      = $entNode->{tree_range} = $self->make_range($begin, $end, $line);
+  }
+  $entNode;
+}
 
 sub convert_entpath_args {
   (my MY $self, my AltNode $entNode, my ($with_text, $pos, $line, @args)) = @_;
@@ -236,7 +261,7 @@ sub make_range {
   };
   $range->{end} = do {
     my Position $p;
-    $p->{character} = $self->column_of_source_pos($self->{string}, $end-1);
+    $p->{character} = $self->column_of_source_pos($self->{string}, $end-1, 1);
     $p->{line} = $lineno - 1 + ($nlines // 0);
     $p;
   };
@@ -245,6 +270,9 @@ sub make_range {
 
 sub column_of_source_pos {
   my $pos = $_[2];
+  if ($_[3] and substr($_[1], $pos, 1) eq "\n") {
+    $pos--;
+  }
   if ((my $found = rindex($_[1], "\n", $pos)) >= 0) {
     $pos - $found;
   } else {

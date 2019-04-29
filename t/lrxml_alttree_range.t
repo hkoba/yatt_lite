@@ -169,7 +169,18 @@ source: &yatt:x;
 subtree[
 {
 kind: var
-path: :x
+path: x
+source: :x
+symbol_range{
+end{
+character: 11
+line: 8
+}
+start{
+character: 9
+line: 8
+}
+}
 tree_range{
 end{
 character: 11
@@ -202,7 +213,18 @@ source: &yatt:y;
 subtree[
 {
 kind: var
-path: :y
+path: y
+source: :y
+symbol_range{
+end{
+character: 7
+line: 9
+}
+start{
+character: 5
+line: 9
+}
+}
 tree_range{
 end{
 character: 7
@@ -258,7 +280,18 @@ source: &yatt:foo:bar:baz;
 subtree[
 {
 kind: var
-path: :foo
+path: foo
+source: :foo
+symbol_range{
+end{
+character: 9
+line: 1
+}
+start{
+character: 5
+line: 1
+}
+}
 tree_range{
 end{
 character: 9
@@ -272,7 +305,18 @@ line: 1
 }
 {
 kind: prop
-path: :bar
+path: bar
+source: :bar
+symbol_range{
+end{
+character: 14
+line: 1
+}
+start{
+character: 9
+line: 1
+}
+}
 tree_range{
 end{
 character: 13
@@ -286,7 +330,18 @@ line: 1
 }
 {
 kind: prop
-path: :baz
+path: baz
+source: :baz
+symbol_range{
+end{
+character: 18
+line: 1
+}
+start{
+character: 13
+line: 1
+}
+}
 tree_range{
 end{
 character: 17
@@ -340,7 +395,18 @@ source: :bar(:baz)
 subtree[
 {
 kind: var
-path: :baz
+path: baz
+source: :baz
+symbol_range{
+end{
+character: 23
+line: 1
+}
+start{
+character: 19
+line: 1
+}
+}
 tree_range{
 end{
 character: 23
@@ -353,6 +419,16 @@ line: 1
 }
 }
 ]
+symbol_range{
+end{
+character: 19
+line: 1
+}
+start{
+character: 14
+line: 1
+}
+}
 tree_range{
 end{
 character: 24
@@ -365,6 +441,16 @@ line: 1
 }
 }
 ]
+symbol_range{
+end{
+character: 10
+line: 1
+}
+start{
+character: 5
+line: 1
+}
+}
 tree_range{
 end{
 character: 29

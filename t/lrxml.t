@@ -163,26 +163,28 @@ END
 [
 - <h2>
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:x;
-value[
-[
-var: x
-]
+subtree[
+{
+kind: var
+path: x
+source: :x
+}
 ]
 }
 -
  </h2>
  
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:y;
-value[
-[
-var: y
-]
+subtree[
+{
+kind: var
+path: y
+source: :y
+}
 ]
 }
 -
@@ -583,7 +585,7 @@ END
     , "tmpl Item '$name'";
 
   TODO: {
-    local $TODO = "Not yet solved";
+    # local $TODO = "Not yet solved";
     # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
 
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
@@ -609,14 +611,14 @@ subtree[
 -
  not defined 
 {
-kind: ENTITY
-path: yatt
-source:
-  &yatt:x
-value[
-[
-var: x
-]
+kind: entpath
+source: &yatt:x;
+subtree[
+{
+kind: var
+path: x
+source: :x
+}
 ]
 }
 ]
@@ -629,7 +631,9 @@ kind: ATT_NESTED
 path[
 yatt: else
 ]
-source: <:yatt:else if="&yatt:x; >= 2"/>
+source:
+ <:yatt:else if="&yatt:x; >= 2"/> world!
+ 
 subtree[
 {
 kind: ATT_TEXT
@@ -637,13 +641,14 @@ path: if
 source: if="&yatt:x; >= 2"
 subtree[
 {
-kind: ENTITY
-path: yatt
-source: "&yatt:x
-value[
-[
-var: x
-]
+kind: entpath
+source: &yatt:x;
+subtree[
+{
+kind: var
+path: x
+source: :x
+}
 ]
 }
 -
@@ -660,7 +665,9 @@ kind: ATT_NESTED
 path[
 yatt: else
 ]
-source: <:yatt:else/>
+source:
+ <:yatt:else/> decades!
+ 
 subtree[
 -
   decades!
@@ -780,7 +787,6 @@ source: <yatt:foo
  
  />
 subtree[
-
 ]
 }
 -
@@ -853,13 +859,14 @@ subtree[
  
  
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:x;
-value[
-[
-var: x
-]
+subtree[
+{
+kind: var
+path: x
+source: :x
+}
 ]
 }
 - 
@@ -938,13 +945,14 @@ value= #null
 -
    <h2>
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:x;
-value[
-[
-var: x
-]
+subtree[
+{
+kind: var
+path: x
+source: :x
+}
 ]
 }
 -
@@ -953,13 +961,14 @@ var: x
 -
    
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:y;
-value[
-[
-var: y
-]
+subtree[
+{
+kind: var
+path: y
+source: :y
+}
 ]
 }
 - 
@@ -1008,13 +1017,14 @@ subtree[
 -
  Hello 
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:world;
-value[
-[
-var: world
-]
+subtree[
+{
+kind: var
+path: world
+source: :world
+}
 ]
 }
 - !
@@ -1044,25 +1054,27 @@ subtree[
 -
    
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:n;
-value[
-[
-var: n
-]
+subtree[
+{
+kind: var
+path: n
+source: :n
+}
 ]
 }
 -
   file removed from directory 
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:dir;
-value[
-[
-var: dir
-]
+subtree[
+{
+kind: var
+path: dir
+source: :dir
+}
 ]
 }
 -
@@ -1096,7 +1108,7 @@ END
   # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
 
   TODO: {
-    local $TODO = "Not yet solved";
+    # local $TODO = "Not yet solved";
     eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
 [
 {
@@ -1133,7 +1145,7 @@ source: :::z
 value= #null
 }
 ]
-source: "1..8"
+source: [x y :::z]="1..8"
 value: 1..8
 }
 ]
@@ -1143,13 +1155,14 @@ value: 1..8
  
 - x=
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:x;
-value[
-[
-var: x
-]
+subtree[
+{
+kind: var
+path: x
+source: :x
+}
 ]
 }
 -
@@ -1157,13 +1170,14 @@ var: x
  
 - y=
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:y;
-value[
-[
-var: y
-]
+subtree[
+{
+kind: var
+path: y
+source: :y
+}
 ]
 }
 -
@@ -1171,13 +1185,14 @@ var: y
  
 - z=
 {
-kind: ENTITY
-path: yatt
+kind: entpath
 source: &yatt:z;
-value[
-[
-var: z
-]
+subtree[
+{
+kind: var
+path: z
+source: :z
+}
 ]
 }
 -

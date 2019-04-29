@@ -413,8 +413,14 @@ sub parse_attlist {
 
 sub parse_attlist_with_lvalue {
   (my MY $self, my ($outer_start, $outer_lvalue, $strref, @opt)) = @_;
+
+  # To examine node range in perldebugger, do like following:
+  #
+  #   x substr($self->{template}{cf_string}, 18, 26-18)
+  #
+
   my ($for_decl) = @opt;
-  my (@result, @lvalue);
+  my (@result, @lvalue); # Note: @lvalue contains position of lvalue expression.
   my $curln = $self->{endln};
   while ($$strref =~ s{^$$self{re_att}}{}xs) {
     my $start = $self->{curpos};
@@ -437,9 +443,12 @@ sub parse_attlist_with_lvalue {
       }
     };
 
+    # lvalue or rvalue
     if (not $m->{equal}) {
+      # rvalue
       # create node. may have lvalue.
       if ($m->{nestclo}) {
+        # "body = [code p q]" comes here
         unless ($outer_lvalue) {
           Carp::croak("syntax error");
         }
@@ -460,7 +469,6 @@ sub parse_attlist_with_lvalue {
         return $node;
       }
 
-      my $bodyStart = $self->{curpos};
       if ($m->{nest}) {
         # [ 〜 ]
         push @result,
@@ -491,15 +499,18 @@ sub parse_attlist_with_lvalue {
             my ($quote, $value) = oneof($m, qw(bare sq dq));
             $node->[NODE_TYPE] = TYPE_ATT_TEXT;
             @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = $mklval->();
+            $node->[NODE_BODY_BEGIN] = $start + ($quote ? 1 : 0);
             splice @$node, NODE_BODY, 0, (
-              $for_decl ? $value : $self->_parse_text_entities_at($start, $value)
+              $for_decl ? $value : $self->_parse_text_entities_at(
+                $node->[NODE_BODY_BEGIN], $value
+              )
             );
           }
         };
-        $node->[NODE_BODY_BEGIN] = $bodyStart;
         $node->[NODE_BODY_END] = $self->{curpos};
       }
     }
+    # lvalue expression.
     elsif (
       # m->{equal} and
       not @lvalue
@@ -509,7 +520,8 @@ sub parse_attlist_with_lvalue {
         @lvalue = (@common, split_ns($m->{bare}));
       }
       elsif ($m->{nestclo}) {
-        @lvalue = (@common, [splice @result]);
+        my ($s, $p, $l) = @common;
+        @lvalue = ($outer_start, undef, $l, [splice @result]);
       }
       else {
         Carp::croak("unknown");
