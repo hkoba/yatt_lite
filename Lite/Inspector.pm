@@ -18,13 +18,14 @@ use MOP4Import::Util qw/lexpand symtab terse_dump/;
 
 use MOP4Import::Types
   Zipper => [[fields => qw/array index path/]]
-  , SymbolInfo => [[fields => qw/kind symbol filename range/]]
+  , SymbolInfo => [[fields => qw/kind symbol filename range refpos/]]
   ;
 
 use parent qw/File::Spec/;
 
 #----------------------------------------
 
+use URI::file;
 use Text::Glob;
 use Plack::Util;
 use File::Basename;
@@ -39,7 +40,10 @@ use YATT::Lite::LRXML::AltTree qw/column_of_source_pos AltNode/;
 
 use YATT::Lite::Walker qw/walk walk_vfs_folders/;
 
-use YATT::Lite::LanguageServer::Protocol qw/Position Range MarkupContent/;
+use YATT::Lite::LanguageServer::Protocol
+  qw/Position Range MarkupContent
+     Location
+    /;
 
 #========================================
 
@@ -121,12 +125,67 @@ sub alttree {
    ->convert_tree($tree)];
 }
 
+sub lookup_symbol_definition {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my $sub = $self->can("lookup_symbol_definition_of__$sym->{kind}")
+    or return;
+
+  $sub->($self, $sym, $cursor);
+}
+
+sub lookup_symbol_definition_of__ELEMENT {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my Position $pos = $sym->{refpos};
+
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  # assert($node);
+
+  my $wname = join(":", lexpand($node->{path}));
+
+  # XXX: yatt:if, yatt:foreach, ... macro
+  # XXX: calllable_vars like <yatt:body/>
+
+  my Part $widget = $self->lookup_widget_from(
+    $node->{path}, $sym->{filename}, $pos->{line}
+  ) or return;
+
+  my Location $loc = +{};
+
+  $loc->{uri} = $self->filename2uri($self->part_filename($widget));
+  $loc->{range} = $self->part_decl_range($widget);
+
+  $loc;
+}
+
+sub filename2uri {
+  (my MY $self, my $fn) = @_;
+  URI::file->new_abs($fn)->as_string;
+}
+
+sub part_filename {
+  (my MY $self, my Part $part) = @_;
+  my Template $tmpl = $part->{cf_folder};
+  $tmpl->{cf_path};
+}
+
 sub describe_symbol {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
   my $resolver = $self->can("describe_symbol_of_$sym->{kind}")
     or return;
   $resolver->($self, $sym, $cursor);
 }
+
+# sub describe_symbol_of_ENTITY {
+#   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+#   my AltNode $node = $cursor->{array}[$cursor->{index}];
+
+#   if ($node->{kind} eq 'call') {
+    
+#   }
+# }
 
 sub describe_symbol_of_ELEMENT {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
@@ -138,7 +197,7 @@ sub describe_symbol_of_ELEMENT {
 
   my $wname = join(":", lexpand($node->{path}));
 
-  # XXX: yatt:if, yatt:foreach, ... macro
+  # XXX: builtin macros like yatt:if, yatt:foreach, ...
   # XXX: calllable_vars like <yatt:body/>
 
   my Part $widget = $self->lookup_widget_from(
@@ -183,6 +242,9 @@ sub locate_symbol_at_file_position {
   $info->{kind} = $node->{kind};
   $info->{range} = $node->{symbol_range};
   $info->{filename} = $fileName;
+  $info->{refpos} = my Position $pos = +{};
+  $pos->{line} = $line;
+  $pos->{character} = $column;
 
   wantarray ? ($info, $cursor) : $info;
 }
@@ -311,25 +373,25 @@ sub dump_tokens_at_file_position {
   if ($line < $part->{cf_bodyln} - 1) {
     # At declaration
     [decllist => $declkind
-     , $self->part_decl_range($tmpl, $part)
+     , $self->part_decl_range($part)
      , $self->alttree($tmpl, $part->{decllist})];
   } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
     # At body of widget, page, args...
     my Widget $widget = $part;
     [body => $declkind
-     , $self->part_body_range($tmpl, $part)
+     , $self->part_body_range($part)
      , $self->alttree($tmpl, $widget->{tree})];
   } else {
     # At body of action, entity, ...
     # XXX: TODO extract tokens for host language.
     [body_string => $declkind
-     , $self->part_body_range($tmpl, $part)
+     , $self->part_body_range($part)
      , $part->{toks}];
   }
 }
 
 sub part_decl_range {
-  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  (my MY $self, my Part $part) = @_;
   my Range $range;
   $range->{start} = do {
     my Position $p;
@@ -347,7 +409,7 @@ sub part_decl_range {
 }
 
 sub part_body_range {
-  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  (my MY $self, my Part $part) = @_;
   my Range $range;
   $range->{start} = do {
     my Position $p;

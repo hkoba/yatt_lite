@@ -28,6 +28,7 @@ sub lspcall__initialize {
   my InitializeResult $res = {};
   $res->{capabilities} = my ServerCapabilities $svcap = {};
   $svcap->{definitionProvider} = JSON::true;
+  $svcap->{implementationProvider} = JSON::true;
   $svcap->{hoverProvider} = JSON::true;
   $res;
 }
@@ -52,35 +53,34 @@ sub lspcall__textDocument__hover {
   if (my $contents = $self->inspector->describe_symbol($symbol, $cursor)) {
     $result->{contents} = $contents;
   } else {
-    $result->{contents} = "XXX: $symbol->{kind} line=$pos->{line} col=$pos->{character}"
+    $result->{contents} = "XXX: $symbol->{kind} line=$pos->{line} col=$pos->{character} node="
+      . terse_dump($cursor->{array}[$cursor->{index}]);
   }
 
   $result;
 }
 
-#
-# WIP:
-#
-sub lspcall__textDocument__definition {
-  (my MY $self, my TextDocumentPositionParams $params) = @_;
-  # print STDERR "# definition: ".terse_dump($params), "\n";
-  my TextDocumentIdentifier $docId = $params->{textDocument};
-  my Position $pos = $params->{position};
-  my Location $res = {};
-  $res->{uri} = $docId->{uri};
-  $res->{range} = my Range $range = {};
-  $range->{start} = do {
-    my Position $p = {};
-    $p->{line} = 0; $p->{character} = 0;
-    $p;
-  };
-  $range->{end} = do {
-    my Position $p = {};
-    $p->{line} = 0; $p->{character} = 0;
-    $p;
-  };
 
-  $res;
+*lspcall__textDocument__definition = *lspcall__textDocument__implementation;
+*lspcall__textDocument__definition = *lspcall__textDocument__implementation;
+
+#
+sub lspcall__textDocument__implementation {
+  (my MY $self, my TextDocumentPositionParams $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  my $fn = $self->uri2localpath($docId->{uri});
+  my Position $pos = $params->{position};
+
+  my ($symbol, $cursor)
+    = $self->inspector->locate_symbol_at_file_position(
+      $fn, $pos->{line}, $pos->{character}
+    ) or return;
+
+  my Location $found = $self->inspector->lookup_symbol_definition($symbol, $cursor)
+    or return;
+
+  $found;
 }
 
 #----------------------------------------
