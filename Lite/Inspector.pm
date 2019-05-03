@@ -19,6 +19,10 @@ use MOP4Import::Util qw/lexpand symtab terse_dump/;
 use MOP4Import::Types
   Zipper => [[fields => qw/array index path/]]
   , SymbolInfo => [[fields => qw/kind symbol filename range refpos/]]
+  , LintResult => [[fields => qw/type is_success
+                                 info
+                                 message
+                                 file diagnostics/]]
   ;
 
 use parent qw/File::Spec/;
@@ -29,6 +33,9 @@ use URI::file;
 use Text::Glob;
 use Plack::Util;
 use File::Basename;
+use File::stat;
+
+use Try::Tiny;
 
 use YATT::Lite;
 use YATT::Lite::Factory;
@@ -43,7 +50,10 @@ use YATT::Lite::Walker qw/walk walk_vfs_folders/;
 use YATT::Lite::LanguageServer::Protocol
   qw/Position Range MarkupContent
      Location
-    /;
+     Diagnostic
+    /
+  , qr/^DiagnosticSeverity__/
+  ;
 
 #========================================
 
@@ -112,6 +122,83 @@ sub emit_ctags {
   # XXX: symbolKind mapping.
   printf "%s:%d:%d:%s!%s\n", $self->clean_path($fileName)
     , $lineNo, $colNo // 1, $kind, $name;
+}
+
+#========================================
+
+sub lint : method {
+  (my MY $self, my $fileName) = @_;
+
+  my ($baseName, $dir) = File::Basename::fileparse($fileName);
+
+  my LintResult $result;
+  my $mtime;
+
+  try {
+
+    unless (-r $fileName) {
+      $result->{message} = "No such file: $fileName";
+      return;
+    }
+
+    $mtime = stat($fileName)->mtime;
+
+    $self->{_SITE}->cf_let([
+      error_handler => sub {
+        (my $type, my YATT::Lite::Error $err) = @_;
+        $result->{type} = $type;
+        $self->yatterror2lintresult($err, $result);
+        die $result;
+      }
+     ], sub {
+      my $yatt = $self->{_SITE}->load_yatt($dir);
+      # $yatt->fconfigure_encoding(\*STDOUT, \*STDERR);
+      # get_trans is not ok.
+      my $core = $yatt->open_trans;
+      my $tmpl = $core->find_file($baseName);
+      $tmpl->refresh($core);
+      my $pkg = $core->find_product(perl => $tmpl);
+
+      $result->{is_success} = JSON::true;
+      # $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}];
+
+    });
+  } catch {
+
+    unless ($result) {
+      if (not ref $_) {
+        $result->{message} = $_;
+      } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
+        $self->yatterror2lintresult($_, $result //= +{});
+      } else {
+        $result->{message} = $_;
+      }
+
+      # $result->{info}{mtime} = $mtime if defined $mtime;
+    }
+  };
+
+  $result;
+}
+
+sub yatterror2lintresult {
+  (my MY $self, my YATT::Lite::Error $err, my LintResult $result) = @_;
+  use YATT::Lite::Util::AllowRedundantSprintf;
+  $result->{file} = $err->{cf_tmpl_file};
+  $result->{diagnostics} = my Diagnostic $diag = {};
+  $diag->{severity} = DiagnosticSeverity__Error;
+  $diag->{message} = $err->{cf_reason} //
+    sprintf($err->{cf_format}, @{$err->{cf_args}});
+  $diag->{range} = $self->make_line_range($err->{cf_tmpl_line} - 1);
+  $result;
+}
+
+sub make_line_range {
+  (my MY $self, my $lineno) = @_;
+  my Range $range = {};
+  $range->{start} = $self->make_line_position($lineno);
+  $range->{end} = $self->make_line_position($lineno+1);
+  $range
 }
 
 #========================================
@@ -393,36 +480,24 @@ sub dump_tokens_at_file_position {
 sub part_decl_range {
   (my MY $self, my Part $part) = @_;
   my Range $range;
-  $range->{start} = do {
-    my Position $p;
-    $p->{character} = 0;
-    $p->{line} = $part->{cf_startln} - 1;
-    $p;
-  };
-  $range->{end} = do {
-    my Position $p;
-    $p->{character} = 0;
-    $p->{line} = $part->{cf_bodyln} - 1;
-    $p;
-  };
+  $range->{start} = $self->make_line_position($part->{cf_startln} - 1);
+  $range->{end} = $self->make_line_position($part->{cf_bodyln} - 1);
   $range;
+}
+
+sub make_line_position {
+  (my MY $self, my ($line, $character)) = @_;
+  my Position $p = {};
+  $p->{character} = $character // 0;
+  $p->{line} = $line;
+  $p;
 }
 
 sub part_body_range {
   (my MY $self, my Part $part) = @_;
   my Range $range;
-  $range->{start} = do {
-    my Position $p;
-    $p->{character} = 0;
-    $p->{line} = $part->{cf_bodyln} - 1;
-    $p;
-  };
-  $range->{end} = do {
-    my Position $p;
-    $p->{character} = 0;
-    $p->{line} = $part->{cf_endln} - 1;
-    $p;
-  };
+  $range->{start} = $self->make_line_position($part->{cf_bodyln} - 1);
+  $range->{end} = $self->make_line_position($part->{cf_endln} - 1);
   $range;
 }
 

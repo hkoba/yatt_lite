@@ -3,6 +3,9 @@ package YATT::Lite::LanguageServer;
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
+
+my $libDir = File::AddInc->libdir;
+
 use YATT::Lite::LanguageServer::Generic -as_base
   , [fields => qw/_initialized
                   _client_cap
@@ -15,7 +18,8 @@ use MOP4Import::Util qw/terse_dump/;
 
 use YATT::Lite::LanguageServer::Protocol;
 
-use YATT::Lite::Inspector [as => 'Inspector'], qw/Zipper AltNode/;
+use YATT::Lite::Inspector [as => 'Inspector']
+  , qw/Zipper AltNode LintResult/;
 
 sub lspcall__initialize {
   (my MY $self, my InitializeParams $params) = @_;
@@ -30,7 +34,37 @@ sub lspcall__initialize {
   $svcap->{definitionProvider} = JSON::true;
   $svcap->{implementationProvider} = JSON::true;
   $svcap->{hoverProvider} = JSON::true;
+  $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
+  $sopts->{openClose} = JSON::true;
+  $sopts->{save} = JSON::true;
   $res;
+}
+
+sub lspcall__textDocument__didSave {
+  (my MY $self, my DidSaveTextDocumentParams $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  my $fn = $self->uri2localpath($docId->{uri});
+
+  my LintResult $res = $self->inspector->lint($fn); # XXX: process isolation
+
+  print STDERR "# lint result: ", terse_dump($res), "\n"
+    unless $self->{quiet};
+
+  my PublishDiagnosticsParams $notif = {};
+  $notif->{uri} = $docId->{uri};
+
+  if ($res->{is_success}) {
+    # ok.
+    $notif->{diagnostics} = [];
+  } elsif ($res->{diagnostics}) {
+
+    $notif->{diagnostics} = [$res->{diagnostics}];
+  }
+
+  if ($notif->{diagnostics}) {
+    $self->send_notification('textDocument/publishDiagnostics', $notif);
+  }
 }
 
 #

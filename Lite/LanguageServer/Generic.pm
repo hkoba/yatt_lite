@@ -18,7 +18,7 @@ use MOP4Import::Types
   (Header => [[fields => qw/Content-Length/]]);
 
 use YATT::Lite::LanguageServer::Protocol
-  qw/Request Response Error/;
+  qw/Message Request Response Notification Error/, qr/^ErrorCodes__/;
 
 # Most logics are shamelessly stolen from Perl::LanguageServer
 
@@ -128,6 +128,21 @@ sub lspcall__exit {
 
 #========================================
 
+sub send_notification {
+  (my MY $self, my ($methodName, $params)) = @_;
+  my Notification $notif = {};
+  $notif->{method} = $methodName;
+  $notif->{params} = $params;
+  $notif->{jsonrpc} = $self->{jsonrpc_version};
+
+  print STDERR "# sending notification: ", $self->cli_encode_json($notif), "\n"
+    unless $self->{quiet};
+
+  my $wdata = $self->format_message($notif);
+
+  $self->emit_outdata($wdata);
+}
+
 sub process_request {
   (my MY $self, my Request $request) = @_;
   my Response $outdata;
@@ -142,7 +157,7 @@ sub process_request {
   }
   if (my $msg = $@) {
     $outdata->{error} = my Error $error = {};
-    $error->{code} = -32001;
+    $error->{code} = ErrorCodes__UnknownErrorCode;
     $error->{message} = $msg;
   }
   if ($outdata) {
@@ -158,8 +173,13 @@ sub emit_response {
   print STDERR "# sending response: ", $self->cli_encode_json($response), "\n"
     unless $self->{quiet};
 
-  my $wdata = $self->format_response($self->make_response($response, $id));
+  my $wdata = $self->format_message($self->make_response($response, $id));
 
+  $self->emit_outdata($wdata);
+}
+
+sub emit_outdata {
+  (my MY $self, my $wdata) = @_;
   my $guard = $self->{_out_semaphore}->guard;
   my $sum = 0;
   use bytes;
@@ -179,9 +199,9 @@ sub make_response {
   $response;
 }
 
-sub format_response {
-  (my MY $self, my Response $response) = @_;
-  my $outdata = $self->cli_encode_json($response);
+sub format_message {
+  (my MY $self, my Message $message) = @_;
+  my $outdata = $self->cli_encode_json($message);
   if (Encode::is_utf8($outdata)) {
     Encode::_utf8_off($outdata);
   }

@@ -15,13 +15,50 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
-# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent
+# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions
 'ClientCapabilities' => [
   [
     'fields',
     'workspace',
     'textDocument',
     'experimental',
+  ],
+],
+undef() => [
+  [
+    'constant',
+    'CodeActionKind__QuickFix',
+    'quickfix',
+  ],
+  [
+    'constant',
+    'CodeActionKind__Refactor',
+    'refactor',
+  ],
+  [
+    'constant',
+    'CodeActionKind__RefactorExtract',
+    'refactor.extract',
+  ],
+  [
+    'constant',
+    'CodeActionKind__RefactorInline',
+    'refactor.inline',
+  ],
+  [
+    'constant',
+    'CodeActionKind__RefactorRewrite',
+    'refactor.rewrite',
+  ],
+  [
+    'constant',
+    'CodeActionKind__Source',
+    'source',
+  ],
+  [
+    'constant',
+    'CodeActionKind__SourceOrganizeImports',
+    'source.organizeImports',
   ],
 ],
 'CodeActionOptions' => [
@@ -43,6 +80,53 @@ use MOP4Import::Types
     'triggerCharacters',
   ],
 ],
+'Diagnostic' => [
+  [
+    'fields',
+    'range',
+    'severity',
+    'code',
+    'source',
+    'message',
+    'relatedInformation',
+  ],
+],
+'DiagnosticRelatedInformation' => [
+  [
+    'fields',
+    'location',
+    'message',
+  ],
+],
+undef() => [
+  [
+    'constant',
+    'DiagnosticSeverity__Error',
+    '1',
+  ],
+  [
+    'constant',
+    'DiagnosticSeverity__Warning',
+    '2',
+  ],
+  [
+    'constant',
+    'DiagnosticSeverity__Information',
+    '3',
+  ],
+  [
+    'constant',
+    'DiagnosticSeverity__Hint',
+    '4',
+  ],
+],
+'DidSaveTextDocumentParams' => [
+  [
+    'fields',
+    'textDocument',
+    'text',
+  ],
+],
 'DocumentLinkOptions' => [
   [
     'fields',
@@ -54,6 +138,63 @@ use MOP4Import::Types
     'fields',
     'firstTriggerCharacter',
     'moreTriggerCharacter',
+  ],
+],
+undef() => [
+  [
+    'constant',
+    'ErrorCodes__ParseError',
+    '-32700',
+  ],
+  [
+    'constant',
+    'ErrorCodes__InvalidRequest',
+    '-32600',
+  ],
+  [
+    'constant',
+    'ErrorCodes__MethodNotFound',
+    '-32601',
+  ],
+  [
+    'constant',
+    'ErrorCodes__InvalidParams',
+    '-32602',
+  ],
+  [
+    'constant',
+    'ErrorCodes__InternalError',
+    '-32603',
+  ],
+  [
+    'constant',
+    'ErrorCodes__serverErrorStart',
+    '-32099',
+  ],
+  [
+    'constant',
+    'ErrorCodes__serverErrorEnd',
+    '-32000',
+  ],
+  [
+    'constant',
+    'ErrorCodes__ServerNotInitialized',
+    '-32002',
+  ],
+  [
+    'constant',
+    'ErrorCodes__UnknownErrorCode',
+    '-32001',
+  ],
+  [
+    'constant',
+    'ErrorCodes__RequestCancelled',
+    '-32800',
+  ],
+  [
+    'constant',
+    'ErrorCodes__ContentModified',
+    '-32801',
   ],
 ],
 'ExecuteCommandOptions' => [
@@ -105,6 +246,13 @@ use MOP4Import::Types
     'fields',
     'line',
     'character',
+  ],
+],
+'PublishDiagnosticsParams' => [
+  [
+    'fields',
+    'uri',
+    'diagnostics',
   ],
 ],
 'Range' => [
@@ -220,6 +368,13 @@ use MOP4Import::Types
     'executeCommand',
     'workspaceFolders',
     'configuration',
+  ],
+],
+'WorkspaceFolder' => [
+  [
+    'fields',
+    'uri',
+    'name',
   ],
 ],
 
