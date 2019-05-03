@@ -17,7 +17,9 @@ use MOP4Import::Base::CLI_JSON -as_base
         my $vd = Data::Dumper->new([$v])->Indent(1)->Terse(1)
           ->Trailingcomma(1)->Dump;
         $vd =~ s/\n\z//;
-        print $outFH MOP4Import::Util::terse_dump($k), " => $vd,\n";
+        print $outFH do {
+          defined $k ? MOP4Import::Util::terse_dump($k) : "undef()";
+        }, " => $vd,\n";
       }
     }
   }];
@@ -42,7 +44,9 @@ use YATT::Lite::LanguageServer::SpecParser qw/Interface Decl Annotated/
 # ]
 
 use MOP4Import::Types
-  CollectedItem => [[fields => qw/name spec fields parent subtypes dependency/]];
+  CollectedItem => [
+    [fields => qw/kind name spec items parent subtypes dependency/]
+  ];
 
 sub make_typedefs_from {
   (my MY $self, my ($specDictOrArrayOrFile, @names)) = @_;
@@ -102,7 +106,7 @@ sub spec_dependency_of {
     Carp::croak "No such type: ". MOP4Import::Util::terse_dump($declOrName);
   }
   my $sub = $self->can("spec_dependency_of__$decl->{kind}") or do {
-    print STDERR "Skipped: not yet supported in spec_dependency_of(): $decl->{kind}"
+    print STDERR "Skipped: not yet supported in spec_dependency_of($decl->{name}): $decl->{kind}"
       . MOP4Import::Util::terse_dump($decl), "\n" unless $self->{quiet};
     return;
   };
@@ -132,6 +136,8 @@ sub spec_dependency_of__interface {
   (my MY $self, my Interface $decl, my ($specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
   $collectedDict //= {};
   my $specDict = $self->specdict_from($specDictOrArrayOrFile);
+
+  # Origin of dependency references
   my CollectedItem $from = $self->intern_collected_item_in($collectedDict, $decl);
   if (my $nm = $decl->{extends}) {
     $from->{parent} = $nm;
@@ -154,8 +160,19 @@ sub spec_dependency_of__interface {
       my @tu = map { unwrap_annotation($_) } @typeUnion;
       push @fieldOpts, typeinfo => (@tu == 1 ? $tu[0] : \@tu);
     }
-    push @{$from->{fields}}, @fieldOpts ? [$slotName, @fieldOpts] : $slotName;
-    foreach my $typeExprString (@typeUnion) {
+    push @{$from->{items}}, @fieldOpts ? [$slotName, @fieldOpts] : $slotName;
+    foreach my $typeExprItem (@typeUnion) {
+      my $typeExprString = do {
+        if (not ref $typeExprItem) {
+          $typeExprItem;
+        } elsif (ref $typeExprItem eq 'ARRAY' and @$typeExprItem == 2 and $typeExprItem->[-1] eq '[]') {
+          $typeExprItem->[0];
+        } else {
+          warn "Skipped: not yet implemented type item: "
+            .MOP4Import::Util::terse_dump($typeExprItem);
+          next;
+        }
+      };
       $typeExprString =~ /[A-Z]/
         or next;
       my Decl $typeSpec = $specDict->{$typeExprString}
@@ -167,10 +184,54 @@ sub spec_dependency_of__interface {
   $from;
 }
 
+sub unwrap_comment_decl {
+  (my MY $self, my Decl $decl) = @_;
+  if (not defined $decl->{kind}
+      and exists $decl->{comment} and exists $decl->{body}) {
+    $decl->{body}
+  } else {
+    $decl;
+  }
+}
+
+sub spec_dependency_of__namespace {
+  (my MY $self, my Decl $decl, my ($specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
+  $collectedDict //= {};
+  my $specDict = $self->specdict_from($specDictOrArrayOrFile);
+
+  my CollectedItem $from = $self->intern_collected_item_in($collectedDict, $decl);
+
+  foreach my Decl $slot (map {$self->unwrap_comment_decl($_)} @{$decl->{body}}) {
+    next unless ($slot->{kind} // '') eq 'const';
+    my ($typeExprString, $value) = do {
+      if (ref $slot->{body}) {
+        @{$slot->{body}};
+      } else {
+        (undef,$slot->{body});
+      }
+    };
+
+    push @{$from->{items}}, [$slot->{name}, $value];
+
+    if (defined $typeExprString) {
+      $typeExprString =~ /[A-Z]/
+        or next;
+      my Decl $typeSpec = $specDict->{$typeExprString}
+        or next;
+
+      $from->{dependency}{$typeExprString}
+        //= $self->spec_dependency_of($typeSpec, $specDict, $collectedDict, $opts);
+    }
+  }
+
+  $from;
+}
+
 sub intern_collected_item_in {
   (my MY $self, my $collectedDict, my Decl $decl, my $opts) = @_;
   $collectedDict->{$decl->{name}} //= do {
     my CollectedItem $item = {};
+    $item->{kind} = $decl->{kind};
     $item->{name} = $decl->{name};
     if ($opts->{spec}) {
       $item->{spec} = $decl;
@@ -211,16 +272,28 @@ sub specdict_from {
   }
 }
 
+#========================================
+
 sub typedefs_of_collected_item {
   (my MY $self, my CollectedItem $item, my $seen) = @_;
   $seen->{$item->{name}}++;
 
+  my $sub = $self->can("typedefs_of_collected_item_of__$item->{kind}") or do {
+    warn "Skipped: not yet implemented to generate typedefs of $item->{kind} for $item->{name};";
+    return;
+  };
+
+  $sub->($self, $item, $seen);
+}
+
+sub typedefs_of_collected_item_of__interface {
+  (my MY $self, my CollectedItem $item, my $seen) = @_;
   # Type is not used currently.
 
   # If item has no fields, no need to generate field specs.
-  return unless $item->{fields};
+  return unless $item->{items};
 
-  my @defs = ([fields => @{$item->{fields}}]);
+  my @defs = ([fields => @{$item->{items}}]);
   if ($item->{subtypes}) {
     push @defs, [subtypes => map {
       $self->typedefs_of_collected_item($_, $seen)
@@ -228,6 +301,19 @@ sub typedefs_of_collected_item {
   }
   ($item->{name}, \@defs);
 }
+
+sub typedefs_of_collected_item_of__namespace {
+  (my MY $self, my CollectedItem $item, my $seen) = @_;
+
+  return unless $item->{items};
+
+  (undef, [map {
+    my ($name, $value) = @$_;
+    [constant => "$item->{name}__$name" => $value];
+  } @{$item->{items}}]);
+}
+
+#========================================
 
 sub gather_by_name {
   (my MY $self, my @decls) = @_;

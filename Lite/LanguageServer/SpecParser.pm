@@ -104,12 +104,23 @@ sub parse_namespace_declbody {
                    $self->tokerror(["Unsupported namespace statement: ", $tok
                                     , decl => $decl], $bodyTokList);
                  };
+      $ast->{body} = my Decl $const = {};
       # enum assignment.
-      $ast->{body} = [$name, $value];
+      $const->{kind} = 'const';
+      $const->{name} = $name;
+      my $expr = $self->unquote_string($value);
+      $const->{body} = (defined $type ? [$type => $expr] : $expr);
       $self->match_token(';', $bodyTokList);
       return defined $ast->{comment} ? $ast : $ast->{body};
     }
   );
+}
+
+sub unquote_string {
+  (my MY $self, my $str) = @_;
+  $str =~ s/^'([^']*)'\z/$1/ or
+    $str =~ s/^"([^"]*)"\z/$1/;
+  $str;
 }
 
 sub parse_enum_declbody {
