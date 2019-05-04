@@ -133,6 +133,7 @@ sub lint : method {
 
   my LintResult $result;
   my $mtime;
+  my $tmpl;
 
   try {
 
@@ -155,12 +156,12 @@ sub lint : method {
       # $yatt->fconfigure_encoding(\*STDOUT, \*STDERR);
       # get_trans is not ok.
       my $core = $yatt->open_trans;
-      my $tmpl = $core->find_file($baseName);
+      $tmpl = $core->find_file($baseName);
       $tmpl->refresh($core);
       my $pkg = $core->find_product(perl => $tmpl);
 
       $result->{is_success} = JSON::true;
-      # $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}];
+      $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}];
 
     });
   } catch {
@@ -174,7 +175,8 @@ sub lint : method {
         $result->{message} = $_;
       }
 
-      # $result->{info}{mtime} = $mtime if defined $mtime;
+      $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}] if defined $mtime;
+      $result->{info}{backtrace} = $self->backtrace2list($_->{cf_backtrace});
     }
   };
 
@@ -191,6 +193,20 @@ sub yatterror2lintresult {
     sprintf($err->{cf_format}, @{$err->{cf_args}});
   $diag->{range} = $self->make_line_range($err->{cf_tmpl_line} - 1);
   $result;
+}
+
+sub backtrace2list {
+  (my MY $self, my $trace) = @_;
+  my @list;
+  while (my $frame = $trace->next_frame) {
+    push @list, +{
+      map {$_ => $frame->$_()}
+      qw(
+          package filename line subroutine
+        )
+    };
+  }
+  \@list;
 }
 
 sub make_line_range {
@@ -518,7 +534,7 @@ sub find_template {
   (my MY $self, my $fileName) = @_;
   my ($fn, $dir) = File::Basename::fileparse($fileName);
   my $yatt = $self->find_yatt_for_template($fileName);
-  my $core = $yatt->get_trans;
+  my $core = $yatt->open_trans;
   my $tmpl = $core->find_file($fn);
   # XXX: force refresh?
   wantarray ? ($tmpl, $core) : $tmpl;
