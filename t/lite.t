@@ -7,6 +7,16 @@ use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
 use Test::More;
+use File::Temp qw(tempdir);
+use autodie qw(mkdir chdir);
+use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util qw(appname catch);
+
+my $TMP = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);
+END {
+  chdir('/');
+}
+
 use YATT::Lite::Test::TestUtil;
 use YATT::Lite::Breakpoint ();
 
@@ -578,5 +588,31 @@ END
     is Encode::is_utf8($res), 1, "$theme off: is_utf8 is on";
     is $res, "漢字かんじひらがな平仮名<br>\n", "$theme off: result matches exactly";
   }}
+
+++$i;
+{
+  my $THEME = "[find_file, refresh and reset]";
+  my $docroot = "$TMP/app$i";
+
+  MY->mkfile("$docroot/index.yatt", <<'END');
+<!yatt:args x y>
+x=&yatt:x; y=&yatt:y;
+
+<!yatt:widget foo>
+bar
+END
+
+  my $yatt = new YATT::Lite(app_ns => myapp($i)
+                            , vfs => [dir => $docroot]);
+
+  my $core = $yatt->get_trans;
+
+  ok my $tmpl = $core->find_file('index.yatt'), "core->find_file is ok";
+
+  # Direct Template->refresh to interested code path.
+  undef $tmpl->{cf_mtime};
+  ok $tmpl->refresh($core), "Template->refresh is safe still";
+}
+
 
 done_testing();
