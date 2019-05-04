@@ -176,6 +176,7 @@ YATT::Lite::Parser->from_file(filename, templateObject)"
 
 sub load_string_into {
   (my $pack, my Template $tmpl) = splice @_, 0, 2;
+  $tmpl->reset;
   my MY $self = ref $pack ? $pack->configure(@_[1 .. $#_])
     : $pack->new(@_[1 .. $#_]);
   unless (defined $_[0]) {
@@ -245,7 +246,6 @@ sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
   break_parser();
   $self->{template} = $tmpl;
-  $tmpl->reset if $tmpl->{product};
   $self->configure(@config);
   $tmpl->{cf_string} = $str;
   $tmpl->{cf_utf8} = Encode::is_utf8($str);

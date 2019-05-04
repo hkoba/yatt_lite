@@ -582,19 +582,24 @@ sub synerror {
     if ($tmpl->{cf_path}) {
       printf STDERR "template_refresh(%s)\n", $tmpl->{cf_path} if DEBUG_REBUILD;
       my $mtime = stat_mtime($tmpl->{cf_path});
-      unless (defined $mtime) {
+      if (not defined $mtime) {
 	printf STDERR " => deleted\n" if DEBUG_REBUILD;
 	return; # XXX: ファイルが消された
-      } elsif (defined $tmpl->{cf_mtime} and $tmpl->{cf_mtime} >= $mtime) {
+      } elsif (not defined $tmpl->{cf_mtime}) {
+        if (DEBUG_REBUILD) {
+          printf STDERR " => found new. mtime($mtime) for tmpl=$tmpl\n";
+        }
+      } elsif ($tmpl->{cf_mtime} >= $mtime) {
 	if (DEBUG_REBUILD) {
 	  printf STDERR " => use cached. mtime(was=$tmpl->{cf_mtime}"
 	    .", now=$mtime) for tmpl=$tmpl\n";
 	}
 	$self->refresh_deps_for($tmpl) if $self->{cf_always_refresh_deps};
 	return; # timestamp は、キャッシュと同じかむしろ古い
-      }
-      if (DEBUG_REBUILD) {
-	printf STDERR " => found update. mtime($mtime) for tmpl=$tmpl\n";
+      } else {
+        if (DEBUG_REBUILD) {
+          printf STDERR " => found update. mtime($mtime) for tmpl=$tmpl\n";
+        }
       }
       $tmpl->{cf_mtime} = $mtime;
       my $parser = $self->get_parser;

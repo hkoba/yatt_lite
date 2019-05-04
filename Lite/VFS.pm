@@ -462,7 +462,7 @@ require File::Basename;
     (my File $file) = @_;
     undef $file->{partlist};
     undef $file->{Item};
-    undef $file->{cf_string};
+    # undef $file->{cf_string};
     undef $file->{cf_base};
     $file->{dependency} = +{};
   }
