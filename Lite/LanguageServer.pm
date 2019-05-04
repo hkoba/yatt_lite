@@ -10,7 +10,7 @@ use YATT::Lite::LanguageServer::Generic -as_base
   , [fields => qw/_initialized
                   _client_cap
                   _inspector
-                  _current_workspace
+                  current_workspace
                  /
    ];
 
@@ -26,7 +26,7 @@ sub lspcall__initialize {
   $self->{_client_cap} = $params->{capabilities};
 
   if (my $path = $self->uri2localpath($params->{rootUri})) {
-    $self->load_inspector($self->{_current_workspace} = $path);
+    $self->load_inspector($self->{current_workspace} = $path);
   }
 
   my InitializeResult $res = {};
@@ -121,7 +121,7 @@ sub lspcall__textDocument__implementation {
 
 sub inspector {
   (my MY $self) = @_;
-  $self->load_inspector($self->{_current_workspace});
+  $self->load_inspector($self->{current_workspace});
 }
 
 sub load_inspector {
