@@ -41,7 +41,8 @@ sub ensure_generated {
   if (not defined $tmpl->{product}{$type}) {
     croak "package for product $type of $tmpl->{cf_path} is not defined!";
   } else {
-    print STDERR "# generating $pkg for $type code of $tmpl->{cf_path}\n"
+    print STDERR "# generating $pkg for $type code of "
+      . ($tmpl->{cf_path} // "(undef)") . "\n"
       if DEBUG_REBUILD;
   }
   $self->{cf_parser}->parse_body($tmpl)
