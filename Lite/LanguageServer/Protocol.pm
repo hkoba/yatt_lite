@@ -102,22 +102,22 @@ undef() => [
   [
     'constant',
     'DiagnosticSeverity__Error',
-    '1',
+    1,
   ],
   [
     'constant',
     'DiagnosticSeverity__Warning',
-    '2',
+    2,
   ],
   [
     'constant',
     'DiagnosticSeverity__Information',
-    '3',
+    3,
   ],
   [
     'constant',
     'DiagnosticSeverity__Hint',
-    '4',
+    4,
   ],
 ],
 'DidSaveTextDocumentParams' => [
@@ -144,57 +144,57 @@ undef() => [
   [
     'constant',
     'ErrorCodes__ParseError',
-    '-32700',
+    -32700,
   ],
   [
     'constant',
     'ErrorCodes__InvalidRequest',
-    '-32600',
+    -32600,
   ],
   [
     'constant',
     'ErrorCodes__MethodNotFound',
-    '-32601',
+    -32601,
   ],
   [
     'constant',
     'ErrorCodes__InvalidParams',
-    '-32602',
+    -32602,
   ],
   [
     'constant',
     'ErrorCodes__InternalError',
-    '-32603',
+    -32603,
   ],
   [
     'constant',
     'ErrorCodes__serverErrorStart',
-    '-32099',
+    -32099,
   ],
   [
     'constant',
     'ErrorCodes__serverErrorEnd',
-    '-32000',
+    -32000,
   ],
   [
     'constant',
     'ErrorCodes__ServerNotInitialized',
-    '-32002',
+    -32002,
   ],
   [
     'constant',
     'ErrorCodes__UnknownErrorCode',
-    '-32001',
+    -32001,
   ],
   [
     'constant',
     'ErrorCodes__RequestCancelled',
-    '-32800',
+    -32800,
   ],
   [
     'constant',
     'ErrorCodes__ContentModified',
-    '-32801',
+    -32801,
   ],
 ],
 'ExecuteCommandOptions' => [

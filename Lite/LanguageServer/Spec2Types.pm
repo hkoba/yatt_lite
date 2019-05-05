@@ -14,12 +14,11 @@ use MOP4Import::Base::CLI_JSON -as_base
     foreach my $list (@args) {
       my @list = @$list;
       while (my ($k, $v) = splice @list, 0, 2) {
-        my $vd = Data::Dumper->new([$v])->Indent(1)->Terse(1)
-          ->Trailingcomma(1)->Dump;
-        $vd =~ s/\n\z//;
+        # Data::Dumper always quotes numbers but it is not ideal for JSON.
+        my $vd = join("", _toy_dump_numeric_as_is($v, 0));
         print $outFH do {
           defined $k ? MOP4Import::Util::terse_dump($k) : "undef()";
-        }, " => $vd,\n";
+        }, " => $vd";
       }
     }
   }];
@@ -323,6 +322,27 @@ sub gather_by_name {
     $dict{$if->{name}} = $if;
   }
   \%dict;
+}
+
+sub _toy_dump_numeric_as_is {
+  my ($obj, $depth) = @_;
+  my $indent = "  " x $depth;
+  if (not defined $obj) {
+    ($indent."undef(),\n");
+  } elsif (not ref $obj) {
+    if ($obj =~ /^[-+]?\d+\z/) {
+      ($indent."$obj,\n");
+    } else {
+      $obj =~ s/\'/\\'/g;
+      ($indent."'$obj',\n");
+    }
+  } elsif (ref $obj eq 'ARRAY') {
+    $indent."[\n".join("", map {
+      _toy_dump_numeric_as_is($_, $depth+1);
+    } @$obj).$indent."],\n";
+  } else {
+    Carp::croak "Not supported type: ". ref $obj;
+  }
 }
 
 MY->run(\@ARGV) unless caller;
