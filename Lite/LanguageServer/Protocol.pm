@@ -15,7 +15,7 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
-# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions
+# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions TextDocumentSyncKind DidChangeTextDocumentParams
 'ClientCapabilities' => [
   [
     'fields',
@@ -118,6 +118,13 @@ undef() => [
     'constant',
     'DiagnosticSeverity__Hint',
     4,
+  ],
+],
+'DidChangeTextDocumentParams' => [
+  [
+    'fields',
+    'textDocument',
+    'contentChanges',
   ],
 ],
 'DidSaveTextDocumentParams' => [
@@ -334,10 +341,28 @@ undef() => [
     'foldingRange',
   ],
 ],
+'TextDocumentContentChangeEvent' => [
+  [
+    'fields',
+    'range',
+    'rangeLength',
+    'text',
+  ],
+],
 'TextDocumentIdentifier' => [
   [
     'fields',
     'uri',
+  ],
+  [
+    'subtypes',
+    'VersionedTextDocumentIdentifier',
+    [
+      [
+        'fields',
+        'version',
+      ],
+    ],
   ],
 ],
 'TextDocumentPositionParams' => [
@@ -345,6 +370,23 @@ undef() => [
     'fields',
     'textDocument',
     'position',
+  ],
+],
+undef() => [
+  [
+    'constant',
+    'TextDocumentSyncKind__None',
+    0,
+  ],
+  [
+    'constant',
+    'TextDocumentSyncKind__Full',
+    1,
+  ],
+  [
+    'constant',
+    'TextDocumentSyncKind__Incremental',
+    2,
   ],
 ],
 'TextDocumentSyncOptions' => [

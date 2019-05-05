@@ -107,7 +107,7 @@ sub fill_source_range_of {
   (my MY $self, my AltNode $altnode, my $orig) = @_;
   if (defined $orig->[NODE_BEGIN] and defined $orig->[NODE_END]
       and $orig->[NODE_BEGIN] < length($self->{string})
-      and $orig->[NODE_END] < length($self->{string})) {
+      and $orig->[NODE_END] <= length($self->{string})) {
     my $source = substr($self->{string}, $orig->[NODE_BEGIN]
                         , $orig->[NODE_END] - $orig->[NODE_BEGIN]);
     if ($self->{with_source}) {

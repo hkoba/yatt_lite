@@ -37,7 +37,20 @@ sub lspcall__initialize {
   $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
   $sopts->{openClose} = JSON::true;
   $sopts->{save} = JSON::true;
+  $sopts->{change} = TextDocumentSyncKind__Incremental;
   $res;
+}
+
+sub lspcall__textDocument__didChange {
+  (my MY $self, my DidChangeTextDocumentParams $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  my $fn = $self->uri2localpath($docId->{uri});
+
+  my $updated = $self->inspector->apply_changes($fn, @{$params->{contentChanges}});
+
+  print STDERR "# updated as: ", terse_dump($updated), "\n"
+    unless $self->{quiet};
 }
 
 sub lspcall__textDocument__didSave {

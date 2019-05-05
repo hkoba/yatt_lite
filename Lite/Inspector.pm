@@ -12,6 +12,7 @@ use MOP4Import::Base::CLI_JSON -as_base
      [ignore_symlink => doc => "ignore symlinked templates"],
      [detail => doc => "show argument details"],
      [line_base => default => 1],
+     # qw/debug/,
    ];
 
 use MOP4Import::Util qw/lexpand symtab terse_dump/;
@@ -51,6 +52,7 @@ use YATT::Lite::LanguageServer::Protocol
   qw/Position Range MarkupContent
      Location
      Diagnostic
+     TextDocumentContentChangeEvent
     /
   , qr/^DiagnosticSeverity__/
   ;
@@ -125,6 +127,58 @@ sub emit_ctags {
 }
 
 #========================================
+
+sub apply_changes {
+  (my MY $self, my ($fileName, @changes)) = @_;
+
+  my ($baseName, $dir) = File::Basename::fileparse($fileName);
+
+  my $yatt = $self->{_SITE}->load_yatt($dir);
+  my $core = $yatt->open_trans;
+
+  my $tmpl = $core->find_file($baseName);
+
+  my $lines = [split /\n/, $tmpl->{cf_string}, -1];
+
+  foreach my TextDocumentContentChangeEvent $change (@changes) {
+    $lines = $self->apply_change_to_lines($lines, $change);
+  }
+
+  $tmpl->{cf_mtime} = time;
+  my $changed = join("\n", @$lines);
+  $core->get_parser->load_string_into($tmpl, $changed);
+
+  $changed;
+}
+
+# Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":0,"character":2}}}'
+# [["fxxoooo","bar","baz"]]
+# Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":0,"character":1}}}'
+# [["fxxooooo","bar","baz"]]
+# Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":0,"character":100}}}'
+# [["fxx","bar","baz"]]
+# Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":1,"character":1}}}'
+# [["fxxar","baz"]]
+
+sub apply_change_to_lines {
+  (my MY $self, my $lines, my TextDocumentContentChangeEvent $change) = @_;
+  my Range $from = $change->{range};
+  my Position $start = $from->{start};
+  my Position $end = $from->{end};
+  my @pre = @{$lines}[0 .. $start->{line}-1];
+  my @post = @{$lines}[$end->{line}+1 .. $#$lines];
+  if ($start->{line} == $end->{line}) {
+    my $edited = $lines->[$start->{line}];
+    substr($edited
+           , $start->{character}, $end->{character} - $start->{character}
+           , $change->{text});
+    [@pre, $edited, @post];
+  } else {
+    my $pre_edit = substr($lines->[$start->{line}], 0, $start->{character});
+    my $post_edit = substr($lines->[$end->{line}], $end->{character});
+    [@pre, $pre_edit.$change->{text}.$post_edit, @post];
+  }
+}
 
 sub lint : method {
   (my MY $self, my $fileName) = @_;
@@ -429,6 +483,10 @@ sub lsearch_node_pos {
   (my MY $self, my Position $pos, my $tree) = @_;
   my $i = 0;
   foreach my AltNode $node (@$tree) {
+    unless (defined $node->{tree_range}) {
+      Carp::confess "BUG: tree_range is empty. i=$i, tree="
+        . terse_dump($tree);
+    }
     if ($self->compare_position($self->range_end($node->{tree_range}), $pos) > 0) {
       return $i;
     }
