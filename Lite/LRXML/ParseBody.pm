@@ -76,6 +76,8 @@ sub _parse_body {
 				  , q{Missing CLO(>) for: <%s, rest: '%s'}
 				  , $path, trimmed($_));
 
+      ++$self->{startln} if defined $2;
+
       # body slot の初期化
       # $is_opt の時に、更に body を attribute として保存するのは冗長だし、後の処理も手間なので
       my $body = [];
