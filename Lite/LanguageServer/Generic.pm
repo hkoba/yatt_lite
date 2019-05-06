@@ -27,12 +27,30 @@ use Coro::AIO ;
 use AnyEvent;
 
 use Scope::Guard qw/guard/;
+use Try::Tiny;
 
 use IO::Handle;
 
 use URI;
 
 #========================================
+
+sub cli_encode_json {
+  (my MY $self, my $obj) = @_;
+  my ($encoded, $err);
+  try {
+    $encoded = $self->SUPER::cli_encode_json($obj);
+  } catch {
+    $err = $_;
+  };
+
+  unless (defined $encoded) {
+    Carp::croak (($err // 'json encode error')
+                 .": ".MOP4Import::Util::terse_dump($obj));
+  }
+
+  $encoded;
+}
 
 sub after_configure_default {
   (my MY $self) = @_;
@@ -158,7 +176,13 @@ sub process_request {
   if (my $msg = $@) {
     $outdata->{error} = my Error $error = {};
     $error->{code} = ErrorCodes__UnknownErrorCode;
-    $error->{message} = $msg;
+    $error->{message} = do {
+      if (ref $msg) {
+        "$msg"; # Expect $msg is an object which supports stringification
+      } else {
+        $msg;
+      }
+    };
   }
   if ($outdata) {
     $self->emit_response($outdata, $request->{id});
