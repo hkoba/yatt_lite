@@ -146,9 +146,24 @@ sub apply_changes {
 
   $tmpl->{cf_mtime} = time;
   my $changed = join("\n", @$lines);
-  $core->get_parser->load_string_into($tmpl, $changed);
 
-  $changed;
+  my LintResult $result;
+
+  try {
+    $core->get_parser->load_string_into($tmpl, $changed, all => 1);
+  } catch {
+    $tmpl->{cf_string} = $changed;
+    $result //= +{};
+    if (not ref $_) {
+      $self->strerror2lintresult($tmpl, $_, $result //= {});
+    } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
+      $self->yatterror2lintresult($_, $result);
+    } else {
+      $result->{message} = $_;
+    }
+  };
+
+  ($changed, $result);
 }
 
 # Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":0,"character":2}}}'
@@ -246,6 +261,18 @@ sub yatterror2lintresult {
   $diag->{message} = $err->{cf_reason} //
     sprintf($err->{cf_format}, @{$err->{cf_args}});
   $diag->{range} = $self->make_line_range($err->{cf_tmpl_line} - 1);
+  $result;
+}
+
+sub strerror2lintresult {
+  (my MY $self, my Template $tmpl, my $errStr, my LintResult $result) = @_;
+  $result->{file} = $tmpl->{cf_path};
+  $result->{diagnostics} = my Diagnostic $diag = {};
+  $diag->{severity} = DiagnosticSeverity__Error;
+  $diag->{message} = $errStr;
+  if ($errStr =~ / line (\d+),/) {
+    $diag->{range} = $self->make_line_range($1);
+  }
   $result;
 }
 

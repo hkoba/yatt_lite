@@ -47,10 +47,18 @@ sub lspcall__textDocument__didChange {
   my TextDocumentIdentifier $docId = $params->{textDocument};
   my $fn = $self->uri2localpath($docId->{uri});
 
-  my $updated = $self->inspector->apply_changes($fn, @{$params->{contentChanges}});
+  (my $updated, my LintResult $error) = $self->inspector->apply_changes($fn, @{$params->{contentChanges}});
 
-  print STDERR "# updated as: ", terse_dump($updated), "\n"
+  print STDERR "# updated ", ($error ? "with error " : ""),"as: ", terse_dump($updated), "\n"
     unless $self->{quiet};
+
+  if ($error) {
+    my PublishDiagnosticsParams $notif = {};
+    $notif->{uri} = $docId->{uri};
+    $notif->{diagnostics} = [$error->{diagnostics}];
+
+    $self->send_notification('textDocument/publishDiagnostics', $notif);
+  }
 }
 
 sub lspcall__textDocument__didSave {
