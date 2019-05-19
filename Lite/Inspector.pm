@@ -256,8 +256,15 @@ sub yatterror2lintresult {
   $result->{file} = $err->{cf_tmpl_file};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
-  $diag->{message} = $err->{cf_reason} //
-    sprintf($err->{cf_format}, @{$err->{cf_args}});
+  $diag->{message} = $err->{cf_reason} // do {
+    my $str;
+    try {
+      $str = sprintf($err->{cf_format}, @{$err->{cf_args}});
+    } catch {
+      $str = terse_dump([$_, $err->{cf_format}, @{$err->{cf_args}}]);
+    };
+    $str;
+  };
   $diag->{range} = $self->make_line_range($err->{cf_tmpl_line} - 1);
   $result;
 }
