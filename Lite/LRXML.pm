@@ -688,7 +688,7 @@ sub declare_args {
       or do {
 	die $self->synerror_at($self->{startln}
 			       , q{Invalid location in %s:%s - "%s"}
-			       , $ns, 'args', $patNode->[NODE_BODY])
+			       , $ns, 'args', $patNode->[NODE_BODY]);
       };
     if ($self->{cf_match_argsroute_first}) {
       $self->{rootroute} = $mapping;
