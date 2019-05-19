@@ -138,7 +138,8 @@ sub apply_changes {
 
   my $tmpl = $core->find_file($baseName);
 
-  my $lines = [split /\n/, $tmpl->{cf_string}, -1];
+  my $lines = [defined $tmpl->{cf_string} && $tmpl->{cf_string} ne ""
+               ? (split /\n/, $tmpl->{cf_string}, -1) : ("")];
 
   foreach my TextDocumentContentChangeEvent $change (@changes) {
     $lines = $self->apply_change_to_lines($lines, $change);
@@ -206,12 +207,9 @@ sub lint : method {
 
   try {
 
-    unless (-r $fileName) {
-      $result->{message} = "No such file: $fileName";
-      return;
+    if (-r $fileName) {
+      $mtime = stat($fileName)->mtime;
     }
-
-    $mtime = stat($fileName)->mtime;
 
     $self->{_SITE}->cf_let([
       error_handler => sub {
@@ -547,6 +545,8 @@ sub dump_tokens_at_file_position {
     = $self->find_part_of_file_line($fileName, $line)
     or return;
 
+  return unless defined $tmpl->{cf_nlines};
+
   unless ($line < $tmpl->{cf_nlines} - 1) {
     # warn?
     return;
@@ -554,6 +554,8 @@ sub dump_tokens_at_file_position {
 
   # my $yatt = $self->find_yatt_for_template($fileName);
   $core->ensure_parsed($part);
+
+  $part->{cf_endln} //= $tmpl->{cf_nlines};
 
   my $declkind = defined $part->{declkind}
     ? [split /:/, $part->{declkind}] : [];

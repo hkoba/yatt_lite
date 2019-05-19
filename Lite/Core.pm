@@ -119,6 +119,7 @@ use YATT::Lite::Breakpoint ();
   }
   sub YATT::Lite::Core::Template::list_parts {
     (my Template $self, my $type) = @_;
+    return unless $self->{partlist};
     return @{$self->{partlist}} unless defined $type;
     grep { UNIVERSAL::isa($_, $type) } @{$self->{partlist}}
   }

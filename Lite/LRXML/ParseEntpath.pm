@@ -91,6 +91,9 @@ sub _parse_entpath {
 }
 sub _parse_pipeline {
   (my MY $self) = @_;
+  unless (defined $_) {
+    Carp::confess "parse_pipeline for undefined \$_!";
+  }
   my @pipe;
   while (s{^ : (?<var>\w+) (?<open>\()?
 	 | ^ (?<open>\[)

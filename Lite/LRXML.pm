@@ -494,6 +494,7 @@ sub parse_attlist_with_lvalue {
             }
             $node->[NODE_TYPE] = TYPE_ATT_TEXT;
             @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = $mklval->();
+            $_ //= $$strref;
             $node->[NODE_BODY] = [$self->mkentity(@common)];
           } else {
             my ($quote, $value) = oneof($m, qw(bare sq dq));
