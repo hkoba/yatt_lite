@@ -164,6 +164,11 @@ sub apply_changes {
     }
   };
 
+  if (not $result) {
+    my LintResult $res = $self->lint($fileName);
+    $result = $res unless $res->{is_success};
+  }
+
   ($changed, $result);
 }
 
