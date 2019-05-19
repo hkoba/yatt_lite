@@ -52,13 +52,11 @@ sub lspcall__textDocument__didChange {
   print STDERR "# updated ", ($error ? "with error " : ""),"as: ", terse_dump($updated), "\n"
     unless $self->{quiet};
 
-  if ($error) {
-    my PublishDiagnosticsParams $notif = {};
-    $notif->{uri} = $docId->{uri};
-    $notif->{diagnostics} = [$error->{diagnostics}];
+  my PublishDiagnosticsParams $notif = {};
+  $notif->{uri} = $docId->{uri};
+  $notif->{diagnostics} = $error ? [$error->{diagnostics}] : [];
 
-    $self->send_notification('textDocument/publishDiagnostics', $notif);
-  }
+  $self->send_notification('textDocument/publishDiagnostics', $notif);
 }
 
 sub lspcall__textDocument__didSave {
