@@ -1225,7 +1225,18 @@ END
 &yatt:foo;
 END
   };
-  like $@, qr/argName is empty!/, "Unclosed <!yatt:args (not optimal diag)";
+  like $@, qr/^yatt:args got wrong token for route spec: ENTITY/, "Unclosed <!yatt:args\\n &yatt:foo;";
+}
+
+{
+  my $tmpl = $CLASS->Template->new;
+  eval {
+    $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<!yatt:widget
+&yatt:foo;
+END
+  };
+  like $@, qr/^yatt:widget got wrong token for route spec: ENTITY/, "Unclosed <!yatt:widget\\n &yatt:foo;";
 }
 
 # (- (region-end) (region-beginning))

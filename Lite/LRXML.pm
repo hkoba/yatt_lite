@@ -300,6 +300,12 @@ sub parse_decl {
       if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
 	$partName = $nameAtt->[NODE_PATH];
       } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
+        if (ref $nameAtt->[NODE_BODY]) {
+          my $t = $YATT::Lite::Constants::TYPE_[$nameAtt->[NODE_BODY][0][NODE_TYPE]];
+          die $self->synerror_at($self->{startln}
+                                 , q{%s:%s got wrong token for route spec: %s}
+                                 , $ns, $kind, $t);
+        }
 	# $partName が foo=bar なら pattern として扱う
 	$mapping = $self->parse_location
 	  ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
@@ -497,7 +503,7 @@ sub parse_attlist_with_lvalue {
 
             # Below is a workaround for unclosed `<!yatt:args` with `&yatt:var;`
             # There would be a better way to handle this...
-            $_ //= $$strref;
+            $_ = $$strref;
 
             $node->[NODE_BODY] = [$self->mkentity(@common)];
           } else {
@@ -688,10 +694,17 @@ sub declare_args {
   if (@_ and $_[0] and $_[0]->[NODE_TYPE] == TYPE_ATT_TEXT
       and not defined $_[0]->[NODE_PATH]) {
     my $patNode = shift;
+    if (ref $patNode->[NODE_BODY]) {
+      my $t = $YATT::Lite::Constants::TYPE_[$patNode->[NODE_BODY][0][NODE_TYPE]];
+      die $self->synerror_at($self->{startln}
+                             , q{%s:%s got wrong token for route spec: %s}
+                             , $ns, 'args', $t);
+
+    }
     my $mapping = $self->parse_location($patNode->[NODE_BODY], '', $newpart)
       or do {
 	die $self->synerror_at($self->{startln}
-			       , q{Invalid location in %s:%s - "%s"}
+			       , q{Invalid route spec in %s:%s - "%s"}
 			       , $ns, 'args', $patNode->[NODE_BODY]);
       };
     if ($self->{cf_match_argsroute_first}) {
