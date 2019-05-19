@@ -341,7 +341,7 @@ sub parse_decl {
     }
     unless ($str =~ s{^>([\ \t]*\r?\n)?}{}s) {
       # XXX: たくさん出しすぎ
-      die $self->synerror_at($self->{startln}, q{Invalid character in decl %s:%s : %s}
+      die $self->synerror_at($self->{startln}, q{Declarator '<!%s:%s' is not closed with '>': %s}
 		   , $ns, $kind
 		   , $str);
     }
@@ -814,7 +814,7 @@ sub add_args {
     my ($node_type, $lno, $argName, $desc)
       = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY];
     unless (defined $argName) {
-      die $self->synerror_at($self->{startln}, 'Invalid argument spec');
+      die $self->synerror_at($self->{startln}, 'argName is empty!');
     }
 
     my ($type, $dflag, $default);

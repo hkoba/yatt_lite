@@ -1205,6 +1205,29 @@ END
 
 }
 
+{
+  my $tmpl = $CLASS->Template->new;
+  eval {
+    $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<!yatt:args
+
+END
+  };
+  like $@, qr/^Declarator '<!yatt:args' is not closed with '>'/
+    , "Unclosed <!yatt:args";
+}
+
+{
+  my $tmpl = $CLASS->Template->new;
+  eval {
+    $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<!yatt:args
+&yatt:foo;
+END
+  };
+  like $@, qr/argName is empty!/, "Unclosed <!yatt:args (not optimal diag)";
+}
+
 # (- (region-end) (region-beginning))
 #
 done_testing();
