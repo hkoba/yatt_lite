@@ -3,6 +3,7 @@ package YATT::Lite::LanguageServer;
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use File::AddInc;
+use Cwd;
 
 my $libDir = File::AddInc->libdir;
 
@@ -20,6 +21,12 @@ use YATT::Lite::LanguageServer::Protocol;
 
 use YATT::Lite::Inspector [as => 'Inspector']
   , qw/Zipper AltNode LintResult/;
+
+sub after_configure_default {
+  (my MY $self) = @_;
+  $self->next::method;
+  $self->{current_workspace} = $ENV{PWD} || getcwd;
+}
 
 sub lspcall__initialize {
   (my MY $self, my InitializeParams $params) = @_;
