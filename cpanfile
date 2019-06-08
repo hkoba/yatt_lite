@@ -20,6 +20,10 @@ requires 'URI::Escape';
 requires 'Tie::IxHash'; # For nested_query
 requires 'Devel::StackTrace';
 
+# For LS
+requires 'File::AddInc';
+requires 'MOP4Import::Declare';
+
 # YATT::Lite::Partial::Gettext
 requires 'Locale::PO';
 
@@ -74,7 +78,4 @@ on test => sub {
  requires 'Email::Simple';
  requires 'CGI::Emulate::PSGI';
  requires 'CGI::Compile';
-
- requires 'File::AddInc';
- requires 'MOP4Import::Declare';
 };
