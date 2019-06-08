@@ -21,6 +21,9 @@
 
 (require 'yatt-lint-any-mode)
 
+(defvar yatt-mode-use-lsp t
+  "Use lsp if available")
+
 (defvar yatt-mode-hook nil
   "yatt で書かれたテンプレートを編集するためのモード")
 
@@ -58,7 +61,12 @@
       (js--update-quick-match-re))
     (setq mmm-submode-decoration-level 2)
     (make-variable-buffer-local 'process-environment)
-    (yatt-lint-any-mode 1)
+    (cond ((and yatt-mode-use-lsp
+                (fboundp 'lsp)
+                (require 'lsp-yatt nil t))
+           (lsp))
+          (t
+           (yatt-lint-any-mode 1)))
     (yatt-mode-ensure-file-coding)
     (ad-activate 'mmm-refontify-maybe)
     (mmm-mode-on)
