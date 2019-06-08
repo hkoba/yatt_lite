@@ -31,7 +31,7 @@ use MOP4Import::Types
 # SpecParser.pm cli_xargs_json --slurp parse_statement_list |
 # jq --slurp .
 
-sub parse_files {
+sub parse_files :method {
   (my MY $self, my @files) = @_;
   $self->parse_statement_list(
     [$self->tokenize_statement_list(
@@ -42,7 +42,7 @@ sub parse_files {
   );
 }
 
-sub parse_statement_list {
+sub parse_statement_list :method {
   (my MY $self, my $statementTokList) = @_;
   map {
     my ($declarator, $comment, $bodyTokList) = @$_;
@@ -76,7 +76,7 @@ sub tokerror {
     . ": " . MOP4Import::Util::terse_dump($bodyTokList);
 }
 
-sub parse_comment_into_decl {
+sub parse_comment_into_decl :method {
   (my MY $self, my Decl $decl, my $comment) = @_;
   return unless defined $comment;
   if ($comment =~ s/\@deprecated(?:\s+(?<by>\S[^\n]*))?//) {
@@ -85,12 +85,12 @@ sub parse_comment_into_decl {
   $decl->{comment} = $comment;
 }
 
-sub parse_type_declbody {
+sub parse_type_declbody :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   $self->parse_typeunion($decl, $bodyTokList);
 }
 
-sub parse_namespace_declbody {
+sub parse_namespace_declbody :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   $self->parse_declbody(
     $decl, $bodyTokList, [], sub {
@@ -116,14 +116,14 @@ sub parse_namespace_declbody {
   );
 }
 
-sub unquote_string {
+sub unquote_string :method {
   (my MY $self, my $str) = @_;
   $str =~ s/^'([^']*)'\z/$1/ or
     $str =~ s/^"([^"]*)"\z/$1/;
   $str;
 }
 
-sub parse_enum_declbody {
+sub parse_enum_declbody :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   $self->parse_declbody(
     $decl, $bodyTokList, [], sub {
@@ -139,11 +139,11 @@ sub parse_enum_declbody {
   );
 }
 
-sub parse_class_declbody {
+sub parse_class_declbody :method {
   shift->parse_interface_declbody(@_);
 }
 
-sub parse_interface_declbody {
+sub parse_interface_declbody :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
 
   # I'm not sure why this requires ',' too.
@@ -165,7 +165,7 @@ sub parse_interface_declbody {
   );
 }
 
-sub parse_declbody {
+sub parse_declbody :method {
   (my MY $self, my Decl $decl, my ($bodyTokList, $terminators, $elemParser)) = @_;
   my @result;
   unless ($self->match_token('{', $bodyTokList)) {
@@ -203,7 +203,7 @@ sub parse_declbody {
 
 # typeunion -> typeconj -> typeunion
 
-sub parse_typeunion {
+sub parse_typeunion :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   my @union;
   while (@$bodyTokList and $bodyTokList->[0] ne ';') {
@@ -225,7 +225,7 @@ sub parse_typeunion {
 #
 # parse conjunctive? type expression.
 #
-sub parse_typeconj {
+sub parse_typeconj :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   if (my ($ident, $bracket) = $bodyTokList->[0] =~ /^(\w+(?:<[^>]+>)?)(\[\])?\z/) {
     shift @$bodyTokList;
@@ -257,7 +257,7 @@ sub parse_typeconj {
   }
 }
 
-sub parse_declarator {
+sub parse_declarator :method {
   (my MY $self, my $declTokIn) = @_;
   my $declTok = [@$declTokIn];
   my Decl $decl = {};
@@ -275,7 +275,7 @@ sub parse_declarator {
   $decl;
 }
 
-sub match_token {
+sub match_token :method {
   (my MY $self, my ($tokString, $tokList)) = @_;
   if (@$tokList and $tokList->[0] eq $tokString) {
     shift @$tokList;
@@ -284,7 +284,7 @@ sub match_token {
 
 #----------------------------------------
 
-sub tokenize_statement_list {
+sub tokenize_statement_list :method {
   (my MY $self, my $statementList) = @_;
   map {
     my ($declarator, $comment, $body) = @$_;
@@ -294,14 +294,14 @@ sub tokenize_statement_list {
   } @$statementList;
 }
 
-sub tokenize_declbody {
+sub tokenize_declbody :method {
   (my MY $self, my $declString) = @_;
   [map {s/\s*\z//; $_}
    grep {/\S/}
    split m{(; | [{}(),\|&] | /\*\*\n(?:.*?)\*/ | //[^\n]*\n) \s*}xs, $declString];
 }
 
-sub tokenize_comment_block {
+sub tokenize_comment_block :method {
   (my MY $self, my $commentString) = @_;
   return undef unless defined $commentString;
   unless ($commentString =~ s,^\s*/\*\*\n,,s) {
@@ -317,12 +317,12 @@ sub tokenize_comment_block {
   $commentString;
 }
 
-sub tokenize_declarator {
+sub tokenize_declarator :method {
   (my MY $self, my $declString) = @_;
   [split " ", $declString];
 }
 
-sub extract_statement_list {
+sub extract_statement_list :method {
   (my MY $self, my ($codeList)) = @_;
   local $_;
   my $wordRe = qr{[^\s{}=\|]+};
@@ -350,7 +350,7 @@ sub extract_statement_list {
 }
 
 # Lite/LanguageServer/SpecParser.pm --flatten --output=raw extract_codeblock typescript specification.md
-sub extract_codeblock {
+sub extract_codeblock :method {
   (my MY $self, my $langId, local @ARGV) = @_;
   local $_;
   my ($chunk, @result);
