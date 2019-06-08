@@ -173,7 +173,7 @@
       (setq sym (caar part) start (cadr part) finish (caddr part))
       (case sym
 	(widget)
-	(action
+	((action entity)
 	 ;; XXX: mmm-ify-region は良くないかも。 interactive だと。
 	 (mmm-make-region 'cperl-mode start finish
 			  :face 'yatt-action-submode-face)
