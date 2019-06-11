@@ -137,6 +137,13 @@ use YATT::Lite::Breakpoint ();
     }
     $tmpl->source_region($node->[NODE_BODY_BEGIN], $node->[NODE_BODY_END]);
   }
+  sub YATT::Lite::Core::Template::node_outer_source {
+    (my Template $tmpl, my $node) = @_;
+    unless (ref $node eq 'ARRAY') {
+      confess "Node is not an ARRAY";
+    }
+    $tmpl->source_region($node->[NODE_BEGIN], $node->[NODE_BODY_END]);
+  }
   sub YATT::Lite::Core::Template::source_region {
     (my Template $tmpl, my ($begin, $end)) = @_;
     $tmpl->source_substr($begin, $end - $begin);

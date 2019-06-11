@@ -878,6 +878,12 @@ sub feed_arg_spec {
     defined (my $argno = $arg_dict->{$name})
       or die $trans->generror("Unknown arg '%s'", $name);
 
+    if (defined (my $prevNode = $_[$argno])) {
+      die $trans->generror("You may forgot '=' between %s and %s"
+                           , $prevNode->[NODE_PATH]
+                           , $trans->{curtmpl}->node_outer_source($arg));
+    }
+
     $_[$argno] = $arg;
     $found++;
   }
@@ -904,18 +910,23 @@ sub feed_arg_spec {
     # いかん、 cond を生成するなら、body も生成しておかないと、行番号が困る。
 
     foreach my $arg (lexpand($foot)) {
-      if ($arg->[NODE_PATH][-1] eq 'else') {
-	$self->feed_arg_spec($arg->[NODE_ATTLIST], \%args, \@args
-			     , my ($if, $unless));
-	my ($fmt, $guard) = do {
-	  if ($if) { (q{elsif (%s) }, $if->[NODE_VALUE]) }
-	  elsif ($unless) { (q{elsif (not %s) }, $unless->[NODE_VALUE]) }
-	  else { (q{else }, undef) }
-	};
-	push @arms, [$fmt, $guard, lexpand($arg->[NODE_VALUE])]
-      } else {
-	push @{$arms[-1]}, lexpand($arg->[NODE_VALUE]);
+      (undef, my $kw) = @{$arg->[NODE_PATH]};
+      unless ($kw eq 'else') {
+        die $self->generror("Unknown option for <%s>: %s"
+                            , join(":", @$path), $kw);
       }
+      $self->feed_arg_spec($arg->[NODE_ATTLIST], \%args, \@args
+                           , my ($if, $unless));
+      my ($fmt, $guard) = do {
+        if ($if) {
+          (q{elsif (%s) }, $if->[NODE_VALUE]);
+        } elsif ($unless) {
+          (q{elsif (not %s) }, $unless->[NODE_VALUE]);
+        } else {
+          (q{else }, undef);
+        }
+      };
+      push @arms, [$fmt, $guard, lexpand($arg->[NODE_VALUE])]
     }
     my @expr = map {
       my ($fmt, $guard, @body) = @$_;
