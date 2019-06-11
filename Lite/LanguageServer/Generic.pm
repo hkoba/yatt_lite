@@ -14,6 +14,8 @@ use MOP4Import::Base::CLI_JSON -as_base
      , qw/_is_shutting_down/
    ];
 
+use JSON::MaybeXS;
+
 use MOP4Import::Types
   (Header => [[fields => qw/Content-Length/]]);
 
@@ -103,7 +105,7 @@ sub mainloop {
       print STDERR "# empty request, skipped\n" unless $self->{quiet};
       return;
     };
-    my Request $request = JSON::decode_json($reqRaw);
+    my Request $request = decode_json($reqRaw);
     if (defined (my $id = $request->{id})) {
       print STDERR "# processing request: "
         , $self->cli_encode_json($request), "\n" unless $self->{quiet};
