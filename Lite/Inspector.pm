@@ -15,6 +15,8 @@ use MOP4Import::Base::CLI_JSON -as_base
      # qw/debug/,
    ];
 
+use JSON::MaybeXS;
+
 use MOP4Import::Util qw/lexpand symtab terse_dump/;
 
 use MOP4Import::Types
@@ -232,7 +234,7 @@ sub lint : method {
       $tmpl->refresh($core);
       my $pkg = $core->find_product(perl => $tmpl);
 
-      $result->{is_success} = JSON::true;
+      $result->{is_success} = JSON()->true;
       $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}];
 
     });

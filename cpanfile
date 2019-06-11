@@ -24,6 +24,8 @@ requires 'Devel::StackTrace';
 requires 'File::AddInc';
 requires 'MOP4Import::Declare';
 
+requires 'JSON::MaybeXS';
+
 # YATT::Lite::Partial::Gettext
 requires 'Locale::PO';
 
@@ -43,6 +45,8 @@ recommends 'Sub::Inspector';
 recommends 'B::Utils' => '!= 0.26';
 
 recommends 'Text::Glob';
+
+recommends 'Coro';
 
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';

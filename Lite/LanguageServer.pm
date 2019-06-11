@@ -7,6 +7,8 @@ use Cwd;
 
 my $libDir = File::AddInc->libdir;
 
+use JSON::MaybeXS;
+
 use YATT::Lite::LanguageServer::Generic -as_base
   , [fields => qw/_initialized
                   _client_cap
@@ -38,12 +40,12 @@ sub lspcall__initialize {
 
   my InitializeResult $res = {};
   $res->{capabilities} = my ServerCapabilities $svcap = {};
-  $svcap->{definitionProvider} = JSON::true;
-  $svcap->{implementationProvider} = JSON::true;
-  $svcap->{hoverProvider} = JSON::true;
+  $svcap->{definitionProvider} = JSON()->true;
+  $svcap->{implementationProvider} = JSON()->true;
+  $svcap->{hoverProvider} = JSON()->true;
   $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
-  $sopts->{openClose} = JSON::true;
-  $sopts->{save} = JSON::true;
+  $sopts->{openClose} = JSON()->true;
+  $sopts->{save} = JSON()->true;
   $sopts->{change} = TextDocumentSyncKind__Incremental;
   $res;
 }
