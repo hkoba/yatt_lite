@@ -873,10 +873,10 @@ sub feed_arg_spec {
     my ($name, @ext) = argName($arg); # XXX: <yatt:my var:type=value /> は？
     unless (defined $name) {
       $name = $arg_order->[$nth++]
-	or die $trans->generror($arg, "Too many args");
+	or die $trans->generror("Too many args");
     }
     defined (my $argno = $arg_dict->{$name})
-      or die $trans->generror($arg, "Unknown arg '%s'", $name);
+      or die $trans->generror("Unknown arg '%s'", $name);
 
     $_[$argno] = $arg;
     $found++;
