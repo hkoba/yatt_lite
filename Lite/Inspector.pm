@@ -192,13 +192,31 @@ sub apply_change_to_lines {
   my @post = @{$lines}[$end->{line}+1 .. $#$lines];
   if ($start->{line} == $end->{line}) {
     my $edited = $lines->[$start->{line}];
-    substr($edited
-           , $start->{character}, $end->{character} - $start->{character}
-           , $change->{text});
+    try {
+      substr($edited
+             , $start->{character}, $end->{character} - $start->{character}
+             , $change->{text});
+    } catch {
+      Carp::croak "failed to apply changes: "
+        . terse_dump([original => $edited
+                      , start => $start->{character}
+                      , len => $end->{character} - $start->{character}
+                      , changed => $change->{text}]). ": $_";
+    };
     [@pre, $edited, @post];
   } else {
-    my $pre_edit = substr($lines->[$start->{line}], 0, $start->{character});
-    my $post_edit = substr($lines->[$end->{line}], $end->{character});
+    my ($pre_edit, $post_edit);
+    try {
+      $pre_edit = substr($lines->[$start->{line}], 0, $start->{character});
+      $post_edit = substr($lines->[$end->{line}], $end->{character});
+    } catch {
+      Carp::croak "failed to apply multiline changes: "
+        . terse_dump([pre => [original => $lines->[$start->{line}]
+                              , start => $start->{character}]
+                      , post => [original => $lines->[$end->{line}]
+                                 , end => $end->{character}]
+                      , changed => $change->{text}]). ": $_";
+    };
     [@pre, $pre_edit.$change->{text}.$post_edit, @post];
   }
 }
@@ -241,16 +259,18 @@ sub lint : method {
   } catch {
 
     unless ($result) {
+      my $backtrace;
       if (not ref $_) {
         $result->{message} = $_;
       } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
         $self->yatterror2lintresult($_, $result //= +{});
+        $backtrace = $_->{cf_backtrace};
       } else {
         $result->{message} = $_;
       }
 
       $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}] if defined $mtime;
-      $result->{info}{backtrace} = $self->backtrace2list($_->{cf_backtrace});
+      $result->{info}{backtrace} = $self->backtrace2list($backtrace) if $backtrace;
     }
   };
 

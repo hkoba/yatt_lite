@@ -243,7 +243,7 @@ sub convert_entpath_args {
       } else {
         die "Really?";
       }
-      $pos += length format_entpath($arg);
+      $pos += length format_entpath(YATT::Lite::Constants::lxnest($arg));
     }
   } continue {
     $pos += length(",");
