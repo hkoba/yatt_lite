@@ -73,27 +73,21 @@ sub prepare_part_handler {
   }
 
   if (not defined $type
-      and $self->{cf_use_subpath} and my $subpath = $prop->{cf_subpath}) {
-    my $tmpl = $trans->find_file($file) or do {
-      croak $self->error("No such file: %s", $file);
-    };
-    ($part, my ($formal, $actual)) = $tmpl->match_subroutes($subpath) or do {
-      # XXX: Is this secure against XSS? <- how about URI encoding?
-      # die $self->psgi_error(404, "No such subpath: ". $subpath);
-      die $self->psgi_error(404, "No such subpath:: ". $subpath
-			    . " in file " . $tmpl->{cf_path});
-    };
-    $pkg = $trans->find_product(perl => $tmpl) or do {
-      croak $self->error("Can't compile template file: %s", $file);
-    };
+      and $self->{cf_use_subpath} and $prop->{cf_subpath}
+      and (my $tmpl, $part, my ($formal, $actual)) = $self->find_subpath_handler(
+        $trans, $file, $prop->{cf_subpath}
+      )) {
 
-    $sub = $pkg->can($part->method_name) or do {
-      croak $self->error("Can't find %s %s for file: %s"
-                         , $part->cget('kind'), $part->public_name, $file);
-    };
-    @args = $trans->reorder_cgi_params($part, $con, $actual)
-      unless $self->{cf_dont_map_args};
+      $pkg = $trans->find_product(perl => $tmpl) or do {
+        croak $self->error("Can't compile template file: %s", $file);
+      };
 
+      $sub = $pkg->can($part->method_name) or do {
+        croak $self->error("Can't find %s %s for file: %s"
+                           , $part->cget('kind'), $part->public_name, $file);
+      };
+      @args = $trans->reorder_cgi_params($part, $con, $actual)
+        unless $self->{cf_dont_map_args};
   } else {
     ($part, $sub, $pkg) = $trans->find_part_handler([$file, $type, $item]);
 
@@ -107,6 +101,24 @@ sub prepare_part_handler {
   }
 
   ($part, $sub, $pkg, \@args);
+}
+
+sub find_subpath_handler {
+  (my MY $self, my ($trans, $file, $subpath)) = @_;
+
+  my $tmpl = $trans->find_file($file) or do {
+    croak $self->error("No such file: %s", $file);
+  };
+
+  if (my @found = $tmpl->match_subroutes($subpath)) {
+    return ($tmpl, @found);
+  } else {
+    if ($subpath ne '/') {
+      die $self->psgi_error(404, "No such subpath:: ". $subpath
+                            . " in file " . $tmpl->{cf_path});
+    }
+  }
+  return;
 }
 
 #========================================
