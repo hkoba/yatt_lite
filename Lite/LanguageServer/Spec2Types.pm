@@ -131,6 +131,8 @@ sub unwrap_annotation {
   }
 }
 
+*spec_dependency_of__class = *spec_dependency_of__interface; *spec_dependency_of__class = *spec_dependency_of__interface;
+
 sub spec_dependency_of__interface {
   (my MY $self, my Interface $decl, my ($specDictOrArrayOrFile, $collectedDict, $opts)) = @_;
   $collectedDict //= {};
@@ -149,6 +151,9 @@ sub spec_dependency_of__interface {
   foreach my Annotated $slot (@{$decl->{body}}) {
     next if ref $slot eq 'HASH' and $slot->{deprecated};
     my $slotDesc = ref $slot eq 'HASH' ? $slot->{body} : $slot;
+    unless (ref $slotDesc) {
+      die "Invalid slotDesc: $slotDesc";
+    }
     my ($slotName, @typeUnion) = @$slotDesc;
     $slotName =~ s/\?\z//;
     my @fieldOpts;
@@ -284,6 +289,8 @@ sub typedefs_of_collected_item {
 
   $sub->($self, $item, $seen);
 }
+
+*typedefs_of_collected_item_of__class = *typedefs_of_collected_item_of__interface; *typedefs_of_collected_item_of__class = *typedefs_of_collected_item_of__interface;
 
 sub typedefs_of_collected_item_of__interface {
   (my MY $self, my CollectedItem $item, my $seen) = @_;
