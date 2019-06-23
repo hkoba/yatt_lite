@@ -17,18 +17,11 @@ use MOP4Import::Types
                   ]]
  );
 
-# SpecParser.pm --flatten extract_codeblock typescript specification.md|
-# SpecParser.pm cli_xargs_json --slurp extract_statement_list|
-# grep -v 'interface ParameterInformation'|
-# SpecParser.pm cli_xargs_json --slurp tokenize_statement_list|
-# SpecParser.pm --flatten=0 cli_xargs_json --slurp parse_statement_list |
-# jq .
-
 # SpecParser.pm extract_codeblock typescript specification.md|
 # SpecParser.pm cli_xargs_json extract_statement_list|
 # grep -v 'interface ParameterInformation'|
-# SpecParser.pm cli_xargs_json --slurp tokenize_statement_list|
-# SpecParser.pm cli_xargs_json --slurp parse_statement_list |
+# SpecParser.pm cli_xargs_json --single tokenize_statement_list|
+# SpecParser.pm cli_xargs_json --single parse_statement_list |
 # jq --slurp .
 
 sub parse_files :method {
@@ -94,23 +87,38 @@ sub parse_namespace_declbody :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
   $self->parse_declbody(
     $decl, $bodyTokList, [], sub {
-      (my $tok, my Annotated $ast) = @_;
+      (my $origTok, my Annotated $ast) = @_;
+      my $tok = $origTok;
       # Currently only something like `export const Error = 1;` are supported.
-      my ($name, $type, $value)
-        = $tok =~ m{^export\s+const\s+(\w+)\s*
-                    (?: : \s* ([^\s=]+) \s*)?
-                    (?: = \s* (\S+))?
-                 }x or do {
-                   $self->tokerror(["Unsupported namespace statement: ", $tok
-                                    , decl => $decl], $bodyTokList);
-                 };
+      $tok =~ s{^export\s+const\s+(\w+)\s*}{}x or do {
+        $self->tokerror(["Unsupported namespace statement: ", $tok
+                         , decl => $decl], $bodyTokList);
+      };
+      my $name = $1;
+
+      my ($type, $value);
+      if ($tok =~ m{= \s* (\S+)\z}x) {
+        $value = $1;
+      } elsif ($self->eat_token(':', $bodyTokList)) {
+        ($type, $value) = $self->re_match_token(qr{([^\s=]+) (?: \s* = \s* (\S+))?}xs, $bodyTokList);
+      } else {
+          $self->tokerror(["Unsupported namespace statement: ", $origTok
+                           , decl => $decl], $bodyTokList);
+      }
+
+      # , $type, $value
+
+                    # (?: : \s* ([^\s=]+) \s*)?
+                    # (?: = \s* (\S+))?
+
+      #        and $self->eat_token(':', $bodyTokList))
       $ast->{body} = my Decl $const = {};
       # enum assignment.
       $const->{kind} = 'const';
       $const->{name} = $name;
       my $expr = $self->unquote_string($value);
       $const->{body} = (defined $type ? [$type => $expr] : $expr);
-      $self->match_token(';', $bodyTokList);
+      $self->eat_token(';', $bodyTokList);
       return defined $ast->{comment} ? $ast : $ast->{body};
     }
   );
@@ -133,7 +141,7 @@ sub parse_enum_declbody :method {
       # enum assignment.
       $ast->{body} = [$+{ident}, $tok];
       # ',' may not exist
-      $self->match_token(',', $bodyTokList);
+      $self->eat_token(',', $bodyTokList);
       return defined $ast->{comment} ? $ast : $ast->{body};
     }
   );
@@ -152,8 +160,9 @@ sub parse_interface_declbody :method {
   $self->parse_declbody(
     $decl, $bodyTokList, [';', ','], sub {
       (my $tok, my Annotated $ast) = @_;
-      $tok =~ s{^(?:(?<ro>readonly)\s+)?
-                (?<slotName>(?:\w+ |\[[^]]+\]) \??):\s*}{}x
+      ($tok =~ s{^(?:(?<ro>readonly)\s+)?
+                (?<slotName>(?:\w+ |\[[^]]+\]) \??)}{}x
+       and $self->eat_token(':', $bodyTokList))
         or return;
       # Drop 'readonly' for now.
       # slot
@@ -165,10 +174,12 @@ sub parse_interface_declbody :method {
   );
 }
 
+# https://github.com/microsoft/TypeScript/blob/master/doc/spec.md#A
+
 sub parse_declbody :method {
   (my MY $self, my Decl $decl, my ($bodyTokList, $terminators, $elemParser)) = @_;
   my @result;
-  unless ($self->match_token('{', $bodyTokList)) {
+  unless ($self->eat_token('{', $bodyTokList)) {
     $self->tokerror(["Invalid leading token for declbody of ", $decl], $bodyTokList);
   }
   my Annotated $ast = +{};
@@ -176,6 +187,21 @@ sub parse_declbody :method {
     my $tok = shift @$bodyTokList;
     if ($tok eq '{') {
       $ast->{body} = [$self->parse_declbody($decl, $bodyTokList, $terminators, $elemParser)];
+    } elsif ($tok eq '[') {
+      # Index Signatures. 3.9.4
+      unless (@$bodyTokList >= 4
+              and $bodyTokList->[0] =~ /^\w+\z/
+              and $bodyTokList->[1] eq ':') {
+        Carp::croak "Invalid Index Signature after '[':"
+          . MOP4Import::Util::terse_dump($bodyTokList);
+      }
+      (my $name, undef, my $ixType, undef) = splice @$bodyTokList, 0, 4;
+      $ast->{body} = my $slotDef = [$name];
+      if ($self->eat_token(':', $bodyTokList)) {
+        push @$slotDef, $self->parse_typeunion($decl, $bodyTokList);
+      }
+      push @result, $ast;
+      $ast = +{};
     } elsif ($tok =~ m{^/\*\*}) {
       $self->parse_comment_into_decl($ast, $self->tokenize_comment_block($tok));
     } elsif ($tok =~ m{^//}) {
@@ -184,22 +210,25 @@ sub parse_declbody :method {
       push @result, $elem;
       $ast = +{};
     } else {
-      die "HOEHOE? "
+      die "HOEHOE? tok='$tok': "
         .MOP4Import::Util::terse_dump($bodyTokList, [decl => $decl]);
     }
   }
-  unless ($self->match_token('}', $bodyTokList)) {
+  unless ($self->eat_token('}', $bodyTokList)) {
     $self->tokerror(["Invalid closing token for declbody of ", $decl], $bodyTokList);
   }
 
   # trailing terminators after '}' is eaten here.
-  $self->match_token($_, $bodyTokList) for @$terminators;
+  $self->eat_token($_, $bodyTokList) for @$terminators;
 
   if (%$ast) {
     $self->tokerror(["Something went wrong for declbody of ", $decl], $bodyTokList);
   }
   @result;
 }
+
+# I call here UnionOrIntersectionOrPrimaryType as typeunion
+# and IntersectionOrPrimaryType as typeconj
 
 # typeunion -> typeconj -> typeunion
 
@@ -211,11 +240,11 @@ sub parse_typeunion :method {
       push @union, $self->parse_interface_declbody($decl, $bodyTokList);
     } else {
       push @union, $self->parse_typeconj($decl, $bodyTokList);
-      if ($self->match_token(';', $bodyTokList)) {
+      if ($self->eat_token(';', $bodyTokList)) {
         last;
       }
     }
-    if (not $self->match_token('|', $bodyTokList)) {
+    if (not $self->eat_token('|', $bodyTokList)) {
       last;
     }
   }
@@ -223,7 +252,7 @@ sub parse_typeunion :method {
 }
 
 #
-# parse conjunctive? type expression.
+# parse conjunctive? type expression. (IntersectionOrPrimaryType)
 #
 sub parse_typeconj :method {
   (my MY $self, my Decl $decl, my $bodyTokList) = @_;
@@ -233,23 +262,34 @@ sub parse_typeconj :method {
   } elsif (my ($string) = $bodyTokList->[0] =~ /^('[^']*' | "[^"]*" )\z/x) {
     shift @$bodyTokList;
     return [constant => $string];
-  } elsif ($self->match_token('(', $bodyTokList)) {
+  } elsif ($self->eat_token('(', $bodyTokList)) {
     my $expr = [\ my @union];
-    until ($self->match_token(')', $bodyTokList)) {
+    until ($self->eat_token(')', $bodyTokList)) {
       do {
         my $e = $self->parse_typeconj($decl, $bodyTokList);
-        if ($self->match_token('&', $bodyTokList)) {
+        if ($self->eat_token('&', $bodyTokList)) {
           $e = ['&', $e];
           do {
             push @$e, $self->parse_typeconj($decl, $bodyTokList);
-          } while ($self->match_token('&', $bodyTokList));
+          } while ($self->eat_token('&', $bodyTokList));
         }
         push @union, $e;
-      } while ($self->match_token('|', $bodyTokList));
+      } while ($self->eat_token('|', $bodyTokList));
     }
     # For ()[] <-- this.
-    if (my $bracket = $self->match_token('[]', $bodyTokList)) {
+    if (my $bracket = $self->eat_token('[]', $bodyTokList)) {
       push @$expr, $bracket;
+    }
+    return $expr;
+  } elsif ($self->eat_token('[', $bodyTokList)) {
+    my $expr = [\ my @tuple]; # XXX
+    unless ($self->eat_token(']', $bodyTokList)) {
+      do {
+        push @tuple, my $e = $self->parse_typeconj($decl, $bodyTokList);
+      } while ($self->eat_token(',', $bodyTokList));
+    }
+    unless ($self->eat_token(']', $bodyTokList)) {
+      $self->tokerror(["Tuple not closed for declbody of ", $decl], $bodyTokList);
     }
     return $expr;
   } else {
@@ -261,13 +301,13 @@ sub parse_declarator :method {
   (my MY $self, my $declTokIn) = @_;
   my $declTok = [@$declTokIn];
   my Decl $decl = {};
-  if ($self->match_token(export => $declTok)) {
+  if ($self->eat_token(export => $declTok)) {
     $decl->{exported} = 1;
   }
   $decl->{kind} = shift @$declTok;
   $decl->{name} = shift @$declTok;
   if ($decl->{kind} eq 'interface') {
-    if ($self->match_token(extends => $declTok)) {
+    if ($self->eat_token(extends => $declTok)) {
       my Interface $if = $decl;
       $if->{extends} = shift @$declTok;
     }
@@ -275,11 +315,20 @@ sub parse_declarator :method {
   $decl;
 }
 
-sub match_token :method {
+sub eat_token :method {
   (my MY $self, my ($tokString, $tokList)) = @_;
   if (@$tokList and $tokList->[0] eq $tokString) {
     shift @$tokList;
   }
+}
+
+sub re_match_token :method {
+  (my MY $self, my ($pattern, $tokList)) = @_;
+  if (@$tokList and my @match = ($tokList->[0] =~ $pattern)) {
+    shift @$tokList;
+    return @match;
+  }
+  return ();
 }
 
 #----------------------------------------
@@ -298,7 +347,9 @@ sub tokenize_declbody :method {
   (my MY $self, my $declString) = @_;
   [map {s/\s*\z//; $_}
    grep {/\S/}
-   split m{(; | [{}(),\|&] | /\*\*\n(?:.*?)\*/ | //[^\n]*\n) \s*}xs, $declString];
+   split m{(; | [{}(),\|&:]
+           | \[ (?=[^]]) | (?<!\[) \]
+           | /\*\*\n(?:.*?)\*/ | //[^\n]*\n) \s*}xs, $declString];
 }
 
 sub tokenize_comment_block :method {
