@@ -15,7 +15,7 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
-# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions TextDocumentSyncKind DidChangeTextDocumentParams
+# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions TextDocumentSyncKind DidChangeTextDocumentParams DocumentSymbolParams DocumentSymbol
 'ClientCapabilities' => [
   [
     'fields',
@@ -145,6 +145,24 @@ undef() => [
     'fields',
     'firstTriggerCharacter',
     'moreTriggerCharacter',
+  ],
+],
+'DocumentSymbol' => [
+  [
+    'fields',
+    'name',
+    'detail',
+    'kind',
+    'deprecated',
+    'range',
+    'selectionRange',
+    'children',
+  ],
+],
+'DocumentSymbolParams' => [
+  [
+    'fields',
+    'textDocument',
   ],
 ],
 undef() => [
@@ -313,6 +331,138 @@ undef() => [
   [
     'fields',
     'triggerCharacters',
+  ],
+],
+undef() => [
+  [
+    'constant',
+    'SymbolKind__File',
+    1,
+  ],
+  [
+    'constant',
+    'SymbolKind__Module',
+    2,
+  ],
+  [
+    'constant',
+    'SymbolKind__Namespace',
+    3,
+  ],
+  [
+    'constant',
+    'SymbolKind__Package',
+    4,
+  ],
+  [
+    'constant',
+    'SymbolKind__Class',
+    5,
+  ],
+  [
+    'constant',
+    'SymbolKind__Method',
+    6,
+  ],
+  [
+    'constant',
+    'SymbolKind__Property',
+    7,
+  ],
+  [
+    'constant',
+    'SymbolKind__Field',
+    8,
+  ],
+  [
+    'constant',
+    'SymbolKind__Constructor',
+    9,
+  ],
+  [
+    'constant',
+    'SymbolKind__Enum',
+    10,
+  ],
+  [
+    'constant',
+    'SymbolKind__Interface',
+    11,
+  ],
+  [
+    'constant',
+    'SymbolKind__Function',
+    12,
+  ],
+  [
+    'constant',
+    'SymbolKind__Variable',
+    13,
+  ],
+  [
+    'constant',
+    'SymbolKind__Constant',
+    14,
+  ],
+  [
+    'constant',
+    'SymbolKind__String',
+    15,
+  ],
+  [
+    'constant',
+    'SymbolKind__Number',
+    16,
+  ],
+  [
+    'constant',
+    'SymbolKind__Boolean',
+    17,
+  ],
+  [
+    'constant',
+    'SymbolKind__Array',
+    18,
+  ],
+  [
+    'constant',
+    'SymbolKind__Object',
+    19,
+  ],
+  [
+    'constant',
+    'SymbolKind__Key',
+    20,
+  ],
+  [
+    'constant',
+    'SymbolKind__Null',
+    21,
+  ],
+  [
+    'constant',
+    'SymbolKind__EnumMember',
+    22,
+  ],
+  [
+    'constant',
+    'SymbolKind__Struct',
+    23,
+  ],
+  [
+    'constant',
+    'SymbolKind__Event',
+    24,
+  ],
+  [
+    'constant',
+    'SymbolKind__Operator',
+    25,
+  ],
+  [
+    'constant',
+    'SymbolKind__TypeParameter',
+    26,
   ],
 ],
 'TextDocumentClientCapabilities' => [
