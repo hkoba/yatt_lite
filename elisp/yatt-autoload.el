@@ -7,7 +7,7 @@
 (autoload 'yatt-mode "yatt-mode"
   "YATT mode" t)
 
-(defvar yatt-mode-file-coding nil "file coding for yatt files.")
+(defvar yatt-mode-file-coding 'utf-8 "file coding for yatt files.")
 
 (let ((yatt-ext "\\.\\(yatt\\|ytmpl\\)\\'"))
 
