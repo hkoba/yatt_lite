@@ -238,6 +238,9 @@ sub fn_msgfile {
 }
 
 #========================================
+# Following code is for per-DirApp error handling.
+# Since this complicates error handling too much, I might drop this code near(?) future.
+#
 sub error_handler {
   (my MY $self, my $type, my Error $err) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
