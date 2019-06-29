@@ -9,6 +9,8 @@ use mro 'c3';
 
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
+use constant DEBUG_ERROR => $ENV{DEBUG_YATT_ERROR};
+
 #========================================
 # Dispatcher Layer: load and run corresponding DirApp for incoming request.
 #========================================
@@ -356,11 +358,13 @@ sub call {
       $self->finalize_response($env, $res);
       $res;
     });
+
   } elsif (UNIVERSAL::isa($error, 'YATT::Lite::Error')) {
 
     return $self->error_response($error, $env, $con);
 
   } else {
+    print STDERR "# from raw die\n" if DEBUG_ERROR;
     # system_error. Should be treated by PSGI Server.
     die $error;
   }
@@ -406,7 +410,6 @@ sub psgi_response_of_connection {
   $self->finalize_response($env, $tuple);
   return $tuple;
 }
-
 
 sub before_dirhandler {
   (my MY $self, my ($dh, $con, $file)) = @_;

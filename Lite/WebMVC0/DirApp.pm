@@ -4,6 +4,8 @@ use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use mro 'c3';
 
+use constant DEBUG_ERROR => $ENV{DEBUG_YATT_ERROR};
+
 use YATT::Lite -as_base, qw/*SYS *CON
 			    Entity/;
 use YATT::Lite::MFields qw/cf_dir_config
@@ -40,10 +42,12 @@ sub handle {
     or die "Can't chdir '$self->{cf_dir}': $!";
   local $SIG{__WARN__} = sub {
     my ($msg) = @_;
+    print STDERR "# from __WARN__ $msg\n" if DEBUG_ERROR;
     die $self->raise(warn => $_[0]);
   };
   local $SIG{__DIE__} = sub {
     my ($err) = @_;
+    print STDERR "# from __DIE__ $err\n" if DEBUG_ERROR;
     die $err if ref $err;
     local $self->{cf_in_sig_die} = 1;
     die $self->error({ignore_frame => [undef, __FILE__, __LINE__]}, $err);
