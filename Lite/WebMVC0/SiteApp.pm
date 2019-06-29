@@ -341,20 +341,8 @@ sub call {
   try_invoke($con, 'flush_headers');
 
   if (not $error or is_done($error)) {
-    my $code = $con->cget('status') // $env->{REDIRECT_STATUS} // 200;
-    my $res = Plack::Response->new($code);
-    $res->content_type("text/html"
-		       . ($self->{cf_header_charset}
-			  ? qq{; charset="$self->{cf_header_charset}"}
-			  : ""));
-    if (my @h = $con->list_header) {
-      $res->headers->header(@h);
-    }
-    $res->body($con->buffer);
 
-    my $tuple = $res->finalize;
-    $self->finalize_response($env, $tuple);
-    return $tuple;
+    return $self->psgi_response_of_connection($con, $env);
 
   } elsif (ref $error eq 'ARRAY' or ref $error eq 'CODE') {
     # redirect
@@ -368,11 +356,57 @@ sub call {
       $self->finalize_response($env, $res);
       $res;
     });
+  } elsif (UNIVERSAL::isa($error, 'YATT::Lite::Error')) {
+
+    return $self->error_response($error, $env, $con);
+
   } else {
     # system_error. Should be treated by PSGI Server.
     die $error;
   }
 }
+
+sub error_response {
+  (my MY $self, my $err, my Env $env, my $orig_con) = @_;
+  my $error_status = $self->{cf_overwrite_status_code_for_errors_as}
+    // $err->{cf_http_status_code}
+    // $orig_con->cget('status')
+    // 500;
+
+  my $root = $self->get_lochandler('/');
+
+  if (my ($sub, $pkg) = $root->find_renderer(error => ignore_error => 1)) {
+    my $errcon = $orig_con->as_error;
+    {
+      local ($SYS, $CON) = ($self, $errcon);
+      $sub->($pkg, $errcon, $err);
+    }
+    $self->psgi_response_of_connection($errcon, $env);
+  } else {
+    return $self->psgi_text($err->cget('http_status_code') // 500
+                            , $err->byte_message);
+  }
+}
+
+sub psgi_response_of_connection {
+  (my MY $self, my $con, my Env $env) = @_;
+  $env //= $con->cget('env');
+  my $code = $con->cget('status') // $env->{REDIRECT_STATUS} // 200;
+  my $res = Plack::Response->new($code);
+  $res->content_type("text/html"
+                     . ($self->{cf_header_charset}
+                        ? qq{; charset="$self->{cf_header_charset}"}
+                        : ""));
+  if (my @h = $con->list_header) {
+    $res->headers->header(@h);
+  }
+  $res->body($con->buffer);
+
+  my $tuple = $res->finalize;
+  $self->finalize_response($env, $tuple);
+  return $tuple;
+}
+
 
 sub before_dirhandler {
   (my MY $self, my ($dh, $con, $file)) = @_;

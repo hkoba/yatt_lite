@@ -197,7 +197,7 @@ sub as_error {
 
 sub error_with_status {
   my ($glob, $code) = splice @_, 0, 2;
-  $glob->configure(status => $code)
+  $glob->as_error->configure(status => $code)
     ->raise(error => incr_opt(depth => \@_), @_);
 }
 

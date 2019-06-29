@@ -869,8 +869,10 @@ foreach my $what (qw(error text dump)) {
 
 sub psgi_error {
   my ($self, $status, $msg, @rest) = @_;
+  my $escaped = escape($msg);
+  Encode::_utf8_off($escaped);
   return [$status, [$self->secure_text_plain, @rest]
-          , [escape($msg)
+          , [$escaped
              , $msg =~ /\n\z/ ? () : "\n" ]];
 }
 

@@ -7,6 +7,7 @@ use YATT::Lite::Partial
 		 cf_error_handler
 		 cf_die_in_error
 		 cf_ext_pattern
+                 cf_in_sig_die
 		/]);
 require Devel::StackTrace;
 

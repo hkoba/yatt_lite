@@ -133,6 +133,7 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_path
 			secure_text_plain
 			psgi_error
+                        psgi_text
 			globref_default
 			define_const
 			terse_dump

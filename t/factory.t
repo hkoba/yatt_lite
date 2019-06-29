@@ -756,6 +756,7 @@ END
         import
         rc_script
         info
+        in_sig_die
     );
 
   my %lite = map {
