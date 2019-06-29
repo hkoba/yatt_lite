@@ -1084,11 +1084,18 @@ sub configparams_for {
   (my MY $self, my $hash) = @_;
   # my @base = map { [dir => $_] } lexpand($self->{cf_tmpldirs});
   # (@base ? (base => \@base) : ())
+
+  my $debugging = YATT::Lite::Util::is_debugging();
+  if ($debugging) {
+    print STDERR "# Note: Factory->die_in_error is turned off for debugging\n";
+  }
+
   (
    $self->cf_delegate_known(0, $hash, $self->_cf_delegates)
    , (exists $hash->{cf_error_handler}
       ? (error_handler => \ $self->{cf_error_handler}) : ())
-   , die_in_error => ! YATT::Lite::Util::is_debugging());
+   , die_in_error => ! $debugging
+ );
 }
 
 # XXX: Should have better interface.
