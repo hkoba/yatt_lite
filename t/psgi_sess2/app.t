@@ -23,7 +23,9 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
   my $mech = Test::WWW::Mechanize::PSGI->new(app => $SITE->to_app);
 
   subtest "No cookie, no state", sub {
-    $mech->get_ok("/");
+    unless ($mech->get_ok("/")) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     $mech->content_contains("No session state");
     $mech->content_contains("No sid cookie");
