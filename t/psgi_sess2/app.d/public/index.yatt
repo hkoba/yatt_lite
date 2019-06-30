@@ -9,7 +9,8 @@
       -->
   &yatt:session_start();
 
-  <h2>Logged in at &yatt:localtime(:psgix_session(){logged_in_at}):strftime((%Y-%m-%d %H:%M:%S %z));</h2>
+  <yatt:my tp:value="&yatt:with_ignoring_die(:localtime(:psgix_session(){logged_in_at}));"/>
+  <h2>Logged in at &yatt:tp:strftime((%Y-%m-%d %H:%M:%S %z));</h2>
   <h3>other_value = &yatt:session_get(other_value);</h3>
 
 </yatt:if>

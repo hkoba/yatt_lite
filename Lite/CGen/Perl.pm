@@ -1264,6 +1264,12 @@ sub entmacro_undef {
   sprintf q|(undef(%s))|, join "", @expr;
 }
 
+sub entmacro_with_ignoring_die {
+  (my MY $self, my $node) = @_;
+  my (@expr) = $self->gen_entlist(undef, entx($node));
+  sprintf q|($this->YATT->with_ignoring_die(sub {%s}))|, join "", @expr;
+}
+
 sub entmacro_if {
   (my MY $self, my $node) = @_;
   my ($cond, $then, $else) = $self->gen_entlist(undef, entx($node));

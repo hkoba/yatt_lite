@@ -12,6 +12,8 @@ use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
 			   cf_overwrite_status_code_for_errors_as
                            cf_ext_public_action
+                           _ignore_warn
+                           _ignore_die
 
 			   Action/;
 
@@ -42,11 +44,19 @@ sub handle {
     or die "Can't chdir '$self->{cf_dir}': $!";
   local $SIG{__WARN__} = sub {
     my ($msg) = @_;
+    if ($self->{_ignore_warn}) {
+      print STDERR "# ignore __WARN__ $msg\n" if DEBUG_ERROR;
+      return;
+    }
     print STDERR "# from __WARN__ $msg\n" if DEBUG_ERROR;
     die $self->raise(warn => $_[0]);
   };
   local $SIG{__DIE__} = sub {
     my ($err) = @_;
+    if ($self->{_ignore_die}) {
+      print STDERR "# ignore __DIE__ $err\n" if DEBUG_ERROR;
+      return;
+    }
     print STDERR "# from __DIE__ $err\n" if DEBUG_ERROR;
     die $err if ref $err;
     local $self->{cf_in_sig_die} = 1;
@@ -56,6 +66,19 @@ sub handle {
     $con->set_charset($charset);
   }
   $self->SUPER::handle($type, $con, $file);
+}
+
+sub with_ignoring_die {
+  (my MY $self, my ($sub, @args)) = @_;
+  local $self->{_ignore_warn} = 1;
+  local $self->{_ignore_die} = 1;
+  $sub->(@args);
+}
+
+sub with_ignoring_warn {
+  (my MY $self, my ($sub, @args)) = @_;
+  local $self->{_ignore_warn} = 1;
+  $sub->(@args);
 }
 
 #
