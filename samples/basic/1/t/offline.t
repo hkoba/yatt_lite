@@ -41,6 +41,7 @@ BEGIN {
 }
 
 
+use YATT::Lite::WebMVC0::SiteApp::CGI;
 use YATT::t::t_preload; # To make Devel::Cover happy.
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]

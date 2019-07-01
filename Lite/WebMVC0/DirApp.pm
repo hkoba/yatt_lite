@@ -4,12 +4,16 @@ use warnings qw(FATAL all NONFATAL misc);
 use Carp;
 use mro 'c3';
 
+use constant DEBUG_ERROR => $ENV{DEBUG_YATT_ERROR};
+
 use YATT::Lite -as_base, qw/*SYS *CON
 			    Entity/;
 use YATT::Lite::MFields qw/cf_dir_config
 			   cf_use_subpath
 			   cf_overwrite_status_code_for_errors_as
                            cf_ext_public_action
+                           _ignore_warn
+                           _ignore_die
 
 			   Action/;
 
@@ -40,17 +44,41 @@ sub handle {
     or die "Can't chdir '$self->{cf_dir}': $!";
   local $SIG{__WARN__} = sub {
     my ($msg) = @_;
+    if ($self->{_ignore_warn}) {
+      print STDERR "# ignore __WARN__ $msg\n" if DEBUG_ERROR;
+      return;
+    }
+    print STDERR "# from __WARN__ $msg\n" if DEBUG_ERROR;
     die $self->raise(warn => $_[0]);
   };
   local $SIG{__DIE__} = sub {
     my ($err) = @_;
+    if ($self->{_ignore_die}) {
+      print STDERR "# ignore __DIE__ $err\n" if DEBUG_ERROR;
+      return;
+    }
+    print STDERR "# from __DIE__ $err\n" if DEBUG_ERROR;
     die $err if ref $err;
+    local $self->{cf_in_sig_die} = 1;
     die $self->error({ignore_frame => [undef, __FILE__, __LINE__]}, $err);
   };
   if (my $charset = $self->header_charset) {
     $con->set_charset($charset);
   }
   $self->SUPER::handle($type, $con, $file);
+}
+
+sub with_ignoring_die {
+  (my MY $self, my ($sub, @args)) = @_;
+  local $self->{_ignore_warn} = 1;
+  local $self->{_ignore_die} = 1;
+  $sub->(@args);
+}
+
+sub with_ignoring_warn {
+  (my MY $self, my ($sub, @args)) = @_;
+  local $self->{_ignore_warn} = 1;
+  $sub->(@args);
 }
 
 #
@@ -233,21 +261,28 @@ sub fn_msgfile {
 }
 
 #========================================
+# Following code is for per-DirApp error handling.
+# Since this complicates error handling too much, I might drop this code near(?) future.
+#
 sub error_handler {
   (my MY $self, my $type, my Error $err) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
   my $errcon = try_invoke($self->CON, 'as_error') || do {
     if ($SYS) {
-      $SYS->make_connection(\*STDOUT, yatt => $self, noheader => 1);
+      $SYS->make_connection(undef, yatt => $self, noheader => 1);
     } else {
-      \*STDERR;
+      $self->CON;
     }
   };
-  if (my $code = $err->{cf_http_status_code}) {
-    $errcon->configure(status => $code);
-  } elsif ($code = try_invoke($errcon, [cget => 'status'])) {
-    $err->{cf_http_status_code} = $code;
-  }
+  try_invoke($errcon, 'as_error');
+
+  my $error_status = $self->{cf_overwrite_status_code_for_errors_as}
+    // $err->{cf_http_status_code}
+    // try_invoke($errcon, [cget => 'status'])
+    // 500;
+
+  $errcon->configure(status => $error_status);
+  $err->{cf_http_status_code} = $error_status;
 
   # yatt/ytmpl 用の Code generator がまだ無いので、素直に raise.
   # XXX: 本当は正しくロードできる可能性もあるが,
@@ -256,25 +291,34 @@ sub error_handler {
     die $err;
   }
 
+  #
+  # For [GH #172] - to avoid 'ARRAY(0x5575a6c9c2a8)Compilation failed in require'
+  #
+  if ($self->{cf_in_sig_die}) {
+    die $err;
+  }
+
+  my $is_psgi = $self->CON->cget('is_psgi');
+
   # error.ytmpl を探し、あれば呼び出す。
   my ($sub, $pkg);
   ($sub, $pkg) = $self->find_renderer($type => ignore_error => 1) or do {
-    if ($err->{cf_http_status_code}
-	|| $self->{cf_overwrite_status_code_for_errors_as}) {
-       ($sub, $pkg) = (sub {
-			 my ($this, $errcon, $err) = @_;
-			 print {*$errcon} $err->reason;
-		       }, $self->EntNS);
-     } else {
-       die $err;
-     }
+    print {*$errcon} $err->reason;
+    if ($is_psgi) {
+      $self->DONE;
+    } else {
+      die $err->reason;
+    }
   };
   $sub->($pkg, $errcon, $err);
-  try_invoke($errcon, 'flush_headers');
-  $self->raise_psgi_html($self->{cf_overwrite_status_code_for_errors_as}
-			 // $errcon->cget('status')
-			 // 500
-			 , $errcon->buffer); # ->DONE was not ok.
+
+  if ($is_psgi) {
+    $self->raise_psgi_html($error_status
+                           , $errcon->buffer); # ->DONE was not ok.
+  } else {
+    try_invoke($errcon, 'flush_headers');
+    $self->DONE;
+  }
 }
 
 # dir_config should be fetched from target dirapp for this request($CON)

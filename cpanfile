@@ -48,6 +48,8 @@ recommends 'Text::Glob';
 
 recommends 'Coro';
 
+recommends 'Time::Piece';
+
 configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
 

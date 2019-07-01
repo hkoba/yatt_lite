@@ -23,7 +23,9 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
   my $mech = Test::WWW::Mechanize::PSGI->new(app => $SITE->to_app);
 
   subtest "No cookie, no state", sub {
-    $mech->get_ok("/");
+    unless ($mech->get_ok("/")) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     $mech->content_contains("No session state");
     $mech->content_contains("No sid cookie");
@@ -47,7 +49,9 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
 
   my $cur_sid;
   subtest "Top page now contains login info", sub {
-    $mech->follow_link_ok({id => "go_top"});
+    unless ($mech->follow_link_ok({id => "go_top"})) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     $mech->content_contains("Has session state");
 
@@ -59,7 +63,9 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
   };
 
   subtest "Reloading the top page shows same info", sub {
-    $mech->get_ok("/");
+    unless ($mech->get_ok("/")) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     $mech->content_contains("Has session state");
 
@@ -74,7 +80,9 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
 
   subtest "change_id (without loosing the state)", sub {
 
-    $mech->follow_link_ok({id => "change_id"});
+    unless ($mech->follow_link_ok({id => "change_id"})) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     ok((my ($new_sid) = $mech->content =~ /New sid: ([0-9a-f]+)/)
        , "New sid");
@@ -83,7 +91,9 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
     $cur_sid = $new_sid;
 
     #----------------------------------------
-    $mech->follow_link_ok({id => "go_top"});
+    unless ($mech->follow_link_ok({id => "go_top"})) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     ok((my ($sid) = $mech->content =~ /Has sid cookie: ([0-9a-f]+)/)
        , "Has sid cookie");
@@ -95,7 +105,10 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
   };
 
   subtest "change_id (clearing the state)", sub {
-    $mech->follow_link_ok({id => "fresh_session"});
+
+    unless ($mech->follow_link_ok({id => "fresh_session"})) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     ok((my ($new_sid) = $mech->content =~ /New sid: ([0-9a-f]+)/)
        , "New sid");
@@ -104,7 +117,10 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
     $cur_sid = $new_sid;
 
     #----------------------------------------
-    $mech->follow_link_ok({id => "go_top"});
+
+    unless ($mech->follow_link_ok({id => "go_top"})) {
+      diag "DIAG: ".($mech->content // '');
+    }
 
     $logged_in_at = localtime->strftime('%Y-%m-%d %H:%M:%S %z');
 

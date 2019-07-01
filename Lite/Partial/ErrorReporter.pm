@@ -7,8 +7,11 @@ use YATT::Lite::Partial
 		 cf_error_handler
 		 cf_die_in_error
 		 cf_ext_pattern
+                 cf_in_sig_die
 		/]);
 require Devel::StackTrace;
+
+use constant DEBUG_ERROR => $ENV{DEBUG_YATT_ERROR};
 
 use YATT::Lite::Error;
 use YATT::Lite::Util qw/incr_opt/;
@@ -100,20 +103,25 @@ sub raise {
   if (ref $self and my $sub = deref($self->{cf_error_handler})) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
+    print STDERR "# raise by cf_error_handler\n" if DEBUG_ERROR;
     unless (ref $sub eq 'CODE') {
       die "error_handler is not a CODE ref: $sub";
     }
     $sub->($type, $err);
   } elsif ($sub = $self->can('error_handler')) {
+    print STDERR "# raise by ->error_handler\n" if DEBUG_ERROR;
     $sub->($self, $type, $err);
   } elsif (not ref $self or $self->{cf_die_in_error}) {
+    print STDERR "# raise by die_in_error\n" if DEBUG_ERROR;
     die $err->message;
   } elsif ($err->{cf_http_status_code}) {
+    print STDERR "# raise by http_status_code\n" if DEBUG_ERROR;
     # If http_status_code is specified explicitly (from error_with_status),
     # raise it immediately, with simple reason. (not full backtrace message).
     $self->raise_psgi_html($err->{cf_http_status_code}
 			   , $err->reason);
   } else {
+    print STDERR "# raise pass-thrue error object\n" if DEBUG_ERROR;
     # 即座に die しないモードは、デバッガから error 呼び出し箇所に step して戻れるようにするため。
     # ... でも、受け側を do {my $err = $con->error; die $err} にでもしなきゃダメかも?
     return $err;

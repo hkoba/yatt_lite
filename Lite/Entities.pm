@@ -259,13 +259,13 @@ sub entity_datetime {
 sub entity_localtime {
   my ($this, $time) = @_;
   require Time::Piece;
-  Time::Piece::localtime($time);
+  Time::Piece->localtime($time);
 }
 
 sub entity_gmtime {
   my ($this, $time) = @_;
   require Time::Piece;
-  Time::Piece::gmtime($time);
+  Time::Piece->gmtime($time);
 }
 
 sub entity_redirect {
