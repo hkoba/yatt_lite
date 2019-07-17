@@ -422,15 +422,30 @@ sub describe_symbol_of_ELEMENT {
 
   my MarkupContent $md = +{};
   $md->{kind} = 'markdown';
-  $md->{value} = <<END;
-(widget) <$wname
-@{[map {"  $_=".$widget->{arg_dict}{$_}->type->[0]."\n"} @{$widget->{arg_order}}]}
-/>
-END
-
+  $md->{value} = $self->widget_signature_md($widget, 1);
   $md;
 }
 
+sub md_quote_code_as {
+  (my MY $self, my ($langId, $text)) = @_;
+   my $pre = q{```}.$langId."\n";
+   $text =~ s/\n*\z/\n/;
+   $pre.$text.q{```}."\n";
+}
+
+sub widget_signature_md {
+  (my MY $self, my Widget $widget, my $detail) = @_;
+  my $wname = "yatt:$widget->{cf_name}";
+  my $args = join("", map {
+    my $var = $widget->{arg_dict}{$_};
+    " ".join("=", $_, q{"}.$var->spec_string.q{"}).($detail ? "\n" : "");
+  } @{$widget->{arg_order}});
+  if ($detail) {
+    $self->md_quote_code_as(yatt => "($widget->{cf_kind}) <$wname$args/>");
+  } else {
+    $args;
+  }
+}
 sub lookup_widget_from {
   (my MY $self, my ($wpath, $fileName, $line)) = @_;
 
