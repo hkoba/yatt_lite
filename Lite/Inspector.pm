@@ -55,8 +55,10 @@ use YATT::Lite::LanguageServer::Protocol
      Location
      Diagnostic
      TextDocumentContentChangeEvent
+     DocumentSymbol
     /
   , qr/^DiagnosticSeverity__/
+  , qr/^SymbolKind__/
   ;
 
 #========================================
@@ -446,6 +448,23 @@ sub widget_signature_md {
     $args;
   }
 }
+
+sub list_parts_in {
+  (my MY $self, my $fileName) = @_;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  my @result;
+  foreach my Part $part ($tmpl->list_parts) {
+    push @result, my DocumentSymbol $sym = {};
+    $sym->{name} = "$part->{cf_kind} $part->{cf_name}";
+    $sym->{kind} = $part->isa(Widget) ? SymbolKind__Constructor
+      : SymbolKind__Method;
+    $sym->{detail} = $self->widget_signature_md($part);
+    $sym->{range} = $self->part_decl_range($part);
+    $sym->{selectionRange} = $self->part_decl_range($part);
+  }
+  @result;
+}
+
 sub lookup_widget_from {
   (my MY $self, my ($wpath, $fileName, $line)) = @_;
 
