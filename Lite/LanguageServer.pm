@@ -43,6 +43,7 @@ sub lspcall__initialize {
   $svcap->{definitionProvider} = JSON()->true;
   $svcap->{implementationProvider} = JSON()->true;
   $svcap->{hoverProvider} = JSON()->true;
+  $svcap->{documentSymbolProvider} = JSON()->true;
   $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
   $sopts->{openClose} = JSON()->true;
   $sopts->{save} = JSON()->true;
@@ -143,6 +144,19 @@ sub lspcall__textDocument__implementation {
     or return;
 
   $found;
+}
+
+sub lspcall__textDocument__documentSymbol {
+  (my MY $self, my DocumentSymbolParams $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  my $fn = $self->uri2localpath($docId->{uri});
+
+  if (my @result = $self->inspector->list_parts_in($fn)) {
+    \@result
+  } else {
+    undef;
+  }
 }
 
 #----------------------------------------
