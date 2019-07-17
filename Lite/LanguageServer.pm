@@ -17,7 +17,7 @@ use YATT::Lite::LanguageServer::Generic -as_base
                  /
    ];
 
-use MOP4Import::Util qw/terse_dump/;
+use MOP4Import::Util qw/terse_dump lexpand/;
 
 use YATT::Lite::LanguageServer::Protocol;
 
@@ -63,7 +63,7 @@ sub lspcall__textDocument__didChange {
 
   my PublishDiagnosticsParams $notif = {};
   $notif->{uri} = $docId->{uri};
-  $notif->{diagnostics} = $error ? [$error->{diagnostics}] : [];
+  $notif->{diagnostics} = [$error ? lexpand($error->{diagnostics}) : ()];
 
   $self->send_notification('textDocument/publishDiagnostics', $notif);
 }
@@ -87,7 +87,7 @@ sub lspcall__textDocument__didSave {
     $notif->{diagnostics} = [];
   } elsif ($res->{diagnostics}) {
 
-    $notif->{diagnostics} = [$res->{diagnostics}];
+    $notif->{diagnostics} = [lexpand($res->{diagnostics})];
   }
 
   if ($notif->{diagnostics}) {
