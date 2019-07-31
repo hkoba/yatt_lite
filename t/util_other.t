@@ -76,4 +76,20 @@ use Test::More;
     , "safe_render with raise-able connection";
 }
 
+{
+  package
+    t_entns1;
+  sub entity_foo { "FOO" }
+
+  package main;
+  is(YATT::Lite::Util->get_entity_symbol('t_entns1', 'foo'), \*t_entns1::entity_foo
+     , "YATT::Lite::Util->get_entity_symbol"
+   );
+
+  is(YATT::Lite::Util->get_entity_symbol('t_entns1', 'missing'), undef
+     , "YATT::Lite::Util->get_entity_symbol for unknown name"
+   );
+
+}
+
 done_testing();

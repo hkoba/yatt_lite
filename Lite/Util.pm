@@ -1065,6 +1065,12 @@ sub reencode_malformed_utf8 {
   $bytes;
 }
 
+sub get_entity_symbol {
+  my ($pack, $entns, $entity_name) = @_;
+  my $symbol_name = join("_", entity => $entity_name);
+  look_for_globref($entns, $symbol_name);
+}
+
 #
 # to put all functions into @EXPORT_OK.
 #
