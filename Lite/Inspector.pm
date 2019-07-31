@@ -703,8 +703,6 @@ sub find_yatt_for_template {
 
 #========================================
 
-#*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
-
 sub cmd_show_file_line {
   (my MY $self, my @desc) = @_;
   $self->cli_output($self->show_file_line(@desc));
@@ -733,10 +731,18 @@ sub show_file_line {
   [@desc, $lines->[$line - $self->{line_base}]];
 }
 
+*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
+
 sub cmd_list_entities {
   (my MY $self, my @args) = @_;
   $self->configure($self->parse_opts(\@args));
-  my $widgetNameGlob = shift @args;
+  my $nameRe = do {
+    if (my $nameGlob = shift @args) {
+      Text::Glob::glob_to_regex($nameGlob);
+    } else {
+      undef;
+    }
+  };
 
   require Sub::Identify;
 
@@ -752,8 +758,20 @@ sub cmd_list_entities {
   my $emit_entities_in_entns; $emit_entities_in_entns = sub {
     my ($entns, $path) = @_;
     my $symtab = symtab($entns);
-    foreach my $meth (sort grep {/^entity_/ and *{$symtab->{$_}}{CODE}}
-                        keys %$symtab) {
+    my @methods = do {
+      if ($nameRe) {
+        sort grep {
+          if (*{$symtab->{$_}}{CODE}
+              and 
+              (my $meth = $_) =~ s/^entity_//) {
+            $meth =~ $nameRe;
+          }
+        } keys %$symtab;
+      } else {
+        sort grep {/^entity_/ and *{$symtab->{$_}}{CODE}} keys %$symtab;
+      }
+    };
+    foreach my $meth (@methods) {
       my ($file, $line) = Sub::Identify::get_code_location(*{$symtab->{$meth}}{CODE});
       $meth =~ s/^entity_//;
       my @result = (name => $meth, entns => $entns
