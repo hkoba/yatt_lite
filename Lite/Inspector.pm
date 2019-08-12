@@ -575,8 +575,14 @@ sub locate_node {
       return $current;
     }
 
-    if ($node->{subtree}) {
+    if ($node->{subtree}
+        and $self->is_in_range($node->{tree_range}, $pos)) {
       return $self->locate_node($node->{subtree}, $pos, $current);
+    } else {
+      # No yatt elements are under the position.
+      splice @$tree, $ix, 0, undef;
+
+      return $current;
     }
   }
 
