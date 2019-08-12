@@ -28,6 +28,7 @@ use YATT::Lite::Constants
      NODE_PATH NODE_BODY NODE_VALUE
      NODE_ATTLIST NODE_AELEM_HEAD NODE_AELEM_FOOT
      TYPE_ELEMENT TYPE_LCMSG
+     TYPE_ATT_TEXT
      TYPE_ATT_NESTED
      TYPE_COMMENT
      TYPE_ENTITY
@@ -85,12 +86,21 @@ sub convert_tree {
           $altnode->{value} = $_->[NODE_ATTLIST];
         } elsif ($_->[NODE_TYPE] == TYPE_ENTITY) {
           $altnode->{value} = [@{$_}[NODE_BODY .. $#$_]];
-        } elsif (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
-          $altnode->{subtree} = [$self->convert_tree(
-            $self->node_body_slot($_), $with_text
-          )];
         } else {
-          $altnode->{value} = $_->[NODE_BODY];
+          if ($_->[NODE_TYPE] == TYPE_ATT_TEXT) {
+            $altnode->{symbol_range}
+              = $self->make_range($_->[NODE_BEGIN]
+                                  , ($_->[NODE_BEGIN] + length($_->[NODE_PATH]))
+                                  , $_->[NODE_LNO])
+              if defined $_->[NODE_BEGIN] and defined $_->[NODE_PATH];
+          }
+          if (defined $_->[NODE_BODY] and ref $_->[NODE_BODY] eq 'ARRAY') {
+            $altnode->{subtree} = [$self->convert_tree(
+              $self->node_body_slot($_), $with_text
+            )];
+          } else {
+            $altnode->{value} = $_->[NODE_BODY];
+          }
         }
       }
       $altnode;
