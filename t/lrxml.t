@@ -654,6 +654,16 @@ source: :x
 -
   >= 2
 ]
+symbol_range{
+end{
+character: 14
+line: 3
+}
+start{
+character: 12
+line: 3
+}
+}
 }
 -
   world!
@@ -721,6 +731,16 @@ kind: ATT_TEXT
 path: a
 source: a='
  '
+symbol_range{
+end{
+character: 11
+line: 1
+}
+start{
+character: 10
+line: 1
+}
+}
 value:
  
  
@@ -730,6 +750,16 @@ kind: ATT_TEXT
 path: b
 source: b="
  "
+symbol_range{
+end{
+character: 3
+line: 2
+}
+start{
+character: 2
+line: 2
+}
+}
 value:
  
  
@@ -1146,6 +1176,16 @@ value= #null
 }
 ]
 source: [x y :::z]="1..8"
+symbol_range{
+end{
+character: 28
+line: 0
+}
+start{
+character: 8
+line: 0
+}
+}
 value: 1..8
 }
 ]
