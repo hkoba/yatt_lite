@@ -823,6 +823,18 @@ sub show_file_line {
   [@desc, $lines->[$line - $self->{line_base}]];
 }
 
+sub find_entity_from {
+  (my MY $self, my ($fromFile, $entityName)) = @_;
+
+  my ($tmpl, $core) = $self->find_template($fromFile);
+
+  my $entns = $tmpl->cget('entns');
+  $entns->can("entity_$entityName")
+    or return;
+
+  +{$self->describe_entns_entity($entns, $entityName)};
+}
+
 *cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
 
 sub cmd_list_entities {
@@ -835,8 +847,6 @@ sub cmd_list_entities {
       undef;
     }
   };
-
-  require Sub::Identify;
 
   my %opts = @args == 1 ? %{$args[0]} : @args;
 
@@ -853,9 +863,10 @@ sub cmd_list_entities {
     my @methods = do {
       if ($nameRe) {
         sort grep {
-          if (*{$symtab->{$_}}{CODE}
-              and 
-              (my $meth = $_) =~ s/^entity_//) {
+          my $entry = $symtab->{$_};
+          if (ref \$entry eq 'GLOB'
+              and *{$entry}{CODE}
+              and (my $meth = $_) =~ s/^entity_//) {
             $meth =~ $nameRe;
           }
         } keys %$symtab;
@@ -864,12 +875,11 @@ sub cmd_list_entities {
       }
     };
     foreach my $meth (@methods) {
-      my ($file, $line) = Sub::Identify::get_code_location(*{$symtab->{$meth}}{CODE});
-      $meth =~ s/^entity_//;
-      my @result = (name => $meth, entns => $entns
-                      , file => $file // $path, line => $line);
+      (my $entityName = $meth) =~ s/^entity_//;
+
+      my @result = $self->describe_entns_entity($entns, $entityName, path => $path);
       $self->cli_output(
-        $self->{detail} ? +{@result} : \@result
+        $self->{detail} ? [+{@result}] : \@result
       );
     }
   };
@@ -904,6 +914,19 @@ sub cmd_list_entities {
     my $path = YATT::Lite::Util::try_invoke($superNS, 'filename');
     $emit_entities_in_entns->($superNS, $path);
   }
+}
+
+sub describe_entns_entity {
+  (my MY $self, my ($entns, $entityName, %opts)) = @_;
+
+  require Sub::Identify;
+
+  my $entSub = $entns->can("entity_$entityName");
+
+  my ($file, $line) = Sub::Identify::get_code_location($entSub);
+
+  (name => $entityName, entns => $entns
+   , file => $file // $opts{path}, line => $line);
 }
 
 sub cmd_list_vfs_folders {
