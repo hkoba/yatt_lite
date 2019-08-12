@@ -522,7 +522,7 @@ sub locate_node_at_file_position {
   $pos->{line} = $line;
   $pos->{character} = $column;
 
-  my ($kind, $path, $range, $tree) = @$treeSpec;
+  (my ($kind, $path, $range, $tree), my Part $part) = @$treeSpec;
   unless ($self->is_in_range($range, $pos)) {
     Carp::croak "BUG: Not in range! range=".terse_dump($range)." line=$line col=$column";
   }
@@ -649,19 +649,25 @@ sub dump_tokens_at_file_position {
     # At declaration
     [decllist => $declkind
      , $self->part_decl_range($part)
-     , $self->alttree($tmpl, $part->{decllist})];
+     , $self->alttree($tmpl, $part->{decllist})
+     , $part
+   ];
   } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
     # At body of widget, page, args...
     my Widget $widget = $part;
     [body => $declkind
      , $self->part_body_range($part)
-     , $self->alttree($tmpl, $widget->{tree})];
+     , $self->alttree($tmpl, $widget->{tree})
+     , $part
+   ];
   } else {
     # At body of action, entity, ...
     # XXX: TODO extract tokens for host language.
     [body_string => $declkind
      , $self->part_body_range($part)
-     , $part->{toks}];
+     , $part->{toks}
+     , $part
+   ];
   }
 }
 
