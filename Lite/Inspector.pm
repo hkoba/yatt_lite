@@ -20,8 +20,13 @@ use JSON::MaybeXS;
 use MOP4Import::Util qw/lexpand symtab terse_dump/;
 
 use MOP4Import::Types
-  , SymbolInfo => [[fields => qw/kind symbol filename range refpos/]]
   Zipper => [[fields => qw/array index path defs/]]
+  , SymbolInfo => [[fields => qw/kind name filename range refpos/]
+                   , [subtypes =>
+                      , VarInfo => [[fields => qw/type detail/]]
+                    ]
+                 ]
+  , EntityInfo => [[fields => qw/name entns file line/]]
   , LintResult => [[fields => qw/type is_success
                                  info
                                  message
@@ -382,6 +387,40 @@ sub lookup_symbol_definition_of__ELEMENT {
   $loc;
 }
 
+sub lookup_symbol_definition_of__var {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my Location $loc = +{};
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($var->{filename});
+    $loc->{range} = $var->{range};
+    return $loc;
+  }
+
+  if (my EntityInfo $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($entFunc->{file});
+    $loc->{range} = $self->make_line_range($entFunc->{line});
+    return $loc;
+  }
+}
+
+sub lookup_symbol_definition_of__call {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my Location $loc = +{};
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($var->{filename});
+    $loc->{range} = $var->{range};
+    return $loc;
+  }
+
+  if (my EntityInfo $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($entFunc->{file});
+    $loc->{range} = $self->make_line_range($entFunc->{line});
+    return $loc;
+  }
+}
+
 sub filename2uri {
   (my MY $self, my $fn) = @_;
   URI::file->new_abs($fn)->as_string;
@@ -406,16 +445,6 @@ sub describe_symbol {
   $resolver->($self, $sym, $cursor);
 }
 
-# sub describe_symbol_of_ENTITY {
-#   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
-
-#   my AltNode $node = $cursor->{array}[$cursor->{index}];
-
-#   if ($node->{kind} eq 'call') {
-    
-#   }
-# }
-
 sub describe_symbol_of_ELEMENT {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
@@ -437,6 +466,46 @@ sub describe_symbol_of_ELEMENT {
   $md->{kind} = 'markdown';
   $md->{value} = $self->widget_signature_md($widget, 1);
   $md;
+}
+
+sub describe_symbol_of_var {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
+    my MarkupContent $md = +{};
+    $md->{kind} = 'markdown';
+    my $text = "$var->{kind} $var->{name}";
+    $text .= ": $var->{type}";
+    $text .= "=$var->{detail}" if $var->{detail};
+    $md->{value} = $self->md_quote_code_as(yatt => $text);
+    return $md;
+  }
+
+  if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    my MarkupContent $md = +{};
+    $md->{kind} = 'markdown';
+    my $text = "entity $sym->{name}";
+    $md->{value} = $self->md_quote_code_as(yatt => $text);
+  }
+}
+
+sub locate_entity_var {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  for (my Zipper $c = $cursor; $c; $c = $c->{path}) {
+    if (my $defs = $c->{defs}) {
+      if (my VarInfo $var = $defs->{$sym->{name}}) {
+        return $var;
+      }
+    }
+  }
+}
+
+sub locate_entity_function {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my ($tmpl, $core) = $self->find_template($sym->{filename});
+
+  $self->find_entity_from($tmpl->cget('entns'), $sym->{name});
 }
 
 sub md_quote_code_as {
@@ -501,6 +570,7 @@ sub locate_symbol_at_file_position {
 
   my SymbolInfo $info = {};
   $info->{kind} = $node->{kind};
+  $info->{name} = join(":", lexpand($node->{path}));
   $info->{range} = $node->{symbol_range};
   $info->{filename} = $fileName;
   $info->{refpos} = my Position $pos = +{};
