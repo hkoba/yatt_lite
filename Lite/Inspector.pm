@@ -626,7 +626,7 @@ sub dump_tokens_at_file_position {
 
   return unless defined $tmpl->{cf_nlines};
 
-  unless ($line < $tmpl->{cf_nlines} - 1) {
+  unless ($line <= $tmpl->{cf_nlines} - 1) {
     # warn?
     return;
   }
@@ -634,7 +634,7 @@ sub dump_tokens_at_file_position {
   # my $yatt = $self->find_yatt_for_template($fileName);
   $core->ensure_parsed($part);
 
-  $part->{cf_endln} //= $tmpl->{cf_nlines};
+  $part->{cf_endln} //= $tmpl->{cf_nlines}; # XXX:
 
   my $declkind = defined $part->{declkind}
     ? [split /:/, $part->{declkind}] : [];
@@ -679,7 +679,10 @@ sub part_body_range {
   (my MY $self, my Part $part) = @_;
   my Range $range;
   $range->{start} = $self->make_line_position($part->{cf_bodyln} - 1);
-  $range->{end} = $self->make_line_position($part->{cf_endln} - 1);
+  my Template $tmpl = $part->{cf_folder};
+  my $hasLastNL = $tmpl->{cf_string} =~ /\n\z/ ? 1 : 0;
+  $range->{end} = $self->make_line_position($part->{cf_endln}
+                                            - ($hasLastNL ? 1 : 0));
   $range;
 }
 
