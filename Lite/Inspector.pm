@@ -20,8 +20,8 @@ use JSON::MaybeXS;
 use MOP4Import::Util qw/lexpand symtab terse_dump/;
 
 use MOP4Import::Types
-  Zipper => [[fields => qw/array index path/]]
   , SymbolInfo => [[fields => qw/kind symbol filename range refpos/]]
+  Zipper => [[fields => qw/array index path defs/]]
   , LintResult => [[fields => qw/type is_success
                                  info
                                  message
@@ -530,7 +530,73 @@ sub locate_node_at_file_position {
   # <!yatt:action>, <!yatt:entity>...
   return if $kind eq 'body_string';
 
-  $self->locate_node($tree, $pos);
+  my Zipper $cursor = $self->locate_node($tree, $pos);
+
+  $self->augment_defs($cursor, $part);
+}
+
+sub augment_defs {
+  (my MY $self, my Zipper $cursor, my Part $part) = @_;
+  my $zipperList = $self->flatten_zipper_top2bottom($cursor);
+  my Zipper $outermost = $zipperList->[0];
+  $outermost->{defs}{$_}
+    //= $self->make_document_symbol_from_argument($part->{arg_dict}{$_})
+    for keys %{$part->{arg_dict}};
+  $self->augment_defs_1($zipperList, 0);
+  $cursor;
+}
+
+sub make_document_symbol_from_argument {
+  (my MY $self, my $arg) = @_;
+  my VarInfo $var = {};
+  $var->{name} = $arg->varname;
+  $var->{kind} = '(argument)';
+  $var->{type} = join(":", lexpand($arg->type));
+  if (my $spec = $arg->spec_string) {
+    $var->{detail} = qq{"$spec"};
+  }
+  $var->{range} = $self->make_line_position($arg->lineno);
+  $var;
+}
+
+sub flatten_zipper_top2bottom {
+  (my MY $self, my Zipper $cursor) = @_;
+  my @zipper;
+  my Zipper $c = $cursor;
+  do {
+    unshift @zipper, $c;
+    $c = $c->{path};
+  } while $c;
+  wantarray ? @zipper : \@zipper;
+}
+
+sub augment_defs_1 {
+  (my MY $self, my $zipperList, my $depth) = @_;
+
+  my Zipper $zipper = $zipperList->[$depth];
+
+  my @nodes = @{$zipper->{array}}[0..$zipper->{index}];
+  foreach my AltNode $node (@nodes) {
+    my $method = join("_", augment_defs_1_ =>
+                      , $node->{kind}, lexpand($node->{path}));
+    my $sub = $self->can($method)
+      or next;
+    $sub->($self, $zipper, $node, $node == $nodes[-1]);
+  }
+}
+
+sub augment_defs_1__ELEMENT_yatt_my {
+  (my MY $self, my Zipper $cursor, my AltNode $node, my $isCurrent) = @_;
+  foreach my AltNode $subNode (@{$node->{subtree}}) {
+    next unless defined $subNode->{kind};
+    next unless $subNode->{kind} eq "ATT_TEXT";
+    my ($name, @type) = lexpand($subNode->{path});
+    $cursor->{defs}{$name} = my VarInfo $var = +{};
+    $var->{kind} = 'my';
+    $var->{name} = $name;
+    $var->{type} = @type ? join(":", @type) : 'text';
+    $var->{range} = $subNode->{symbol_range};
+  }
 }
 
 sub node_path_of_zipper {
