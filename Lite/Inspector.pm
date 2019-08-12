@@ -346,6 +346,11 @@ sub alttree {
 sub lookup_symbol_definition {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
+  unless (defined $sym->{kind}) {
+    Carp::croak "kind in SymbolInfo is empty! "
+      . terse_dump($sym);
+  }
+
   my $sub = $self->can("lookup_symbol_definition_of__$sym->{kind}")
     or return;
 
@@ -390,6 +395,12 @@ sub part_filename {
 
 sub describe_symbol {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  unless (defined $sym->{kind}) {
+    Carp::croak "kind in SymbolInfo is empty! "
+      . terse_dump($sym);
+  }
+
   my $resolver = $self->can("describe_symbol_of_$sym->{kind}")
     or return;
   $resolver->($self, $sym, $cursor);
