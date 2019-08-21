@@ -775,7 +775,7 @@ sub list_default_parts {
   return unless $tmpl->{partlist};
   grep {
     my Part $part = $_;
-    $part->{cf_name} eq '';
+    $part->{cf_name} eq '' and not $part->{cf_suppressed};
   } @{$tmpl->{partlist}};
 }
 
