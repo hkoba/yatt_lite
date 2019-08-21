@@ -123,7 +123,7 @@ foreach my MY $sect (@section) {
 	skip "Module @missing is not installed", $test->ntests;
       }
       if ($test->{cf_BREAK}) {
-	breakpoint();
+        $DB::single = 1; 1 if $DB::single;
       }
       if ($test->{cf_OUT}) {
 	unless ($test->{realfile}) {

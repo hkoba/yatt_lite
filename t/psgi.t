@@ -206,7 +206,8 @@ END
 	, "<h2>Fallback contents, outside of document root</h2>\n"]
     ) {
     unless (defined $test) {
-      &YATT::Lite::Breakpoint::breakpoint();
+      $DB::single = 1;
+      1 if $DB::single; # To suppress warning
       next;
     }
     my ($path_or_spec, $code, $body, $header) = @$test;
