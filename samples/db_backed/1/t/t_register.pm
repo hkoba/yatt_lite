@@ -81,23 +81,23 @@ END
   <table>
     <tr>
       <th>User ID:</th>
-      <td><input type="text" name="login" size="15"></td>
+      <td><input type="text" name=".login" size="15"></td>
     </tr>
     <tr>
       <th>Password:</th>
-      <td><input type="password" name="password" size="15"></td>
+      <td><input type="password" name=".password" size="15"></td>
     </tr>
     <tr>
       <th>(Retype password):</th>
-      <td><input type="password" name="password2" size="15"></td>
+      <td><input type="password" name=".password2" size="15"></td>
     </tr>
     <tr>
       <th>Email:</th>
-      <td><input type="text" name="email" size="30"></td>
+      <td><input type="text" name=".email" size="30"></td>
     </tr>
     <tr>
       <td colspan="2">
-        <input type="hidden" name="nx" value="index.yatt"/>
+        <input type="hidden" name=".nx" value="index.yatt"/>
         <input type="submit" name="!register"/>
       </td>
     </tr>
@@ -113,11 +113,11 @@ END
 
   local $ENV{EMAIL_SENDER_TRANSPORT} = 'YATT_TEST';
   $got = nocr($app->render(['/register.yatt', action => 'register']
-			   , {qw(login     hkoba
-				 password  foo
-				 password2 foo
-				 email     hkoba@foo.bar
-				 nx      index.yatt)}));
+			   , {qw(.login     hkoba
+				 .password  foo
+				 .password2 foo
+				 .email     hkoba@foo.bar
+				 .nx      index.yatt)}));
 
   eq_or_diff($got, <<'END', 'register.yatt !register');
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
