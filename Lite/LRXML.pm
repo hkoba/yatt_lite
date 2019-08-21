@@ -312,41 +312,13 @@ sub parse_decl {
       # yatt:widget, action
       my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
       my $saved_attlist = [@args];
-      my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
-	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}
-			       , $ns, $kind
-			       , nonmatched($str));
-      };
-      my ($partName, $mapping);
-      if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
-	$partName = $nameAtt->[NODE_PATH];
-      } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
-        if (ref $nameAtt->[NODE_BODY]) {
-          my $t = $YATT::Lite::Constants::TYPE_[$nameAtt->[NODE_BODY][0][NODE_TYPE]];
-          die $self->synerror_at($self->{startln}
-                                 , q{%s:%s got wrong token for route spec: %s}
-                                 , $ns, $kind, $t);
-        }
-        if ($nameAtt->[NODE_BODY] eq '') {
-          $partName = $nameAtt->[NODE_PATH] // '';
-        } else {
-          # $partName が foo=bar なら pattern として扱う
-          $mapping = $self->parse_location
-            ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
-              die $self->synerror_at($self->{startln}
-                                     , q{Invalid location in %s:%s - "%s"}
-                                     , $ns, $kind, $nameAtt->[NODE_BODY])
-            };
-          $partName = $nameAtt->[NODE_PATH]
-            // $self->location2name($nameAtt->[NODE_BODY]);
-        }
-      } else {
-	die $self->synerror_at($self->{startln}, q{Invalid part name in %s:%s}
-			       , $ns, $kind);
-      }
-      $self->add_part($tmpl, $part = $self->build($ns, $kind, $partName));
 
       $part->{declkind} = $declkind;
+      # Cut partname="/route/pattern" from @args
+      my ($partName, $mapping) = $self->cut_partname_and_route($declkind, \@args);
+
+      $self->add_part($tmpl, $part = $self->build($ns, $kind, $kind, $partName));
+
       # $part decllist may contain not only attributes but also others
       # like argmacrosand possible future items.
       $part->{decllist} = $saved_attlist;
@@ -419,6 +391,45 @@ sub parse_decl {
   $tmpl->{cf_nlines} = $self->{endln};
 
   $self->finalize_template($tmpl);
+}
+
+sub cut_partname_and_route {
+  (my MY $self, my ($declkind, $argList)) = @_;
+  my $nameAtt = YATT::Lite::Constants::cut_first_att($argList) or do {
+    my Template $tmpl = $self->{template};
+    die $self->synerror_at($self->{startln}, q{No part name in %s\n%s}
+                           , $declkind
+                           , nonmatched($tmpl->{cf_string}));
+  };
+  my ($partName, $mapping);
+  if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
+    $partName = $nameAtt->[NODE_PATH];
+  } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
+    if (ref $nameAtt->[NODE_BODY]) {
+      my $t = $YATT::Lite::Constants::TYPE_[$nameAtt->[NODE_BODY][0][NODE_TYPE]];
+      die $self->synerror_at($self->{startln}
+                             , q{%s got wrong token for route spec: %s}
+                             , $declkind, $t);
+    }
+    if ($nameAtt->[NODE_BODY] eq '') {
+      $partName = $nameAtt->[NODE_PATH] // '';
+    } else {
+      # $partName が foo=bar なら pattern として扱う
+      $mapping = $self->parse_location
+        ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
+          die $self->synerror_at($self->{startln}
+                                 , q{Invalid location in %s - "%s"}
+                                 , $declkind, $nameAtt->[NODE_BODY])
+        };
+      $partName = $nameAtt->[NODE_PATH]
+        // $self->location2name($nameAtt->[NODE_BODY]);
+    }
+  } else {
+    die $self->synerror_at($self->{startln}, q{Invalid part name in %s}
+                           , $declkind);
+  }
+
+  ($partName, $mapping);
 }
 
 sub finalize_template {
@@ -716,32 +727,40 @@ sub declare_args {
   $newpart->{cf_bodypos} = $self->{curpos} + 1;
   $self->add_part($tmpl, $newpart); # partlist と Item に足し直す
 
-  if (@_ and $_[0] and $_[0]->[NODE_TYPE] == TYPE_ATT_TEXT
-      and not defined $_[0]->[NODE_PATH]) {
-    my $patNode = shift;
-    if (ref $patNode->[NODE_BODY]) {
-      my $t = $YATT::Lite::Constants::TYPE_[$patNode->[NODE_BODY][0][NODE_TYPE]];
-      die $self->synerror_at($self->{startln}
-                             , q{%s:%s got wrong token for route spec: %s}
-                             , $ns, 'args', $t);
+  $self->cut_root_route_and_install_url_params($newpart, \@args);
 
-    }
-    my $mapping = $self->parse_location($patNode->[NODE_BODY], '', $newpart)
-      or do {
-	die $self->synerror_at($self->{startln}
-			       , q{Invalid route spec in %s:%s - "%s"}
-			       , $ns, 'args', $patNode->[NODE_BODY]);
-      };
-    if ($self->{cf_match_argsroute_first}) {
-      $self->{rootroute} = $mapping;
-    } else {
-      $self->{subroutes}->append($mapping);
-    }
-    $self->add_url_params($newpart, lexpand($mapping->cget('params')));
-  }
-
-  $self->add_args($newpart, @_);
+  $self->add_args($newpart, @args);
   $newpart;
+}
+
+sub cut_root_route_and_install_url_params {
+  (my MY $self, my Part $part, my ($argList)) = @_;
+
+  return unless @$argList and $argList->[0]
+    and $argList->[0][NODE_TYPE] == TYPE_ATT_TEXT
+    and not defined $argList->[0]->[NODE_PATH];
+
+  my $patNode = shift @$argList;
+  if (ref $patNode->[NODE_BODY]) {
+    my $t = $YATT::Lite::Constants::TYPE_[$patNode->[NODE_BODY][0][NODE_TYPE]];
+    die $self->synerror_at($self->{startln}
+                           , q{%s got wrong token for route spec: %s}
+                           , $part->syntax_keyword, $t);
+
+  }
+  my $mapping = $self->parse_location($patNode->[NODE_BODY], '', $part)
+    or do {
+      die $self->synerror_at($self->{startln}
+                             , q{Invalid route spec in %s - "%s"}
+                             , $part->syntax_keyword, $patNode->[NODE_BODY]);
+    };
+  if ($self->{cf_match_argsroute_first}) {
+    $self->{rootroute} = $mapping;
+  } else {
+    $self->{subroutes}->append($mapping);
+  }
+  $self->add_url_params($part, lexpand($mapping->cget('params')));
+
 }
 
 # <!yatt:config cf=value...>
