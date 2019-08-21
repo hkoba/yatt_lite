@@ -730,12 +730,12 @@ sub declare_args {
 		   , startln => $self->{startln});
     }
   };
-  $newpart->{cf_startpos} = $self->{startpos};
-  $newpart->{cf_bodypos} = $self->{curpos} + 1;
   $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
 
   $self->cut_root_route_and_install_url_params($newpart, \@args);
 
+  # $newpart->{cf_startpos} = $self->{startpos};
+  # $newpart->{cf_bodypos} = $self->{curpos} + 1;
   $self->add_args($newpart, @args);
   $newpart;
 }
