@@ -244,10 +244,12 @@ sub update_posinfo {
 
 sub ensure_default_part {
   (my MY $self, my Template $tmpl) = @_;
-  my Part $part = $self->build
-                  ($self->primary_ns, $self->default_part_for($tmpl)
-                   , '', implicit => 1
-                   , startpos => $self->{startpos}, bodypos => $self->{startpos});
+  my Part $part = $self->build(
+    $self->primary_ns
+    , args => $self->default_part_for($tmpl)
+    , '', implicit => 1
+    , startpos => $self->{startpos}, bodypos => $self->{startpos}
+  );
   $self->add_part($tmpl, $part);
   $part;
 }
@@ -304,7 +306,6 @@ sub parse_decl {
 	// $part;
 
       if ($part) {
-        $part->{declkind} = $declkind;
         $part->{decllist} = \@args;
       }
     }
@@ -313,7 +314,6 @@ sub parse_decl {
       my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
       my $saved_attlist = [@args];
 
-      $part->{declkind} = $declkind;
       # Cut partname="/route/pattern" from @args
       my ($partName, $mapping) = $self->cut_partname_and_route($declkind, \@args);
 
@@ -679,12 +679,13 @@ sub drop_leading_ws {
 #========================================
 # build($ns, $kind, $partName, @attlist)
 sub build {
-  (my MY $self, my ($ns, $kind, $partName)) = splice @_, 0, 4;
+  (my MY $self, my ($ns, $decl, $kind, $partName, @rest)) = @_;
   local %+;
   $self->can("build_$kind")->
-    ($self, name => $partName, kind => $kind
+    ($self, name => $partName, decl => $decl, kind => $kind
+     , namespace => $ns
      , folder => $self->{template}
-     , startpos => $self->{startpos}, @_);
+     , startpos => $self->{startpos}, @rest);
 }
 
 sub build_widget { shift->Widget->new(@_) }
@@ -705,11 +706,14 @@ sub declare_base {
 }
 
 sub declare_args {
-  (my MY $self, my Template $tmpl, my $ns) = splice @_, 0, 3;
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
   my Part $newpart = do {
     (my Part $oldpart, my @other) = $self->list_default_parts($tmpl);
     unless (not $oldpart or $oldpart->{cf_implicit}) {
-      die $self->synerror_at($self->{startln}, q{Duplicate !%s:args declaration}, $ns);
+      die $self->synerror_at($self->{startln}
+                             , q{<!%s> at line %d conflicts with <!%s:%s>}
+                             , $oldpart->syntax_keyword, $oldpart->{cf_startln}
+                             , $ns, 'args');
     }
     if ($oldpart
         and $tmpl->{partlist} and @{$tmpl->{partlist}} == 1
@@ -718,7 +722,7 @@ sub declare_args {
       shift @{$tmpl->{partlist}}; # == $oldpart
     } else {
       $oldpart->{cf_suppressed} = 1 if $oldpart; # 途中なら、古いものを隠して、新たに作り直し。
-      $self->build($ns, $self->default_part_for($tmpl), ''
+      $self->build($ns, args => $self->default_part_for($tmpl), ''
 		   , startln => $self->{startln});
     }
   };

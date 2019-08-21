@@ -778,8 +778,7 @@ sub dump_tokens_at_file_position {
 
   $part->{cf_endln} //= $tmpl->{cf_nlines}; # XXX:
 
-  my $declkind = defined $part->{declkind}
-    ? [split /:/, $part->{declkind}] : [];
+  my $declkind = [$part->{cf_namespace}, $part->{cf_kind}];
 
   if ($line < $part->{cf_bodyln} - 1) {
     # At declaration
