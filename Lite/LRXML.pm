@@ -324,9 +324,7 @@ sub parse_decl {
       $part->{decllist} = $saved_attlist;
 
       if ($mapping) {
-	$mapping->configure(item => $part);
-	$self->{subroutes}->append($mapping);
-	$self->add_url_params($part, lexpand($mapping->cget('params')));
+        $self->add_route($part, $mapping);
       }
       $self->add_args($part, @args);
     }
@@ -849,6 +847,13 @@ sub add_part {
   $part->{cf_startln} = $self->{startln};
   $part->{cf_bodyln} = $self->{endln};
   push @{$tmpl->{partlist}}, $tmpl->{Item}{$itemKey} = $part;
+}
+
+sub add_route {
+  (my MY $self, my Part $part, my $mapping) = @_;
+  $mapping->configure(item => $part);
+  $self->{subroutes}->append($mapping);
+  $self->add_url_params($part, lexpand($mapping->cget('params')));
 }
 
 sub add_text {
