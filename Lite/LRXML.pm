@@ -296,7 +296,6 @@ sub parse_decl {
     }
     my $declkind = $+{declname};
     my ($ns, $kind) = split /:/, $declkind, 2;
-    my $is_new;
     if (my $sub = $self->can("declare_$kind")) {
       # yatt:base, yatt:args vs perl:base, perl:args...
       # 戻り値が undef なら、同じ $part を用いつづける。
@@ -318,7 +317,7 @@ sub parse_decl {
 			       , $ns, $kind
 			       , nonmatched($str));
       };
-      my ($partName, $mapping, @opts);
+      my ($partName, $mapping);
       if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
 	$partName = $nameAtt->[NODE_PATH];
       } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
@@ -358,7 +357,6 @@ sub parse_decl {
 	$self->add_url_params($part, lexpand($mapping->cget('params')));
       }
       $self->add_args($part, @args);
-      $is_new++;
     }
     else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
