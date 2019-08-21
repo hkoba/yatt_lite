@@ -112,6 +112,15 @@ END
       $yatt->find_part_handler([foo => action => 'hoe']);
     }, qr{^No such action in file foo: hoe}
       , "$theme Error diag for misspelled action";
+
+    $yatt->add_to(implicit_then_explicit_args => <<'END');
+FOO
+<!yatt:args>
+BAR
+END
+
+    is $yatt->render('implicit_then_explicit_args'), "FOO\nBAR\n", "$theme implicit_then_explicit_args => merged";
+
   }
 
   {
@@ -587,7 +596,8 @@ END
     my $res = $yatt_utf8->render('', ['かんじ','平仮名']);
     is Encode::is_utf8($res), 1, "$theme off: is_utf8 is on";
     is $res, "漢字かんじひらがな平仮名<br>\n", "$theme off: result matches exactly";
-  }}
+  }
+}
 
 ++$i;
 {
@@ -614,5 +624,79 @@ END
   ok $tmpl->refresh($core), "Template->refresh is safe still";
 }
 
+++$i;
+{
+  my $theme = "[name-less (default) action]";
+
+  my $template = <<'END';
+<!yatt:action '' x y>
+print $CON "hello!\n";
+print $CON "x=", $x // '(none)', "\n";
+print $CON "y=", $y // '(none)', "\n";
+END
+
+  my $yatt = new YATT::Lite(app_ns => myapp(++$i),
+                            vfs => [data => $template, public => 1],
+                            debug_cgen => $ENV{DEBUG});
+  {
+    my $res = $yatt->render(['', action => ''], {x => 3, y => 8});
+    is $res, <<END, "$theme correctly invoked";
+hello!
+x=3
+y=8
+END
+  }
+
+  {
+    err_like sub {
+      $yatt->add_to(dup_args => <<'END');
+<!yatt:args>
+foo
+<!yatt:args>
+bar
+END
+
+    }, qr{^<!yatt:args> at line 1 conflicts with <!yatt:args> at file dup_args line 3}
+      , "$theme - args then name-less action => should raise error";
+
+    err_like sub {
+
+      $yatt->add_to(explicit2 => <<'END');
+<!yatt:action ''>
+print $CON 'bar';
+<!yatt:args>
+foo
+END
+
+    }, qr{^<!yatt:action ''> at line 1 conflicts with <!yatt:args> at file explicit2 line 3}
+      , "$theme - name-less action then args => should raise error";
+
+  }
+
+  {
+    err_like sub {
+      $yatt->add_to(explicit1 => <<'END');
+<!yatt:args>
+foo
+<!yatt:action ''>
+print $CON 'bar';
+END
+
+    }, qr{^<!yatt:args> at line 1 conflicts with <!yatt:action ''> at file explicit1 line 3}
+      , "$theme - args then name-less action => should raise error";
+
+
+    err_like sub {
+
+      $yatt->add_to(implicit => <<'END');
+foo
+<!yatt:action ''>
+print $CON 'bar';
+END
+
+    }, qr{^<!yatt:action ''> conflicts with name-less default widget at file implicit line 2}
+      , "$theme - name-less widget then actionname-less  then => should raise error";
+  }
+}
 
 done_testing();
