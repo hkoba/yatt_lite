@@ -242,6 +242,16 @@ sub update_posinfo {
   $self->{startpos} = $self->{curpos} if $sync;
 }
 
+sub ensure_default_part {
+  (my MY $self, my Template $tmpl) = @_;
+  my Part $part = $self->build
+                  ($self->primary_ns, $self->default_part_for($tmpl)
+                   , '', implicit => 1
+                   , startpos => $self->{startpos}, bodypos => $self->{startpos});
+  $self->add_part($tmpl, $part);
+  $part;
+}
+
 sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
   # local %+; # ← XXX: This causes massive test failure, but why??
@@ -251,12 +261,12 @@ sub parse_decl {
   $tmpl->{cf_string} = $str;
   $tmpl->{cf_utf8} = Encode::is_utf8($str);
   $self->{startln} = $self->{endln} = 1;
-  $self->add_part($tmpl, my Part $part = $self->build
-		  ($self->primary_ns, $self->default_part_for($tmpl)
-		   , '', implicit => 1
-		   , startpos => 0, bodypos => 0));
   ($self->{startpos}, $self->{curpos}, my $total) = (0, 0, length $str);
+  my Part $part;
   while ($str =~ s{^(.*?)($$self{re_decl})}{}s) {
+    if (not $part and (length $1 || $+{comment})) {
+      $part = $self->ensure_default_part($tmpl);
+    }
     $self->add_text($part, $1) if length $1;
     $self->{curpos} = $total - length $str;
     if (my $comment_ns = $+{comment}) {
@@ -341,8 +351,10 @@ sub parse_decl {
       $part = $sub->($self, $tmpl, $ns, @args)
 	// $part;
 
-      $part->{declkind} = $declkind;
-      $part->{decllist} = \@args;
+      if ($part) {
+        $part->{declkind} = $declkind;
+        $part->{decllist} = \@args;
+      }
     } else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
     }
@@ -358,14 +370,20 @@ sub parse_decl {
     }
     $self->add_posinfo(length $&);
     $self->{endln} += numLines($1);
-    $part->{cf_bodypos} = $self->{curpos};
-    $part->{cf_bodyln} = $self->{endln}; # part の本体開始行の初期値
+    if ($part) {
+      $part->{cf_bodypos} = $self->{curpos};
+      $part->{cf_bodyln} = $self->{endln}; # part の本体開始行の初期値
+    }
   } continue {
     $self->{startpos} = $self->{curpos};
   }
+
+  # Even if no declarations are found, there should be at least one default part.
+  $part //= $self->ensure_default_part($tmpl);
   push @{$part->{toks}}, nonmatched($str);
   # widget->{cf_endln} は, (視覚上の最後の行)より一つ先の行を指す。(末尾の改行を数える分,多い)
   $part->{cf_endln} = $self->{endln} += numLines($str);
+
   # $default が partlist に足されてなかったら、先頭に足す... 逆か。
   # args が、 $default を先頭から削る?
   # fixup parts.
@@ -677,14 +695,16 @@ sub declare_args {
   my Part $newpart = do {
     # 宣言抜きで作られていた part を一旦一覧から外す。
     my Part $oldpart = delete $tmpl->{Item}{''};
-    unless ($oldpart->{cf_implicit}) {
+    unless (not $oldpart or $oldpart->{cf_implicit}) {
       die $self->synerror_at($self->{startln}, q{Duplicate !%s:args declaration}, $ns);
     }
-    if (@{$tmpl->{partlist}} == 1) {
+    if ($oldpart
+        and $tmpl->{partlist} and @{$tmpl->{partlist}} == 1
+        and $tmpl->{partlist}[0] == $oldpart) {
       # 先頭だったら再利用。
       shift @{$tmpl->{partlist}}; # == $oldpart
     } else {
-      $oldpart->{cf_suppressed} = 1; # 途中なら、古いものを隠して、新たに作り直し。
+      $oldpart->{cf_suppressed} = 1 if $oldpart; # 途中なら、古いものを隠して、新たに作り直し。
       $self->build($ns, $self->default_part_for($tmpl), ''
 		   , startln => $self->{startln});
     }
