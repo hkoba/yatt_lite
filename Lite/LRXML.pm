@@ -779,6 +779,37 @@ sub cut_root_route_and_install_url_params {
 
 }
 
+sub declare_action {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  my $kind = 'action';
+  my $declkind = join(":", $ns, $kind);
+
+  my ($partName, $mapping) = $self->cut_partname_and_route($declkind, \@args);
+
+  if ($partName eq '' and not $mapping) {
+    # implicit な page は suppress
+    # explicit な page は構文エラー(再利用は出来ない)
+    my $declname = "$declkind ''";
+    if (my Part $implicit = $self->cut_implicit_default_part($tmpl, $declname)) {
+      die $self->synerror_at($self->{startln}
+                             , q{<!%s> conflicts with name-less default widget}
+                             , "$declkind ''");
+    }
+  }
+
+  my Part $newpart = $self->build($ns, $kind => $kind, $partName, startln => $self->{startln});
+
+  $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
+
+  if ($mapping) {
+    $self->add_route($newpart, $mapping);
+  }
+
+  $self->add_args($newpart, @args);
+
+  $newpart;
+}
+
 sub list_default_parts {
   (my MY $self, my Template $tmpl) = @_;
   return unless $tmpl->{partlist};
