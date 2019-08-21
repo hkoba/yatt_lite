@@ -167,8 +167,8 @@ use YATT::Lite::Breakpoint ();
     foreach my $name (map($_ ? @$_ : (), $widget->{arg_order})) {
       push @params, delete $params->{$name};
     }
-    if (keys %$params) {
-      die "Unknown args for $widget->{cf_name}: " . join(", ", keys %$params)
+    if (my @unknown = grep {/^[a-z]\w*$/i} keys %$params) {
+      die "Unknown args for $widget->{cf_name}: " . join(", ", @unknown)
 	. "\n";
     }
     wantarray ? @params : \@params;
@@ -333,7 +333,7 @@ sub synerror {
     }
 
     my @args = do {
-      unless (defined $args and $part->isa(MY->Widget)) {
+      if (not defined $args) {
 	();
       } elsif (ref $args eq 'ARRAY') {
 	@$args
