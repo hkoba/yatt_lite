@@ -711,33 +711,42 @@ sub declare_base {
 
 sub declare_args {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
-  my Part $newpart = do {
-    (my Part $oldpart, my @other) = $self->list_default_parts($tmpl);
-    unless (not $oldpart or $oldpart->{cf_implicit}) {
-      die $self->synerror_at($self->{startln}
-                             , q{<!%s> at line %d conflicts with <!%s:%s>}
-                             , $oldpart->syntax_keyword, $oldpart->{cf_startln}
-                             , $ns, 'args');
-    }
-    if ($oldpart
-        and $tmpl->{partlist} and @{$tmpl->{partlist}} == 1
-        and $tmpl->{partlist}[0] == $oldpart) {
-      # 先頭だったら再利用。
-      shift @{$tmpl->{partlist}}; # == $oldpart
-    } else {
-      $oldpart->{cf_suppressed} = 1 if $oldpart; # 途中なら、古いものを隠して、新たに作り直し。
-      $self->build($ns, args => $self->default_part_for($tmpl), ''
-		   , startln => $self->{startln});
-    }
-  };
-  $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
+  my $kind = 'args';
+  my $declkind = join(":", $ns, $kind);
+  my Part $newpart = $self->cut_implicit_default_part($tmpl, $declkind)
+    || $self->build($ns, $kind => $self->default_part_for($tmpl), ''
+                    , startln => $self->{startln});
 
   $self->cut_root_route_and_install_url_params($newpart, \@args);
 
   # $newpart->{cf_startpos} = $self->{startpos};
   # $newpart->{cf_bodypos} = $self->{curpos} + 1;
+  $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
+
   $self->add_args($newpart, @args);
+
   $newpart;
+}
+
+sub cut_implicit_default_part {
+  (my MY $self, my Template $tmpl, my ($declkind)) = @_;
+  (my Part $oldpart, my @other) = $self->list_default_parts($tmpl);
+  unless (not $oldpart or $oldpart->{cf_implicit}) {
+    die $self->synerror_at($self->{startln}
+                           , q{<!%s> at line %d conflicts with <!%s>}
+                           , $oldpart->syntax_keyword, $oldpart->{cf_startln}
+                           , $declkind);
+  }
+  if ($oldpart
+      and $tmpl->{partlist} and @{$tmpl->{partlist}} == 1
+      and $tmpl->{partlist}[0] == $oldpart) {
+    # 先頭だったら再利用。
+    shift @{$tmpl->{partlist}}; # == $oldpart
+  } else {
+    $oldpart->{cf_suppressed} = 1 if $oldpart; # 途中なら、古いものを隠して、新たに作り直し。
+
+    return undef;
+  }
 }
 
 sub cut_root_route_and_install_url_params {
