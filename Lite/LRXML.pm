@@ -359,37 +359,6 @@ sub parse_decl {
   # widget->{cf_endln} は, (視覚上の最後の行)より一つ先の行を指す。(末尾の改行を数える分,多い)
   $part->{cf_endln} = $self->{endln} += numLines($str);
 
-  # $default が partlist に足されてなかったら、先頭に足す... 逆か。
-  # args が、 $default を先頭から削る?
-  # fixup parts.
-  my Part $prev;
-  foreach my Part $part (@{$tmpl->{partlist}}) {
-    if ($prev) {
-      unless (defined $part->{cf_startpos}) {
-	die $self->synerror_at($self->{startln}, q{startpos is undef});
-      }
-      unless (defined $prev->{cf_bodypos}) {
-	die $self->synerror_at($self->{startln}, q{prev bodypos is undef});
-      }
-      $prev->{cf_bodylen} = $part->{cf_startpos} - $prev->{cf_bodypos};
-    }
-    if ($part->{toks} and @{$part->{toks}}) {
-      # widget 末尾の連続改行を、単一の改行トークンへ変換。(行番号は解析済みだから大丈夫)
-      if ($part->{toks}[-1] =~ s/(?:\r?\n)+\Z//) {
-	push @{$part->{toks}}, "\n"
-	  unless $tmpl->{cf_ignore_trailing_newlines};
-      }
-    }
-    if (my $sub = $part->can('fixup')) {
-      $sub->($part, $tmpl, $self);
-    }
-  } continue { $prev = $part }
-  if ($prev) {
-    $prev->{cf_bodylen} = length($tmpl->{cf_string}) - $prev->{cf_bodypos};
-  }
-
-  $tmpl->{cf_nlines} = $self->{endln};
-
   $self->finalize_template($tmpl);
 }
 
@@ -434,6 +403,11 @@ sub cut_partname_and_route {
 
 sub finalize_template {
   (my MY $self, my Template $tmpl) = @_;
+
+  $self->fixup_template_foreach_part_posinfo($tmpl);
+
+  $tmpl->{cf_nlines} = $self->{endln};
+
   if ($self->{cf_match_argsroute_first}) {
     if ($self->{rootroute}) {
       $self->subroutes->append($self->{rootroute});
@@ -443,6 +417,38 @@ sub finalize_template {
     $tmpl->{cf_subroutes} = $self->{subroutes};
   }
   $tmpl
+}
+
+sub fixup_template_foreach_part_posinfo {
+  (my MY $self, my Template $tmpl) = @_;
+  # $default が partlist に足されてなかったら、先頭に足す... 逆か。
+  # args が、 $default を先頭から削る?
+  # fixup parts.
+  my Part $prev;
+  foreach my Part $part (@{$tmpl->{partlist}}) {
+    if ($prev) {
+      unless (defined $part->{cf_startpos}) {
+	die $self->synerror_at($self->{startln}, q{startpos is undef});
+      }
+      unless (defined $prev->{cf_bodypos}) {
+	die $self->synerror_at($self->{startln}, q{prev bodypos is undef});
+      }
+      $prev->{cf_bodylen} = $part->{cf_startpos} - $prev->{cf_bodypos};
+    }
+    if ($part->{toks} and @{$part->{toks}}) {
+      # widget 末尾の連続改行を、単一の改行トークンへ変換。(行番号は解析済みだから大丈夫)
+      if ($part->{toks}[-1] =~ s/(?:\r?\n)+\Z//) {
+	push @{$part->{toks}}, "\n"
+	  unless $tmpl->{cf_ignore_trailing_newlines};
+      }
+    }
+    if (my $sub = $part->can('fixup')) {
+      $sub->($part, $tmpl, $self);
+    }
+  } continue { $prev = $part }
+  if ($prev) {
+    $prev->{cf_bodylen} = length($tmpl->{cf_string}) - $prev->{cf_bodypos};
+  }
 }
 
 sub parse_attlist {
