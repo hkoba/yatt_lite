@@ -244,6 +244,7 @@ sub update_posinfo {
 
 sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
+  # local %+; # ← XXX: This causes massive test failure, but why??
   break_parser();
   $self->{template} = $tmpl;
   $self->configure(@config);
@@ -647,6 +648,7 @@ sub drop_leading_ws {
 # build($ns, $kind, $partName, @attlist)
 sub build {
   (my MY $self, my ($ns, $kind, $partName)) = splice @_, 0, 4;
+  local %+;
   $self->can("build_$kind")->
     ($self, name => $partName, kind => $kind
      , folder => $self->{template}
