@@ -317,15 +317,19 @@ sub parse_decl {
                                  , q{%s:%s got wrong token for route spec: %s}
                                  , $ns, $kind, $t);
         }
-	# $partName が foo=bar なら pattern として扱う
-	$mapping = $self->parse_location
-	  ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
-	    die $self->synerror_at($self->{startln}
-				   , q{Invalid location in %s:%s - "%s"}
-				   , $ns, $kind, $nameAtt->[NODE_BODY])
-	  };
-	$partName = $nameAtt->[NODE_PATH]
-	  // $self->location2name($nameAtt->[NODE_BODY]);
+        if ($nameAtt->[NODE_BODY] eq '') {
+          $partName = $nameAtt->[NODE_PATH] // '';
+        } else {
+          # $partName が foo=bar なら pattern として扱う
+          $mapping = $self->parse_location
+            ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
+              die $self->synerror_at($self->{startln}
+                                     , q{Invalid location in %s:%s - "%s"}
+                                     , $ns, $kind, $nameAtt->[NODE_BODY])
+            };
+          $partName = $nameAtt->[NODE_PATH]
+            // $self->location2name($nameAtt->[NODE_BODY]);
+        }
       } else {
 	die $self->synerror_at($self->{startln}, q{Invalid part name in %s:%s}
 			       , $ns, $kind);
