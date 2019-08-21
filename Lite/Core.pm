@@ -403,34 +403,47 @@ sub synerror {
       = ref $nameSpec ? @$nameSpec : $nameSpec;
 
     $partName ||= $self->{cf_index_name};
-    $kind //= 'page';
-    $pureName //= '';
 
-    my ($itemKey, $method) = $self->can("_itemKey_$kind")->($self, $pureName);
+    my Template $tmpl = do {
+      if (UNIVERSAL::isa($self->{root}, Template)) {
+        # Special case.
+        # XXX: Should add action tests for this case.
+        $self->{root};
 
-    (my Template $tmpl, my Part $part);
-
-    if (UNIVERSAL::isa($self->{root}, Template)) {
-      # Special case.
-      # XXX: Should add action tests for this case.
-      $tmpl = $self->{root};
-
-      $part = $tmpl->{Item}{$partName}
-	or ($ignore_error and return)
-	  or croak "No such item in template: $partName";
-
-      $method = "render_$partName";
-
-    } else {
-      # General container case.
-      $tmpl = $self->find_file($partName)
-	or ($ignore_error and return)
+      } else {
+        # General container case.
+        $self->find_file($partName)
+          or ($ignore_error and return)
 	  or croak "No such template file: $partName";
-      $part = $tmpl->{Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
-	or ($ignore_error and return)
-	  or croak "No such $kind in file $partName: $pureName";
-    }
+      }
+    };
 
+    (my Part $part, my $method) = do {
+      (my Part $p, my $meth);
+      if (not defined $kind and not defined $pureName) {
+        foreach my $k (qw(page action)) {
+          (my $itemKey, $meth) = $self->can("_itemKey_$k")->($self, '');
+          $p = $tmpl->{Item}{$itemKey}
+            and last;
+        }
+      }
+
+      if ($p) {
+        ($p, $meth);
+      } else {
+
+        $kind //= 'page';
+        $pureName //= '';
+
+        my ($itemKey, $meth) = $self->can("_itemKey_$kind")->($self, $pureName);
+
+        $p = $tmpl->{Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
+          or ($ignore_error and return)
+          or croak "No such $kind in file $partName: $pureName";
+
+        ($p, $meth);
+      };
+    };
 
     my $pkg = $self->find_product(perl => $tmpl)
       or ($ignore_error and return)
