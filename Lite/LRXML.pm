@@ -707,8 +707,7 @@ sub declare_base {
 sub declare_args {
   (my MY $self, my Template $tmpl, my $ns) = splice @_, 0, 3;
   my Part $newpart = do {
-    # 宣言抜きで作られていた part を一旦一覧から外す。
-    my Part $oldpart = delete $tmpl->{Item}{''};
+    (my Part $oldpart, my @other) = $self->list_default_parts($tmpl);
     unless (not $oldpart or $oldpart->{cf_implicit}) {
       die $self->synerror_at($self->{startln}, q{Duplicate !%s:args declaration}, $ns);
     }
@@ -725,7 +724,7 @@ sub declare_args {
   };
   $newpart->{cf_startpos} = $self->{startpos};
   $newpart->{cf_bodypos} = $self->{curpos} + 1;
-  $self->add_part($tmpl, $newpart); # partlist と Item に足し直す
+  $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
 
   $self->cut_root_route_and_install_url_params($newpart, \@args);
 
@@ -761,6 +760,15 @@ sub cut_root_route_and_install_url_params {
   }
   $self->add_url_params($part, lexpand($mapping->cget('params')));
 
+}
+
+sub list_default_parts {
+  (my MY $self, my Template $tmpl) = @_;
+  return unless $tmpl->{partlist};
+  grep {
+    my Part $part = $_;
+    $part->{cf_name} eq '';
+  } @{$tmpl->{partlist}};
 }
 
 # <!yatt:config cf=value...>
@@ -820,9 +828,9 @@ sub namespace {
 
 #========================================
 sub add_part {
-  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  (my MY $self, my Template $tmpl, my Part $part, my $no_conflict_check) = @_;
   my $itemKey = $part->item_key;
-  if (defined $tmpl->{Item}{$itemKey}) {
+  if (not $no_conflict_check and defined $tmpl->{Item}{$itemKey}) {
     die $self->synerror_at($self->{startln}, q{Conflicting part name! '%s'}, $part->{cf_name});
   }
   if ($tmpl->{partlist} and my Part $prev = $tmpl->{partlist}[-1]) {
