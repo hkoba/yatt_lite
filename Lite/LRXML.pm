@@ -296,9 +296,20 @@ sub parse_decl {
     }
     my $declkind = $+{declname};
     my ($ns, $kind) = split /:/, $declkind, 2;
-    # XXX: build と declare の順序が逆ではないか? 気にしなくていい?
     my $is_new;
-    if ($self->can("build_$kind")) {
+    if (my $sub = $self->can("declare_$kind")) {
+      # yatt:base, yatt:args vs perl:base, perl:args...
+      # 戻り値が undef なら、同じ $part を用いつづける。
+      my @args = $self->parse_attlist(\$str, 1);
+      $part = $sub->($self, $tmpl, $ns, @args)
+	// $part;
+
+      if ($part) {
+        $part->{declkind} = $declkind;
+        $part->{decllist} = \@args;
+      }
+    }
+    elsif ($self->can("build_$kind")) {
       # yatt:widget, action
       my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
       my $saved_attlist = [@args];
@@ -348,18 +359,8 @@ sub parse_decl {
       }
       $self->add_args($part, @args);
       $is_new++;
-    } elsif (my $sub = $self->can("declare_$kind")) {
-      # yatt:base, yatt:args vs perl:base, perl:args...
-      # 戻り値が undef なら、同じ $part を用いつづける。
-      my @args = $self->parse_attlist(\$str, 1);
-      $part = $sub->($self, $tmpl, $ns, @args)
-	// $part;
-
-      if ($part) {
-        $part->{declkind} = $declkind;
-        $part->{decllist} = \@args;
-      }
-    } else {
+    }
+    else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
     }
     unless ($str =~ s{^>([\ \t]*\r?\n)?}{}s) {
