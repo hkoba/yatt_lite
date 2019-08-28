@@ -495,32 +495,59 @@ sub describe_symbol_of_ELEMENT {
   $md;
 }
 
+sub describe_symbol_of_call {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor, 'code')) {
+    return $self->describe_entity_var($sym, $var);
+  }
+
+  if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    return $self->describe_entity_function($sym, $entFunc);
+  }
+}
+
 sub describe_symbol_of_var {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
   if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
-    my MarkupContent $md = +{};
-    $md->{kind} = 'markdown';
-    my $text = "$var->{kind} $var->{name}";
-    $text .= ": $var->{type}";
-    $text .= "=$var->{detail}" if $var->{detail};
-    $md->{value} = $self->md_quote_code_as(yatt => $text);
-    return $md;
+    return $self->describe_entity_var($sym, $var);
   }
 
   if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
-    my MarkupContent $md = +{};
-    $md->{kind} = 'markdown';
-    my $text = "entity $sym->{name}";
-    $md->{value} = $self->md_quote_code_as(yatt => $text);
+    return $self->describe_entity_function($sym, $entFunc);
   }
 }
 
+sub describe_entity_var {
+  (my MY $self, my SymbolInfo $sym, my VarInfo $var) = @_;
+
+  my MarkupContent $md = +{};
+
+  $md->{kind} = 'markdown';
+  my $text = "$var->{kind} $var->{name}";
+  $text .= ": $var->{type}";
+  $text .= "=$var->{detail}" if $var->{detail};
+  $md->{value} = $self->md_quote_code_as(yatt => $text);
+
+  return $md;
+}
+
+sub describe_entity_function {
+  (my MY $self, my SymbolInfo $sym, my EntityInfo $entFunc) = @_;
+  my MarkupContent $md = +{};
+  $md->{kind} = 'markdown';
+  my $text = "function $sym->{name}";
+  $md->{value} = $self->md_quote_code_as(yatt => $text);
+  return $md;
+}
+
 sub locate_entity_var {
-  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $ofType) = @_;
   for (my Zipper $c = $cursor; $c; $c = $c->{path}) {
     if (my $defs = $c->{defs}) {
       if (my VarInfo $var = $defs->{$sym->{name}}) {
+        next if defined $ofType and $var->{type} ne $ofType;
         return $var;
       }
     }
