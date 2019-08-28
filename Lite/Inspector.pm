@@ -172,7 +172,7 @@ sub apply_changes {
   my $yatt = $self->{_SITE}->load_yatt($dir);
   my $core = $yatt->open_trans;
 
-  my $tmpl = $core->find_file($baseName);
+  my Template $tmpl = $core->find_file($baseName);
 
   my $lines = [defined $tmpl->{cf_string} && $tmpl->{cf_string} ne ""
                ? (split /\n/, $tmpl->{cf_string}, -1) : ("")];
@@ -674,6 +674,9 @@ sub augment_defs_1 {
 
   my @nodes = @{$zipper->{array}}[0..$zipper->{index}];
   foreach my AltNode $node (@nodes) {
+    unless (defined $node->{kind}) {
+      next;
+    }
     my $method = join("_", augment_defs_1_ =>
                       , $node->{kind}, lexpand($node->{path}));
     my $sub = $self->can($method)
