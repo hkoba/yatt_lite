@@ -137,6 +137,33 @@ sub emit_ctags {
 
 #========================================
 
+sub load_string_into_file {
+  (my MY $self, my ($fileName, $text)) = @_;
+  my ($baseName, $dir) = File::Basename::fileparse($fileName);
+
+  my $yatt = $self->{_SITE}->load_yatt($dir);
+  my $core = $yatt->open_trans;
+
+  my $tmpl = $core->find_file($baseName);
+
+  my LintResult $result;
+
+  try {
+    $core->get_parser->load_string_into($tmpl, $text, all => 1);
+  } catch {
+    $result //= +{};
+    if (not ref $_) {
+      $self->strerror2lintresult($tmpl, $_, $result //= {});
+    } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
+      $self->yatterror2lintresult($_, $result);
+    } else {
+      $result->{message} = $_;
+    }
+  };
+
+  $result;
+}
+
 sub apply_changes {
   (my MY $self, my ($fileName, @changes)) = @_;
 
