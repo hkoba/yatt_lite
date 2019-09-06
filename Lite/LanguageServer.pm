@@ -17,7 +17,7 @@ use YATT::Lite::LanguageServer::Generic -as_base
                  /
    ];
 
-use MOP4Import::Util qw/terse_dump/;
+use MOP4Import::Util qw/terse_dump lexpand/;
 
 use YATT::Lite::LanguageServer::Protocol;
 
@@ -43,6 +43,7 @@ sub lspcall__initialize {
   $svcap->{definitionProvider} = JSON()->true;
   $svcap->{implementationProvider} = JSON()->true;
   $svcap->{hoverProvider} = JSON()->true;
+  $svcap->{documentSymbolProvider} = JSON()->true;
   $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
   $sopts->{openClose} = JSON()->true;
   $sopts->{save} = JSON()->true;
@@ -63,7 +64,7 @@ sub lspcall__textDocument__didChange {
 
   my PublishDiagnosticsParams $notif = {};
   $notif->{uri} = $docId->{uri};
-  $notif->{diagnostics} = $error ? [$error->{diagnostics}] : [];
+  $notif->{diagnostics} = [$error ? lexpand($error->{diagnostics}) : ()];
 
   $self->send_notification('textDocument/publishDiagnostics', $notif);
 }
@@ -87,7 +88,7 @@ sub lspcall__textDocument__didSave {
     $notif->{diagnostics} = [];
   } elsif ($res->{diagnostics}) {
 
-    $notif->{diagnostics} = [$res->{diagnostics}];
+    $notif->{diagnostics} = [lexpand($res->{diagnostics})];
   }
 
   if ($notif->{diagnostics}) {
@@ -143,6 +144,19 @@ sub lspcall__textDocument__implementation {
     or return;
 
   $found;
+}
+
+sub lspcall__textDocument__documentSymbol {
+  (my MY $self, my DocumentSymbolParams $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  my $fn = $self->uri2localpath($docId->{uri});
+
+  if (my @result = $self->inspector->list_parts_in($fn)) {
+    \@result
+  } else {
+    undef;
+  }
 }
 
 #----------------------------------------

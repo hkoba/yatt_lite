@@ -63,8 +63,8 @@ sub call_method {
   (my MY $self, my Request $request) = @_;
   my $method = $self->translate_method_name($request->{method});
   if (my $sub = $self->can($method)) {
-    print STDERR "# call_method '$method': ", $self->cli_encode_json($request), "\n";
     my $params = $request->{params};
+    print STDERR "# call_method: $method '", $self->cli_encode_json($params), "'\n";
     $sub->($self, $params);
   } else {
     print STDERR "# Not implemented: ", $self->cli_encode_json($request), "\n";

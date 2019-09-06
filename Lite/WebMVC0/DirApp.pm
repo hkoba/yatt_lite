@@ -57,6 +57,10 @@ sub handle {
       print STDERR "# ignore __DIE__ $err\n" if DEBUG_ERROR;
       return;
     }
+    unless ($^S) {
+      print STDERR "# interp state is falsy: ignore __DIE__ $err\n" if DEBUG_ERROR;
+      return;
+    }
     print STDERR "# from __DIE__ $err\n" if DEBUG_ERROR;
     die $err if ref $err;
     local $self->{cf_in_sig_die} = 1;

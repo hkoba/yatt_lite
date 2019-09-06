@@ -20,8 +20,13 @@ use JSON::MaybeXS;
 use MOP4Import::Util qw/lexpand symtab terse_dump/;
 
 use MOP4Import::Types
-  Zipper => [[fields => qw/array index path/]]
-  , SymbolInfo => [[fields => qw/kind symbol filename range refpos/]]
+  Zipper => [[fields => qw/array index path defs/]]
+  , SymbolInfo => [[fields => qw/kind name filename range refpos/]
+                   , [subtypes =>
+                      , VarInfo => [[fields => qw/type detail/]]
+                    ]
+                 ]
+  , EntityInfo => [[fields => qw/name entns file line/]]
   , LintResult => [[fields => qw/type is_success
                                  info
                                  message
@@ -55,8 +60,10 @@ use YATT::Lite::LanguageServer::Protocol
      Location
      Diagnostic
      TextDocumentContentChangeEvent
+     DocumentSymbol
     /
   , qr/^DiagnosticSeverity__/
+  , qr/^SymbolKind__/
   ;
 
 #========================================
@@ -344,6 +351,11 @@ sub alttree {
 sub lookup_symbol_definition {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
+  unless (defined $sym->{kind}) {
+    Carp::croak "kind in SymbolInfo is empty! "
+      . terse_dump($sym);
+  }
+
   my $sub = $self->can("lookup_symbol_definition_of__$sym->{kind}")
     or return;
 
@@ -375,6 +387,40 @@ sub lookup_symbol_definition_of__ELEMENT {
   $loc;
 }
 
+sub lookup_symbol_definition_of__var {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my Location $loc = +{};
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($var->{filename});
+    $loc->{range} = $var->{range};
+    return $loc;
+  }
+
+  if (my EntityInfo $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($entFunc->{file});
+    $loc->{range} = $self->make_line_range($entFunc->{line});
+    return $loc;
+  }
+}
+
+sub lookup_symbol_definition_of__call {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my Location $loc = +{};
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($var->{filename});
+    $loc->{range} = $var->{range};
+    return $loc;
+  }
+
+  if (my EntityInfo $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    $loc->{uri} = $self->filename2uri($entFunc->{file});
+    $loc->{range} = $self->make_line_range($entFunc->{line});
+    return $loc;
+  }
+}
+
 sub filename2uri {
   (my MY $self, my $fn) = @_;
   URI::file->new_abs($fn)->as_string;
@@ -388,20 +434,16 @@ sub part_filename {
 
 sub describe_symbol {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  unless (defined $sym->{kind}) {
+    Carp::croak "kind in SymbolInfo is empty! "
+      . terse_dump($sym);
+  }
+
   my $resolver = $self->can("describe_symbol_of_$sym->{kind}")
     or return;
   $resolver->($self, $sym, $cursor);
 }
-
-# sub describe_symbol_of_ENTITY {
-#   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
-
-#   my AltNode $node = $cursor->{array}[$cursor->{index}];
-
-#   if ($node->{kind} eq 'call') {
-    
-#   }
-# }
 
 sub describe_symbol_of_ELEMENT {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
@@ -422,13 +464,85 @@ sub describe_symbol_of_ELEMENT {
 
   my MarkupContent $md = +{};
   $md->{kind} = 'markdown';
-  $md->{value} = <<END;
-(widget) <$wname
-@{[map {"  $_=".$widget->{arg_dict}{$_}->type->[0]."\n"} @{$widget->{arg_order}}]}
-/>
-END
-
+  $md->{value} = $self->widget_signature_md($widget, 1);
   $md;
+}
+
+sub describe_symbol_of_var {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
+    my MarkupContent $md = +{};
+    $md->{kind} = 'markdown';
+    my $text = "$var->{kind} $var->{name}";
+    $text .= ": $var->{type}";
+    $text .= "=$var->{detail}" if $var->{detail};
+    $md->{value} = $self->md_quote_code_as(yatt => $text);
+    return $md;
+  }
+
+  if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    my MarkupContent $md = +{};
+    $md->{kind} = 'markdown';
+    my $text = "entity $sym->{name}";
+    $md->{value} = $self->md_quote_code_as(yatt => $text);
+  }
+}
+
+sub locate_entity_var {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  for (my Zipper $c = $cursor; $c; $c = $c->{path}) {
+    if (my $defs = $c->{defs}) {
+      if (my VarInfo $var = $defs->{$sym->{name}}) {
+        return $var;
+      }
+    }
+  }
+}
+
+sub locate_entity_function {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  my ($tmpl, $core) = $self->find_template($sym->{filename});
+
+  $self->find_entity_from($tmpl->cget('entns'), $sym->{name});
+}
+
+sub md_quote_code_as {
+  (my MY $self, my ($langId, $text)) = @_;
+   my $pre = q{```}.$langId."\n";
+   $text =~ s/\n*\z/\n/;
+   $pre.$text.q{```}."\n";
+}
+
+sub widget_signature_md {
+  (my MY $self, my Widget $widget, my $detail) = @_;
+  my $wname = "yatt:$widget->{cf_name}";
+  my $args = join("", map {
+    my $var = $widget->{arg_dict}{$_};
+    " ".join("=", $_, q{"}.$var->spec_string.q{"}).($detail ? "\n" : "");
+  } @{$widget->{arg_order}});
+  if ($detail) {
+    $self->md_quote_code_as(yatt => "($widget->{cf_kind}) <$wname$args/>");
+  } else {
+    $args;
+  }
+}
+
+sub list_parts_in {
+  (my MY $self, my $fileName) = @_;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  my @result;
+  foreach my Part $part ($tmpl->list_parts) {
+    push @result, my DocumentSymbol $sym = {};
+    $sym->{name} = "$part->{cf_kind} $part->{cf_name}";
+    $sym->{kind} = $part->isa(Widget) ? SymbolKind__Constructor
+      : SymbolKind__Method;
+    $sym->{detail} = $self->widget_signature_md($part);
+    $sym->{range} = $self->part_decl_range($part);
+    $sym->{selectionRange} = $self->part_decl_range($part);
+  }
+  @result;
 }
 
 sub lookup_widget_from {
@@ -456,6 +570,7 @@ sub locate_symbol_at_file_position {
 
   my SymbolInfo $info = {};
   $info->{kind} = $node->{kind};
+  $info->{name} = join(":", lexpand($node->{path}));
   $info->{range} = $node->{symbol_range};
   $info->{filename} = $fileName;
   $info->{refpos} = my Position $pos = +{};
@@ -477,7 +592,7 @@ sub locate_node_at_file_position {
   $pos->{line} = $line;
   $pos->{character} = $column;
 
-  my ($kind, $path, $range, $tree) = @$treeSpec;
+  (my ($kind, $path, $range, $tree), my Part $part) = @$treeSpec;
   unless ($self->is_in_range($range, $pos)) {
     Carp::croak "BUG: Not in range! range=".terse_dump($range)." line=$line col=$column";
   }
@@ -485,7 +600,73 @@ sub locate_node_at_file_position {
   # <!yatt:action>, <!yatt:entity>...
   return if $kind eq 'body_string';
 
-  $self->locate_node($tree, $pos);
+  my Zipper $cursor = $self->locate_node($tree, $pos);
+
+  $self->augment_defs($cursor, $part);
+}
+
+sub augment_defs {
+  (my MY $self, my Zipper $cursor, my Part $part) = @_;
+  my $zipperList = $self->flatten_zipper_top2bottom($cursor);
+  my Zipper $outermost = $zipperList->[0];
+  $outermost->{defs}{$_}
+    //= $self->make_document_symbol_from_argument($part->{arg_dict}{$_})
+    for keys %{$part->{arg_dict}};
+  $self->augment_defs_1($zipperList, 0);
+  $cursor;
+}
+
+sub make_document_symbol_from_argument {
+  (my MY $self, my $arg) = @_;
+  my VarInfo $var = {};
+  $var->{name} = $arg->varname;
+  $var->{kind} = '(argument)';
+  $var->{type} = join(":", lexpand($arg->type));
+  if (my $spec = $arg->spec_string) {
+    $var->{detail} = qq{"$spec"};
+  }
+  $var->{range} = $self->make_line_position($arg->lineno);
+  $var;
+}
+
+sub flatten_zipper_top2bottom {
+  (my MY $self, my Zipper $cursor) = @_;
+  my @zipper;
+  my Zipper $c = $cursor;
+  do {
+    unshift @zipper, $c;
+    $c = $c->{path};
+  } while $c;
+  wantarray ? @zipper : \@zipper;
+}
+
+sub augment_defs_1 {
+  (my MY $self, my $zipperList, my $depth) = @_;
+
+  my Zipper $zipper = $zipperList->[$depth];
+
+  my @nodes = @{$zipper->{array}}[0..$zipper->{index}];
+  foreach my AltNode $node (@nodes) {
+    my $method = join("_", augment_defs_1_ =>
+                      , $node->{kind}, lexpand($node->{path}));
+    my $sub = $self->can($method)
+      or next;
+    $sub->($self, $zipper, $node, $node == $nodes[-1]);
+  }
+}
+
+sub augment_defs_1__ELEMENT_yatt_my {
+  (my MY $self, my Zipper $cursor, my AltNode $node, my $isCurrent) = @_;
+  foreach my AltNode $subNode (@{$node->{subtree}}) {
+    next unless defined $subNode->{kind};
+    next unless $subNode->{kind} eq "ATT_TEXT";
+    my ($name, @type) = lexpand($subNode->{path});
+    $cursor->{defs}{$name} = my VarInfo $var = +{};
+    $var->{kind} = 'my';
+    $var->{name} = $name;
+    $var->{type} = @type ? join(":", @type) : 'text';
+    $var->{range} = $subNode->{symbol_range};
+  }
 }
 
 sub node_path_of_zipper {
@@ -530,8 +711,14 @@ sub locate_node {
       return $current;
     }
 
-    if ($node->{subtree}) {
+    if ($node->{subtree}
+        and $self->is_in_range($node->{tree_range}, $pos)) {
       return $self->locate_node($node->{subtree}, $pos, $current);
+    } else {
+      # No yatt elements are under the position.
+      splice @$tree, $ix, 0, undef;
+
+      return $current;
     }
   }
 
@@ -581,7 +768,7 @@ sub dump_tokens_at_file_position {
 
   return unless defined $tmpl->{cf_nlines};
 
-  unless ($line < $tmpl->{cf_nlines} - 1) {
+  unless ($line <= $tmpl->{cf_nlines} - 1) {
     # warn?
     return;
   }
@@ -589,7 +776,7 @@ sub dump_tokens_at_file_position {
   # my $yatt = $self->find_yatt_for_template($fileName);
   $core->ensure_parsed($part);
 
-  $part->{cf_endln} //= $tmpl->{cf_nlines};
+  $part->{cf_endln} //= $tmpl->{cf_nlines}; # XXX:
 
   my $declkind = defined $part->{declkind}
     ? [split /:/, $part->{declkind}] : [];
@@ -598,19 +785,25 @@ sub dump_tokens_at_file_position {
     # At declaration
     [decllist => $declkind
      , $self->part_decl_range($part)
-     , $self->alttree($tmpl, $part->{decllist})];
+     , $self->alttree($tmpl, $part->{decllist})
+     , $part
+   ];
   } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
     # At body of widget, page, args...
     my Widget $widget = $part;
     [body => $declkind
      , $self->part_body_range($part)
-     , $self->alttree($tmpl, $widget->{tree})];
+     , $self->alttree($tmpl, $widget->{tree})
+     , $part
+   ];
   } else {
     # At body of action, entity, ...
     # XXX: TODO extract tokens for host language.
     [body_string => $declkind
      , $self->part_body_range($part)
-     , $part->{toks}];
+     , $part->{toks}
+     , $part
+   ];
   }
 }
 
@@ -634,7 +827,10 @@ sub part_body_range {
   (my MY $self, my Part $part) = @_;
   my Range $range;
   $range->{start} = $self->make_line_position($part->{cf_bodyln} - 1);
-  $range->{end} = $self->make_line_position($part->{cf_endln} - 1);
+  my Template $tmpl = $part->{cf_folder};
+  my $hasLastNL = $tmpl->{cf_string} =~ /\n\z/ ? 1 : 0;
+  $range->{end} = $self->make_line_position($part->{cf_endln}
+                                            - ($hasLastNL ? 1 : 0));
   $range;
 }
 
@@ -669,8 +865,6 @@ sub find_yatt_for_template {
 
 #========================================
 
-#*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
-
 sub cmd_show_file_line {
   (my MY $self, my @desc) = @_;
   $self->cli_output($self->show_file_line(@desc));
@@ -699,12 +893,30 @@ sub show_file_line {
   [@desc, $lines->[$line - $self->{line_base}]];
 }
 
+sub find_entity_from {
+  (my MY $self, my ($fromFile, $entityName)) = @_;
+
+  my ($tmpl, $core) = $self->find_template($fromFile);
+
+  my $entns = $tmpl->cget('entns');
+  $entns->can("entity_$entityName")
+    or return;
+
+  +{$self->describe_entns_entity($entns, $entityName)};
+}
+
+*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
+
 sub cmd_list_entities {
   (my MY $self, my @args) = @_;
   $self->configure($self->parse_opts(\@args));
-  my $widgetNameGlob = shift @args;
-
-  require Sub::Identify;
+  my $nameRe = do {
+    if (my $nameGlob = shift @args) {
+      Text::Glob::glob_to_regex($nameGlob);
+    } else {
+      undef;
+    }
+  };
 
   my %opts = @args == 1 ? %{$args[0]} : @args;
 
@@ -718,14 +930,26 @@ sub cmd_list_entities {
   my $emit_entities_in_entns; $emit_entities_in_entns = sub {
     my ($entns, $path) = @_;
     my $symtab = symtab($entns);
-    foreach my $meth (sort grep {/^entity_/ and *{$symtab->{$_}}{CODE}}
-                        keys %$symtab) {
-      my ($file, $line) = Sub::Identify::get_code_location(*{$symtab->{$meth}}{CODE});
-      $meth =~ s/^entity_//;
-      my @result = (name => $meth, entns => $entns
-                      , file => $file // $path, line => $line);
+    my @methods = do {
+      if ($nameRe) {
+        sort grep {
+          my $entry = $symtab->{$_};
+          if (ref \$entry eq 'GLOB'
+              and *{$entry}{CODE}
+              and (my $meth = $_) =~ s/^entity_//) {
+            $meth =~ $nameRe;
+          }
+        } keys %$symtab;
+      } else {
+        sort grep {/^entity_/ and *{$symtab->{$_}}{CODE}} keys %$symtab;
+      }
+    };
+    foreach my $meth (@methods) {
+      (my $entityName = $meth) =~ s/^entity_//;
+
+      my @result = $self->describe_entns_entity($entns, $entityName, path => $path);
       $self->cli_output(
-        $self->{detail} ? +{@result} : \@result
+        $self->{detail} ? [+{@result}] : \@result
       );
     }
   };
@@ -760,6 +984,19 @@ sub cmd_list_entities {
     my $path = YATT::Lite::Util::try_invoke($superNS, 'filename');
     $emit_entities_in_entns->($superNS, $path);
   }
+}
+
+sub describe_entns_entity {
+  (my MY $self, my ($entns, $entityName, %opts)) = @_;
+
+  require Sub::Identify;
+
+  my $entSub = $entns->can("entity_$entityName");
+
+  my ($file, $line) = Sub::Identify::get_code_location($entSub);
+
+  (name => $entityName, entns => $entns
+   , file => $file // $opts{path}, line => $line);
 }
 
 sub cmd_list_vfs_folders {

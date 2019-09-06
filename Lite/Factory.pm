@@ -141,6 +141,7 @@ use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
                         raise_psgi_dump
                         raise_response
                         trimleft_length
+                        get_entity_symbol
 		       /;
 
 use YATT::Lite::XHF ();

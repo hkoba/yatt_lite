@@ -78,6 +78,12 @@ sub list_field_names {
   sub YATT::Lite::VarTypes::Base::default_dflag_default {
     ();
   }
+  sub YATT::Lite::VarTypes::Base::spec_string {
+    my ($var) = @_;
+    my $type = join(":", @{$var->[VSLOT_TYPE]});
+    $type . (defined $var->[VSLOT_DFLAG]
+             ? ($var->[VSLOT_DFLAG] . ($var->[VSLOT_DEFAULT] // '')) : '');
+  }
 }
 
 BEGIN {

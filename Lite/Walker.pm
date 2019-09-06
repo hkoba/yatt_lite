@@ -132,6 +132,7 @@ sub walk_vfs_folders {
       my @subDir;
       foreach my $name ($vfs->list_all_names) {
         my $path = "$dirName/$name";
+        next unless -e $path;
         if (-d $path) {
           push @subDir, $path;
         } else {
