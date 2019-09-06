@@ -248,7 +248,8 @@
 	(old-coding buffer-file-coding-system))
     (setq new-coding (or new-coding yatt-mode-file-coding))
     (when (and new-coding
-	       (not (eq old-coding new-coding)))
+	       (not (eq (coding-system-base old-coding)
+			(coding-system-base new-coding))))
       (set-buffer-file-coding-system new-coding nil)
       (set-buffer-modified-p modified)
       (message "coding is changed from %s to %s, modified is now %s"
