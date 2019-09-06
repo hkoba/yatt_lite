@@ -45,22 +45,21 @@
 To disable, set to nil.")
 
 (defun yatt-lint-any-mode-blacklistp ()
-  (let ((ok t) (lst yatt-lint-any-mode-blacklist)
-	i)
-    (while (and ok lst)
-      (setq i (car lst))
-      (setq ok (and ok (not (cond ((and (symbolp i) (boundp i))
-				   (symbol-value i))
-				  ((listp i)
-				   (funcall i))
-				  (t nil)))))
-      (setq lst (cdr lst)))))
+  (cl-some (lambda (i)
+	      (cond ((and (symbolp i))
+		     (and (boundp i)
+			  (symbol-value i)))
+		    ((listp i)
+		     (funcall i))
+		    (t
+		     (error "Unknown type blacklist item: %s" i))))
+	    yatt-lint-any-mode-blacklist))
 
 (defun yatt-lint-any-mode-unless-blacklisted ()
   (cond ((not (yatt-lint-any-mode-blacklistp))
 	 (yatt-lint-any-mode t))
 	(yatt-lint-any-mode
-	 (yatt-lint-any-mode nil))))
+	 (yatt-lint-any-mode -1))))
 
 (defvar yatt-lint-any-mode-map (make-sparse-keymap))
 (define-key yatt-lint-any-mode-map [f5] 'yatt-lint-any-after)
@@ -71,21 +70,28 @@ To disable, set to nil.")
   :lighter "<F5 lint>"
   :global nil
   (let ((hook 'after-save-hook) (fn 'yatt-lint-any-after)
-	(buf (current-buffer)))
+	(buf (current-buffer))
+	(is-perl-minlint (and (boundp 'perl-minlint-mode) perl-minlint-mode))
+	(has-app-psgi (and
+		       (buffer-file-name (current-buffer))
+		       (yatt-lint-any-find-upward "app.psgi"))))
     (cond ((or (yatt-lint-any-mode-blacklistp)
 	       (and (boundp 'mmm-temp-buffer-name)
 		    (equal (buffer-name) mmm-temp-buffer-name)))
 	   (message "skipping yatt-lint-any-mode for %s" buf)
 	   nil)
 	  (yatt-lint-any-mode
-	   (cond ((and (boundp 'perl-minlint-mode)
-		       perl-minlint-mode)
-		  (message "Use yatt-lint-any-mode instead of perl-minlint-mode for %s" buf)
-		  (perl-minlint-mode -1))
+	   (cond ((and is-perl-minlint (not has-app-psgi))
+		  (message "Disable yatt-lint-any-mode since perl-minlint-mode is enabled and app.psgi is missing")
+		  (yatt-lint-any-mode -1))
 		 (t
-		  (message "enabling yatt-lint-any-mode for %s" buf)))
-	   (add-hook hook fn nil nil)
-	   (make-variable-buffer-local 'yatt-lint-any-driver-path))
+		  (cond (is-perl-minlint
+			 (message "Use yatt-lint-any-mode instead of perl-minlint-mode for %s" buf)
+			 (perl-minlint-mode -1))
+			(t
+			 (message "enabling yatt-lint-any-mode for %s" buf)))
+		  (add-hook hook fn nil nil)
+		  (make-variable-buffer-local 'yatt-lint-any-driver-path))))
 	  (t
 	   (message "disabling yatt-lint-any-mode for %s" buf)
 	   (remove-hook hook fn nil)))))
