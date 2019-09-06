@@ -38,8 +38,9 @@ use YATT::Lite::Breakpoint ();
   use YATT::Lite::Types
     ([Part => -base => MY->Item
       , -fields => [qw(toks arg_dict arg_order
-                       declkind decllist
+                       decllist
 		       cf_namespace cf_kind cf_folder cf_data
+                       cf_decl
 		       cf_implicit cf_suppressed
 		       cf_startln cf_bodyln cf_endln
 		       cf_startpos cf_bodypos cf_bodylen
@@ -80,6 +81,25 @@ use YATT::Lite::Breakpoint ();
     (my Part $part) = @_;
     $part->{cf_name};
   }
+  sub YATT::Lite::Core::Part::decl_kind {
+    (my Part $part) = @_;
+    join(":", $part->{cf_namespace}, $part->{cf_decl});
+  }
+  sub YATT::Lite::Core::Part::syntax_keyword {
+    (my Part $part) = @_;
+    join(" ", $part->decl_kind, $part->syntax_name);
+  }
+  *YATT::Lite::Core::Part::syntax_name = *YATT::Lite::Core::Part::public_name;
+  *YATT::Lite::Core::Part::syntax_name = *YATT::Lite::Core::Part::public_name;
+  sub YATT::Lite::Core::Widget::syntax_name {
+    (my Widget $widget) = @_;
+    $widget->{cf_decl} eq 'args' ? () : $widget->{cf_name};
+  }
+  sub YATT::Lite::Core::Action::syntax_name {
+    (my Action $action) = @_;
+    $action->{cf_name} eq '' ? q{''} : $action->{cf_name};
+  }
+
   sub YATT::Lite::Core::Part::method_name {...}
   sub YATT::Lite::Core::Widget::method_name {
     (my Widget $widget) = @_;
@@ -167,8 +187,8 @@ use YATT::Lite::Breakpoint ();
     foreach my $name (map($_ ? @$_ : (), $widget->{arg_order})) {
       push @params, delete $params->{$name};
     }
-    if (keys %$params) {
-      die "Unknown args for $widget->{cf_name}: " . join(", ", keys %$params)
+    if (my @unknown = grep {/^[a-z]\w*$/i} keys %$params) {
+      die "Unknown args for $widget->{cf_name}: " . join(", ", @unknown)
 	. "\n";
     }
     wantarray ? @params : \@params;
@@ -333,7 +353,7 @@ sub synerror {
     }
 
     my @args = do {
-      unless (defined $args and $part->isa(MY->Widget)) {
+      if (not defined $args) {
 	();
       } elsif (ref $args eq 'ARRAY') {
 	@$args
@@ -403,34 +423,47 @@ sub synerror {
       = ref $nameSpec ? @$nameSpec : $nameSpec;
 
     $partName ||= $self->{cf_index_name};
-    $kind //= 'page';
-    $pureName //= '';
 
-    my ($itemKey, $method) = $self->can("_itemKey_$kind")->($self, $pureName);
+    my Template $tmpl = do {
+      if (UNIVERSAL::isa($self->{root}, Template)) {
+        # Special case.
+        # XXX: Should add action tests for this case.
+        $self->{root};
 
-    (my Template $tmpl, my Part $part);
-
-    if (UNIVERSAL::isa($self->{root}, Template)) {
-      # Special case.
-      # XXX: Should add action tests for this case.
-      $tmpl = $self->{root};
-
-      $part = $tmpl->{Item}{$partName}
-	or ($ignore_error and return)
-	  or croak "No such item in template: $partName";
-
-      $method = "render_$partName";
-
-    } else {
-      # General container case.
-      $tmpl = $self->find_file($partName)
-	or ($ignore_error and return)
+      } else {
+        # General container case.
+        $self->find_file($partName)
+          or ($ignore_error and return)
 	  or croak "No such template file: $partName";
-      $part = $tmpl->{Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
-	or ($ignore_error and return)
-	  or croak "No such $kind in file $partName: $pureName";
-    }
+      }
+    };
 
+    (my Part $part, my $method) = do {
+      (my Part $p, my $meth);
+      if (not defined $kind and not defined $pureName) {
+        foreach my $k (qw(page action)) {
+          (my $itemKey, $meth) = $self->can("_itemKey_$k")->($self, '');
+          $p = $tmpl->{Item}{$itemKey}
+            and last;
+        }
+      }
+
+      if ($p) {
+        ($p, $meth);
+      } else {
+
+        $kind //= 'page';
+        $pureName //= '';
+
+        my ($itemKey, $meth) = $self->can("_itemKey_$kind")->($self, $pureName);
+
+        $p = $tmpl->{Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
+          or ($ignore_error and return)
+          or croak "No such $kind in file $partName: $pureName";
+
+        ($p, $meth);
+      };
+    };
 
     my $pkg = $self->find_product(perl => $tmpl)
       or ($ignore_error and return)

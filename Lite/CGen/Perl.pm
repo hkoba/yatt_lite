@@ -101,7 +101,8 @@ use YATT::Lite::Constants;
   sub generate_widget {
     (my MY $self, my Widget $widget, my ($widget_name, $tmpl_path)) = @_;
     if ($widget->{cf_suppressed}) {
-      return "\n" x ($widget->{cf_endln} - $widget->{cf_startln});
+      # First line is alread used for package declaration.
+      return "\n" x ((($widget->{cf_endln} - 1) - $widget->{cf_startln}) - 2);
     }
     break_cgen();
     local $self->{curwidget} = $widget;

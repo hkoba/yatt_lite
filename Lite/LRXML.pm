@@ -242,20 +242,33 @@ sub update_posinfo {
   $self->{startpos} = $self->{curpos} if $sync;
 }
 
+sub ensure_default_part {
+  (my MY $self, my Template $tmpl) = @_;
+  my Part $part = $self->build(
+    $self->primary_ns
+    , args => $self->default_part_for($tmpl)
+    , '', implicit => 1
+    , startpos => $self->{startpos}, bodypos => $self->{startpos}
+  );
+  $self->add_part($tmpl, $part);
+  $part;
+}
+
 sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
+  # local %+; # ← XXX: This causes massive test failure, but why??
   break_parser();
   $self->{template} = $tmpl;
   $self->configure(@config);
   $tmpl->{cf_string} = $str;
   $tmpl->{cf_utf8} = Encode::is_utf8($str);
   $self->{startln} = $self->{endln} = 1;
-  $self->add_part($tmpl, my Part $part = $self->build
-		  ($self->primary_ns, $self->default_part_for($tmpl)
-		   , '', implicit => 1
-		   , startpos => 0, bodypos => 0));
   ($self->{startpos}, $self->{curpos}, my $total) = (0, 0, length $str);
+  my Part $part;
   while ($str =~ s{^(.*?)($$self{re_decl})}{}s) {
+    if (not $part and (length $1 || $+{comment})) {
+      $part = $self->ensure_default_part($tmpl);
+    }
     $self->add_text($part, $1) if length $1;
     $self->{curpos} = $total - length $str;
     if (my $comment_ns = $+{comment}) {
@@ -285,64 +298,37 @@ sub parse_decl {
     }
     my $declkind = $+{declname};
     my ($ns, $kind) = split /:/, $declkind, 2;
-    # XXX: build と declare の順序が逆ではないか? 気にしなくていい?
-    my $is_new;
-    if ($self->can("build_$kind")) {
-      # yatt:widget, action
-      my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
-      my $saved_attlist = [@args];
-      my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
-	die $self->synerror_at($self->{startln}, q{No part name in %s:%s\n%s}
-			       , $ns, $kind
-			       , nonmatched($str));
-      };
-      my ($partName, $mapping, @opts);
-      if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
-	$partName = $nameAtt->[NODE_PATH];
-      } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
-        if (ref $nameAtt->[NODE_BODY]) {
-          my $t = $YATT::Lite::Constants::TYPE_[$nameAtt->[NODE_BODY][0][NODE_TYPE]];
-          die $self->synerror_at($self->{startln}
-                                 , q{%s:%s got wrong token for route spec: %s}
-                                 , $ns, $kind, $t);
-        }
-	# $partName が foo=bar なら pattern として扱う
-	$mapping = $self->parse_location
-	  ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
-	    die $self->synerror_at($self->{startln}
-				   , q{Invalid location in %s:%s - "%s"}
-				   , $ns, $kind, $nameAtt->[NODE_BODY])
-	  };
-	$partName = $nameAtt->[NODE_PATH]
-	  // $self->location2name($nameAtt->[NODE_BODY]);
-      } else {
-	die $self->synerror_at($self->{startln}, q{Invalid part name in %s:%s}
-			       , $ns, $kind);
-      }
-      $self->add_part($tmpl, $part = $self->build($ns, $kind, $partName));
-
-      $part->{declkind} = $declkind;
-      # $part decllist may contain not only attributes but also others
-      # like argmacrosand possible future items.
-      $part->{decllist} = $saved_attlist;
-
-      if ($mapping) {
-	$mapping->configure(item => $part);
-	$self->{subroutes}->append($mapping);
-	$self->add_url_params($part, lexpand($mapping->cget('params')));
-      }
-      $self->add_args($part, @args);
-      $is_new++;
-    } elsif (my $sub = $self->can("declare_$kind")) {
+    if (my $sub = $self->can("declare_$kind")) {
       # yatt:base, yatt:args vs perl:base, perl:args...
       # 戻り値が undef なら、同じ $part を用いつづける。
       my @args = $self->parse_attlist(\$str, 1);
       $part = $sub->($self, $tmpl, $ns, @args)
 	// $part;
 
-      $part->{declkind} = $declkind;
-      $part->{decllist} = \@args;
-    } else {
+      if ($part) {
+        $part->{decllist} = \@args;
+      }
+    }
+    elsif ($self->can("build_$kind")) {
+      # yatt:widget, action
+      my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
+      my $saved_attlist = [@args];
+
+      # Cut partname="/route/pattern" from @args
+      my ($partName, $mapping) = $self->cut_partname_and_route($declkind, \@args);
+
+      $self->add_part($tmpl, $part = $self->build($ns, $kind, $kind, $partName));
+
+      # $part decllist may contain not only attributes but also others
+      # like argmacrosand possible future items.
+      $part->{decllist} = $saved_attlist;
+
+      if ($mapping) {
+        $self->add_route($part, $mapping);
+      }
+      $self->add_args($part, @args);
+    }
+    else {
       die $self->synerror_at($self->{startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
     }
     unless ($str =~ s{^>([\ \t]*\r?\n)?}{}s) {
@@ -357,14 +343,82 @@ sub parse_decl {
     }
     $self->add_posinfo(length $&);
     $self->{endln} += numLines($1);
-    $part->{cf_bodypos} = $self->{curpos};
-    $part->{cf_bodyln} = $self->{endln}; # part の本体開始行の初期値
+    if ($part) {
+      $part->{cf_bodypos} = $self->{curpos};
+      $part->{cf_bodyln} = $self->{endln}; # part の本体開始行の初期値
+    }
   } continue {
     $self->{startpos} = $self->{curpos};
   }
+
+  # Even if no declarations are found, there should be at least one default part.
+  $part //= $self->ensure_default_part($tmpl);
   push @{$part->{toks}}, nonmatched($str);
   # widget->{cf_endln} は, (視覚上の最後の行)より一つ先の行を指す。(末尾の改行を数える分,多い)
   $part->{cf_endln} = $self->{endln} += numLines($str);
+
+  $self->finalize_template($tmpl);
+}
+
+sub cut_partname_and_route {
+  (my MY $self, my ($declkind, $argList)) = @_;
+  my $nameAtt = YATT::Lite::Constants::cut_first_att($argList) or do {
+    my Template $tmpl = $self->{template};
+    die $self->synerror_at($self->{startln}, q{No part name in %s\n%s}
+                           , $declkind
+                           , nonmatched($tmpl->{cf_string}));
+  };
+  my ($partName, $mapping);
+  if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NAMEONLY) {
+    $partName = $nameAtt->[NODE_PATH];
+  } elsif ($nameAtt->[NODE_TYPE] == TYPE_ATT_TEXT) {
+    if (ref $nameAtt->[NODE_BODY]) {
+      my $t = $YATT::Lite::Constants::TYPE_[$nameAtt->[NODE_BODY][0][NODE_TYPE]];
+      die $self->synerror_at($self->{startln}
+                             , q{%s got wrong token for route spec: %s}
+                             , $declkind, $t);
+    }
+    if ($nameAtt->[NODE_BODY] eq '') {
+      $partName = $nameAtt->[NODE_PATH] // '';
+    } else {
+      # $partName が foo=bar なら pattern として扱う
+      $mapping = $self->parse_location
+        ($nameAtt->[NODE_BODY], $nameAtt->[NODE_PATH]) or do {
+          die $self->synerror_at($self->{startln}
+                                 , q{Invalid location in %s - "%s"}
+                                 , $declkind, $nameAtt->[NODE_BODY])
+        };
+      $partName = $nameAtt->[NODE_PATH]
+        // $self->location2name($nameAtt->[NODE_BODY]);
+    }
+  } else {
+    die $self->synerror_at($self->{startln}, q{Invalid part name in %s}
+                           , $declkind);
+  }
+
+  ($partName, $mapping);
+}
+
+sub finalize_template {
+  (my MY $self, my Template $tmpl) = @_;
+
+  $self->fixup_template_foreach_part_posinfo($tmpl);
+
+  $tmpl->{cf_nlines} = $self->{endln};
+
+  if ($self->{cf_match_argsroute_first}) {
+    if ($self->{rootroute}) {
+      $self->subroutes->append($self->{rootroute});
+    }
+  }
+  if ($self->{subroutes}) {
+    $tmpl->{cf_subroutes} = $self->{subroutes};
+  }
+  $tmpl
+}
+
+sub fixup_template_foreach_part_posinfo {
+  (my MY $self, my Template $tmpl) = @_;
   # $default が partlist に足されてなかったら、先頭に足す... 逆か。
   # args が、 $default を先頭から削る?
   # fixup parts.
@@ -393,23 +447,6 @@ sub parse_decl {
   if ($prev) {
     $prev->{cf_bodylen} = length($tmpl->{cf_string}) - $prev->{cf_bodypos};
   }
-
-  $tmpl->{cf_nlines} = $self->{endln};
-
-  $self->finalize_template($tmpl);
-}
-
-sub finalize_template {
-  (my MY $self, my Template $tmpl) = @_;
-  if ($self->{cf_match_argsroute_first}) {
-    if ($self->{rootroute}) {
-      $self->subroutes->append($self->{rootroute});
-    }
-  }
-  if ($self->{subroutes}) {
-    $tmpl->{cf_subroutes} = $self->{subroutes};
-  }
-  $tmpl
 }
 
 sub parse_attlist {
@@ -646,11 +683,13 @@ sub drop_leading_ws {
 #========================================
 # build($ns, $kind, $partName, @attlist)
 sub build {
-  (my MY $self, my ($ns, $kind, $partName)) = splice @_, 0, 4;
+  (my MY $self, my ($ns, $decl, $kind, $partName, @rest)) = @_;
+  local %+;
   $self->can("build_$kind")->
-    ($self, name => $partName, kind => $kind
+    ($self, name => $partName, decl => $decl, kind => $kind
+     , namespace => $ns
      , folder => $self->{template}
-     , startpos => $self->{startpos}, @_);
+     , startpos => $self->{startpos}, @rest);
 }
 
 sub build_widget { shift->Widget->new(@_) }
@@ -671,52 +710,113 @@ sub declare_base {
 }
 
 sub declare_args {
-  (my MY $self, my Template $tmpl, my $ns) = splice @_, 0, 3;
-  my Part $newpart = do {
-    # 宣言抜きで作られていた part を一旦一覧から外す。
-    my Part $oldpart = delete $tmpl->{Item}{''};
-    unless ($oldpart->{cf_implicit}) {
-      die $self->synerror_at($self->{startln}, q{Duplicate !%s:args declaration}, $ns);
-    }
-    if (@{$tmpl->{partlist}} == 1) {
-      # 先頭だったら再利用。
-      shift @{$tmpl->{partlist}}; # == $oldpart
-    } else {
-      $oldpart->{cf_suppressed} = 1; # 途中なら、古いものを隠して、新たに作り直し。
-      $self->build($ns, $self->default_part_for($tmpl), ''
-		   , startln => $self->{startln});
-    }
-  };
-  $newpart->{cf_startpos} = $self->{startpos};
-  $newpart->{cf_bodypos} = $self->{curpos} + 1;
-  $self->add_part($tmpl, $newpart); # partlist と Item に足し直す
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  my $kind = 'args';
+  my $declkind = join(":", $ns, $kind);
+  my Part $newpart = $self->cut_implicit_default_part($tmpl, $declkind)
+    || $self->build($ns, $kind => $self->default_part_for($tmpl), ''
+                    , startln => $self->{startln});
 
-  if (@_ and $_[0] and $_[0]->[NODE_TYPE] == TYPE_ATT_TEXT
-      and not defined $_[0]->[NODE_PATH]) {
-    my $patNode = shift;
-    if (ref $patNode->[NODE_BODY]) {
-      my $t = $YATT::Lite::Constants::TYPE_[$patNode->[NODE_BODY][0][NODE_TYPE]];
+  $self->cut_root_route_and_install_url_params($newpart, \@args);
+
+  # $newpart->{cf_startpos} = $self->{startpos};
+  # $newpart->{cf_bodypos} = $self->{curpos} + 1;
+  $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
+
+  $self->add_args($newpart, @args);
+
+  $newpart;
+}
+
+sub cut_implicit_default_part {
+  (my MY $self, my Template $tmpl, my ($declkind)) = @_;
+  (my Part $oldpart, my @other) = $self->list_default_parts($tmpl);
+  unless (not $oldpart or $oldpart->{cf_implicit}) {
+    die $self->synerror_at($self->{startln}
+                           , q{<!%s> at line %d conflicts with <!%s>}
+                           , $oldpart->syntax_keyword, $oldpart->{cf_startln}
+                           , $declkind);
+  }
+  if ($oldpart
+      and $tmpl->{partlist} and @{$tmpl->{partlist}} == 1
+      and $tmpl->{partlist}[0] == $oldpart) {
+    # 先頭だったら再利用。
+    shift @{$tmpl->{partlist}}; # == $oldpart
+  } else {
+    $oldpart->{cf_suppressed} = 1 if $oldpart; # 途中なら、古いものを隠して、新たに作り直し。
+
+    return undef;
+  }
+}
+
+sub cut_root_route_and_install_url_params {
+  (my MY $self, my Part $part, my ($argList)) = @_;
+
+  return unless @$argList and $argList->[0]
+    and $argList->[0][NODE_TYPE] == TYPE_ATT_TEXT
+    and not defined $argList->[0]->[NODE_PATH];
+
+  my $patNode = shift @$argList;
+  if (ref $patNode->[NODE_BODY]) {
+    my $t = $YATT::Lite::Constants::TYPE_[$patNode->[NODE_BODY][0][NODE_TYPE]];
+    die $self->synerror_at($self->{startln}
+                           , q{%s got wrong token for route spec: %s}
+                           , $part->syntax_keyword, $t);
+
+  }
+  my $mapping = $self->parse_location($patNode->[NODE_BODY], '', $part)
+    or do {
       die $self->synerror_at($self->{startln}
-                             , q{%s:%s got wrong token for route spec: %s}
-                             , $ns, 'args', $t);
+                             , q{Invalid route spec in %s - "%s"}
+                             , $part->syntax_keyword, $patNode->[NODE_BODY]);
+    };
+  if ($self->{cf_match_argsroute_first}) {
+    $self->{rootroute} = $mapping;
+  } else {
+    $self->{subroutes}->append($mapping);
+  }
+  $self->add_url_params($part, lexpand($mapping->cget('params')));
 
+}
+
+sub declare_action {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  my $kind = 'action';
+  my $declkind = join(":", $ns, $kind);
+
+  my ($partName, $mapping) = $self->cut_partname_and_route($declkind, \@args);
+
+  if ($partName eq '' and not $mapping) {
+    # implicit な page は suppress
+    # explicit な page は構文エラー(再利用は出来ない)
+    my $declname = "$declkind ''";
+    if (my Part $implicit = $self->cut_implicit_default_part($tmpl, $declname)) {
+      die $self->synerror_at($self->{startln}
+                             , q{<!%s> conflicts with name-less default widget}
+                             , "$declkind ''");
     }
-    my $mapping = $self->parse_location($patNode->[NODE_BODY], '', $newpart)
-      or do {
-	die $self->synerror_at($self->{startln}
-			       , q{Invalid route spec in %s:%s - "%s"}
-			       , $ns, 'args', $patNode->[NODE_BODY]);
-      };
-    if ($self->{cf_match_argsroute_first}) {
-      $self->{rootroute} = $mapping;
-    } else {
-      $self->{subroutes}->append($mapping);
-    }
-    $self->add_url_params($newpart, lexpand($mapping->cget('params')));
   }
 
-  $self->add_args($newpart, @_);
+  my Part $newpart = $self->build($ns, $kind => $kind, $partName, startln => $self->{startln});
+
+  $self->add_part($tmpl, $newpart, 1); # partlist と Item に足し直す. no_conflict_check
+
+  if ($mapping) {
+    $self->add_route($newpart, $mapping);
+  }
+
+  $self->add_args($newpart, @args);
+
   $newpart;
+}
+
+sub list_default_parts {
+  (my MY $self, my Template $tmpl) = @_;
+  return unless $tmpl->{partlist};
+  grep {
+    my Part $part = $_;
+    $part->{cf_name} eq '' and not $part->{cf_suppressed};
+  } @{$tmpl->{partlist}};
 }
 
 # <!yatt:config cf=value...>
@@ -776,9 +876,9 @@ sub namespace {
 
 #========================================
 sub add_part {
-  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  (my MY $self, my Template $tmpl, my Part $part, my $no_conflict_check) = @_;
   my $itemKey = $part->item_key;
-  if (defined $tmpl->{Item}{$itemKey}) {
+  if (not $no_conflict_check and defined $tmpl->{Item}{$itemKey}) {
     die $self->synerror_at($self->{startln}, q{Conflicting part name! '%s'}, $part->{cf_name});
   }
   if ($tmpl->{partlist} and my Part $prev = $tmpl->{partlist}[-1]) {
@@ -787,6 +887,13 @@ sub add_part {
   $part->{cf_startln} = $self->{startln};
   $part->{cf_bodyln} = $self->{endln};
   push @{$tmpl->{partlist}}, $tmpl->{Item}{$itemKey} = $part;
+}
+
+sub add_route {
+  (my MY $self, my Part $part, my $mapping) = @_;
+  $mapping->configure(item => $part);
+  $self->{subroutes}->append($mapping);
+  $self->add_url_params($part, lexpand($mapping->cget('params')));
 }
 
 sub add_text {

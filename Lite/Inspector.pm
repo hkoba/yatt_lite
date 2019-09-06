@@ -137,6 +137,33 @@ sub emit_ctags {
 
 #========================================
 
+sub load_string_into_file {
+  (my MY $self, my ($fileName, $text)) = @_;
+  my ($baseName, $dir) = File::Basename::fileparse($fileName);
+
+  my $yatt = $self->{_SITE}->load_yatt($dir);
+  my $core = $yatt->open_trans;
+
+  my $tmpl = $core->find_file($baseName);
+
+  my LintResult $result;
+
+  try {
+    $core->get_parser->load_string_into($tmpl, $text, all => 1);
+  } catch {
+    $result //= +{};
+    if (not ref $_) {
+      $self->strerror2lintresult($tmpl, $_, $result //= {});
+    } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
+      $self->yatterror2lintresult($_, $result);
+    } else {
+      $result->{message} = $_;
+    }
+  };
+
+  $result;
+}
+
 sub apply_changes {
   (my MY $self, my ($fileName, @changes)) = @_;
 
@@ -145,7 +172,7 @@ sub apply_changes {
   my $yatt = $self->{_SITE}->load_yatt($dir);
   my $core = $yatt->open_trans;
 
-  my $tmpl = $core->find_file($baseName);
+  my Template $tmpl = $core->find_file($baseName);
 
   my $lines = [defined $tmpl->{cf_string} && $tmpl->{cf_string} ne ""
                ? (split /\n/, $tmpl->{cf_string}, -1) : ("")];
@@ -468,32 +495,59 @@ sub describe_symbol_of_ELEMENT {
   $md;
 }
 
+sub describe_symbol_of_call {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor, 'code')) {
+    return $self->describe_entity_var($sym, $var);
+  }
+
+  if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
+    return $self->describe_entity_function($sym, $entFunc);
+  }
+}
+
 sub describe_symbol_of_var {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
   if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
-    my MarkupContent $md = +{};
-    $md->{kind} = 'markdown';
-    my $text = "$var->{kind} $var->{name}";
-    $text .= ": $var->{type}";
-    $text .= "=$var->{detail}" if $var->{detail};
-    $md->{value} = $self->md_quote_code_as(yatt => $text);
-    return $md;
+    return $self->describe_entity_var($sym, $var);
   }
 
   if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
-    my MarkupContent $md = +{};
-    $md->{kind} = 'markdown';
-    my $text = "entity $sym->{name}";
-    $md->{value} = $self->md_quote_code_as(yatt => $text);
+    return $self->describe_entity_function($sym, $entFunc);
   }
 }
 
+sub describe_entity_var {
+  (my MY $self, my SymbolInfo $sym, my VarInfo $var) = @_;
+
+  my MarkupContent $md = +{};
+
+  $md->{kind} = 'markdown';
+  my $text = "$var->{kind} $var->{name}";
+  $text .= ": $var->{type}";
+  $text .= "=$var->{detail}" if $var->{detail};
+  $md->{value} = $self->md_quote_code_as(yatt => $text);
+
+  return $md;
+}
+
+sub describe_entity_function {
+  (my MY $self, my SymbolInfo $sym, my EntityInfo $entFunc) = @_;
+  my MarkupContent $md = +{};
+  $md->{kind} = 'markdown';
+  my $text = "function $sym->{name}";
+  $md->{value} = $self->md_quote_code_as(yatt => $text);
+  return $md;
+}
+
 sub locate_entity_var {
-  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $ofType) = @_;
   for (my Zipper $c = $cursor; $c; $c = $c->{path}) {
     if (my $defs = $c->{defs}) {
       if (my VarInfo $var = $defs->{$sym->{name}}) {
+        next if defined $ofType and $var->{type} ne $ofType;
         return $var;
       }
     }
@@ -647,6 +701,9 @@ sub augment_defs_1 {
 
   my @nodes = @{$zipper->{array}}[0..$zipper->{index}];
   foreach my AltNode $node (@nodes) {
+    unless (defined $node->{kind}) {
+      next;
+    }
     my $method = join("_", augment_defs_1_ =>
                       , $node->{kind}, lexpand($node->{path}));
     my $sub = $self->can($method)
@@ -778,8 +835,7 @@ sub dump_tokens_at_file_position {
 
   $part->{cf_endln} //= $tmpl->{cf_nlines}; # XXX:
 
-  my $declkind = defined $part->{declkind}
-    ? [split /:/, $part->{declkind}] : [];
+  my $declkind = [$part->{cf_namespace}, $part->{cf_kind}];
 
   if ($line < $part->{cf_bodyln} - 1) {
     # At declaration

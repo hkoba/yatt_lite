@@ -51,6 +51,22 @@ sub lspcall__initialize {
   $res;
 }
 
+sub lspcall__textDocument__didOpen {
+  (my MY $self, my DidOpenTextDocumentParams $params) = @_;
+
+  my TextDocumentItem $docItem = $params->{textDocument};
+  my $fn = $self->uri2localpath($docItem->{uri});
+
+  my LintResult $error
+    = $self->inspector->load_string_into_file($fn, $docItem->{text});
+
+  my PublishDiagnosticsParams $notif = {};
+  $notif->{uri} = $docItem->{uri};
+  $notif->{diagnostics} = [$error ? lexpand($error->{diagnostics}) : ()];
+
+  $self->send_notification('textDocument/publishDiagnostics', $notif);
+}
+
 sub lspcall__textDocument__didChange {
   (my MY $self, my DidChangeTextDocumentParams $params) = @_;
 

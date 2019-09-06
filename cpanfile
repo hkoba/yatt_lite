@@ -41,12 +41,19 @@ recommends 'Sub::Inspector';
 
 recommends 'YAML::Tiny';
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
+
+recommends 'Test::Requires'; # which is required by Sub::Inspector
 recommends 'Sub::Inspector';
+
 recommends 'B::Utils' => '!= 0.26';
 
 recommends 'Text::Glob';
 
+# For LanguageServer support
 recommends 'Coro';
+recommends 'Coro::AIO';
+recommends 'IO::AIO';
+recommends 'AnyEvent::AIO';
 
 recommends 'Time::Piece';
 

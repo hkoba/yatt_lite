@@ -184,6 +184,10 @@ END
      , ["/index.yatt/foo/bar", 200, $hello->(content => "Worldfoo/bar")]
      , ["/index/foo/bar", 200, $hello->(content => "Worldfoo/bar")]
      , ["/index/baz/1234", 200, $hello->(other => "ok?(1234)")]
+     , ["/defaction.yatt?!!=", 200, "OK"]
+     , ["/defaction.yatt", 200, "OK"]
+     , ["/mid_defaction.yatt?!!=", 200, "OK2"]
+     , ["/mid_defaction.yatt", 200, "OK2"]
      , ["/baz/5678", 200, $hello->(other => "ok?(5678)")]
      , ["/no_subpath/foobar", 404, qr{No such subpath}]
      , ["/test.lib/Foo.pm", 403, qr{Forbidden}]
@@ -202,7 +206,8 @@ END
 	, "<h2>Fallback contents, outside of document root</h2>\n"]
     ) {
     unless (defined $test) {
-      &YATT::Lite::Breakpoint::breakpoint();
+      $DB::single = 1;
+      1 if $DB::single; # To suppress warning
       next;
     }
     my ($path_or_spec, $code, $body, $header) = @$test;

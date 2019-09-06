@@ -716,3 +716,16 @@ IN:
  <!yatt:widget foo mycode="code">
  <yatt:mycode/>
 ERROR: Invalid text expression for variable 'mycode': print \$CON 'bar'
+
+
+TITLE: suppressed implicit default part
+IN:
+ |
+ FOO
+ |
+ <!yatt:widget bar>
+ BAR
+ <!yatt:args>
+ BAZ <?perl= __LINE__?>
+OUT:
+ BAZ 7

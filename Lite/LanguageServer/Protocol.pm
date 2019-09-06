@@ -15,7 +15,7 @@ use MOP4Import::Types
    Error => [[fields => qw/code message data/]],
 
    #==BEGIN_GENERATED
-# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions TextDocumentSyncKind DidChangeTextDocumentParams DocumentSymbolParams DocumentSymbol
+# make_typedefs_from: InitializeParams InitializeResult TextDocumentPositionParams Location Hover MarkupContent ErrorCodes DidSaveTextDocumentParams DiagnosticSeverity PublishDiagnosticsParams TextDocumentSyncOptions TextDocumentSyncKind DidChangeTextDocumentParams DocumentSymbolParams DocumentSymbol DidOpenTextDocumentParams
 'ClientCapabilities' => [
   [
     'fields',
@@ -125,6 +125,12 @@ undef() => [
     'fields',
     'textDocument',
     'contentChanges',
+  ],
+],
+'DidOpenTextDocumentParams' => [
+  [
+    'fields',
+    'textDocument',
   ],
 ],
 'DidSaveTextDocumentParams' => [
@@ -513,6 +519,15 @@ undef() => [
         'version',
       ],
     ],
+  ],
+],
+'TextDocumentItem' => [
+  [
+    'fields',
+    'uri',
+    'languageId',
+    'version',
+    'text',
   ],
 ],
 'TextDocumentPositionParams' => [
