@@ -37,8 +37,7 @@
     )
   "Auto lint filename mapping for yatt and related files.")
 
-(defvar yatt-lint-any-mode-blacklist '(perl-minlint-mode
-				       flymake-mode flycheck-mode)
+(defvar yatt-lint-any-mode-blacklist '(flymake-mode flycheck-mode)
   "Avoid yatt-lint if any of modes in this list are t")
 
 (defvar yatt-lint-any-perl-mode 'yatt-lint-any-handle-perl-script
@@ -58,7 +57,7 @@ To disable, set to nil.")
       (setq lst (cdr lst)))))
 
 (defun yatt-lint-any-mode-unless-blacklisted ()
-  (cond ((yatt-lint-any-mode-blacklistp)
+  (cond ((not (yatt-lint-any-mode-blacklistp))
 	 (yatt-lint-any-mode t))
 	(yatt-lint-any-mode
 	 (yatt-lint-any-mode nil))))
@@ -79,7 +78,12 @@ To disable, set to nil.")
 	   (message "skipping yatt-lint-any-mode for %s" buf)
 	   nil)
 	  (yatt-lint-any-mode
-	   (message "enabling yatt-lint-any-mode for %s" buf)
+	   (cond ((and (boundp 'perl-minlint-mode)
+		       perl-minlint-mode)
+		  (message "Use yatt-lint-any-mode instead of perl-minlint-mode for %s" buf)
+		  (perl-minlint-mode -1))
+		 (t
+		  (message "enabling yatt-lint-any-mode for %s" buf)))
 	   (add-hook hook fn nil nil)
 	   (make-variable-buffer-local 'yatt-lint-any-driver-path))
 	  (t

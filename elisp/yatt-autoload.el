@@ -24,7 +24,7 @@
 (autoload 'yatt-lint-any-mode-unless-blacklisted "yatt-lint-any-mode"
   "To turn on yatt-lint unless after-save-hook contains blacklisted." t)
 
-(defvar yatt-lint-any-mode-blacklist '(perl-minlint-mode)
+(defvar yatt-lint-any-mode-blacklist '(flymake-mode flycheck-mode)
   "Avoid yatt-lint if any of modes in this list are t")
 
 (add-hook 'cperl-mode-hook
