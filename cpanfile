@@ -33,7 +33,7 @@ requires 'Locale::PO';
 requires 'Cookie::Baker';
 
 # For perl 5.20. Actually, CGI is not required (I hope).
-requires 'CGI';
+requires 'CGI', '>= 4.40';
 requires 'HTML::Entities';
 
 recommends 'Sub::Identify';
