@@ -22,7 +22,7 @@ requires 'Devel::StackTrace';
 
 # For LS
 requires 'File::AddInc';
-requires 'MOP4Import::Declare';
+requires 'MOP4Import::Declare', '>= 0.050';
 
 requires 'JSON::MaybeXS';
 
