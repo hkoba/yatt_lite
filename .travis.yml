@@ -1,18 +1,34 @@
-sudo: false
-language: perl
-perl:
-  - "5.30"
-  - "5.28"
-  - "5.26"
-  - "5.24"
-  - "5.22"
-addons:
-  apt:
-    packages:
-      - zsh
+language: minimal
+services: docker
+env:
+  - image=perl:5.30
+  - image=perl:5.28
+  - image=perl:5.26
+  - image=perl:5.24
+  - image=perl:5.22
+  - image=perl:5.20
+  - image=perl:5.18
+  - image=perl:5.16
+  - image=perl:5.14
+  - image=perl:5.12
+  - image=perl:5.10
 before_install:
-  - "cpanm -n Devel::Cover::Report::Coveralls\n"
+  - docker pull $image
+  - docker run $image perl -V
 script:
-  cd .. && mkdir lib && mv yatt_lite lib/YATT && cd lib/YATT &&
-  t/runtests.zsh $YATT_TRAVIS_OPTS
-
+  - |
+    docker run --init --rm -it -v $PWD:/$TRAVIS_REPO_SLUG -w /$TRAVIS_REPO_SLUG $image bash -c '
+    set -euxo pipefail
+    apt install zsh
+    cpanm -n Devel::Cover::Report::Coveralls
+    cpanm --notest --quiet --installdeps .
+    cd ..
+    mkdir lib
+    mv yatt_lite lib/YATT
+    cd lib/YATT
+    t/runtests.zsh $YATT_TRAVIS_OPTS
+    cover -test
+    echo DONE
+    '
+after_success:
+  cover -report coveralls
