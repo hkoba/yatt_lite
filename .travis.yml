@@ -21,11 +21,11 @@ script:
     set -euxo pipefail
     apt update
     apt install -y zsh
-    cpanm -n Devel::Cover::Report::Coveralls
-    cpanm --notest --quiet --installdeps .
+    cpanm -n App::cpm
+    cpm install -g --cpanfile=./cpanfile Devel::Cover::Report::Coveralls
     ln -s yatt_lite ../YATT
     cd ../YATT
-    t/runtests.zsh $YATT_TRAVIS_OPTS
+    t/runtests.zsh
     cover -test
     echo DONE
     '
