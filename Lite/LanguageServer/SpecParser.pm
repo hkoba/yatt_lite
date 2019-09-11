@@ -405,7 +405,7 @@ sub extract_codeblock :method {
   (my MY $self, my $langId, local @ARGV) = @_;
   local $_;
   my ($chunk, @result);
-  while (<<>>) {
+  while (defined($_ = $self->cli_compat_diamond)) {
     my $line = s{^```$langId\b}{} .. s{^```}{}
       or next;
     my $end = $line =~ /E0/;
