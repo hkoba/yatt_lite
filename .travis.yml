@@ -17,16 +17,14 @@ before_install:
   - docker run $image perl -V
 script:
   - |
-    docker run --init --rm -it -v $PWD:/$TRAVIS_REPO_SLUG -w /$TRAVIS_REPO_SLUG $image bash -c '
+    docker run --init --rm -it -v $PWD:/run/lib/$TRAVIS_REPO_SLUG -w /run/lib/$TRAVIS_REPO_SLUG $image bash -c '
     set -euxo pipefail
     apt update
     apt install -y zsh
     cpanm -n Devel::Cover::Report::Coveralls
     cpanm --notest --quiet --installdeps .
-    cd ..
-    mkdir lib
-    mv yatt_lite lib/YATT
-    cd lib/YATT
+    ln -s yatt_lite ../YATT
+    cd ../YATT
     t/runtests.zsh $YATT_TRAVIS_OPTS
     cover -test
     echo DONE
