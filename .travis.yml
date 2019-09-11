@@ -17,7 +17,7 @@ before_install:
   - docker run $image perl -V
 script:
   - |
-    docker run --init --rm -it -v $PWD:/run/lib/$TRAVIS_REPO_SLUG -w /run/lib/$TRAVIS_REPO_SLUG $image bash -c '
+    docker run --init --rm -it -v $PWD:/run/lib/$(basename $TRAVIS_REPO_SLUG) -w /run/lib/$(basename $TRAVIS_REPO_SLUG) $image bash -c '
     set -euxo pipefail
     apt update
     apt install -y zsh
