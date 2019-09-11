@@ -15,6 +15,7 @@ my $dist_root = "$FindBin::Bin/..";
 
 use File::Find;
 
+my @CORO = qw/Coro Coro::AIO AnyEvent/;
 my @M4I = qw/File::AddInc MOP4Import::Base::CLI_JSON/;
 
 my %prereq
@@ -23,8 +24,8 @@ my %prereq
      , 'YATT::Lite::WebMVC0::Partial::Session3' => [qw/Session::ExpiryFriendly/]
 
      , 'YATT::Lite::Inspector' => [@M4I, qw/Text::Glob/]
-     , 'YATT::Lite::LanguageServer' => [@M4I]
-     , 'YATT::Lite::LanguageServer::Generic' => [@M4I]
+     , 'YATT::Lite::LanguageServer' => [@M4I, @CORO]
+     , 'YATT::Lite::LanguageServer::Generic' => [@M4I, @CORO]
      , 'YATT::Lite::LanguageServer::Protocol' => [@M4I]
      , 'YATT::Lite::LanguageServer::SpecParser' => [@M4I]
      , 'YATT::Lite::LanguageServer::Spec2Types' => [@M4I]
