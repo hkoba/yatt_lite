@@ -22,7 +22,8 @@ script:
     apt update
     apt install -y zsh
     cpanm -n App::cpm
-    cpm install -g --cpanfile=./cpanfile Devel::Cover::Report::Coveralls
+    cpm install -g Devel::Cover::Report::Coveralls
+    cpm install -g .
     ln -s yatt_lite ../YATT
     cd ../YATT
     t/runtests.zsh
