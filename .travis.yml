@@ -23,7 +23,7 @@ script:
     apt install -y zsh
     cpanm -n App::cpm
     cpm install -g Devel::Cover::Report::Coveralls
-    cpm install -g .
+    cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
     ln -s yatt_lite ../YATT
     cd ../YATT
     t/runtests.zsh
