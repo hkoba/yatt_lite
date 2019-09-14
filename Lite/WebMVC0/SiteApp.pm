@@ -39,13 +39,13 @@ use YATT::Lite::MFields qw/cf_noheader
 			   re_handled_ext
                            handled_ext_list
 
-                           cf_progname
+                           cf_^progname
 
                            cf_no_trim_script_name
 
                            cf_ext_public_action
 
-                           cf_config_dir
+                           cf_^config_dir
                            dirapp_config
                            cf_use_sibling_config_dir
 			 /;

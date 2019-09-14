@@ -27,7 +27,7 @@ use YATT::Lite::MFields
 ([cf_namespace =>
   (doc => "namespace prefix for yatt. (default: [yatt, perl])")]
 
- , [cf_doc_root =>
+ , ["cf_^doc_root" =>
     (doc => "Primary template directory")]
 
  # Note: Don't confuse 'cf_app_rootname' below with 'cf_app_root'.
@@ -36,10 +36,10 @@ use YATT::Lite::MFields
  , [cf_app_rootname =>
     (doc => "rootname() of app.psgi. Used to find app.site_config.yml")]
 
- , [cf_app_base =>
-    (doc => "Base dir for this siteapp")]
+ , ["cf_^app_base" =>
+    (doc => "Base template dir for all DirApps")]
 
- , [cf_site_prefix =>
+ , ["cf_^site_prefix" =>
     (doc => "Location prefix for this siteapp")]
 
  , [cf_index_name =>
@@ -65,7 +65,7 @@ use YATT::Lite::MFields
  , [cf_render_as_bytes =>
     (doc => "Force render() to return raw bytes. (default: false)")]
 
- , [cf_offline =>
+ , ["cf_^offline" =>
     (doc => "Whether header should be emitted or not.")]
 
  , [cf_binary_config   =>

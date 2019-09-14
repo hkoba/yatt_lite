@@ -31,6 +31,7 @@ sub DIR { $YATT }
 our $SYS;
 sub symbol_SYS { return *SYS }
 sub SYS { $SYS }
+sub SYSTEM { $SYS }
 sub SITE { $SYS }
 
 # Connection
