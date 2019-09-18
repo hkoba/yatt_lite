@@ -956,6 +956,7 @@ sub take_spread_name {
   sub macro_my {
     (my MY $self, my $node) = @_;
     my ($path, $body, $maybeWrappedAttlist, $head, $foot) = nx($node);
+    $DB::single = 1;
 
     my $has_body = $body && @$body ? 1 : 0;
     my $simple_adder = sub {
@@ -977,7 +978,7 @@ sub take_spread_name {
 	# typename == source の時が問題だ。
 	my $expr = 'my '.$self->as_lvalue($var);
 	my $value = argValue($valNode);
-	$expr .= $value ? (' = '.$self->as_cast_to($var, $value)) : ';';
+	$expr .= defined $value ? (' = '.$self->as_cast_to($var, $value)) : ';';
       }
     };
     my $adder = sub {

@@ -191,3 +191,15 @@ OUT:
  
 
 
+
+TITLE: [GH #181] initial value of my
+IN:
+ <yatt:my idx1="0" /><?perl= defined $idx1?>
+ <yatt:my idx2=0 /><?perl= defined $idx2?>
+ <yatt:my idx3:value="0" /><?perl= defined $idx3?>
+ <yatt:my idx4:value=0 /><?perl= defined $idx4?>
+OUT:
+ 1
+ 1
+ 1
+ 1
