@@ -472,7 +472,9 @@ sub mkurl {
 sub mkprefix {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{cf_env};
-  my $scheme = $env->{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
+  my $scheme
+    = $env->{HTTP_X_FORWARDED_PROTO}
+    || $env->{'psgi.url_scheme'} || $prop->{cf_cgi}->protocol;
   my $host = $glob->mkhost($scheme);
   $scheme . '://' . $host . join("", @_);
 }

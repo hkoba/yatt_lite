@@ -47,6 +47,7 @@ BEGIN {
 	  HTTP_X_REAL_IP
 	  HTTP_X_CLIENT_IP
 	  HTTP_X_FORWARDED_FOR
+          HTTP_X_FORWARDED_PROTO
 
 	  psgi.version
 	  psgi.url_scheme
