@@ -106,6 +106,7 @@ To disable, set to nil.")
    (setq yatt-lint-any-driver-path
 	 (let ((htaccess ".htaccess")
 	       (htyattcf ".htyattconfig.xhf") config
+               app_psgi
 	       action driver libdir yattdir)
 	   (cond ((and
 		   ;; For vhost and non-standard DocumentRoot case,
@@ -114,6 +115,11 @@ To disable, set to nil.")
 		   (setq libdir (yatt-xhf-fetch htyattcf "info" "libdir"))
 		   (file-exists-p (setq yattdir (concat libdir "/YATT/"))))
 		  yattdir)
+
+                 ((and
+                   (setq app_psgi (yatt-lint-any-find-upward "app.psgi"))
+                   (file-exists-p (setq yattdir (concat (file-name-directory app_psgi) "lib/YATT/"))))
+                  yattdir)
 
 		 ((setq libdir (yatt-lint-any-find-upward "YATT"))
 		  (concat libdir "/"))
