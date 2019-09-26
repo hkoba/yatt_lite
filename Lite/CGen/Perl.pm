@@ -956,8 +956,6 @@ sub take_spread_name {
   sub macro_my {
     (my MY $self, my $node) = @_;
     my ($path, $body, $maybeWrappedAttlist, $head, $foot) = nx($node);
-    $DB::single = 1;
-
     my $has_body = $body && @$body ? 1 : 0;
     my $simple_adder = sub {
       my ($default_type, $arg, $valNode, $skip) = @_;
