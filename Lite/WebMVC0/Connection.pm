@@ -373,7 +373,8 @@ sub convert_array_param_psgi {
       my $qs = $glob->parse_nested_query([$req->query_parameters->flatten]);
       foreach my $key (keys %$qs) {
 	if (exists $body->{$key}) {
-	  die $glob->error("Attempt to overwrite post param '%s' by qs"
+	  die $glob->error("Attempt to overwrite a POST parameter '%s'"
+                           . " by the same one in QUERY_STRING"
 			   , $key);
 	}
 	$body->{$key} = $qs->{$key};

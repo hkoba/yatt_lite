@@ -332,11 +332,13 @@ sub call {
 		, path_info => $env->{PATH_INFO}
 		, $self->connection_quad([$virtdir, $loc, $file, $trailer])
 		, $is_index ? (is_index => 1) : ()
-		, is_psgi => 1, cgi => $req);
+		, is_psgi => 1);
 
-  my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
+  local $CON = my $con = $self->make_connection(undef, @params, yatt => $dh, noheader => 1);
 
   my $error = catch {
+    $CON->configure(cgi => $req);
+
     $self->run_dirhandler($dh, $con, $file);
   };
 
