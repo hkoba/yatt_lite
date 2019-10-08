@@ -188,7 +188,7 @@ require File::Basename;
       or return undef;
     my $abs = do {
       if ($fn =~ /^@/) {
-	croak "Not (yet) supported path type '$fn' in $folder->{cf_path}";
+        $vfs->{cf_facade}->app_path_expand($fn);
       } elsif ($fn =~ s!^((?:\.\./)+)!!) {
 	# leading upward relpath is treated specially.
 	my $up = length($1) / 3;
