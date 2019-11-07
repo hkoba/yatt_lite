@@ -305,6 +305,9 @@ sub entity_query_string {
   # XXX: check unknown options... statically?! ← entmacro?
   $args->{sep} //= $args->{separator} // ';';
   my $hash = $args->{of} // $args->{in} // $CON->as_hash;
+  if (my $merge = $args->{merge}) {
+    $hash->{$_} = $merge->{$_} for keys %$merge;
+  }
   $this->build_nested_query($hash, $args);
 }
 
