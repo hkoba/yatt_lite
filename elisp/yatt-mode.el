@@ -24,6 +24,9 @@
 (defvar yatt-mode-use-lsp t
   "Use lsp if available")
 
+(defvar yatt-mode-lsp-client 'eglot
+  "LSP client mode")
+
 (defvar yatt-mode-hook nil
   "yatt で書かれたテンプレートを編集するためのモード")
 
@@ -47,6 +50,15 @@
       html-js ,css-class))
   "Default mmm-classes for *.yatt files.")
 
+(defun yatt-mode-ls-command ()
+  "Generate the language server startup command."
+  (let* ((app-dir (locate-dominating-file "." "app.psgi"))
+         (yatt-lib (cond (app-dir
+                          (concat app-dir "lib/YATT/"))
+                         (t
+                          yatt-mode-YATT-dir))))
+    (list (concat yatt-lib "Lite/LanguageServer.pm") "server")))
+
 ;;========================================
 ;; 通常の html 部分
 (define-derived-mode yatt-mode html-mode "YATT"
@@ -61,12 +73,9 @@
       (js--update-quick-match-re))
     (setq mmm-submode-decoration-level 2)
     (make-variable-buffer-local 'process-environment)
-    (cond ((and yatt-mode-use-lsp
-                (fboundp 'lsp)
-                (require 'lsp-yatt nil t))
-           (lsp))
-          (t
-           (yatt-lint-any-mode 1)))
+    (unless (and yatt-mode-use-lsp
+                 (yatt-mode-ensure-lsp))
+      (yatt-lint-any-mode 1))
     (yatt-mode-ensure-file-coding)
     (ad-activate 'mmm-refontify-maybe)
     (mmm-mode-on)
@@ -76,6 +85,20 @@
     ;; [after idle] 的な処理が必要なんでは?
     ;; (yatt-mode-multipart-refontify)
     (run-hooks 'yatt-mode-hook)))
+
+(defun yatt-mode-ensure-lsp ()
+  (when (require yatt-mode-lsp-client nil t)
+    (cond ((eq yatt-mode-lsp-client 'eglot)
+           (dolist (m '(yatt-mode yatt-declaration-mode))
+             (add-to-list 'eglot-server-programs
+                          (cons m (yatt-mode-ls-command))))
+           (eglot-ensure))
+          ((eq yatt-mode-lsp-client 'lsp)
+           (require 'lsp-yatt)
+           (lsp))
+          (t
+           (error "Unknown value for yatt-mode-lsp-client: %s" yatt-mode-lsp-client)
+           ))))
 
 ;;; Below is stolen and modified from recent sgml-mode to revert old behavior
 ;;;
