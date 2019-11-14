@@ -87,6 +87,23 @@ Entity session_expire => sub {
   "";
 };
 
+Entity session_middleware => sub {
+  my ($this) = @_;
+  my MY $self = $CON->cget('system');
+  my $mw = $self->{_session_middleware} or do {
+    Carp::croak("Session middleware is not initialized!");
+  };
+  $mw;
+};
+
+Entity session_csrf_token => sub {
+  my ($this, $name) = @_;
+  $name //= "csrf_token"; # XXX: default name should be configurable.
+  $this->entity_psgix_session->{$name} //= do {
+    $this->entity_session_middleware->state->generate;
+  };
+};
+
 #----------------------------------------
 sub default_session_class {'Plack::Session'}
 
