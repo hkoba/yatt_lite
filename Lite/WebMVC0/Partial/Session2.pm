@@ -47,6 +47,15 @@ Entity psgix_session => sub {
   $env->{'psgix.session'};
 };
 
+Entity psgix_session_or_dummy => sub {
+  my ($this) = @_;
+  if ($this->entity_session_state_exists) {
+    $this->entity_psgix_session;
+  } else {
+    +{};
+  }
+};
+
 Entity psgix_session_options => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
