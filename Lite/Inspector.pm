@@ -961,7 +961,7 @@ sub find_entity_from {
   +{$self->describe_entns_entity($entns, $entityName)};
 }
 
-*cmd_list_entitiy = *cmd_list_entities;*cmd_list_entitiy = *cmd_list_entities;
+*cmd_list_entity = *cmd_list_entities;*cmd_list_entity = *cmd_list_entities;
 
 sub cmd_list_entities {
   (my MY $self, my @args) = @_;
