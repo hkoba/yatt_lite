@@ -102,14 +102,14 @@ sub _parse_pipeline {
     my $type = $+{open} ? $table->{$+{open}}
       : @pipe ? 'prop' : 'var';
     push @pipe, do {
-      if (not @pipe and $+{hash}) {
-	[$type, $self->_parse_hash]
-      } else {
+      # if (not @pipe and $+{hash}) {
+      #   [$type, $self->_parse_hash]
+      # } else {
 	[$type, defined $+{var} ? $+{var} : ()
 	 , $+{open}
 	 ? $self->_parse_entgroup($close_ch{$+{open}}, $for_expr{$type})
 	 : ()];
-      }
+      # }
     };
   }
   if (wantarray) {
