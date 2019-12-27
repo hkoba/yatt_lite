@@ -304,7 +304,14 @@ sub entity_query_string {
   my $args = (@_ == 1 ? $_[0] : +{@_});
   # XXX: check unknown options... statically?! ← entmacro?
   $args->{sep} //= $args->{separator} // ';';
-  my $hash = $args->{of} // $args->{in} // $CON->as_hash;
+  my $hash = do {
+    my $h = $args->{of} // $args->{in} // $CON->as_hash;
+    if (my $sub = UNIVERSAL::can($h, 'clone')) {
+      $sub->($h);
+    } else {
+      +{%$h};
+    }
+  };
   if (my $merge = $args->{merge}) {
     $hash->{$_} = $merge->{$_} for keys %$merge;
   }
