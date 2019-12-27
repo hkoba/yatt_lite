@@ -318,6 +318,11 @@ sub entity_query_string {
   $this->build_nested_query($hash, $args);
 }
 
+sub entity_build_nested_query {
+  my ($this, $hash, $args) = @_;
+  $this->build_nested_query($hash, $args);
+}
+
 use YATT::Lite::Breakpoint ();
 YATT::Lite::Breakpoint::break_load_entns();
 
