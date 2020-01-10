@@ -729,3 +729,17 @@ IN:
  BAZ <?perl= __LINE__?>
 OUT:
  BAZ 7
+
+
+TITLE: [delegate] can be written as "delegate" too
+IN:
+ <yatt:bar x=3/>
+ <!yatt:widget foo x>
+ <h2>foo &yatt:x;</h2>
+ <!yatt:widget bar foo="delegate">
+ <yatt:foo/>
+OUT:
+ <h2>foo 3</h2>
+ 
+ 
+

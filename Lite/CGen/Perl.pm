@@ -495,6 +495,9 @@ use YATT::Lite::Constants;
   sub as_varcall_delegate {
     (my MY $self, my ($var, $node)) = @_;
     my Widget $delegate = $var->widget;
+    unless (defined $delegate) {
+      Carp::croak "delegate target widget is empty!";
+    }
     $self->ensure_generated(perl => my Template $tmpl = $delegate->{cf_folder});
     my $that = $tmpl == $self->{curtmpl} ? '$this' : $tmpl->{cf_entns};
     \ sprintf(q{%s->render_%s($CON, %s)}

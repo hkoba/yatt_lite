@@ -962,17 +962,21 @@ sub add_args {
                                 , $lno, $node_type);
       $self->set_dflag_default_to($var, $dflag, $default);
 
+      my $type = $var->type->[0];
       if ($node_type == TYPE_ATT_NESTED) {
         # XXX: [delegate:type ...], [code  ...] の ... が来る
         # 仮想的な widget にする？ のが一番楽そうではあるか。そうすれば add_args 出来る。
         # $self->add_arg_of_delegate/code/...へ。
-        my $t = $var->type->[0];
-        my $sub = $self->can("add_arg_of_type_$t")
-          or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $t);
+        my $sub = $self->can("add_arg_of_type_$type")
+          or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $type);
         $sub->($self, $part, $var, $desc);
       } else {
-        push @{$part->{arg_order}}, $argName;
-        $part->{arg_dict}{$argName} = $var;
+        if (my $sub = $self->can("add_arg_of_type_$type")) {
+          $sub->($self, $part, $var, []);
+        } else {
+          push @{$part->{arg_order}}, $argName;
+          $part->{arg_dict}{$argName} = $var;
+        }
       }
     }
   }
