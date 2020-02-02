@@ -169,6 +169,9 @@ sub session_expire {
 
   my Env $env = $CON->env;
 
+  # XXX: How about renaming $options->{expire} to $options->{do_expire}
+  # to avoid confusing with $options->{expires}.
+  #
   if (my $options = $env->{'psgix.session.options'}) {
 
     $options->{expire} = 1;
@@ -280,6 +283,8 @@ sub finalize_response {
     return;
   }
 
+  # XXX: See comment in session_expire() too.
+  #
   if ($options->{expire}) {
     dputs('EXPIRE') if DEBUG >= 4;
     $mw->expire_session($options->{id}, $res, $env);
