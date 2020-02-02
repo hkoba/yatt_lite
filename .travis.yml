@@ -17,10 +17,12 @@ script:
     docker run --init --rm -it -v $PWD:/run/lib/YATT -w /run/lib/YATT $image bash -c '
     set -euxo pipefail
     apt update
-    apt install -y zsh
-    cpanm -n App::cpm Test::Requires
+    curl -fsSL --compressed https://git.io/cpm > cpm
+    chmod +x cpm
+    cpm install -g Test::Requires
     # cpm install -g Devel::Cover Devel::Cover::Report::Coveralls 
     cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
+    apt install -y zsh
     t/runtests.zsh
     echo DONE
     '
