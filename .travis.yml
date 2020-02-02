@@ -19,9 +19,9 @@ script:
     apt update
     curl -fsSL --compressed https://git.io/cpm > cpm
     chmod +x cpm
-    cpm install -g Test::Requires
-    # cpm install -g Devel::Cover Devel::Cover::Report::Coveralls 
-    cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
+    ./cpm install -g Test::Requires
+    # ./cpm install -g Devel::Cover Devel::Cover::Report::Coveralls 
+    ./cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
     apt install -y zsh
     t/runtests.zsh
     echo DONE
