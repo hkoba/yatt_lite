@@ -187,6 +187,10 @@ sub mechanized {
     my $last_body;
     foreach my Item $item (@{$sect->{items}}) {
 
+      if ($item->{cf_BREAK}) {
+        YATT::Lite::Breakpoint::breakpoint();
+      }
+
       if (my $action = $item->{cf_ACTION}) {
 	my ($method, @args) = @$action;
 	my $sub = $tests->can("action_$method")
