@@ -61,8 +61,13 @@ sub handle {
       print STDERR "# interp state is falsy: ignore __DIE__ $err\n" if DEBUG_ERROR;
       return;
     }
-    print STDERR "# from __DIE__ $err\n" if DEBUG_ERROR;
-    die $err if ref $err;
+    if (ref $err) {
+      print STDERR Carp::longmess("# in __DIE__, got ref error: "
+                                  , terse_dump($err)), "\n" if DEBUG_ERROR;
+      die $err;
+    } else {
+      print STDERR "# from __DIE__ $err\n" if DEBUG_ERROR;
+    }
     local $self->{cf_in_sig_die} = 1;
     die $self->error({ignore_frame => [undef, __FILE__, __LINE__]}, $err);
   };
