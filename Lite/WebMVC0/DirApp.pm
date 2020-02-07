@@ -280,6 +280,8 @@ sub error_handler {
   };
   try_invoke($errcon, 'as_error');
 
+  $errcon->add_error($err);
+
   my $error_status = $self->{cf_overwrite_status_code_for_errors_as}
     // $err->{cf_http_status_code}
     // try_invoke($errcon, [cget => 'status'])

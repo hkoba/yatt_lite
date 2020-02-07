@@ -344,6 +344,14 @@ sub call {
 
   try_invoke($con, 'flush_headers');
 
+  if ($self->has_htdebug("response")) {
+    return [200, [], [terse_dump(["caught exception" => $error])
+                      , "\n", terse_dump(["diag(inner to outer)" => $CON->diag_list])
+                      , "\n", terse_dump(["buffers(inner to outer)" => $CON->oldbuf, $CON->buffer])
+                    ]
+          ];
+  }
+
   if (not $error or is_done($error)) {
 
     return $self->psgi_response_of_connection($con, $env);
