@@ -216,8 +216,22 @@ sub mechanized {
           } elsif ($item->{cf_ACCEPT_ERROR}
                    and grep {$error =~ $_} lexpand($item->{cf_ACCEPT_ERROR})) {
             # ok
-	  } else {
-	    fail "[$sect_name] $T Unknown error: $error";
+	  }
+          elsif (not $res->is_success
+                 and defined (my $content = $res->decoded_content)
+                 and ($item->{cf_ERROR} or $item->{cf_BODY})
+               ) {
+            if ($item->{cf_ERROR}) {
+              like $content, qr{$item->{cf_ERROR}}, "[$sect_name] $T HTTP Error should match $item->{cf_ERROR}";
+
+              next;
+            } else {
+              # fall through to BODY test
+            }
+          }
+          else {
+	    fail "[$sect_name] $T Unknown error: $error "
+              . $tests->item_url($item);
 	    next;
 	  }
 	}
