@@ -44,6 +44,10 @@
   "Check every perl-mode buffer even if it is not related to yatt.
 To disable, set to nil.")
 
+(defun yatt-lint-any-has-perlminlint ()
+  "Check if perlminlint is available"
+  (executable-find "perlminlint"))
+
 (defun yatt-lint-any-mode-blacklistp ()
   (cl-some (lambda (i)
 	      (cond ((and (symbolp i))
@@ -305,12 +309,17 @@ Currently only RHEL is supported."
 
 (defun yatt-lint-any-handle-perl-module (buffer)
   (yatt-lint-any-perl-error-by
-   (yatt-lint-cmdfile "scripts/yatt.lintpm") buffer))
+   (if (yatt-lint-any-has-perlminlint) "perlminlint"
+     (yatt-lint-cmdfile "scripts/yatt.lintpm"))
+    buffer))
 
 (defun yatt-lint-any-handle-perl-script (buffer)
   (if (member major-mode '(perl-mode cperl-mode))
       ;; XXX: Should add -T if shbang has -T
-      (yatt-lint-any-perl-error-by "perl -wc " buffer)))
+      (yatt-lint-any-perl-error-by
+       (concat (if (yatt-lint-any-has-perlminlint) "perlminlint" "perl")
+               " -wc ")
+       buffer)))
 
 (defun yatt-lint-any-perl-error-by (command buffer)
   (plist-bind (rc err)
