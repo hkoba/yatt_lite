@@ -26,7 +26,7 @@ use YATT::Lite::MFields
    , 'cf_no_auto_flush_headers'
 
    # To distinguish error state.
-   , qw/is_error raised oldbuf/
+   , qw/is_error raised oldbuf diag_list error_list/
 
    # Session store
    , qw/session stash debug_stash/
@@ -188,7 +188,7 @@ sub as_error {
   my PROP $prop = prop(my $glob = shift);
   $prop->{is_error} = 1;
   if (my $buf = $prop->{cf_buffer}) {
-    $prop->{oldbuf} = $$buf;
+    push @{$prop->{oldbuf}}, $$buf if $$buf ne '';
     $glob->rewind;
   }
   $glob->configure(@_) if @_;
@@ -418,6 +418,40 @@ sub buffer {
   my PROP $prop = prop(my $glob = shift);
   $glob->IO::Handle::flush();
   ${$prop->{cf_buffer}}
+}
+
+sub diag_list {
+  my PROP $prop = prop(my $glob = shift);
+  my $list = $prop->{diag_list}
+    or return;
+  wantarray ? @$list : $list;
+}
+
+sub add_diag {
+  my PROP $prop = prop(my $glob = shift);
+  push @{$prop->{diag_list}}, shift;
+  $glob;
+}
+
+sub error_list {
+  my PROP $prop = prop(my $glob = shift);
+  my $list = $prop->{error_list}
+    or return;
+  wantarray ? @$list : $list;
+}
+
+sub add_error {
+  my PROP $prop = prop(my $glob = shift);
+  push @{$prop->{error_list}}, my $err = shift;
+  $glob->add_diag($err->reason);
+  $glob;
+}
+
+sub oldbuf {
+  my PROP $prop = prop(my $glob = shift);
+  my $oldbuf = $prop->{oldbuf}
+    or return;
+  wantarray ? @$oldbuf : $oldbuf;
 }
 
 sub mkheader {
