@@ -16,7 +16,7 @@
   "Generate the language server startup command."
   (let* ((app-dir (locate-dominating-file "." "app.psgi"))
          (yatt-lib (cond (app-dir
-                          (concat app-dir "lib/YATT/"))
+                          (concat (file-local-name app-dir) "lib/YATT/"))
                          (t
                           yatt-lint-any-YATT-dir))))
     (list (concat yatt-lib "Lite/LanguageServer.pm") "server")))
@@ -25,6 +25,13 @@
  (make-lsp-client :new-connection (lsp-stdio-connection 'lsp-yatt--ls-command)
                   :major-modes '(yatt-mode)
                   :server-id 'yatt))
+
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-tramp-connection 'lsp-yatt--ls-command)
+                  :major-modes '(yatt-mode)
+                  :remote? t
+                  :server-id 'yatt-remote))
+
 
 (provide 'lsp-yatt)
 ;;; lsp-yatt.el ends here
