@@ -94,6 +94,8 @@
                           (cons m (yatt-mode-ls-command))))
            (eglot-ensure))
           ((eq yatt-mode-lsp-client 'lsp)
+           (add-to-list 'lsp-language-id-configuration
+                        '(yatt-mode . "yatt"))
            (require 'lsp-yatt)
            (lsp))
           (t
