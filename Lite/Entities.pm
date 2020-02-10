@@ -315,6 +315,9 @@ sub entity_query_string {
   if (my $merge = $args->{merge}) {
     $hash->{$_} = $merge->{$_} for keys %$merge;
   }
+  if (my $delete = $args->{delete}) {
+    delete $hash->{$_} for YATT::Lite::Util::lexpand($delete);
+  }
   $this->build_nested_query($hash, $args);
 }
 
