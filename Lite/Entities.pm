@@ -227,8 +227,10 @@ sub entity_dump {
 }
 
 sub entity_can_render {
-  my ($this, $widget) = @_;
-  $this->can("render_$widget");
+  my ($this, $wspec) = @_;
+  my @nsegs = YATT::Lite::Util::lexpand($wspec);
+  my $wname = join _ => map {defined $_ ? $_ : ''} @nsegs;
+  $this->can("render_$wname");
 }
 
 sub entity_uc { shift; uc($_[0]) }
