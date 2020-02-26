@@ -12,6 +12,7 @@ use MOP4Import::Base::CLI_JSON -as_base
      [ignore_symlink => doc => "ignore symlinked templates"],
      [detail => doc => "show argument details"],
      [line_base => default => 1],
+     [changes_logfile => doc => "logfile to save all changes"],
      # qw/debug/,
    ];
 
@@ -177,8 +178,21 @@ sub apply_changes {
   my $lines = [defined $tmpl->{cf_string} && $tmpl->{cf_string} ne ""
                ? (split /\n/, $tmpl->{cf_string}, -1) : ("")];
 
+  my $logFH;
+  if ($self->{changes_logfile}) {
+    open $logFH, '>>', $self->{changes_logfile}
+      or Carp::croak "Can't open logfile";
+    $logFH->autoflush(1);
+    print STDERR "# changes logfile $self->{changes_logfile} is opened\n";
+    print $logFH $self->cli_encode_json_as_bytes(
+      [start_file => $fileName, lines => $lines]
+    ), "\n";
+  } else {
+    print STDERR "# no changes logfile \n";
+  }
+
   foreach my TextDocumentContentChangeEvent $change (@changes) {
-    $lines = $self->apply_change_to_lines($lines, $change);
+    $lines = $self->apply_change_to_lines($lines, $change, $logFH);
   }
 
   $tmpl->{cf_mtime} = time;
@@ -218,7 +232,7 @@ sub apply_changes {
 # [["fxxar","baz"]]
 
 sub apply_change_to_lines {
-  (my MY $self, my $lines, my TextDocumentContentChangeEvent $change) = @_;
+  (my MY $self, my $lines, my TextDocumentContentChangeEvent $change, my $logFH) = @_;
   my Range $from = $change->{range};
   my Position $start = $from->{start};
   my Position $end = $from->{end};
@@ -226,24 +240,49 @@ sub apply_change_to_lines {
   my @post = @{$lines}[$end->{line}+1 .. $#$lines];
   if ($start->{line} == $end->{line}) {
     my $edited = $lines->[$start->{line}];
+    if ($logFH) {
+      print $logFH $self->cli_encode_json_as_bytes(
+        [try_oneline => $start->{line}, substr_args =>
+         [$start->{character}, $end->{character} - $start->{character}
+          , $change->{text}]
+       ]
+      ), "\n";
+    }
     try {
       substr($edited
              , $start->{character}, $end->{character} - $start->{character}
              , $change->{text});
     } catch {
+      if ($logFH) {
+        print $logFH $self->cli_encode_json_as_bytes([failed => $_]), "\n";
+      }
       Carp::croak "failed to apply changes: "
         . terse_dump([original => $edited
                       , start => $start->{character}
                       , len => $end->{character} - $start->{character}
                       , changed => $change->{text}]). ": $_";
     };
+    if ($logFH) {
+      print $logFH $self->cli_encode_json_as_bytes(['success']), "\n";
+    }
     [@pre, $edited, @post];
   } else {
     my ($pre_edit, $post_edit);
+    if ($logFH) {
+      print $logFH $self->cli_encode_json_as_bytes(
+        [pre_edit_param => $lines->[$start->{line}], 0, $start->{character}]
+      ), "\n";
+      print $logFH $self->cli_encode_json_as_bytes(
+        [post_edit_param => $lines->[$end->{line}], $end->{character}]
+      ), "\n";
+    }
     try {
       $pre_edit = substr($lines->[$start->{line}], 0, $start->{character});
       $post_edit = substr($lines->[$end->{line}], $end->{character});
     } catch {
+      if ($logFH) {
+        print $logFH $self->cli_encode_json_as_bytes([failed => $_]), "\n";
+      }
       Carp::croak "failed to apply multiline changes: "
         . terse_dump([pre => [original => $lines->[$start->{line}]
                               , start => $start->{character}]
@@ -251,6 +290,9 @@ sub apply_change_to_lines {
                                  , end => $end->{character}]
                       , changed => $change->{text}]). ": $_";
     };
+    if ($logFH) {
+      print $logFH $self->cli_encode_json_as_bytes(['success']), "\n";
+    }
     [@pre, $pre_edit.$change->{text}.$post_edit, @post];
   }
 }

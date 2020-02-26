@@ -13,7 +13,9 @@ use YATT::Lite::LanguageServer::Generic -as_base
   , [fields => qw/_initialized
                   _client_cap
                   _inspector
+                  inspector_options
                   current_workspace
+                  debug
                  /
    ];
 
@@ -76,7 +78,7 @@ sub lspcall__textDocument__didChange {
   (my $updated, my LintResult $error) = $self->inspector->apply_changes($fn, @{$params->{contentChanges}});
 
   print STDERR "# updated ", ($error ? "with error " : ""),"as: ", terse_dump($updated), "\n"
-    unless $self->{quiet};
+    if $self->{debug};
 
   my PublishDiagnosticsParams $notif = {};
   $notif->{uri} = $docId->{uri};
@@ -185,7 +187,11 @@ sub inspector {
 sub load_inspector {
   (my MY $self, my $rootPath) = @_;
   $self->{_inspector}{$rootPath} //= do {
-    $self->Inspector->new(dir => $rootPath);
+    my %opts = map {
+      ref $_ eq 'HASH' ? %$_
+        : ref $_ eq 'ARRAY' ? @$_
+        : ()} $self->{inspector_options};
+    $self->Inspector->new(dir => $rootPath, %opts);
   };
 }
 
