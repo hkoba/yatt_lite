@@ -311,7 +311,7 @@ sub entity_query_string {
     if (my $sub = UNIVERSAL::can($h, 'clone')) {
       $sub->($h);
     } else {
-      +{%$h};
+      YATT::Lite::Util::ixhash(%$h);
     }
   };
   if (my $merge = $args->{merge}) {

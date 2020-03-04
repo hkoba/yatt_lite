@@ -313,6 +313,69 @@ OUT:
  http://0:5000/baz?x=Y
 
 
+TITLE: query_string()
+CON_CLASS: YATT::Lite::WebMVC0::Connection
+PARAM[
+x: foo
+y: bar
+]
+IN:
+ &yatt:query_string;
+OUT:
+ x=foo;y=bar
+
+
+TITLE: query_string(separator,(&))
+CON_CLASS: YATT::Lite::WebMVC0::Connection
+PARAM[
+x: FOO
+y: BAR
+]
+TODO: It's too late to change. You need :HTML()
+IN:
+ &yatt:query_string(separator,(&));
+OUT:
+ x=FOO&y=BAR
+
+
+TITLE: :HTML(query_string(separator,(&)))
+CON_CLASS: YATT::Lite::WebMVC0::Connection
+PARAM[
+x: aaa
+y: bbb
+]
+IN:
+ &yatt:HTML(:query_string(separator,(&)));
+OUT:
+ x=aaa&y=bbb
+
+
+TITLE: query_string(merge,HASH)
+CON_CLASS: YATT::Lite::WebMVC0::Connection
+PARAM[
+x: foo
+y: bar
+]
+IN:
+ &yatt:query_string(merge,{y,BAZ});
+OUT:
+ x=foo;y=BAZ
+
+
+TITLE: query_string(of,HASH,delete,[a,b])
+IN:
+ <yatt:my dict:value="{a => 'xxx', b => 'yyy', x => 'foo'}"/>
+ &yatt:query_string(of,:dict,delete,[a,b]);
+ &yatt:dict;
+OUT:
+ x=foo
+ {
+   'a' => 'xxx',
+   'b' => 'yyy',
+   'x' => 'foo'
+ }
+ 
+
 TITLE: :default(,,none) => none
 PARAM[
 ]
