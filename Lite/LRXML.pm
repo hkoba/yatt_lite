@@ -97,7 +97,7 @@ sub after_new {
 	   |"(?<dq>[^\"]*+)"
 	   |(?<nest>\[) | (?<nestclo>\])
 	   |$entOpen
-	   |(?<bare>[^\s'\"<>\[\]/=]++)
+	   |(?<bare>[^\s'\"<>\[\]/=;]++)
 	   )
            (?<equal>\s*=\s*+)?+
 	}xs;
