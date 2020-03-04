@@ -14,15 +14,18 @@ before_install:
   - docker run $image perl -V
 script:
   - |
-    docker run --init --rm -it -v $PWD:/run/lib/YATT -w /run/lib/YATT $image bash -c '
+    docker run --init --rm -it -v $PWD:/run/lib/YATT -w /run/lib/YATT \
+      -e COVERALLS_REPO_TOKEN \
+      -e TRAVIS_BRANCH \
+      $image bash -c '
     set -euxo pipefail
-    apt update
+    if [[ -r .git/config ]]; then git checkout $TRAVIS_BRANCH; else echo NO GIT; fi
     curl -fsSL --compressed https://git.io/cpm > cpm
     chmod +x cpm
-    ./cpm install -g Test::Requires
-    # ./cpm install -g Devel::Cover Devel::Cover::Report::Coveralls 
+    ./cpm install -g Test::Requires Devel::Cover Devel::Cover::Report::Coveralls 
     ./cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
     apt install -y zsh
     t/runtests.zsh
+    cover -report coveralls
     echo DONE
     '
