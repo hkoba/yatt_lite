@@ -203,3 +203,9 @@ OUT:
  1
  1
  1
+
+
+TITLE: Garbage before CLO should be correctly reported
+IN:
+ <yatt:my [chng ::key]="1..3";/>
+ERROR: Garbage before CLO\(>\) for: <yatt:my, rest: ';/>'

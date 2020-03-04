@@ -1124,6 +1124,16 @@ END
 
 {
   my $tmpl = $CLASS->Template->new;
+  my $err = catch {$CLASS->load_string_into($tmpl, my $cp = <<END, all => 1)};
+<yatt:my [x y :::z]="1..8"; />
+END
+
+  like $err, qr{^\QGarbage before CLO(>) for: <yatt:my, rest: '; />'}
+    , "Garbage before CLO(>) should be rejected by LRXML parser";
+}
+
+{
+  my $tmpl = $CLASS->Template->new;
   $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
 <yatt:my [x y :::z]="1..8" />
 x=&yatt:x;
