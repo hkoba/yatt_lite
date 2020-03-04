@@ -359,7 +359,9 @@ END
       , [2, 2], "Site apps are destroyed correctly.";
   };
 
-  if ($] >= 5.018) {
+  if ($] >= 5.018
+      and not grep(defined && /^-MDevel::Cover/, $ENV{HARNESS_PERL_SWITCHES})
+    ) {
     $t->();
   } else {
     TODO: {
