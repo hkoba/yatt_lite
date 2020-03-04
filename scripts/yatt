@@ -11,6 +11,7 @@ use YATT::Lite::MFields
   (()
    , [cf_help => doc => "show help messages"]
    , [cf_script_path => doc => "script search path for yatt subcommands"]
+   , [cf_debug => doc => "run in perldebugger"]
   );
 # XXX: Should use doc strings in help message.
 
@@ -18,14 +19,18 @@ use YATT::Lite;
 use YATT::Lite::Util::CmdLine qw/parse_opts/;
 
 {
-  my MY $self = MY->new(MY->parse_opts(\@ARGV, undef, {h => "help"}));
+  my MY $self = MY->new(MY->parse_opts(\@ARGV, undef, {h => "help", d => "debug"}));
 
   my $cmd = shift // 'help';
 
   if (my $sub = $self->can("cmd_$cmd")) {
     $sub->($self, @ARGV);
   } elsif (-x (my $fn = $self->subcmd_path($cmd))) {
-    exec $fn, @ARGV or die "couldn't exec $fn: $!";
+    if ($self->{cf_debug}) {
+      exec $^X, "-d", $fn, @ARGV or die "couldn't exec $fn: $!";
+    } else {
+      exec $fn, @ARGV or die "couldn't exec $fn: $!";
+    }
   } else {
     $self->usage("No such command: $cmd");
   }
