@@ -26,6 +26,6 @@ script:
     ./cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
     apt update; apt install -y zsh
     t/runtests.zsh -C
-    cover -report coveralls
+    cover -report coveralls /run/lib/YATT/t/cover_db
     echo DONE
     '
