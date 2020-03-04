@@ -71,10 +71,14 @@ sub _parse_body {
       }
 
       # タグの直後の改行は、独立したトークンにしておく
-      s{^(?<empty_elem>/)? >(\r?\n)?}{}xs
-	or die $self->synerror_at($self->{startln}
-				  , q{Missing CLO(>) for: <%s, rest: '%s'}
-				  , $path, trimmed($_));
+      s{^(?<empty_elem>/)? >(\r?\n)?}{}xs or do {
+        my $diag = m{^\S*\s*?/?>}
+          ? "Garbage before CLO(>)"
+          : "Missing CLO(>)";
+        die $self->synerror_at($self->{startln}
+                                 , q{%s for: <%s, rest: '%s'}
+                                 , $diag, $path, trimmed($_));
+      };
 
       ++$self->{startln} if defined $2;
 
