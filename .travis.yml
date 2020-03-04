@@ -24,7 +24,7 @@ script:
     chmod +x cpm
     ./cpm install -g Test::Requires Devel::Cover Devel::Cover::Report::Coveralls 
     ./cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
-    apt install -y zsh
+    apt update; apt install -y zsh
     t/runtests.zsh
     cover -report coveralls
     echo DONE
