@@ -1140,7 +1140,10 @@ sub take_spread_name {
 
     # <yatt:foreach ..>\n
     #                  ↑This newline should be removed.
-    $self->cut_next_nl;
+    my $statements = "{";
+    if (my $nl = $self->cut_next_nl) {
+      $statements .= $nl;
+    }
 
     # ___</yatt:foreach>
     # ↑ This indent is messy too.
@@ -1153,7 +1156,7 @@ sub take_spread_name {
     local $self->{no_last_newline} = 0;
 
     local $self->{scope} = $self->mkscope(\%local, $self->{scope});
-    my $statements = '{'.$self->as_print('}');
+    $statements .= $self->as_print('}');
 
     if ($opts and $opts->{fragment}) {
       ($fmt, $loopvar, $listexpr, $statements
