@@ -197,6 +197,7 @@ sub apply_changes {
       $self->yatterror2lintresult($_, $result);
     } else {
       $result->{message} = $_;
+      $result->{info}{from} = ["line: ", __LINE__];
     }
   };
 
@@ -295,12 +296,13 @@ sub lint : method {
     unless ($result) {
       my $backtrace;
       if (not ref $_) {
-        $result->{message} = $_;
+        $self->strerror2lintresult($tmpl, $_, $result //= {});
       } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
         $self->yatterror2lintresult($_, $result //= +{});
         $backtrace = $_->{cf_backtrace};
       } else {
         $result->{message} = $_;
+        $result->{info}{from} = ["line: ", __LINE__];
       }
 
       $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}] if defined $mtime;
@@ -314,6 +316,7 @@ sub lint : method {
 sub yatterror2lintresult {
   (my MY $self, my YATT::Lite::Error $err, my LintResult $result) = @_;
   use YATT::Lite::Util::AllowRedundantSprintf;
+  $result->{info}{from} = 'yatterror2lintresult';
   $result->{file} = $err->{cf_tmpl_file};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
@@ -332,11 +335,13 @@ sub yatterror2lintresult {
 
 sub strerror2lintresult {
   (my MY $self, my Template $tmpl, my $errStr, my LintResult $result) = @_;
+  $result->{info}{from} = 'strerror2lintresult';
   $result->{file} = $tmpl->{cf_path};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
+  $errStr =~ s/\n.*\z//s;
   $diag->{message} = $errStr;
-  if ($errStr =~ / line (\d+),/) {
+  if ($errStr =~ / line (\d+)[,\.]/) {
     $diag->{range} = $self->make_line_range($1);
   }
   $result;
