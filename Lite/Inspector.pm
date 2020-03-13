@@ -342,7 +342,7 @@ sub strerror2lintresult {
   $errStr =~ s/\n.*\z//s;
   $diag->{message} = $errStr;
   if ($errStr =~ / line (\d+)[,\.]/) {
-    $diag->{range} = $self->make_line_range($1);
+    $diag->{range} = $self->make_line_range($1+0);
   }
   $result;
 }
