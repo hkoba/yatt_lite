@@ -855,6 +855,24 @@ sub raise_response {
   die $response;
 }
 
+#
+# $this->raise_download($fileName, $bytesOrBytesRef, ?[@header]?)
+#
+sub raise_download {
+  my $this = $_[0];
+  my $filename = $_[1];
+  my $bytesRef = ref $_[2] eq 'SCALAR' ? $_[2] : \$_[2];
+  my @header = ("Content-type" => qq{application/octet-stream},
+                , "Content-Length" => length($$bytesRef));
+  push @header, "Content-Disposition" => qq{attachment; filename="$filename"}
+    if defined $filename and $filename ne '';
+  if (defined $_[3] and ref $_[3]) {
+    push @header, lexpand($_[3]);
+  }
+
+  $this->raise_response([200, \@header, [$$bytesRef]]);
+}
+
 #========================================
 
 foreach my $what (qw(error text dump)) {
