@@ -16,6 +16,7 @@ use Test::WWW::Mechanize::PSGI;
 use Time::Piece;
 
 use YATT::Lite::Factory;
+use YATT::Lite::Util::File qw/wait_if_near_deadline/;
 
 ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
 
@@ -36,6 +37,11 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
   my $logged_in_at;
   subtest "Start session with other_value", sub {
     my $next = "~start";
+
+    if (my $slept = wait_if_near_deadline(my $goal = time+1)) {
+      diag "slept: $slept, goal was: $goal, now: ". Time::HiRes::time;
+    }
+
     $mech->submit_form_ok(
       {button => $next, fields => {$next => 1, other_value => $sample_text}},
       "-> $next",
@@ -105,6 +111,10 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
   };
 
   subtest "change_id (clearing the state)", sub {
+
+    if (my $slept = wait_if_near_deadline(my $goal = time+1)) {
+      diag "slept: $slept, goal was: $goal, now: ". Time::HiRes::time;
+    }
 
     unless ($mech->follow_link_ok({id => "fresh_session"})) {
       diag "DIAG: ".($mech->content // '');
