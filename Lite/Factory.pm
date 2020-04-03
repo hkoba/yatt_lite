@@ -571,8 +571,8 @@ sub parse_path_info {
    );
 }
 
-sub render_encoded {
-  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+sub prepare_processing_context {
+  (my MY $self, my ($reqrec, $args)) = @_;
 
   my ($path_info, $tmpldir, $loc, $widgetSpec, @rest)
     = $self->parse_path_info($reqrec) or do {
@@ -590,6 +590,14 @@ sub render_encoded {
     , encoding => $self->{cf_output_encoding}
     , $self->make_debug_params($reqrec, $args)
   );
+
+  ($dh, $con, $widgetSpec);
+}
+
+sub render_encoded {
+  (my MY $self, my ($reqrec, $args, @opts)) = @_;
+
+  my ($dh, $con, $widgetSpec) = $self->prepare_processing_context($reqrec, $args);
 
   $self->invoke_dirhandler
   (
@@ -804,6 +812,32 @@ sub after_dirhandler  { &maybe::next::method; }
 sub invoke_dirhandler {
   (my MY $self, my ($dh, $method, @args)) = @_;
   $dh->with_system($self, $method, @args);
+}
+
+sub invoke_sub_in {
+  (my MY $self, my ($reqrec, $args, $sub, @rest)) = @_;
+
+  my $wantarray = wantarray;
+
+  my ($dh, $con, $widgetSpec)
+    = $self->prepare_processing_context($reqrec, $args);
+
+  local ($SYS, $YATT, $CON) = ($self, $dh, $con);
+
+  $self->before_dirhandler($dh, $con, lexpand($widgetSpec));
+
+  my @result;
+  if ($wantarray) {
+    @result = $sub->($dh, $con, @rest);
+  } else {
+    $result[0] = $sub->($dh, $con, @rest);
+  }
+
+  $self->after_dirhandler($dh, $con, lexpand($widgetSpec));
+
+  YATT::Lite::Util::try_invoke($con, 'flush_headers');
+
+  $wantarray ? @result : $result[0];
 }
 
 #========================================
