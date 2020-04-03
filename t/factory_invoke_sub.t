@@ -22,11 +22,35 @@ sub myapp {join _ => MyTest => appname($0), @_}
 
 my $i = 0;
 {
-  my $theme = "invoke_sub_in";
   my $item = "sess_backed/2/app.psgi";
   my $fn = "$FindBin::Bin/../samples/$item";
   my $CLS = myapp($i);
   ok(my $app = Factory->load_factory_script($fn), $item);
+
+  is_deeply([$app->invoke_sub_in("/", +{}, sub { 1..3 })]
+            , [1..3]
+            , "invoke_sub_in - list context");
+
+  is_deeply(scalar $app->invoke_sub_in("/", +{}, sub { my @x = 1..3; })
+            , 3
+            , "invoke_sub_in - scalar context");
+
+  ok($app->invoke_sub_in("/", +{}, sub { my ($dh, $con) = @_; $dh; })
+     ->isa('YATT::Lite')
+     , 'sub ($dh, $con) - $dh is a YATT::Lite');
+
+  ok($app->invoke_sub_in("/", +{}, sub { my ($dh, $con) = @_; $con; })
+     ->isa('YATT::Lite::Connection')
+     , 'sub ($dh, $con) - $con is a YATT::Lite::Connection');
+
+  is_deeply(
+    $app->invoke_sub_in("/", +{foo => [2..4]}, sub {
+      my ($dh, $con) = @_;
+      $con->param('foo');
+    })
+    , [2..4]
+    , '$con->param("foo")'
+   );
 
   is_deeply($app->invoke_sub_in("/", +{}, sub {
     my ($dh, $con) = @_;

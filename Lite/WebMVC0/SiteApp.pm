@@ -440,13 +440,12 @@ sub make_debug_params {
 
   my @params = ($self->SUPER::make_debug_params($reqrec, $args)
 		, env => $env);
-
-  #
-  # Only for debugging aid. See YATT/samples/db_backed/1/t/t_signup.pm
-  #
-  if (@rest == 2 and defined $rest[-1] and ref $args eq 'HASH') {
-    require Hash::MultiValue;
-    push @params, hmv => Hash::MultiValue->from_mixed($args);
+  {
+    require Plack::Request;
+    push @params, cgi => Plack::Request->new($env)
+      , parameters => YATT::Lite::Util::ixhash(lexpand($args))
+      , is_psgi => 1
+      ;
   }
 
   @params;
