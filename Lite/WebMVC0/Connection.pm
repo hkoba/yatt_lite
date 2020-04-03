@@ -77,7 +77,7 @@ BEGIN {
     };
   }
 
-  foreach my $name (qw(file subpath)) {
+  foreach my $name (qw(file subpath parameters)) {
     my $cf = "cf_$name";
     *{globref(PROP, $name)} = sub {
       my PROP $prop = (my $glob = shift)->prop;
