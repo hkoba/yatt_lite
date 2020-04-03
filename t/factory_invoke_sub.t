@@ -44,12 +44,21 @@ my $i = 0;
      , 'sub ($dh, $con) - $con is a YATT::Lite::Connection');
 
   is_deeply(
-    $app->invoke_sub_in("/", +{foo => [2..4]}, sub {
+    $app->invoke_sub_in("/", +{foo => 3}, sub {
       my ($dh, $con) = @_;
       $con->param('foo');
     })
+    , 3
+    , q{$con->param('foo')}
+   );
+
+  is_deeply(
+    $app->invoke_sub_in("/", +{foo => [2..4]}, sub {
+      my ($dh, $con) = @_;
+      $con->parameters->{foo};
+    })
     , [2..4]
-    , '$con->param("foo")'
+    , q{$con->parameters->{foo}}
    );
 
   is_deeply($app->invoke_sub_in("/", +{}, sub {
