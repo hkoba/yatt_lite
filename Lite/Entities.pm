@@ -15,6 +15,7 @@ use YATT::Lite::Util qw/
                          raise_response
                          raise_download
                          raise_psgi_error
+                         raise_psgi_dump
                          secure_text_plain
                          psgi_text
 			 build_nested_query

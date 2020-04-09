@@ -95,6 +95,19 @@ describe '$this->raise_psgi_SOMETHING helpers', sub {
       expect($res->content)->to_be("Not logged in\n");
     };
   };
+
+  describe '$this->raise_psgi_dump', sub {
+
+    my $obj;
+    my $res = action_response {
+      my ($this, $con) = @_;
+      $this->raise_psgi_dump($obj = [foo => {bar => 'baz', qux => undef}]);
+    };
+
+    it "should contain dumped items", sub {
+      expect($res->content)->to_be(YATT::Lite::Util::terse_dump($obj)."\n");
+    };
+  };
 };
 
 describe '$CON->raise_response(sub {$streamhandler})', sub {
