@@ -14,6 +14,7 @@ use YATT::Lite::Util qw/
                          globref terse_dump url_encode
                          raise_response
                          raise_download
+                         raise_psgi_error
                          secure_text_plain
                          psgi_text
 			 build_nested_query

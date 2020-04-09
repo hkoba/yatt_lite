@@ -80,6 +80,23 @@ describe '$CON->raise_response([$code, $msg, @args...])', sub {
 
 };
 
+describe '$this->raise_psgi_SOMETHING helpers', sub {
+  describe '$this->raise_psgi_error', sub {
+    my $res = action_response {
+      my ($this, $con) = @_;
+      $this->raise_psgi_error(403, "Not logged in");
+    };
+
+    it "should have code == 403", sub {
+      expect($res->code)->to_be(403);
+    };
+
+    it "should have raised content", sub {
+      expect($res->content)->to_be("Not logged in\n");
+    };
+  };
+};
+
 describe '$CON->raise_response(sub {$streamhandler})', sub {
   #
   # Stolen (and converted for Test::Kantan) from Plack-Middleware/bufferedstreaming.t
