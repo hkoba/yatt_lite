@@ -25,13 +25,13 @@
 
 (lsp-register-client
  (make-lsp-client :new-connection (lsp-stdio-connection 'lsp-yatt--ls-command)
-                  :major-modes '(yatt-mode)
+                  :major-modes '(yatt-mode yatt-declaration-mode)
                   :server-id 'yatt))
 
 (lsp-register-client
  (make-lsp-client :new-connection
                   (lsp-tramp-connection (lambda () (lsp-yatt--ls-command "--quiet")))
-                  :major-modes '(yatt-mode)
+                  :major-modes '(yatt-mode yatt-declaration-mode)
                   :remote? t
                   :server-id 'yatt-remote))
 

@@ -98,7 +98,9 @@
              (add-to-list 'lsp-language-id-configuration
                           (cons m "yatt")))
            (require 'lsp-yatt)
-           (lsp))
+           (lsp)
+           ;; To avoid "Flycheck cannot use lsp in this buffer, type M-x flycheck-verify-setup for more details" error
+           (lsp-flycheck-add-mode 'yatt-declaration-mode))
           (t
            (error "Unknown value for yatt-mode-lsp-client: %s" yatt-mode-lsp-client)
            ))))
