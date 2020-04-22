@@ -24,6 +24,9 @@
 (defvar yatt-mode-use-lsp t
   "Use lsp if available")
 
+(defvar yatt-mode-use-yatt-lint-with-lsp t
+  "Use yatt-lint too even if lsp is available")
+
 (defvar yatt-mode-lsp-client 'eglot
   "LSP client mode")
 
@@ -73,8 +76,10 @@
       (js--update-quick-match-re))
     (setq mmm-submode-decoration-level 2)
     (make-variable-buffer-local 'process-environment)
-    (unless (and yatt-mode-use-lsp
-                 (yatt-mode-ensure-lsp))
+    (when yatt-mode-use-lsp
+      (yatt-mode-ensure-lsp))
+    (when (or (not yatt-mode-use-lsp)
+              yatt-mode-use-yatt-lint-with-lsp)
       (yatt-lint-any-mode 1))
     (yatt-mode-ensure-file-coding)
     (ad-activate 'mmm-refontify-maybe)
