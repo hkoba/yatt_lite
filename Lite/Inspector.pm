@@ -1056,8 +1056,8 @@ sub describe_entns_entity {
 
   my ($file, $line) = Sub::Identify::get_code_location($entSub);
 
-  (name => $entityName, entns => $entns
-   , file => $file // $opts{path}, line => $line);
+  [name => $entityName, entns => $entns
+   , file => $file // $opts{path}, line => $line];
 }
 
 sub cmd_list_vfs_folders {
