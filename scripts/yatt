@@ -17,6 +17,7 @@ use YATT::Lite::MFields
 
 use YATT::Lite;
 use YATT::Lite::Util::CmdLine qw/parse_opts/;
+use List::Util qw/uniq/;
 
 {
   my MY $self = MY->new(MY->parse_opts(\@ARGV, undef, {h => "help", d => "debug"}));
@@ -25,7 +26,7 @@ use YATT::Lite::Util::CmdLine qw/parse_opts/;
 
   if (my $sub = $self->can("cmd_$cmd")) {
     $sub->($self, @ARGV);
-  } elsif (-x (my $fn = $self->subcmd_path($cmd))) {
+  } elsif (my $fn = $self->subcmd_path($cmd)) {
     if ($self->{cf_debug}) {
       exec $^X, "-d", $fn, @ARGV or die "couldn't exec $fn: $!";
     } else {
@@ -56,13 +57,29 @@ END
 
 sub subcmd_list {
   (my MY $self) = @_;
-  my $prefix = "$self->{cf_script_path}yatt.";
-  map {substr($_, length($prefix))} glob("$prefix*")
+  my $prefix = "$self->{cf_script_path}yatt";
+  uniq sort map {
+    my $rest = substr($_, length($prefix));
+    if ($rest =~ s/^\.//) {
+      $rest;
+    } elsif ($rest =~ /^-([-\w]+)/) {
+      $1;
+    } else {
+      ();
+    }
+  }
+  grep {-x}
+  glob("$prefix*");
 }
 
 sub subcmd_path {
   (my MY $self, my $subcmd) = @_;
-  "$self->{cf_script_path}yatt.$subcmd";
+  foreach my $fnPat (qw(yatt-%s*  yatt.%s)) {
+    my $glob = $self->{cf_script_path}. sprintf($fnPat, $subcmd);
+    foreach my $fn (glob($glob)) {
+      return $fn if -x $fn;
+    }
+  }
 }
 
 sub find_libdir {
