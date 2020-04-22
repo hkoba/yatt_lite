@@ -58,6 +58,13 @@ END
 sub subcmd_list {
   (my MY $self) = @_;
   my $prefix = "$self->{cf_script_path}yatt";
+  my %hidden; $hidden{$_} = 1
+    for qw(backend call command dispatcher
+           lintany lintpm lintrc
+           xgettext xhftest);
+  grep {
+    not $hidden{$_}
+  }
   uniq sort map {
     my $rest = substr($_, length($prefix));
     if ($rest =~ s/^\.//) {
