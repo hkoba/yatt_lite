@@ -270,7 +270,7 @@ require File::Spec;
     my $ixfn = $index_name . ".$ext1";
     my @dirlist = grep {defined $_ and -d $_} @$dirlist;
     print STDERR "dirlist" => terse_dump(@dirlist), "\n" if DEBUG_LOOKUP_PATH;
-    my $pi = $path_info;
+    my $pi = normalize_path($path_info);
     my ($loc, $cur, $ext) = ("", "");
   DIG:
     while ($pi =~ s{^/+([^/]+)}{}) {
@@ -318,6 +318,27 @@ require File::Spec;
       print STDERR terse_dump('at_last'), "\n" if DEBUG_LOOKUP_PATH;
     return;
   }
+
+  # Shamelessly stolen (with slight mod) from Dancer2::FileUtils::normalize_path
+  our $seqregex = qr{
+                      [^/]*       # anything without a slash
+                      /\.\.(/|\z) # that is accompanied by two dots as such
+                  }x;
+  sub normalize_path {
+
+    # this is a revised version of what is described in
+    # http://www.linuxjournal.com/content/normalizing-path-names-bash
+    # by Mitch Frazier
+    my $path = shift or return;
+
+    $path =~ s{/\./}{/}g;
+    1 while $path =~ s{$seqregex}{};
+
+    #see https://rt.cpan.org/Public/Bug/Display.html?id=80077
+    $path =~ s{^//}{/};
+    return $path;
+  }
+
 
   sub trim_common_suffix_from {
     @_ == 2 or Carp::croak "trim_common_suffix_from(FROM, COMPARE)";

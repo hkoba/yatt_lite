@@ -217,4 +217,24 @@ $i++;
 
 }
 
+{
+  # Shamelessly stolen from Dancer2/t/file_utils.t
+  my $paths = [
+    [ undef          => 'undef' ],
+    [ '/foo/./bar/'  => '/foo/bar/' ],
+    [ '/foo/../bar' => '/bar' ],
+    [ '/foo/bar/..'  => '/foo/' ],
+    [ '/a/b/c/d/A/B/C' => '/a/b/c/d/A/B/C' ],
+    [ '/a/b/c/d/../A/B/C' => '/a/b/c/A/B/C' ],
+    [ '/a/b/c/d/../../A/B/C' => '/a/b/A/B/C' ],
+    [ '/a/b/c/d/../../../A/B/C' => '/a/A/B/C' ],
+    [ '/a/b/c/d/../../../../A/B/C' => '/A/B/C' ],
+  ];
+
+  for my $case ( @$paths ) {
+    is YATT::Lite::Util::normalize_path( $case->[0] ), $case->[1]
+      , YATT::Lite::Util::terse_dump($case);
+  }
+}
+
 done_testing();

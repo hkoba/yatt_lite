@@ -263,6 +263,10 @@ sub call {
   my ($tmpldir, $loc, $file, $trailer, $is_index)
     = my @pi = $self->split_path_info($env);
 
+  if (@pi and $loc =~ m{/\.\./}) {
+    return $self->psgi_error(403, "Bad location: $loc");
+  }
+
   # Set $env->{yatt.script_name}
   $self->set_yatt_script_name($env);
 
