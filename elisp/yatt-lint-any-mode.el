@@ -6,7 +6,7 @@
 
 ;; TODO: lint *before* real file saving, for safer operation.
 
-(require 'cl)
+(require 'cl-lib)
 
 (require 'plist-bind "yatt-utils")
 
