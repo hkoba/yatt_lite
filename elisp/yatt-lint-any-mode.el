@@ -234,10 +234,10 @@ Currently only RHEL is supported."
 (defun yatt-lint-any-lookup (bufname &optional registry)
   (setq registry (or registry yatt-lint-any-registry))
   (save-match-data
-    (block loop
+    (cl-block loop
       (while registry
 	(when (string-match (caar registry) bufname)
-	  (return-from loop (cdar registry)))
+	  (cl-return-from loop (cdar registry)))
 	(setq registry (cdr registry))))))
 
 (defun yatt-lint-any-run (handler buffer)
