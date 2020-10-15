@@ -21,7 +21,7 @@ script:
     if [[ -r .git/config ]]; then git checkout $TRAVIS_BRANCH; else echo NO GIT; fi
     curl -fsSL --compressed https://git.io/cpm > cpm
     chmod +x cpm
-    ./cpm install -g Test::Requires Devel::Cover Devel::Cover::Report::Coveralls 
+    ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::Report::Coveralls 
     ./cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
     apt update; apt install -y zsh
     t/runtests.zsh -C
