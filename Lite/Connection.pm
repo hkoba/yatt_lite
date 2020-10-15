@@ -467,7 +467,10 @@ sub oldbuf {
 sub mkheader {
   my PROP $prop = (my $glob = shift)->prop;
   my ($code) = shift // $prop->{cf_status} // 200;
-  require HTTP::Headers;
+
+  # For GH-200 (to avoid "Can't locate Clone.pm" from HTTP::Headers)
+  YATT::Lite::Util::permissive_require('HTTP::Headers');
+
   my $headers = HTTP::Headers->new("Content-type", $glob->_mk_content_type
 				   , map($_ ? %$_ : (), $prop->{headers})
 				   , @_);

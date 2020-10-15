@@ -175,6 +175,17 @@ require File::Spec;
   sub ckrequire {
     ckeval("require $_[0]");
   }
+
+  #
+  # permissive_require($modName) allows you to load other module without worrying
+  # about their internal use of `eval { require OtherMod }` which misfires the error_handler of
+  # YATT::Lite::WebMVC0::DirApp.
+  #
+  sub permissive_require {
+    local ($SIG{__DIE__}, $SIG{__WARN__});
+    ckrequire($_[0]);
+  }
+
   use Scalar::Util qw(refaddr);
   sub cached_in {
     my ($dir, $dict, $nameSpec, $sys, $mark, $loader, $refresher) = @_;
