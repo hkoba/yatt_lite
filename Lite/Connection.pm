@@ -186,8 +186,11 @@ sub cf_pairs {
 
 sub as_error {
   my PROP $prop = prop(my $glob = shift);
+  my $was_error = $prop->{is_error};
   $prop->{is_error} = 1;
-  if (my $buf = $prop->{cf_buffer}) {
+  if (not $was_error
+      and
+      my $buf = $prop->{cf_buffer}) {
     push @{$prop->{oldbuf}}, $$buf if $$buf ne '';
     $glob->rewind;
   }
@@ -324,11 +327,18 @@ sub flush_headers {
 
   return if $prop->{header_was_sent}++;
 
+  my $was_error = $prop->{is_error};
+
   $glob->finalize_headers;
 
   if (not $prop->{cf_noheader}) {
     my $fh = $prop->{cf_parent_fh} // $glob;
-    print $fh $glob->mkheader;
+    my $header = $glob->mkheader;
+    if (not $was_error and my ($err) = $glob->error_list) {
+      die "\n\nError during first call of flush_headers(): $err\n";
+    } else {
+      print $fh $header;
+    }
   }
   $glob->flush;
 }
