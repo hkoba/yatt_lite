@@ -95,6 +95,6 @@
          "url" : "https://github.com/hkoba/yatt_lite"
       }
    },
-   "version" : "0.101_100",
+   "version" : "0.101_101",
    "x_serialization_backend" : "JSON::PP version 4.04"
 }

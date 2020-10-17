@@ -1,5 +1,8 @@
 Revision history for YATT::Lite
 
+0.101_101 2020-10-17
+    * GH-202 - fixed some test failures
+
 0.101_100 2020-10-15
     * Security fixes
          - GH-197 - fix relative path traversal in path_info mode (which is not normally used until recently) 

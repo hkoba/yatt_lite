@@ -73,5 +73,5 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/hkoba/yatt_lite
-version: 0.101_100
+version: 0.101_101
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'
