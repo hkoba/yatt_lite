@@ -30,7 +30,7 @@ requires 'JSON::MaybeXS';
 requires 'Locale::PO';
 
 # For $CON->cookies_in, $CON->set_cookie
-requires 'Cookie::Baker::XS';
+requires 'Cookie::Baker';
 
 # For perl 5.20. Actually, CGI is not required (I hope).
 requires 'CGI', '>= 4.40';

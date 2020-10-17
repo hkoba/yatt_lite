@@ -377,7 +377,7 @@ sub cookies_in {
   my Env $env = $prop->{cf_env};
   $prop->{cookies_in} ||= do {
     if (defined $env->{HTTP_COOKIE}) {
-      require Cookie::Baker;
+      YATT::Lite::Util::permissive_require('Cookie::Baker');
       Cookie::Baker::crush_cookie($env->{HTTP_COOKIE});
     } else {
       +{};
@@ -407,7 +407,7 @@ sub set_cookie {
 sub new_cookie {
   my $glob = shift;		# not used.
   my ($name, $value, @opts) = @_;
-  require Cookie::Baker;
+  YATT::Lite::Util::permissive_require('Cookie::Baker');
   my $baked = {value => $value};
   while (my ($k, $v) = splice @opts, 0, 2) {
     $k =~ s/^-//; # For backward compatibility with CGI::Cookie style options.
