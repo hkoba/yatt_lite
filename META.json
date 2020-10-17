@@ -37,7 +37,7 @@
          },
          "requires" : {
             "CGI" : "4.40",
-            "Cookie::Baker" : "0",
+            "Cookie::Baker::XS" : "0",
             "Devel::StackTrace" : "0",
             "File::AddInc" : "0",
             "File::Path" : "0",
@@ -95,6 +95,6 @@
          "url" : "https://github.com/hkoba/yatt_lite"
       }
    },
-   "version" : "0.101_101",
+   "version" : "0.101_102",
    "x_serialization_backend" : "JSON::PP version 4.04"
 }
