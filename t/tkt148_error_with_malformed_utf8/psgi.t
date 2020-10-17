@@ -3,7 +3,7 @@
 #----------------------------------------
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
-use FindBin; BEGIN { do "$FindBin::Bin/../t_lib.pl" }
+use FindBin; BEGIN { local @_ = "$FindBin::Bin/.."; do "$FindBin::Bin/../t_lib.pl" }
 #----------------------------------------
 use utf8;
 
