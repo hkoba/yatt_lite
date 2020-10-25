@@ -39,6 +39,7 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
   sub default_subns {'INST'}
   sub default_default_app {'YATT::Lite'}
   sub default_app_ns {'MyYATT'}
+  sub default_auto_rename_ns { 1 }
 
   sub init_default_app {
     (my MY $self) = @_;
