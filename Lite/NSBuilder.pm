@@ -23,13 +23,15 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
   our %SEEN_NS;
   use YATT::Lite::MFields qw/cf_app_ns app_ns
 			     cf_default_app default_app
+                             cf_auto_rename_ns
 			     subns/;
   sub _before_after_new {
     (my MY $self) = @_;
     $self->SUPER::_before_after_new;
-    if ($self->{cf_app_ns} and $SEEN_NS{$self->{cf_app_ns}}++) {
+    if ($self->{cf_app_ns} and $SEEN_NS{$self->{cf_app_ns}}) {
       confess "app_ns '$self->{cf_app_ns}' is already used!";
     }
+    $self->{cf_auto_rename_ns} //= $self->default_auto_rename_ns;
     $self->init_default_app;
     $self->init_app_ns;
   }
@@ -48,8 +50,15 @@ use constant DEBUG => $ENV{DEBUG_YATT_NSBUILDER} // 0;
   sub init_app_ns {
     (my MY $self) = @_;
     # This usually set 'MyYATT'
-    $self->{app_ns} = my $app_ns = $self->{cf_app_ns}
-      // $self->default_app_ns;
+    my $app_ns = $self->{cf_app_ns} // $self->default_app_ns;
+    if (my $count = $SEEN_NS{$app_ns}++) {
+      if ($self->{cf_auto_rename_ns}) {
+        $app_ns .= $count+1;
+      } else {
+        Carp::croak "Namespace collision is detected! app_ns: $app_ns";
+      }
+    }
+    $self->{app_ns} = $app_ns;
     try_require($app_ns);
 
     Carp::carp("init_app_ns called") if DEBUG;
