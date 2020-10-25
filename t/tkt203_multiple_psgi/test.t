@@ -25,7 +25,10 @@ BEGIN {
 
 #========================================
 
-use constant USE_FORK => ($ENV{YATT_TEST_LEVEL} // 1) == 1;
+use Getopt::Long;
+
+GetOptions("S|single" => \ my $o_single)
+  or die "Unknown options";
 
 my $testDir = $FindBin::Bin;
 
@@ -42,7 +45,7 @@ my @TESTEE = (
 );
 
 {
-  if (USE_FORK) {
+  if (not $o_single) {
     foreach my $testNo (0 .. $#TESTEE) {
       my @thisTest = list_beginning($testNo, \@TESTEE);
       my $title = join "", map {$_->[0]} @thisTest;
