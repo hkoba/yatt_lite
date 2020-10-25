@@ -25,6 +25,8 @@ BEGIN {
 
 #========================================
 
+use constant USE_FORK => ($ENV{YATT_TEST_LEVEL} // 1) == 1;
+
 my $testDir = $FindBin::Bin;
 
 my @TESTEE = (
@@ -39,30 +41,39 @@ my @TESTEE = (
   }],
 );
 
-foreach my $testNo (
-  0
-  # .. $#TESTEE
-) {
-  my @thisTest = list_beginning($testNo, \@TESTEE);
-  my $title = join "", map {$_->[0]} @thisTest;
-  # defined (my $kidPid = fork)
-  #   or BAIL_OUT("fork failed for testNo=$testNo, title=$title");
-  # if ($kidPid) {
-  #   # parent, wait
-  # } else {
-    subtest "testNo=$testNo, title=$title", sub {
-      plan tests => scalar @thisTest;
-      foreach my $item (@thisTest) {
-        my ($key, $builder) = @$item;
-        $item->[-1] = $builder->();
+{
+  if (USE_FORK) {
+    foreach my $testNo (0 .. $#TESTEE) {
+      my @thisTest = list_beginning($testNo, \@TESTEE);
+      my $title = join "", map {$_->[0]} @thisTest;
+      defined (my $kidPid = fork)
+        or BAIL_OUT("fork failed for testNo=$testNo, title=$title");
+      if ($kidPid) {
+        waitpid $kidPid, 0;
+      } else {
+        subtest "testNo=$testNo, title=$title", sub {
+          plan tests => scalar @thisTest;
+          doTest(@thisTest);
+        };
+        exit;
       }
-      foreach my $item (@thisTest) {
-        my ($key, $site) = @$item;
-        my $dh = $site->get_lochandler('/');
-        is $dh->mytest, uc($key), "$key->mytest";
-      }
-    };
-#   }
+    }
+  } else {
+    doTest(list_beginning(0, \@TESTEE))
+  }
+}
+
+sub doTest {
+  my (@thisTest) = @_;
+  my @actualTest = map {
+    my ($key, $builder) = @$_;
+    [$key, $builder->()];
+  } @thisTest;
+  foreach my $item (@actualTest) {
+    my ($key, $site) = @$item;
+    my $dh = $site->get_lochandler('/');
+    is $dh->mytest, uc($key), "$key->mytest";
+  }
 }
 
 sub list_beginning {
