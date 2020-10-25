@@ -67,7 +67,11 @@ foreach my $testNo (
 
 sub list_beginning {
   my ($pos, $list) = @_;
-  map {$list->[$_]} map {($_+$pos) % @$list} 0 .. $#$list;
+  map {
+    $list->[$_];
+  } map {
+    ($_+$pos) % @$list;
+  } 0 .. $#$list;
 }
 
 #========================================
