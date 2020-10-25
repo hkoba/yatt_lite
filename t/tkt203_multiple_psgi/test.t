@@ -72,7 +72,7 @@ sub doTest {
   foreach my $item (@actualTest) {
     my ($key, $site) = @$item;
     my $dh = $site->get_lochandler('/');
-    is $dh->mytest, uc($key), "$key->mytest";
+    is $dh->mytest, uc($key), ref($dh).": $key->mytest";
   }
 }
 
