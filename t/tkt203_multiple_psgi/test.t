@@ -27,7 +27,7 @@ BEGIN {
 
 use Getopt::Long;
 
-GetOptions("S|single" => \ my $o_single)
+GetOptions("F|fork" => \ my $o_fork)
   or die "Unknown options";
 
 my $testDir = $FindBin::Bin;
@@ -45,7 +45,7 @@ my @TESTEE = (
 );
 
 {
-  if (not $o_single) {
+  if ($o_fork) {
     foreach my $testNo (0 .. $#TESTEE) {
       my @thisTest = list_beginning($testNo, \@TESTEE);
       my $title = join "", map {$_->[0]} @thisTest;
