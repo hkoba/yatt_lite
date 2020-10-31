@@ -17,6 +17,7 @@ script:
     docker run --init --rm -it -v $PWD:/run/lib/YATT -w /run/lib/YATT \
       -e COVERALLS_REPO_TOKEN \
       -e TRAVIS_BRANCH \
+      -e YATT_TRAVIS_OPTS \
       $image bash -c '
     set -euxo pipefail
     if [[ -r .git/config ]]; then git checkout $TRAVIS_BRANCH; else echo NO GIT; fi
@@ -25,7 +26,7 @@ script:
     ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::Report::Coveralls 
     ./cpm install -g --with-recommends --with-test --cpanfile=./cpanfile
     apt update; apt install -y zsh
-    t/runtests.zsh -C
+    t/runtests.zsh -C $YATT_TRAVIS_OPTS
     cover -report coveralls /run/lib/YATT/t/cover_db
     echo DONE
     '
