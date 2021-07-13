@@ -225,7 +225,7 @@ fi
 
 : ${docroot:=/var/www/html}
 if [[ -n $o_cover ]] && [[ -d $cover_db ]] &&
-       ! (($+COVERALLS_REPO_TOKEN))
+       ! (($+GITHUB_TOKEN))
 then
     # ``t/cover'' is modified to accpet charset option.
     $plenv_exec $bindir/cover -charset $charset $ignore $cover_db
