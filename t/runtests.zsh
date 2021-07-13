@@ -188,8 +188,6 @@ if [[ -n $o_cover ]]; then
     cover_db=$bindir/cover_db
     charset=utf-8
 
-    harness+=(+select '^Lite')
-
     ignore=(
 	-ignore_re '^/usr/local/'
 	-ignore_re '\.(?:t|yatt|ytmpl|ydo|htyattrc\.pl|psgi)$'
@@ -201,7 +199,7 @@ if [[ -n $o_cover ]]; then
 	ignore+=(-ignore_re "^$d")
     done
 
-    harness+=(-MDevel::Cover=-db,$cover_db,${(j/,/)ignore})
+    harness+=(-MDevel::Cover=-db,$cover_db,${(j/,/)ignore},+select,'^Lite')
 
     (($+libdir)) && harness+=(-I$libdir)
 
