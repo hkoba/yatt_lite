@@ -22,10 +22,6 @@ jobs:
           - '5.34'
           - 'latest'
           - 'threaded'
-        include:
-          - perl-version: 'latest'
-            os: ubuntu-latest
-            coverage: true
 
     container:
       image: perl:${{ matrix.perl-version }}
