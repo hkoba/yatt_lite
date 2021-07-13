@@ -139,11 +139,11 @@
 
 ;;----------------------------------------
 (defface yatt-declaration-submode-face
-  '((t (:background "#d2d4f1")))
+  '((t (:background "#d2d4f1" :extend t)))
   "Face used for yatt declaration block (<!yatt:...>)")
 
 (defface yatt-action-submode-face
-  '((t (:background "#f4f2f5")))
+  '((t (:background "#f4f2f5" :extend t)))
   "Face used for yatt action part (<!yatt:...>)")
 
 (defface yatt-pi-perl-raw-output-submode-face
