@@ -188,6 +188,8 @@ if [[ -n $o_cover ]]; then
     cover_db=$bindir/cover_db
     charset=utf-8
 
+    harness+=(+select '^Lite')
+
     ignore=(
 	-ignore_re '^/usr/local/'
 	-ignore_re '\.(?:t|yatt|ytmpl|ydo|htyattrc\.pl|psgi)$'
