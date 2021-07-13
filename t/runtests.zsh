@@ -169,6 +169,8 @@ if (($+PERL)); then
     fi
 fi
 
+$plenv_exec ${PERL:-perl} -v
+
 typeset -T HARNESS_PERL_SWITCHES harness ' '
 export HARNESS_PERL_SWITCHES
 

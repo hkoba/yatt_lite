@@ -37,16 +37,16 @@ jobs:
       - name: Install Dependencies
         run: |
           curl -sL https://git.io/cpm > cpm
-          perl ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::DB Devel::Cover::Report::Coveralls 
+          perl ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::Report::Coveralls 
           perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
           apt update; apt install -y zsh
       - name: Run Tests (no coverage)
         if: ${{ !matrix.coverage }}
-        run: t/runtests.zsh
+        run: PERL=$(which perl) t/runtests.zsh
       - name: Run Tests (with coverage)
         if: ${{ matrix.coverage }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          t/runtests.zsh -C
+          PERL=$(which perl) t/runtests.zsh -C
           cover -report coveralls /run/lib/YATT/t/cover_db
