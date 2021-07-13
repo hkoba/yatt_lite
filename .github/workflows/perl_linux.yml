@@ -49,4 +49,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PERL=$(which perl) t/runtests.zsh -C
-          cover -report coveralls /run/lib/YATT/t/cover_db
+          perl t/cover -report coveralls t/cover_db
