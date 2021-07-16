@@ -199,7 +199,7 @@ sub find_apps {
 #========================================
 # PSGI Adaptor
 #========================================
-use YATT::Lite::PSGIEnv;
+use YATT::Lite::PSGIEnv qw/SCRIPT_URL/;
 
 sub to_app {
   my MY $self = shift;
@@ -923,11 +923,11 @@ foreach my $item (map([$_ => uc($_)]
 		      , qw/path_info
 			   request_uri
 
-			   script_uri
-			   script_url
 			   script_filename
 
                            SCRIPT_NAME
+                           SCRIPT_URI
+			   SCRIPT_URL
 			   /)) {
   my ($method, $env_name) = @$item;
   Entity $method => sub {
@@ -943,6 +943,22 @@ Entity script_name => sub {
   my ($this) = @_;
   my Env $env = $CON->env;
   $env->{'yatt.script_name'};
+};
+
+
+# GH-205
+# &yatt:SCRIPT_URI(); is original $env->{SCRIPT_URI}
+# &yatt:script_uri(); cares HTTP_X_FORWARDED_PROTO
+
+Entity script_uri => sub {
+  my ($this) = @_;
+  $CON->mkprefix . $this->entity_script_url;
+};
+
+Entity script_url => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  $env->{SCRIPT_URL} // $this->entity_file_location;
 };
 
 #

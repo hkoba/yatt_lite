@@ -153,6 +153,54 @@ foreach my $test (combination(['', '/foo/bar']
   };
 }
 
+{
+  my $theme = 'x_forwarded_proto';
+  my $app_root = "$tempdir/t" . ++$testno . $theme;
+  my $real_dir = "$app_root/html";
+  make_path($real_dir);
+
+  my $site = YATT::Lite::WebMVC0::SiteApp
+    ->new(app_ns => "Test$testno"
+          , app_root => $app_root
+          , doc_root => $real_dir);
+
+  my $exampleUrl = "//example.com";
+  my @tests = (['/', 'index.yatt'], ['/test', 'test.yatt']);
+
+  describe "&yatt:script_uri();", sub {
+
+    describe "normally", sub {
+
+      foreach my $test (@tests) {
+        my ($loc, $file) = @$test;
+        my $urlMain = $exampleUrl.$loc;
+        MY->mkfile("$real_dir/$file"
+                   , qq{<!yatt:args test>\n(&yatt:script_uri();)});
+        my $psgi = (GET "http:$urlMain")->to_psgi;
+
+        it "should return http:$urlMain for $file", sub {
+
+          expect($site->call($psgi))->to_be([200, $CT, ["(http:$urlMain)"]]);
+        };
+      }
+    };
+
+    describe "when HTTP_X_FORWARDED_PROTO=https", sub {
+      foreach my $test (@tests) {
+        my ($loc, $file) = @$test;
+        my $urlMain = $exampleUrl.$loc;
+        my $psgi = (GET "http:$urlMain")->to_psgi;
+        $psgi->{HTTP_X_FORWARDED_PROTO} = 'https';
+
+        it "should return https:$urlMain", sub {
+          expect($site->call($psgi))->to_be([200, $CT, ["(https:$urlMain)"]]);
+        };
+      }
+    };
+  };
+
+}
+
 chdir($cwd);
 
 done_testing();
