@@ -42,6 +42,7 @@ foreach my $test (combination(['', '/foo/bar']
 
     my $mkpsgi = sub {
       my ($url) = @_;
+      my $URI = URI->new($url);
       my Env $env = (GET $url)->to_psgi;
 
       if ($use_path_translated) {
@@ -60,14 +61,17 @@ foreach my $test (combination(['', '/foo/bar']
 
         # Below mimics DirectoryIndex behavior.
         #
-        $url =~ s,/$,/index,;
-        $env->{PATH_TRANSLATED} = "$real_dir$url.yatt";
+        my $path = $URI->path;
+
+        $path =~ s,/$,/index,;
+
+        $env->{PATH_TRANSLATED} = "$real_dir$path.yatt";
 
         # Other cgi fields set by Apache.
         #
         $env->{REDIRECT_HANDLER} = 'x-psgi-handler';
         $env->{REDIRECT_STATUS} = 200;
-        $env->{REDIRECT_URL} = "$url.yatt";
+        $env->{REDIRECT_URL} = "$path.yatt";
 
       } else {
         #
@@ -93,12 +97,16 @@ foreach my $test (combination(['', '/foo/bar']
 
       my $item = 0;
       $item++;
-      foreach my $req (['/' => 'index'], ["/test$item", "test$item"]) {
+      foreach my $req (
+        ['/' => 'index'],
+        ["/test$item", "test$item"],
+        ['/zzz/?test=foo' => 'zzz/index'],
+      ) {
         my ($url, $wname) = @$req;
 
         {
           MY->mkfile("$real_dir/$wname.yatt"
-                     , qq{(&yatt:script_name();)});
+                     , qq{<!yatt:args test>\n(&yatt:script_name();)});
 
           my Env $psgi = $mkpsgi->($url);
 
@@ -118,20 +126,25 @@ foreach my $test (combination(['', '/foo/bar']
 
       my $item = 0;
       $item++;
-      foreach my $req (['/' => 'index'], ["/test$item", "test$item"]) {
+      foreach my $req (
+        ['/' => 'index'],
+        ["/test$item", "test$item"],
+        ['/zzz/?test=foo' => 'zzz/index'],
+      ) {
         my ($url, $wname) = @$req;
+        my $path = URI->new($url)->path;
 
         {
           MY->mkfile("$real_dir/$wname.yatt"
-                     , qq{(&yatt:file_location();)});
+                     , qq{<!yatt:args test>\n(&yatt:file_location();)});
 
           my Env $psgi = $mkpsgi->($url);
 
           describe "&yatt:file_location(); for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
 
-            it "should return ($script_name$url)", sub {
+            it "should return ($script_name$path)", sub {
 
-              expect($site->call($psgi))->to_be([200, $CT, ["($script_name$url)"]]);
+              expect($site->call($psgi))->to_be([200, $CT, ["($script_name$path)"]]);
             };
           };
         }

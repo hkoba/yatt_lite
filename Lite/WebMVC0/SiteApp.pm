@@ -550,9 +550,12 @@ sub split_path_info {
     #
     # So instead turn on it when "$env->{REQUEST_URI}$file" eq $env->{REDIRECT_URL};
     #
-    $is_index ||= ($env->{REQUEST_URI}
-                   and $env->{REDIRECT_URL}
-                   and "$env->{REQUEST_URI}$file" eq $env->{REDIRECT_URL});
+    $is_index ||= do {
+      if ($env->{REQUEST_URI} and $env->{REDIRECT_URL}) {
+        my $path = URI->new($env->{REQUEST_URI})->path;
+        "$path$file" eq $env->{REDIRECT_URL};
+      }
+    };
 
     ($tmpldir, $loc, $file, $trailer, $is_index);
 
