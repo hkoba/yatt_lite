@@ -161,6 +161,10 @@ sub get_lochandler {
   if ($self->{cf_per_role_docroot}) {
     # When per_role_docroot is on, $tmpldir already points
     # $per_role_docroot/$role. So just append $location.
+
+    # Unfortunately, $self->error_response calls get_lochandler without $tmpldir
+    $tmpldir //= "$self->{cf_per_role_docroot}/$self->{cf_default_role}";
+
     $self->get_dirhandler($tmpldir.$location);
   } else {
     $self->SUPER::get_lochandler($location, $tmpldir);
