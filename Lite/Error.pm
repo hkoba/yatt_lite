@@ -39,7 +39,7 @@ sub message {
 
 sub byte_message {
   (my Error $error) = @_;
-  my $msg = $error->message;
+  my $msg = $error->reason; # Place may not be useful for SiteApp->error_handler
   Encode::_utf8_off($msg);
   $msg;
 }
