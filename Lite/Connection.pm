@@ -191,11 +191,8 @@ sub is_error {
 
 sub as_error {
   my PROP $prop = prop(my $glob = shift);
-  my $was_error = $prop->{is_error};
-  $prop->{is_error} = 1;
-  if (not $was_error
-      and
-      my $buf = $prop->{cf_buffer}) {
+  $prop->{is_error}++;
+  if (my $buf = $prop->{cf_buffer}) {
     push @{$prop->{oldbuf}}, $$buf if $$buf ne '';
     $glob->rewind;
   }
