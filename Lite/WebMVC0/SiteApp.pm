@@ -360,7 +360,12 @@ sub call {
           ];
   }
 
-  if (not $error or is_done($error)) {
+  if ($con->is_error) {
+    print STDERR "# EARLY ERROR\n" if DEBUG_ERROR;
+    my $error_list = $con->error_list;
+    return $self->error_response($error_list->[0], $env, $con);
+  }
+  elsif (not $error or is_done($error)) {
     print STDERR "# NORMAL\n" if DEBUG_ERROR;
 
     return $self->psgi_response_of_connection($con, $env);
