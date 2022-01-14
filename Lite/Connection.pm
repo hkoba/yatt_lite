@@ -184,6 +184,11 @@ sub cf_pairs {
 
 #========================================
 
+sub is_error {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{is_error};
+}
+
 sub as_error {
   my PROP $prop = prop(my $glob = shift);
   my $was_error = $prop->{is_error};
