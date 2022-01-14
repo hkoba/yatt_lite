@@ -294,10 +294,13 @@ sub error_handler {
   $errcon->configure(status => $error_status);
   $err->{cf_http_status_code} = $error_status;
 
+  my $msg = $err->message;
+
   # yatt/ytmpl 用の Code generator がまだ無いので、素直に raise.
   # XXX: 本当は正しくロードできる可能性もあるが,
   #  そこで更に fail すると真のエラーが隠されてしまうため、頑張らない。
   unless ($self->is_default_cgen_ready) {
+    print STDERR "# error_handler(with cgen): $msg\n" if DEBUG_ERROR;
     die $err;
   }
 
@@ -305,8 +308,11 @@ sub error_handler {
   # For [GH #172] - to avoid 'ARRAY(0x5575a6c9c2a8)Compilation failed in require'
   #
   if ($self->{cf_in_sig_die}) {
+    print STDERR "# error_handler(sig die): $msg\n" if DEBUG_ERROR;
     die $err;
   }
+
+  print STDERR "# error_handler(normal): $msg\n" if DEBUG_ERROR;
 
   my $is_psgi = $self->CON->cget('is_psgi');
 
