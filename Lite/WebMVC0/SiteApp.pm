@@ -361,10 +361,13 @@ sub call {
   }
 
   if (not $error or is_done($error)) {
+    print STDERR "# NORMAL\n" if DEBUG_ERROR;
 
     return $self->psgi_response_of_connection($con, $env);
 
   } elsif (ref $error eq 'ARRAY' or ref $error eq 'CODE') {
+    print STDERR "# SPECIAL\n" if DEBUG_ERROR;
+
     # redirect
     if ($self->{cf_debug_psgi}) {
       if (my $errfh = fileno(STDERR) ? \*STDERR : $env->{'psgi.errors'}) {
@@ -378,6 +381,7 @@ sub call {
     });
 
   } elsif (UNIVERSAL::isa($error, 'YATT::Lite::Error')) {
+    print STDERR "# ERROR\n" if DEBUG_ERROR;
 
     return $self->error_response($error, $env, $con);
 
