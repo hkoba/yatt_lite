@@ -277,13 +277,12 @@ sub error_handler {
   (my MY $self, my $type, my Error $err) = @_;
   # どこに出力するか、って問題も有る。 $CON を rewind すべき？
   my $errcon = try_invoke($self->CON, 'as_error') || do {
-    if ($SYS) {
-      $SYS->make_connection(undef, yatt => $self, noheader => 1);
-    } else {
-      $self->CON;
-    }
+    my $con = $SYS
+      ? $SYS->make_connection(undef, yatt => $self, noheader => 1)
+      : $self->CON;
+    try_invoke($con, 'as_error');
+    $con;
   };
-  try_invoke($errcon, 'as_error');
 
   $errcon->add_error($err);
 
