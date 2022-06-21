@@ -194,11 +194,12 @@ sub handle {
   }
 
   my $sub = $YATT->find_handler($ext, $file, $CON);
-  $sub->($YATT, $CON, $file);
+
+  my $result = $sub->($YATT, $CON, $file);
 
   try_invoke($CON, 'flush_headers');
 
-  $CON;
+  $result;
 }
 
 sub render {

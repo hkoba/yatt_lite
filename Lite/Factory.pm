@@ -801,9 +801,14 @@ sub run_dirhandler {
   (my MY $self, my ($dh, $con, $file)) = @_;
   local ($SYS, $YATT, $CON) = ($self, $dh, $con);
   $self->before_dirhandler($dh, $con, $file);
-  $self->invoke_dirhandler($dh,
-			   , handle => $dh->cut_ext($file), $con, $file);
+  my $result = $self->invoke_dirhandler(
+    $dh,
+    handle => $dh->cut_ext($file), $con, $file
+  );
   $self->after_dirhandler($dh, $con, $file);
+  if (defined $result and ref $result eq 'ARRAY' and @$result == 3) {
+    $self->raise_response($result)
+  }
 }
 
 sub before_dirhandler { &maybe::next::method; }
