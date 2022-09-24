@@ -1,5 +1,7 @@
 # Brief Internals of YATT::Lite::CGen::Perl
 
+## Template (Widget)
+
 ```html
 <!yatt:args a=text b=text>
 
@@ -28,13 +30,15 @@
 ```
 
 ```html
-<!yatt:widget foo x=text y=html z=value w=list>
+<!yatt:widget foo x=text y=html z=value w=list body=[code]>
 
-<!yatt:widget bar x=text y=html z=value w=list>
+<!yatt:widget bar x=text y=html z=value w=list body=[code]>
 
 ```
 
-### In YATT::Lite::CGen::Perl:
+※processing instructions `<?perl= ... ?>` are omitted in this doc.
+
+### Corresponding handlers for each node kinds and their appeared contexts
 
 <table border="0" cellspacing="0" cellpadding="0" class="table-1">
 <style>
@@ -81,3 +85,175 @@ table.table-1 th.right  {border-right-width:  5px;}
 <td><p><b>escaping</b>, as_print</p></td>
 <td><p>from_element (invoke)</p></td></tr>
 </table>
+
+### Entity Path Items
+
+YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or more entity path items `:foo` and terminal `;`.
+* Entity path items can start either `:var` or `:call(...)` which can also takes path items as arguments in `(...)`.
+  ```
+  :var
+  :call(...)
+  ```
+
+
+* In entity arguments `(...)`, each startings of path items can also be `(text)`, `(=expr)`, `[array]` and `{hash}`.
+
+  ```
+  (text...)
+  (=expr...)
+  [array...]
+  {hash...}
+  ```
+
+
+* After the leading items, arbitrary number of `:prop`, `:invoke(...)`, `[aref]` and `{href}` can follow.
+
+  ```
+  〜:prop
+  〜:invoke(...)
+  〜[aref...]
+  〜{href...}
+  ```
+
+
+### Corresponding handlers called from gen_entpath
+
+<table border="0" cellspacing="0" cellpadding="0" class="ta1">
+<colgroup>
+<col width="111"/>
+<col width="111"/>
+<col width="128"/>
+<col width="181"/>
+<col width="407"/>
+</colgroup>
+<tr class="ro4">
+<td><p>path place</p></td>
+<td><p>path item kind</p></td>
+<td><p>handler</p></td>
+<td><p>name kind/var type</p></td>
+<td><p>codegen action (pseudo code with JS style template string)</p></td>
+</tr>
+<tr class="ro4">
+<td><p>head</p></td>
+<td><p>var</p></td>
+<td><p>as_expr_var($name)</p></td>
+<td> </td>
+<td><p>as_lvalue($var)</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td> </td>
+<td> </td>
+<td><p>entity</p></td>
+<td><p>gen_entcall($name)</p></td>
+</tr>
+<tr class="ro5">
+<td> </td>
+<td> </td>
+<td> </td>
+<td><p>var html</p><p><span class="T2">→ as_expr_var_html</span></p></td>
+<td><p>escaping, as_lvalue_html($var)</p></td>
+</tr>
+<tr class="ro5">
+<td> </td>
+<td> </td>
+<td> </td>
+<td><p>var attr</p><p><span class="T2">→ as_expr_var_attr</span></p></td>
+<td><p>`named_attr(${attname // name}, ${name})`</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>call</p></td>
+<td><p>as_expr_call($name, @args)</p></td>
+<td> </td>
+<td> </td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td> </td>
+<td> </td>
+<td><p>entity</p></td>
+<td><p>gen_entcall($name, @args)</p></td>
+</tr>
+<tr class="ro5">
+<td> </td>
+<td> </td>
+<td> </td>
+<td><p>var </p><p><span class="T2">→ as_expr_call_var</span></p></td>
+<td><p>`${name} &amp;&amp; ${name}(${ gen_entlist(@args) })`</p></td>
+</tr>
+<tr class="ro5">
+<td> </td>
+<td> </td>
+<td> </td>
+<td><p>var attr</p><p><span class="T2">→ as_expr_call_var_attr</span></p></td>
+<td><p>`named_attr(${attname // name}, ${ gen_entlist(@args) })`</p></td>
+</tr>
+<tr class="ro4">
+<td><p>arg head</p></td>
+<td><p>text</p></td>
+<td><p>as_expr_text($val)</p></td>
+<td> </td>
+<td><p>qqvalue($val)</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>expr</p></td>
+<td><p>as_expr_expr($val)</p></td>
+<td> </td>
+<td><p>$val</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>array</p></td>
+<td><p>as_expr_array(@args)</p></td>
+<td> </td>
+<td><p>`[${ gen_entlist(@args) }]`</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>hash</p></td>
+<td><p>as_expr_hash(@args)</p></td>
+<td> </td>
+<td><p>`{${ gen_entlist(@args) }}`</p></td>
+</tr>
+<tr class="ro4">
+<td><p>rest</p></td>
+<td><p>prop</p></td>
+<td><p>as_expr_prop($name)</p></td>
+<td> </td>
+<td><p>$name</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>invoke</p></td>
+<td><p>as_expr_invoke($name, @args)</p></td>
+<td> </td>
+<td><p>`${name}(${ gen_entlist(@args) })`</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>aref</p></td>
+<td><p>as_expr_aref(@args)</p></td>
+<td> </td>
+<td><p>`[${ gen_entpath(@args) }]`</p></td>
+</tr>
+<tr class="ro4">
+<td> </td>
+<td><p>href</p></td>
+<td><p>as_expr_href(@args)</p></td>
+<td> </td>
+<td><p>`{${ gen_entpath(@args) }}`</p></td>
+</tr>
+</table>
+
+Note:
+
+- `gen_entlist(@args)` is approximately:
+  ```perl
+  map {gen_entpath($_)} @args
+  ```
+- `gen_entcall($name, @args)` generates:
+  ```js
+  `$this->entity_${name}(${ gen_entlist(@args) })`
+  ```
