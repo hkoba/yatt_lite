@@ -38,14 +38,14 @@
 
 ※processing instructions `<?perl= ... ?>` are omitted in this doc.
 
-### How toplevel code generator works - simplified version of `as_print()`
+### How toplevel code generator works - a simplified version of `as_print()`
 
-`as_print()` scans current tokens in `$self->{curtoks}` and basically generates a sequence of statements which mostly are print statements.
+Basically, `as_print()` scans current tokens in `$self->{curtoks}` and generates a sequence of statements which mostly are print statements. (Users of as_print() must put input tokens to `curtoks` with proper localization before its invocation). (Note: Real implementation of as_print contains more logic for better(?) line splitting of generated code).
 
 - Most tokens are converted to **printable expressions** and queued to `@queue`.
-- Also token handlers can generate **general statements** which are represented by scalar reference that directly goes to `@result`.
-- Then if current token contains newline, `@queue` is flushed and they go to final code fragment list `@result`;
-- Finally, every generated codes in `@result` are joined to a result string.
+- Then if the current token contains a newline, all items of `@queue` are removed, are wrapped by a `print` statement, and go to the final code fragment list `@result`.
+- Also, token handlers can generate **general statements** (represented by scalar reference) that directly goes to `@result`.
+- Finally, every generated code in `@result` is joined to a result string.
 
 ```perl
 sub as_print {
@@ -64,12 +64,9 @@ sub as_print {
     else {
       my $handler = $DISPATCH[$node->[0]]; # from_element, from_entity...
       my $expr = $handler->($self, $node);
-      if (not defined $expr) {
-        push @result, $self->cut_next_newline;
-      }
-      elsif (ref $expr) {
+      if (ref $expr) {
         flush();
-        push @result, "$$expr; ", $self->cut_next_newline;
+        push @result, "$$expr;";
       }
       else {
         push @queue, $expr;
@@ -132,7 +129,7 @@ table.table-1 th.right  {border-right-width:  5px;}
 <td><p>from_element (invoke)</p></td></tr>
 </table>
 
-### Entity Path Items
+## Entity Path Items
 
 YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or more entity path items `:foo` and terminal `;`.
 * Entity path items can start either `:var` or `:call(...)` which can also takes path items as arguments in `(...)`.
