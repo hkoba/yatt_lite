@@ -38,6 +38,52 @@
 
 ※processing instructions `<?perl= ... ?>` are omitted in this doc.
 
+### How toplevel code generator works - simplified version of `as_print()`
+
+`as_print()` scans current tokens in `$self->{curtoks}` and basically generates a sequence of statements which mostly are print statements.
+
+- Most tokens are converted to **printable expressions** and queued to `@queue`.
+- Also token handlers can generate **general statements** which are represented by scalar reference that directly goes to `@result`.
+- Then if current token contains newline, `@queue` is flushed and they go to final code fragment list `@result`;
+- Finally, every generated codes in `@result` are joined to a result string.
+
+```perl
+sub as_print {
+  my ($self) = @_;
+  my (@result, @queue);
+  my sub flush {
+    push @result, q{print $CON (}.join(", ", @queue). q{);} if @queue;
+    undef @queue;
+  }
+  while (@{$self->{curtoks}}) {
+    my $node = @{$self->{curtoks}};
+    if (not ref $node) {
+      push @queue, qtext($node);
+      flush() if $node =~ /\n/;
+    }
+    else {
+      my $handler = $DISPATCH[$node->[0]]; # from_element, from_entity...
+      my $expr = $handler->($self, $node);
+      if (not defined $expr) {
+        push @result, $self->cut_next_newline;
+      }
+      elsif (ref $expr) {
+        flush();
+        push @result, "$$expr; ", $self->cut_next_newline;
+      }
+      else {
+        push @queue, $expr;
+        flush() if $expr =~ /\n/;
+      }
+    }
+  }
+  flush();
+  join " ", @result;
+}
+```
+
+
+
 ### Corresponding handlers for each node kinds and their appeared contexts
 
 <table border="0" cellspacing="0" cellpadding="0" class="table-1">
@@ -257,3 +303,7 @@ Note:
   ```js
   `$this->entity_${name}(${ gen_entlist(@args) })`
   ```
+
+## TODO
+
+- escape_now? escape_later? Which is true?
