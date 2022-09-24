@@ -251,7 +251,7 @@ Note:
 
 - `gen_entlist(@args)` is approximately:
   ```perl
-  map {gen_entpath($_)} @args
+  map {gen_entpath(@$_)} @args
   ```
 - `gen_entcall($name, @args)` generates:
   ```js
