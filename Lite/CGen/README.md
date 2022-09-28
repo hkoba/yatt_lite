@@ -159,6 +159,33 @@ YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or
   ```
 
 
+### How entpath code generator works - a simplified version of `gen_entpath()`
+
+```perl
+sub gen_entpath {
+  my ($self, $escape_now, @pathItems) = @_;
+  return '' unless @pathItems;
+  local $self->{needs_escaping} = 0;
+  if (my $macro = $self->_is_entmacro_call($pathItems[0])) {
+    return $macro->($self, $pathItems[0])
+  }
+  my @pathCodes = map {
+    my ($type, @rest) = @$_;
+    my $handler = $self->can("as_expr_$type");
+    $handler->($self, \$escape_now, @rest);
+  } @pathItems;
+  return '' unless @pathCodes;
+  my $result = @pathCodes > 1 ? join("->", @pathCodes) : $pathCodes[0];
+  if (not $escape_now or ref $result) {
+    # as_expr_var_html comes here because not $escape_now
+    # as_expr_call_var comes here because ref $result
+    $result;
+  } else {
+    sprintf(q{YATT::Lite::Util::escape(%s)}, $result);
+  }
+}
+```
+
 ### Corresponding handlers called from gen_entpath
 
 <table border="0" cellspacing="0" cellpadding="0" class="ta1">
@@ -195,14 +222,14 @@ YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or
 <td> </td>
 <td> </td>
 <td><p>var html</p><p><span class="T2">→ as_expr_var_html</span></p></td>
-<td><p>escaping, as_lvalue_html($var)</p></td>
+<td><p>This entpath is returned as-is(== no need to be escaped in gen_entpath)<code>($$esc_later = 0)</code>, as_lvalue_html($var)</p></td>
 </tr>
 <tr class="ro5">
 <td> </td>
 <td> </td>
 <td> </td>
 <td><p>var attr</p><p><span class="T2">→ as_expr_var_attr</span></p></td>
-<td><p>`named_attr(${attname // name}, ${name})`</p></td>
+<td><p><code>named_attr(${attname // name}, ${name})</code></p></td>
 </tr>
 <tr class="ro4">
 <td> </td>
@@ -223,14 +250,14 @@ YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or
 <td> </td>
 <td> </td>
 <td><p>var </p><p><span class="T2">→ as_expr_call_var</span></p></td>
-<td><p>`${name} &amp;&amp; ${name}(${ gen_entlist(@args) })`</p></td>
+<td><p><code>${name} &amp;&amp; ${name}(${ gen_entlist(@args) })</code></p></td>
 </tr>
 <tr class="ro5">
 <td> </td>
 <td> </td>
 <td> </td>
 <td><p>var attr</p><p><span class="T2">→ as_expr_call_var_attr</span></p></td>
-<td><p>`named_attr(${attname // name}, ${ gen_entlist(@args) })`</p></td>
+<td><p><code>named_attr(${attname // name}, ${ gen_entlist(@args) })</code></p></td>
 </tr>
 <tr class="ro4">
 <td><p>arg head</p></td>
@@ -251,14 +278,14 @@ YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or
 <td><p>array</p></td>
 <td><p>as_expr_array(@args)</p></td>
 <td> </td>
-<td><p>`[${ gen_entlist(@args) }]`</p></td>
+<td><p><code>[${ gen_entlist(@args) }]</code></p></td>
 </tr>
 <tr class="ro4">
 <td> </td>
 <td><p>hash</p></td>
 <td><p>as_expr_hash(@args)</p></td>
 <td> </td>
-<td><p>`{${ gen_entlist(@args) }}`</p></td>
+<td><p><code>{${ gen_entlist(@args) }}</code></p></td>
 </tr>
 <tr class="ro4">
 <td><p>rest</p></td>
@@ -272,31 +299,31 @@ YATT entities like `&yatt:foo;` are parsed as a namespace prefix `&yatt`, one or
 <td><p>invoke</p></td>
 <td><p>as_expr_invoke($name, @args)</p></td>
 <td> </td>
-<td><p>`${name}(${ gen_entlist(@args) })`</p></td>
+<td><p><code>${name}(${ gen_entlist(@args) })</code></p></td>
 </tr>
 <tr class="ro4">
 <td> </td>
 <td><p>aref</p></td>
 <td><p>as_expr_aref(@args)</p></td>
 <td> </td>
-<td><p>`[${ gen_entpath(@args) }]`</p></td>
+<td><p><code>[${ gen_entpath(@args) }]</code></p></td>
 </tr>
 <tr class="ro4">
 <td> </td>
 <td><p>href</p></td>
 <td><p>as_expr_href(@args)</p></td>
 <td> </td>
-<td><p>`{${ gen_entpath(@args) }}`</p></td>
+<td><p><code>{${ gen_entpath(@args) }}</code></p></td>
 </tr>
 </table>
 
 Note:
 
-- `gen_entlist(@args)` is approximately:
+- <code>gen_entlist(@args)</code> is approximately:
   ```perl
   map {gen_entpath(@$_)} @args
   ```
-- `gen_entcall($name, @args)` generates:
+- <code>gen_entcall($name, @args)</code> generates:
   ```js
   `$this->entity_${name}(${ gen_entlist(@args) })`
   ```
