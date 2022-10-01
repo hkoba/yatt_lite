@@ -12,6 +12,7 @@
 ;; (add-to-list 'auto-mode-alist '("\\.ydo\\'" . perl-mode))
 ;;
 
+(require 'cl-lib)
 (require 'advice)
 (require 'mmm-mode)
 (require 'mmm-sample)
@@ -219,16 +220,16 @@
 	   (restore-buffer-modified-p nil)))))))
 
 (defun yatt-mode-multipart-list ()
-  (do* (result
-	(regions (mmm-regions-in (point-min) (point-max))
-		 next)
-	(reg (car regions) (car regions))
-	(next (cdr regions) (cdr regions))
-	(section
-         (if (not (eq (car reg) 'yatt-declaration-mode))
-             `((default)
-               ,(cadr (car regions)))))
-        )
+  (cl-do* (result
+	   (regions (mmm-regions-in (point-min) (point-max))
+		    next)
+	   (reg (car regions) (car regions))
+	   (next (cdr regions) (cdr regions))
+	   (section
+            (if (not (eq (car reg) 'yatt-declaration-mode))
+                `((default)
+                  ,(cadr (car regions)))))
+           )
       ;; 次が無いなら、最後の section を詰めて返す
       ((not next)
        (reverse (cons (append section (list (caddr reg))) result)))
@@ -292,19 +293,19 @@
 ;; Debugging aid.
 
 (defun yatt-mode-called-from-p (fsym)
-  (do* ((i 0 (1+ i))
-	(frame (backtrace-frame i) (backtrace-frame i)))
+  (cl-do* ((i 0 (1+ i))
+	   (frame (backtrace-frame i) (backtrace-frame i)))
       ((not frame))
     (when (eq (cadr frame) fsym)
-      (return t))))
+      (cl-return t))))
 
 (defun yatt-mode-from-hook-p (hooksym)
-  (do* ((i 0 (1+ i))
-	(frame (backtrace-frame i) (backtrace-frame i)))
+  (cl-do* ((i 0 (1+ i))
+	   (frame (backtrace-frame i) (backtrace-frame i)))
       ((not frame))
     (when (and (eq (cadr frame) 'run-hooks)
 	       (eq (caddr frame) hooksym))
-      (return t))))
+      (cl-return t))))
 
 (defun yatt-mode-backtrace (msg &rest args)
   (let ((standard-output (get-buffer-create "*yatt-debug*")))

@@ -188,10 +188,10 @@ To disable, set to nil.")
 	  (unwind-protect
 	      (progn
 		(goto-char 0)
-		(block loop
+		(cl-block loop
 		  (while (setq found (re-search-forward pat nil t))
 		    (end-of-line)
-		    (return-from loop (buffer-substring found (point))))))
+		    (cl-return-from loop (buffer-substring found (point))))))
 	    (kill-buffer (current-buffer))))))))
 
 '(yatt-lint-any-action-libdir
