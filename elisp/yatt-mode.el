@@ -84,13 +84,41 @@
       (yatt-lint-any-mode 1))
     (yatt-mode-ensure-file-coding)
     (ad-activate 'mmm-refontify-maybe)
+
+    (yatt-mode--setup-comment-style)
     (mmm-mode-on)
+    (yatt-mode--setup-comment-style)
+
     (mmm-refontify-maybe)
     ;; cperl-mode にする中で、 buffer-modified-p が立ってる... かと思いきや...
     ;; 分からん！
     ;; [after idle] 的な処理が必要なんでは?
     ;; (yatt-mode-multipart-refontify)
     (run-hooks 'yatt-mode-hook)))
+
+(defun yatt-mode--setup-comment-style ()
+  (yatt-mode--update-assoc-or-local-vars
+   (get 'yatt-mode 'mmm-local-variables)
+   (yatt-mode-comment-style)))
+
+(defun yatt-mode-comment-style ()
+  ;; XXX: namespace
+  (list
+   '(comment-start "<!--#yatt ")
+   '(comment-continue " # ")
+   '(comment-end " #-->")
+   '(comment-style extra-line)))
+
+(defun yatt-mode--update-assoc-or-local-vars (dest-assoc spec-assoc)
+  (dolist (spec spec-assoc)
+    (let ((k (car spec))
+          (l (cdr spec))
+          dest)
+      (if dest-assoc
+          (when (setq dest (assoc k dest-assoc))
+            (setcdr dest l))
+        (set (make-variable-buffer-local k) (car l))))))
+
 
 (defun yatt-mode-ensure-lsp ()
   (when (require yatt-mode-lsp-client nil t)
