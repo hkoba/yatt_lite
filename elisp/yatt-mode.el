@@ -85,9 +85,18 @@
     (yatt-mode-ensure-file-coding)
     (ad-activate 'mmm-refontify-maybe)
 
-    (yatt-mode--setup-comment-style)
+    ;; I want to set comment-start, comment-end... here,
+    ;; but it doesn't take effect because it is overriden via
+    ;; (get 'yatt-mode 'mmm-local-variables)
+    (yatt-mode--set-local-vars
+     (yatt-mode-comment-style))
+
     (mmm-mode-on)
-    (yatt-mode--setup-comment-style)
+
+    ;; So I also update the property directly.
+    (yatt-mode--update-assoc
+     (get 'yatt-mode 'mmm-local-variables)
+     (yatt-mode-comment-style))
 
     (mmm-refontify-maybe)
     ;; cperl-mode にする中で、 buffer-modified-p が立ってる... かと思いきや...
@@ -96,28 +105,25 @@
     ;; (yatt-mode-multipart-refontify)
     (run-hooks 'yatt-mode-hook)))
 
-(defun yatt-mode--setup-comment-style ()
-  (yatt-mode--update-assoc-or-local-vars
-   (get 'yatt-mode 'mmm-local-variables)
-   (yatt-mode-comment-style)))
-
 (defun yatt-mode-comment-style ()
-  ;; XXX: namespace
+  ;; XXX: get namespace from workspace config
   (list
    '(comment-start "<!--#yatt ")
    '(comment-continue " # ")
    '(comment-end " #-->")
    '(comment-style extra-line)))
 
-(defun yatt-mode--update-assoc-or-local-vars (dest-assoc spec-assoc)
+(defun yatt-mode--set-local-vars (spec-assoc)
+  (dolist (spec spec-assoc)
+    (set (make-variable-buffer-local (car spec)) (car (cdr spec)))))
+
+(defun yatt-mode--update-assoc (dest-assoc spec-assoc)
   (dolist (spec spec-assoc)
     (let ((k (car spec))
           (l (cdr spec))
           dest)
-      (if dest-assoc
-          (when (setq dest (assoc k dest-assoc))
-            (setcdr dest l))
-        (set (make-variable-buffer-local k) (car l))))))
+      (when (setq dest (assoc k dest-assoc))
+            (setcdr dest l)))))
 
 
 (defun yatt-mode-ensure-lsp ()
