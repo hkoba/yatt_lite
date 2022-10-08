@@ -79,6 +79,53 @@ sub as_print {
 }
 ```
 
+### as_text, as_list and gen_as([list | text])
+
+```perl
+sub as_text { join '.', gen_as(text => \@AS_TEXT, 0, 1, @_) }
+sub as_list {           gen_as(list => \@AS_LIST, 0, 0, @_) }
+
+sub gen_as {
+  my ($self, $type, $dispatch, $escape, $text_quote, @node) = @_;
+  local $self->{needs_escaping} = $escape;
+
+  my @result = map {
+    if (not ref $_) {
+      $text_quote ? qtext($_) : $_;
+    } else {
+      my $handler = $dispatch->[$_->[0]];
+      my $expr = $handler->($self, $_);
+      defined $expr ? $expr : ();
+    }
+  } @node;
+
+  wantarray ? @result : join("", @result)
+}
+```
+
+Other cast
+```perl
+sub as_cast_to_text($self, $var, $value) {
+  ref $value ? $self->as_text(@$value) : qtext($value); 
+}
+sub as_cast_to_html($self, $var, $value) {
+  ref $value ? join('.', gen_as(text => \@AS_TEXT, 1, 1, @_)) : qtext($value); 
+}
+sub as_cast_to_scalar($self, $var, $value) {
+  'scalar(do {'.(ref $value ? $self->as_list(@$value) : $value).'})';
+}
+sub as_cast_to_list($self, $var, $value) {
+  '['.(ref $value ? $self->as_list(@$value) : $value).']';
+}
+sub as_cast_to_code($self, $var, $value) {
+  local $self->{curtoks} = [@$value];
+  my Widget $virtual = $var->widget;
+  local $self->{scope} = $self->mkscope
+    ({}, $virtual->{arg_dict} ||= {}, $self->{scope});
+  q|sub {|. join('', $self->gen_getargs($virtual)
+		   , $self->as_print("}"));
+}
+```
 
 
 ### Corresponding handlers for each node kinds and their appeared contexts
@@ -105,15 +152,15 @@ table.table-1 th.right  {border-right-width:  5px;}
 <tr class="ro5">
 <th colspan="2" class="right"><p>Toplevel</p><p>(= Output as_print())</p></th><td><p>qtext()</p></td>
 <td><p>from_element (invoke)</p></td>
-<td rowspan="6"><p>from_entity() </p><p>→ gen_entpath()</p><p>→ as_print()</p></td></tr>
+<td rowspan="6"><p>from_entity() </p><p>→ gen_entpath( <b><code>$self->{needs_escaping}</code></b> )</p></td></tr>
 <tr class="ro6">
 <th rowspan="5"><p>Assignment (Cast to type)</p><p>/ Composition</p></th>
 <th class="right"><p>text</p><p>as_cast_to_text:</p></th>
-<td><p>qtext()</p><p>/ gen_as(text)</p></td>
+<td><p>qtext()</p><p>/ as_text()</p></td>
 <td><p>?text_from_element</p><p>→ <code>capture {</code><br>from_element<br><code>}</code></p></td></tr>
 <tr class="ro6">
 <th class="right"><p>html</p><p>as_cast_to_html:</p></th>
-<td><p>qtext()</p><p>/ gen_as(text, <b>escaping</b> )</p></td>
+<td><p>qtext()</p><p>/ gen_as(text, <b>escaping</b>, <b>text_quote</b>)</p></td>
 <td><p>?text_from_element</p><p>→ <code>capture {</code><br>from_element<br><code>}</code></p></td></tr>
 <tr class="ro3">
 <th class="right"><p>value</p><p>as_cast_to_scalar:</p></th>
