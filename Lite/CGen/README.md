@@ -109,7 +109,7 @@ sub as_cast_to_text($self, $var, $value) {
   ref $value ? $self->as_text(@$value) : qtext($value); 
 }
 sub as_cast_to_html($self, $var, $value) {
-  ref $value ? join('.', gen_as(text => \@AS_TEXT, 1, 1, @_)) : qtext($value); 
+  ref $value ? join('.', gen_as(text => \@AS_TEXT, 1, 1, @$value)) : qtext($value); 
 }
 sub as_cast_to_scalar($self, $var, $value) {
   'scalar(do {'.(ref $value ? $self->as_list(@$value) : $value).'})';
