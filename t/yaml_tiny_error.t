@@ -9,21 +9,19 @@ use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 use Test::More;
 use YATT::Lite::WebMVC0::SiteApp;
 
-eval { require YAML::Tiny };
-if ($@) {
-  plan skip_all => "YAML::Tiny is not installed.";
-  exit;
-}
-else {
+SKIP: {
+  eval { require YAML::Tiny };
+  skip "YAML::Tiny is not installed.", 1 if $@;
+  
   my $version = YAML::Tiny->VERSION // 'unkown';
   diag "YAML::Tiny version ... $version";
+
+  my $site = YATT::Lite::WebMVC0::SiteApp->new();
+
+  eval { $site->read_file("dummy.yml") };
+  my $error = $@ // '';
+  $error =~ s/\n+$//;
+  ok $error =~ qr/does not exist/, "raise error: $error";
 }
-
-my $site = YATT::Lite::WebMVC0::SiteApp->new();
-
-eval { $site->read_file("dummy.yml") };
-my $error = $@ // '';
-$error =~ s/\n+$//;
-ok $error =~ qr/does not exist/, "raise error: $error";
 
 done_testing();
