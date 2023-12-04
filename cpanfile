@@ -81,7 +81,6 @@ on test => sub {
  requires 'Time::HiRes';
 
  requires 'DBD::SQLite';
- requires 'DBD::mysql';
  requires 'DBIx::Class';
 
  requires 'Pod::Simple::SimpleTree';
