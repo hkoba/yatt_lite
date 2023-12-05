@@ -33,7 +33,8 @@ jobs:
         run: perl -V
       - name: Install Dependencies
         run: |
-          apt-get update -y && apt-get install -y zsh
+          apt-get update -y || true
+          apt-get install -y zsh
           curl -fsSL --compressed https://raw.githubusercontent.com/skaji/cpm/main/cpm > cpm
           perl ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::Report::Coveralls 
           perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
