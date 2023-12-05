@@ -84,16 +84,15 @@ sub node_body {
 
 sub node_body_slot {
   my ($self, $node) = @_;
-  given ($node->[NODE_TYPE]) {
-    when (TYPE_ELEMENT) {
-      return $node->[NODE_BODY][NODE_VALUE] if defined $node->[NODE_BODY];
-    }
-    when (TYPE_ATT_NESTED) {
-      return $node->[NODE_VALUE];
-    }
-    default {
-      die "Invalid node type for node_body_slot: $_";
-    }
+  my $type = $node->[NODE_TYPE];
+  if ($type == TYPE_ELEMENT) {
+    return $node->[NODE_BODY][NODE_VALUE] if defined $node->[NODE_BODY];
+  }
+  elsif ($type == TYPE_ATT_NESTED) {
+    return $node->[NODE_VALUE];
+  }
+  else {
+    die "Invalid node type for node_body_slot: $type";
   }
 }
 

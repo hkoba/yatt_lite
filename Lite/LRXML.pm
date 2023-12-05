@@ -1161,13 +1161,15 @@ sub AUTOLOAD {
   (my $meth = $sub) =~ s/.*:://;
   my $sym = $YATT::Lite::LRXML::{$meth}
     or croak "No such method: $meth";
-  given ($meth) {
-    when (/ent/)  { require YATT::Lite::LRXML::ParseEntpath }
-    when (/body/) { require YATT::Lite::LRXML::ParseBody }
-    default {
-      my MY $self = $_[0];
-      die $self->synerror_at($self->{startln}, "Unknown method: %s", $meth);
-    }
+  if ($meth =~ /ent/) {
+    require YATT::Lite::LRXML::ParseEntpath
+  }
+  elsif ($meth =~ /body/) {
+    require YATT::Lite::LRXML::ParseBody
+  }
+  else {
+    my MY $self = $_[0];
+    die $self->synerror_at($self->{startln}, "Unknown method: %s", $meth);
   }
   my $code = *{$sym}{CODE}
     or croak "Can't find definition of: $meth";

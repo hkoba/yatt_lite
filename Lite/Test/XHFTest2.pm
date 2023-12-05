@@ -317,16 +317,15 @@ sub mkformref_if_post {
 sub mech_request {
   (my Tests $tests, my ($mech, $item)) = @_;
   my $url = $tests->item_url($item);
-  given ($tests->item_method($item)) {
-    when ('GET') {
-      return $mech->get($url);
-    }
-    when ('POST') {
-      return $mech->post($url, $item->{cf_PARAM});
-    }
-    default {
-      die "Unknown test method: $_\n";
-    }
+  my $method = $tests->item_method($item);
+  if ($method eq 'GET') {
+    return $mech->get($url);
+  }
+  elsif ($method eq 'POST') {
+    return $mech->post($url, $item->{cf_PARAM});
+  }
+  else {
+    die "Unknown test method: $method\n";
   }
 }
 
