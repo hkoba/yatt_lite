@@ -136,7 +136,7 @@ function plenv_install_missings {
     fi
     local m
     for m in $wants; do
-	plenv exec perl -M$m -e0 >&/dev/null || missings+=($m)
+	plenv exec perldoc -ml $m >&/dev/null || missings+=($m)
     done
     if (($#missings)); then
         confirm "Following modules are not yet installed for plenv:\n----\n${(F)missings}\n----\n$c_em[1]Install (with plenv exec cpanm) now? "\
