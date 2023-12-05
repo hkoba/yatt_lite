@@ -39,11 +39,11 @@ jobs:
           perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
       - name: Run Tests (no coverage)
         if: ${{ !matrix.coverage }}
-        run: PERL=$(which perl) t/runtests.zsh
+        run: PERL=$(which perl) ./t/runtests.zsh
       - name: Run Tests (with coverage)
         if: ${{ matrix.coverage }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PERL=$(which perl) t/runtests.zsh -C
+          PERL=$(which perl) ./t/runtests.zsh -C
           cover -report coveralls t/cover_db
