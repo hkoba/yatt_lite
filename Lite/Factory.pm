@@ -1223,6 +1223,9 @@ sub read_file_yml {
   (my MY $self, my $fn) = @_;
   require YAML::Tiny;
   my $yaml = YAML::Tiny->read($fn);
+  unless (defined $yaml) { # YAML::Tiny old version doesn't raise error.
+    Carp::croak(YAML::Tiny->errstr . ""); # errstr is deprecated, but only old version can reach this line.
+  }
   wantarray ? lexpand($yaml->[0]) : $yaml->[0];
 }
 
