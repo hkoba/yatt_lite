@@ -600,17 +600,18 @@ sub split_path_info {
 
 sub has_forbidden_path {
   (my MY $self, my $path) = @_;
-  given ($path) {
-    when (undef) {
-      return undef;
-    }
-    when (m{\.lib(?:/|$)}) {
-      return ".lib: $path";
-    }
-    when (m{(?:^|/)\.ht|\.ytmpl$}) {
-      # XXX: basename() is just to ease testing.
-      return "filetype: " . basename($path);
-    }
+  if (not defined $path) {
+    return undef;
+  }
+  elsif ($path =~ m{\.lib(?: / | $ )}x) {
+    return ".lib: $path";
+  }
+  elsif ($path =~ m{(?:^|/)\.ht|\.ytmpl$ }x) {
+    # XXX: basename() is just to ease testing.
+    return "filetype: " . basename($path);
+  }
+  else {
+    undef;
   }
 }
 
