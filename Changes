@@ -1,5 +1,17 @@
 Revision history for YATT::Lite
 
+0.101_103 2023-12-05
+    * GH-214 - Drop use of deprecated `given` syntax
+    * GH-211 - Allow `*.ydo` to reurn PSGI tuple directly
+    * GH-209 - Fix incorrect error of dynamic module loading while rendering
+    * GH-207 - Fix error_response handling for per_role_docroot mode
+    * GH-206 - Fix is_index mis-detection
+    * GH-205 - `&yatt:script_uri;` now cares HTTP_X_FORWARDED_PROTO
+    * GH-204 - (Emacs) fix yatt-mode background face
+    * GH-203 - Allow loading multiple app.psgi in a process
+
+    * Drop perl 5.10
+
 0.101_102 2020-10-17
     * GH-202 - fixed some test failures
 

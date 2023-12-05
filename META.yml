@@ -7,7 +7,6 @@ build_requires:
   CGI::Emulate::PSGI: '0'
   CGI::Session: '0'
   DBD::SQLite: '0'
-  DBD::mysql: '0'
   DBIx::Class: '0'
   Email::Sender: '0'
   Email::Simple: '0'
@@ -27,11 +26,12 @@ build_requires:
   Test::Refcount: '0'
   Test::WWW::Mechanize::PSGI: '0'
   Time::HiRes: '0'
+  YAML::Tiny: '0'
 configure_requires:
   Module::Build: '0'
   Module::CPANfile: '0'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4231, CPAN::Meta::Converter version 2.150010'
+generated_by: 'Module::Build version 0.4234, CPAN::Meta::Converter version 2.150010'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -49,10 +49,9 @@ recommends:
   Test::Requires: '0'
   Text::Glob: '0'
   Time::Piece: '0'
-  YAML::Tiny: '0'
 requires:
   CGI: '4.40'
-  Cookie::Baker::XS: '0'
+  Cookie::Baker: '0'
   Devel::StackTrace: '0'
   File::AddInc: '0'
   File::Path: '0'
@@ -73,5 +72,5 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/hkoba/yatt_lite
-version: 0.101_102
+version: 0.101_103
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

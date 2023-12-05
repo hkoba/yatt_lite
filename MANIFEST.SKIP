@@ -45,6 +45,7 @@
 \.#
 \.rej$
 \.db$
+\.tar\.gz$
 
 # Avoid OS-specific files/dirs
 # Mac OSX metadata
@@ -84,3 +85,7 @@
 samples/benchmarks/template/[^/]+\.out$
 
 samples/.*?/data/\.ht_[^/]+$
+
+samples/.*?/html/\.htaccess$
+samples/.*?/html/cgi-bin/\.htaccess$
+samples/.*?/html/cgi-bin/runyatt\.cgi$

@@ -39,7 +39,6 @@ requires 'HTML::Entities';
 recommends 'Sub::Identify';
 recommends 'Sub::Inspector';
 
-recommends 'YAML::Tiny';
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 
 recommends 'Test::Requires'; # which is required by Sub::Inspector
@@ -91,4 +90,6 @@ on test => sub {
  requires 'Email::Simple';
  requires 'CGI::Emulate::PSGI';
  requires 'CGI::Compile';
+
+ requires 'YAML::Tiny';
 };

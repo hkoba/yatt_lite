@@ -2,6 +2,7 @@
 .htaccess
 .shipit
 .travis.yml
+.github/workflows/perl_linux.yml
 Build.PL
 Changes
 cpanfile
@@ -17,6 +18,7 @@ Lite.pod
 Lite/Breakpoint.pm
 Lite/CGen.pm
 Lite/CGen/Perl.pm
+Lite/CGen/README.md
 Lite/Connection.pm
 Lite/Constants.pm
 Lite/Core.pm
@@ -110,6 +112,7 @@ misc/cpan/MyBuilder.pm
 misc/gnu-source-highlight/sh_yatt.js
 misc/gnu-source-highlight/yatt.lang
 README.md
+samples/runplack-env-dev.cgi
 samples/basic/1/.symlinks
 samples/basic/1/app.psgi
 samples/basic/1/html/envelope.ytmpl
@@ -194,17 +197,6 @@ samples/basic/3/t/fcgi_offline.t
 samples/basic/3/t/http_localhost.t
 samples/basic/3/t/offline.t
 samples/basic/3/t/psgi_offline.t
-samples/basic/4/.symlinks
-samples/basic/4/app.psgi
-samples/basic/4/html/.htyattrc.pl
-samples/basic/4/html/index.yatt
-samples/basic/4/t/.htaccess
-samples/basic/4/t/.symlinks
-samples/basic/4/t/1-basic.xhf
-samples/basic/4/t/fcgi_offline.t
-samples/basic/4/t/http_localhost.t
-samples/basic/4/t/offline.t
-samples/basic/4/t/psgi_offline.t
 samples/basic/5/.symlinks
 samples/basic/5/app.psgi
 samples/basic/5/html/dot.htaccess
@@ -701,6 +693,7 @@ t/psgi_pi.t
 t/psgi_raise_response.t
 t/psgi_root_index.t
 t/psgi_sess2/app.d/public/index.yatt
+t/psgi_sess2/app.d/public/.htyattrc.pl
 t/psgi_sess2/app.psgi
 t/psgi_sess2/app.t
 t/psgi_site_config.t
@@ -735,6 +728,17 @@ t/tkt172_moderror_in_entity/lib/MyBackendFOOBAR.pm
 t/tkt172_moderror_in_entity/psgi.t
 t/tkt172_moderror_in_entity/public/index.yatt
 t/tkt172_moderror_in_entity/ytmpl/error.ytmpl
+t/tkt203_multiple_psgi/bar/app.psgi
+t/tkt203_multiple_psgi/bar/public/.htyattrc.pl
+t/tkt203_multiple_psgi/baz.psgi
+t/tkt203_multiple_psgi/baz/.htyattrc.pl
+t/tkt203_multiple_psgi/foo/app.psgi
+t/tkt203_multiple_psgi/foo/public/.htyattrc.pl
+t/tkt203_multiple_psgi/test.t
+t/tkt209_modcatcherror_in_entity/lib/MyBackendFOOBAR.pm
+t/tkt209_modcatcherror_in_entity/psgi.t
+t/tkt209_modcatcherror_in_entity/public/index.yatt
+t/tkt209_modcatcherror_in_entity/ytmpl/error.ytmpl
 t/typealias.t
 t/types.t
 t/use.t
@@ -757,6 +761,7 @@ t/xhf/lite/7-foreach.xhf
 t/xhf/lite/8-newline.xhf
 t/xhf/lite/9-raise.xhf
 t/xhfdump.t
+t/yaml_tiny_error.t
 vendor/apple/.symlinks
 vendor/apple/ApacheConfig.pm
 vendor/apple/apple-enable-cgi.pl
