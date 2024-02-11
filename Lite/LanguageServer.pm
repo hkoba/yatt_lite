@@ -124,8 +124,7 @@ sub lspcall__textDocument__hover {
   my $fn = $self->uri2localpath($docId->{uri});
   my Position $pos = $params->{position};
 
-  my ($symbol, $cursor)
-    = $self->inspector->locate_symbol_at_file_position(
+  my ($symbol, $cursor) = $self->locate_symbol_at_file_position(
       $fn, $pos->{line}, $pos->{character}
     ) or return;
 
@@ -151,8 +150,7 @@ sub lspcall__textDocument__implementation {
   my $fn = $self->uri2localpath($docId->{uri});
   my Position $pos = $params->{position};
 
-  my ($symbol, $cursor)
-    = $self->inspector->locate_symbol_at_file_position(
+  my ($symbol, $cursor) = $self->locate_symbol_at_file_position(
       $fn, $pos->{line}, $pos->{character}
     ) or return;
 
@@ -160,6 +158,20 @@ sub lspcall__textDocument__implementation {
     or return;
 
   $found;
+}
+
+#
+# Extract a symbol at file/position.
+# In list context, also returns $cursor for later tree walk.
+#
+sub locate_symbol_at_file_position {
+  (my MY $self, my ($fn, $line, $character)) = @_;
+
+  my ($symbol, $cursor) = $self->inspector->locate_symbol_at_file_position(
+      $fn, $line, $character // 0
+    ) or return;
+
+  wantarray ? ($symbol, $cursor) : $symbol;
 }
 
 sub lspcall__textDocument__documentSymbol {
