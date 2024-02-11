@@ -963,7 +963,7 @@ sub find_entity_from {
   $entns->can("entity_$entityName")
     or return;
 
-  +{$self->describe_entns_entity($entns, $entityName)};
+  +{@{$self->describe_entns_entity($entns, $entityName)}};
 }
 
 *cmd_list_entity = *cmd_list_entities;*cmd_list_entity = *cmd_list_entities;
@@ -1008,7 +1008,7 @@ sub cmd_list_entities {
     foreach my $meth (@methods) {
       (my $entityName = $meth) =~ s/^entity_//;
 
-      my @result = $self->describe_entns_entity($entns, $entityName, path => $path);
+      my @result = @{$self->describe_entns_entity($entns, $entityName, path => $path)};
       $self->cli_output(
         $self->{detail} ? [+{@result}] : \@result
       );
