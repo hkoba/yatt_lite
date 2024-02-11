@@ -479,7 +479,7 @@ use YATT::Lite::Constants;
     } elsif (my $sub = $self->can("as_lvalue_" . $type->[0])) {
       $sub->($self, $var);
     } else {
-      '$'.$var->varname;
+      "\$".$var->varname;
     }
   }
   sub as_lvalue_html {
@@ -672,7 +672,7 @@ use YATT::Lite::Constants;
 	  push @$args, $self->as_escaped($var);
 	  $uniq->{$name} = 1 + keys %$uniq;
 	}
-	my $argno = $ref_numeric ? $uniq->{$name} . '$' : '';
+	my $argno = $ref_numeric ? $uniq->{$name} . "\$" : '';
 	# XXX: type==value is alias of scalar.
 	if ($ref_numeric and $var->type->[0] eq 'scalar') {
 	  $msgid .= "%${argno}d"; # XXX: format selection... but how? from entity?
@@ -817,7 +817,7 @@ use YATT::Lite::Constants;
     (undef, my $attname) = @{$var->type};
     sprintf q|YATT::Lite::Util::named_attr('%s', %s)|
       , $attname // $name
-	, join ", ", '$'.$name, $self->gen_entlist(undef, @args);
+	, join ", ", "\$".$name, $self->gen_entlist(undef, @args);
   }
   sub as_expr_invoke {
     (my MY $self, my ($esc_later, $name)) = splice @_, 0, 3;
@@ -1097,7 +1097,7 @@ sub take_spread_name {
 	my ($x, @type) = lexpand($my->[NODE_PATH]);
 	my $varname = $my->[NODE_VALUE];
 	$local{$varname} = $self->mkvar_at(undef, $type[0] || '' => $varname);
-	'my $' . $varname;
+	"my \$" . $varname;
       } else {
 	# _ は？ entity 自体に処理させるか…
 	''
