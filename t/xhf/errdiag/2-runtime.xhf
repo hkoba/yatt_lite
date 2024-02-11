@@ -42,7 +42,7 @@ ERROR: ^Use of uninitialized value (?:\$html_x )?in print at \S+ line 3,
 TITLE: pi var in body
 IN:
  <yatt:foo>
- <?perl undef $html_x;?> <?perl===&yatt:x;?>
+ <?perl=== undef $html_x; &yatt:x;?>
  </yatt:foo>
  
  <!yatt:widget foo body = [code x=html]>

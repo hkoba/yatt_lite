@@ -171,6 +171,7 @@ sub _parse_body {
       my $nl = "\n" if $2;
       # XXX: parse_text の前なので、本当は良くない
       $self->{curpos} += length $2 if $2;
+      $self->{endln} += numLines($1);
       push @$sink, do {
         my $node = [];
         $node->[NODE_TYPE] = TYPE_PI;
