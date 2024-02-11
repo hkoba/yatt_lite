@@ -820,6 +820,34 @@ sub compare_position {
     || $leftPos->{character} <=> $rightPos->{character};
 }
 
+sub dump_part_decllist {
+  (my MY $self, my ($fileName, $line)) = @_;
+  $line //= 0;
+
+  (my Part $part, my Template $tmpl, my $core)
+    = $self->find_part_of_file_line($fileName, $line)
+    or return;
+
+  $part->{decllist}
+}
+
+sub dump_part_tree {
+  (my MY $self, my ($fileName, $line)) = @_;
+  $line //= 0;
+
+  (my Part $part, my Template $tmpl, my $core)
+    = $self->find_part_of_file_line($fileName, $line)
+    or return;
+
+  unless (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
+    Carp::croak "part $part->{cf_kind} $part->{cf_name} is not a widget";
+  }
+
+  $core->ensure_parsed($part);
+  my Widget $widget = $part;
+  $widget->{tree}
+}
+
 sub dump_tokens_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
   $line //= 0;
