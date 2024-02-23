@@ -132,7 +132,7 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
       diag "DIAG: ".($mech->content // '');
     }
 
-    $logged_in_at = localtime->strftime('%Y-%m-%d %H:%M:%S %z');
+    $logged_in_at = localtime->strftime('%Y-%m-%d %H:%M:');
 
     ok((my ($sid) = $mech->content =~ /Has sid cookie: ([0-9a-f]+)/)
        , "Has sid cookie");
