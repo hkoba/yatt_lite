@@ -47,7 +47,7 @@ ok(my $SITE = YATT::Lite::Factory->load_factory_script($psgi));
       "-> $next",
     );
 
-    $logged_in_at = localtime->strftime('%Y-%m-%d %H:%M:%S %z');
+    $logged_in_at = localtime->strftime('%Y-%m-%d %H:%M:');
 
     $mech->content_contains("Has session state");
     $mech->content_contains("No sid cookie"); # because it is just assigned.
