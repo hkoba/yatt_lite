@@ -51,7 +51,7 @@ sub wait_for_time {
 #
 sub wait_if_near_deadline {
   my ($deadline, $threshold) = @_;
-  $threshold //= 0.05;
+  $threshold //= 0.2;
   my $now = Time::HiRes::time;
   my $diff = $deadline - $now;
   return if $diff > $threshold;
