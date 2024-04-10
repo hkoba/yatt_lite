@@ -543,6 +543,7 @@ sub parse_attlist_with_lvalue {
             $_ = $$strref;
 
             $node->[NODE_BODY] = [$self->mkentity(@common)];
+            $node->[NODE_END] = $self->{curpos};
           } else {
             my ($quote, $value) = oneof($m, qw(bare sq dq));
             $node->[NODE_TYPE] = TYPE_ATT_TEXT;
@@ -604,6 +605,7 @@ sub mkentity {
   } else {
     die "mkentity called without entity or special";
   }
+  $node->[NODE_END] = $self->{curpos};
   $node;
 }
 
