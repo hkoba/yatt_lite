@@ -85,7 +85,7 @@
          }
       }
    },
-   "release_status" : "testing",
+   "release_status" : "stable",
    "resources" : {
       "license" : [
          "http://dev.perl.org/licenses/"
@@ -94,6 +94,6 @@
          "url" : "https://github.com/hkoba/yatt_lite"
       }
    },
-   "version" : "0.101_103",
+   "version" : "0.110",
    "x_serialization_backend" : "JSON::PP version 4.16"
 }

@@ -1,5 +1,8 @@
 Revision history for YATT::Lite
 
+0.110 2024-08-16
+    * GH-216, GH-217 - More LRXML parser fix (for Language Server)
+
 0.101_103 2023-12-05
     * GH-214 - Drop use of deprecated `given` syntax
     * GH-211 - Allow `*.ydo` to reurn PSGI tuple directly
