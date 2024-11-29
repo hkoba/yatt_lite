@@ -66,7 +66,7 @@ sub process_yatt_dist_files {
   find({no_chdir => 1, wanted => sub {
 	  return $self->prune if /^\.git|^lib$/;
 	  return if -d $_;
-	  return unless m{/yatt[^/]*$|\.el$};
+	  return unless -x $_ and m{/yatt[^/]*$};
 	  my $d = $script_files{$_} = "bin/". File::Basename::basename($_);
 	  $self->_yatt_dist_ensure_blib_copied($_, $d);
 	  }}, 'scripts');
@@ -76,7 +76,7 @@ sub process_yatt_dist_files {
   find({no_chdir => 1, wanted => sub {
 	  return $self->prune if /^\.git|^lib$/;
 	  return if -d $_;
-	  return unless m{/yatt[^/]*$|\.el$};
+	  return unless m{\.el$};
 	  my $d = $pm_files{$_} = "lib/YATT/$_";
 	  $self->_yatt_dist_ensure_blib_copied($_, $d);
 	  }}, 'elisp');
