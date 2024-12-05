@@ -2,7 +2,14 @@
 #----------------------------------------
 use strict;
 use warnings qw(FATAL all NONFATAL misc);
-use FindBin; BEGIN {local $_ = "$FindBin::RealBin/libdir.pl"; -r $_ and do $_}
+use FindBin; BEGIN {local $_ = "$FindBin::RealBin/libdir.pl";
+if (-r $_) { 
+  do $_
+} elsif ($FindBin::RealBin =~ m{/local/bin$}) {
+  require lib;
+  lib->import($FindBin::RealBin . "/../lib/perl5");
+}
+}
 sub MY () {__PACKAGE__}
 #----------------------------------------
 
