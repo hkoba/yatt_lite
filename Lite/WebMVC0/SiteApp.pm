@@ -533,7 +533,7 @@ sub set_yatt_script_name {
   };
 
   # script_dir = script_name + /
-  ($env->{'yatt.script_dir'} = $script_name) =~ s,/*\z,/,;
+  ($env->{'yatt.script_dir'} = $script_name // '') =~ s,/*\z,/,;
 
   $script_name
 }
