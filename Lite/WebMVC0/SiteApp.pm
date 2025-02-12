@@ -968,6 +968,11 @@ Entity script_name => sub {
   $env->{'yatt.script_name'};
 };
 
+Entity script_dir => sub {
+  my ($this) = @_;
+  my Env $env = $CON->env;
+  $env->{'yatt.script_dir'};
+};
 
 # GH-205
 # &yatt:SCRIPT_URI(); is original $env->{SCRIPT_URI}
