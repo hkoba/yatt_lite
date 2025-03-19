@@ -32,7 +32,7 @@ require_ok('YATT::Lite::Inspector');
     ["foo", "bar"],
     decode_json(q{[{"range":{"end":{"character":0,"line":1},"start":{"character":3,"line":0}},"rangeLength":0,"text":"\nqux\nquuux"}]}),
     ["foo", "qux", "quuuxbar"],
-    "insert first newline"
+    "insert multiline changes with newlines"
   );
 
 }

@@ -240,19 +240,20 @@ sub apply_change_to_lines {
   my @pre = @{$lines}[0 .. $start->{line}-1];
   my @post = @{$lines}[$end->{line}+1 .. $#$lines];
   if ($start->{line} == $end->{line}) {
-    my $edited = $lines->[$start->{line}];
+    my @edited = $lines->[$start->{line}];
     try {
-      substr($edited
+      substr($edited[0]
              , $start->{character}, $end->{character} - $start->{character}
              , $change->{text});
+      @edited = split /\n/, $edited[0], -1;
     } catch {
       Carp::croak "failed to apply changes: "
-        . terse_dump([original => $edited
+        . terse_dump([original => $lines->[$start->{line}]
                       , start => $start->{character}
                       , len => $end->{character} - $start->{character}
                       , changed => $change->{text}]). ": $_";
     };
-    [@pre, $edited, @post];
+    [@pre, @edited, @post];
   } else {
     my ($pre_edit, $post_edit);
     try {
@@ -266,7 +267,8 @@ sub apply_change_to_lines {
                                  , end => $end->{character}]
                       , changed => $change->{text}]). ": $_";
     };
-    [@pre, $pre_edit.$change->{text}.$post_edit, @post];
+    my $edited = $pre_edit.$change->{text}.$post_edit;
+    [@pre, split(/\n/, $edited, -1), @post];
   }
 }
 
