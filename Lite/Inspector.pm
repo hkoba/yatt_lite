@@ -218,6 +218,20 @@ sub apply_changes {
 # Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":1,"character":1}}}'
 # [["fxxar","baz"]]
 
+sub cmd_apply_all_change_to_lines {
+  (my MY $self, my $lines, my $changeList) = @_;
+  my $result = $self->apply_all_change_to_lines($lines, $changeList);
+  print $_, "\n" for @$result;
+}
+
+sub apply_all_change_to_lines {
+  (my MY $self, my $lines, my $changeList) = @_;
+  foreach my TextDocumentContentChangeEvent $change (@$changeList) {
+    $lines = $self->apply_change_to_lines($lines, $change);
+  }
+  $lines;
+}
+
 sub apply_change_to_lines {
   (my MY $self, my $lines, my TextDocumentContentChangeEvent $change) = @_;
   my Range $from = $change->{range};
