@@ -12,6 +12,8 @@ use MOP4Import::Base::CLI_JSON -as_base
      [ignore_symlink => doc => "ignore symlinked templates"],
      [detail => doc => "show argument details"],
      [line_base => default => 1],
+     [debug_changes_dir => doc => "(LSP debugging only)"
+      , default => "var/debug_yatt_ls"],
      # qw/debug/,
    ];
 
@@ -42,6 +44,10 @@ use Text::Glob;
 use Plack::Util;
 use File::Basename;
 use File::stat;
+
+use File::Path qw(make_path);
+use File::Slurp qw(write_file);
+use Time::HiRes ();
 
 use Try::Tiny;
 
@@ -184,6 +190,11 @@ sub apply_changes {
   $tmpl->{cf_mtime} = time;
   my $changed = join("\n", @$lines);
 
+  if ($ENV{DEBUG_YATT_LANGSERVER} and $self->debug_changes_dir_exists) {
+    my $destFn = $self->debug_changes_write_file($fileName, $changed);
+    print STDERR "# Wrote: $destFn\n";
+  }
+
   my LintResult $result;
 
   try {
@@ -207,6 +218,43 @@ sub apply_changes {
   }
 
   ($changed, $result);
+}
+
+sub head_as_json_array {
+  my MY $self = shift;
+  my $limit = 10;
+  if ($_[0] =~ /^-(\d+)/) {
+    $limit = $1; shift;
+  }
+  use open qw(:std :locale);
+  local @ARGV = @_;
+  my @result;
+  while (<<>>) {
+    chomp;
+    push @result, $_;
+    last if --$limit <= 0;
+  }
+  \@result;
+}
+
+sub debug_changes_dir_exists {
+  (my MY $self) = @_;
+  -d "$self->{dir}/$self->{debug_changes_dir}";
+}
+
+sub debug_changes_write_file {
+  (my MY $self, my ($fileName, $changed)) = @_;
+
+  my $debugDir = "$self->{dir}/$self->{debug_changes_dir}";
+
+  substr($fileName, 0, length $self->{dir}) = "";
+
+  my $destFn = "$debugDir/$fileName." . Time::HiRes::time;
+  my $destDir = File::Basename::dirname($destFn);
+  unless (-d $destDir) {
+    make_path($destDir);
+  }
+  write_file($destFn, +{binmode => ':utf8'}, $changed);
 }
 
 # Z-chtholly(pts/0)% ./Lite/Inspector.pm apply_change_to_lines '["fooooo","bar","baz"]' '{"text":"xx","range":{"start":{"line":0,"character":1},"end":{"line":0,"character":2}}}'
