@@ -1,0 +1,41 @@
+#!/usr/bin/env perl
+# -*- mode: perl; coding: utf-8 -*-
+#----------------------------------------
+use strict;
+use warnings qw(FATAL all NONFATAL misc);
+use FindBin;
+BEGIN { do "$FindBin::Bin/t_lib.pl" }
+#----------------------------------------
+
+use Test::More;
+use JSON;
+
+require_ok('YATT::Lite::Inspector');
+
+{
+  my $inspector = YATT::Lite::Inspector->new;
+  my $test = sub {
+    my ($before, $changeList, $expect, $title) = @_;
+    my $got = $inspector->apply_all_change_to_lines($before, $changeList);
+    is_deeply($got, $expect, $title);
+  };
+
+
+  $test->(
+    ["foo", "bar"],
+    decode_json(q{[{"range":{"end":{"character":0,"line":0},"start":{"character":0,"line":0}},"rangeLength":0,"text":"\n"}]}),
+    ["", "foo", "bar"],
+    "insert first newline"
+  );
+
+  $test->(
+    ["foo", "bar"],
+    decode_json(q{[{"range":{"end":{"character":0,"line":1},"start":{"character":3,"line":0}},"rangeLength":0,"text":"\nqux\nquuux"}]}),
+    ["foo", "qux", "quuuxbar"],
+    "insert first newline"
+  );
+
+}
+
+done_testing();
+
