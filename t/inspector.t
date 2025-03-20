@@ -12,13 +12,11 @@ use Test::More;
 require_ok('YATT::Lite::Inspector');
 
 {
-  my $inspector = YATT::Lite::Inspector->new;
   my $test = sub {
     my ($before, $changeList, $expect, $title) = @_;
-    my $got = $inspector->apply_all_change_to_lines($before, $changeList);
+    my $got = YATT::Lite::Inspector->apply_all_change_to_lines($before, $changeList);
     is_deeply($got, $expect, $title);
   };
-
 
   $test->(
     ["foo", "bar"],
