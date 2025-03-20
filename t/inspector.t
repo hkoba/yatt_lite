@@ -8,7 +8,6 @@ BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
 use Test::More;
-use JSON;
 
 require_ok('YATT::Lite::Inspector');
 
@@ -23,14 +22,20 @@ require_ok('YATT::Lite::Inspector');
 
   $test->(
     ["foo", "bar"],
-    decode_json(q{[{"range":{"end":{"character":0,"line":0},"start":{"character":0,"line":0}},"rangeLength":0,"text":"\n"}]}),
+    [{"range" =>
+      {"end" => {"character" => 0,"line" => 0}
+       ,"start" => {"character" => 0,"line" => 0}}
+      ,"rangeLength" => 0,"text" => "\n"}],
     ["", "foo", "bar"],
     "insert first newline"
   );
 
   $test->(
     ["foo", "bar"],
-    decode_json(q{[{"range":{"end":{"character":0,"line":1},"start":{"character":3,"line":0}},"rangeLength":0,"text":"\nqux\nquuux"}]}),
+    [{"range" =>
+      {"end" => {"character" => 0,"line" => 1}
+       ,"start" => {"character" => 3,"line" => 0}}
+      ,"rangeLength" => 0,"text" => "\nqux\nquuux"}],
     ["foo", "qux", "quuuxbar"],
     "insert multiline changes with newlines"
   );
