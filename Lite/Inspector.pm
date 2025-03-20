@@ -229,7 +229,7 @@ sub head_as_json_array {
   use open qw(:std :locale);
   local @ARGV = @_;
   my @result;
-  while (<<>>) {
+  while (<>) {
     chomp;
     push @result, $_;
     last if --$limit <= 0;
