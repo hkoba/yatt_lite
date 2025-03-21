@@ -190,7 +190,7 @@ sub apply_changes {
   $tmpl->{cf_mtime} = time;
   my $changed = join("\n", @$lines);
 
-  if ($ENV{DEBUG_YATT_LANGSERVER} and $self->debug_changes_dir_exists) {
+  if ($self->debug_changes_dir_exists) {
     my $destFn = $self->debug_changes_write_file($fileName, $changed);
     print STDERR "# Wrote: $destFn\n";
   }
@@ -239,6 +239,8 @@ sub head_as_json_array {
 
 sub debug_changes_dir_exists {
   (my MY $self) = @_;
+  -e "$self->{dir}/DEBUG_YATT_LANGSERVER"
+    &&
   -d "$self->{dir}/$self->{debug_changes_dir}";
 }
 
