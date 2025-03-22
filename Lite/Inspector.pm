@@ -269,7 +269,16 @@ sub debug_changes_write_file {
 # [["fxxar","baz"]]
 
 sub cmd_apply_all_change_to_lines {
-  (my MY $self, my $lines, my $changeList) = @_;
+  (my MY $self, my $linesOrFileName, my $changeList) = @_;
+
+  my $lines = do {
+    if (ref $linesOrFileName) {
+      $linesOrFileName
+    } else {
+      [split /\r?\n/, YATT::Lite::Util::read_file($linesOrFileName)]
+    }
+  };
+
   my $result = $self->apply_all_change_to_lines($lines, $changeList);
   print $_, "\n" for @$result;
 }
