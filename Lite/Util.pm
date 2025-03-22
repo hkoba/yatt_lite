@@ -730,7 +730,13 @@ sub ostream {
 
 sub read_file {
   my ($fn, $layer) = @_;
-  open my $fh, '<' . ($layer // ''), $fn or die "Can't open '$fn': $!";
+  my $fh;
+  if ($fn eq '-') {
+    $fh = \*STDIN;
+  } else {
+    open $fh, '<' . ($layer // ''), $fn
+      or die "Can't open '$fn': $!";
+  }
   local $/;
   scalar <$fh>;
 }
