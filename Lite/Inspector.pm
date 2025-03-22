@@ -304,7 +304,7 @@ sub apply_change_to_lines {
       substr($edited[0]
              , $start->{character}, $end->{character} - $start->{character}
              , $change->{text});
-      @edited = split /\n/, $edited[0], -1;
+      @edited = split /\n/, $edited[0], -1 if $edited[0] ne '';
     } catch {
       Carp::croak "failed to apply changes: "
         . terse_dump([original => $lines->[$start->{line}]
@@ -327,7 +327,8 @@ sub apply_change_to_lines {
                       , changed => $change->{text}]). ": $_";
     };
     my $edited = $pre_edit.$change->{text}.$post_edit;
-    [@pre, split(/\n/, $edited, -1), @post];
+    my @edited = $edited ne '' ? split(/\n/, $edited, -1) : $edited;
+    [@pre, @edited, @post];
   }
 }
 
