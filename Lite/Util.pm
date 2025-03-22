@@ -681,7 +681,7 @@ sub url_encode {
 
   # XXX: Forward slash (and ':') is allowed, for cleaner url. This may break...
   $encode
-    =~ s{([^A-Za-z0-9\-_.!~*'() /:])}{ uc sprintf "%%%02x",ord $1 }eg;
+    =~ s{([^A-Za-z0-9\-_.!~*\'() /:])}{ uc sprintf "%%%02x",ord $1 }eg;
   $encode =~ tr/ /+/;
   return $encode;
 }
