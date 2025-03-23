@@ -719,11 +719,13 @@ sub declare_args {
     || $self->build($ns, $kind => $self->default_part_for($tmpl), ''
                     , startln => $self->{startln});
 
-  $newpart->configure(
-    startpos => $self->{curpos},
-    startln => $self->{startln},
-  );
-  $newpart->{toks} = [];
+  if (not grep {/\S/} @{$newpart->{toks}}) {
+    $newpart->configure(
+      # startpos => $self->{curpos},
+      startln => $self->{startln},
+    );
+    $newpart->{toks} = [];
+  }
 
   $self->cut_root_route_and_install_url_params($newpart, \@args);
 
