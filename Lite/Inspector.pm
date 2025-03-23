@@ -640,7 +640,7 @@ sub locate_entity_function {
 
   my ($tmpl, $core) = $self->find_template($sym->{filename});
 
-  $self->find_entity_from($tmpl->cget('entns'), $sym->{name});
+  $self->find_entity_from($tmpl, $sym->{name});
 }
 
 sub md_quote_code_as {
@@ -1059,9 +1059,9 @@ sub show_file_line {
 }
 
 sub find_entity_from {
-  (my MY $self, my ($fromFile, $entityName)) = @_;
+  (my MY $self, my ($tmplOrFile, $entityName)) = @_;
 
-  my ($tmpl, $core) = $self->find_template($fromFile);
+  my ($tmpl) = ref $tmplOrFile ? $tmplOrFile : $self->find_template($tmplOrFile);
 
   my $entns = $tmpl->cget('entns');
   $entns->can("entity_$entityName")
