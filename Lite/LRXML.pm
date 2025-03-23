@@ -715,9 +715,15 @@ sub declare_args {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
   my $kind = 'args';
   my $declkind = join(":", $ns, $kind);
-  my Part $newpart = $self->cut_implicit_default_part($tmpl, $declkind)
+  my Widget $newpart = $self->cut_implicit_default_part($tmpl, $declkind)
     || $self->build($ns, $kind => $self->default_part_for($tmpl), ''
                     , startln => $self->{startln});
+
+  $newpart->configure(
+    startpos => $self->{curpos},
+    startln => $self->{startln},
+  );
+  $newpart->{toks} = [];
 
   $self->cut_root_route_and_install_url_params($newpart, \@args);
 
