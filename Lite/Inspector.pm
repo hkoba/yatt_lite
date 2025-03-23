@@ -449,11 +449,11 @@ sub make_line_range {
 
 sub alttree {
   (my MY $self, my ($tmpl, $tree)) = @_;
-  [YATT::Lite::LRXML::AltTree->new(
+  my $converter = YATT::Lite::LRXML::AltTree->new(
     string => $tmpl->cget('string'),
     with_source => 0,
-  )
-   ->convert_tree($tree)];
+  );
+  [$converter->convert_tree($tree)];
 }
 
 sub lookup_symbol_definition {
