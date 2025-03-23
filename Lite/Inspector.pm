@@ -1018,7 +1018,10 @@ sub find_template {
   my $yatt = $self->find_yatt_for_template($fileName);
   my $core = $yatt->open_trans;
   my $tmpl = $core->find_file($fn);
-  # XXX: force refresh?
+
+  # perl コードの生成を行わないと、継承が設定されないため。
+  $core->find_product(perl => $tmpl);
+
   wantarray ? ($tmpl, $core) : $tmpl;
 }
 
