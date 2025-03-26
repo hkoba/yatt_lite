@@ -706,7 +706,9 @@ sub build_entity { shift->Entity->new(@_) }
 sub declare_base {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
 
-  $self->{cf_vfs}->declare_base($self, $tmpl, $ns, @args);
+  # Accept empty '<!yatt:base>' declaration as nop for parser testing aid.
+  $self->{cf_vfs}->declare_base($self, $tmpl, $ns, @args)
+    if @args;
 
   undef;
 }
