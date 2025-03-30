@@ -299,18 +299,22 @@ sub parse_decl {
     my $declkind = $+{declname};
     my ($ns, $kind) = split /:/, $declkind, 2;
     if (my $sub = $self->can("declare_$kind")) {
-      # yatt:base, yatt:args vs perl:base, perl:args...
+      # add_part を自分で呼びたい、又は add_part 自体を呼びたくないものは
+      # declare_ で処理する
+
       # 戻り値が undef なら、同じ $part を用いつづける。
       my @args = $self->parse_attlist(\$str, 1);
-      $part = $sub->($self, $tmpl, $ns, @args)
-	// $part;
+      my $newpart = $sub->($self, $tmpl, $ns, @args);
 
-      if ($part) {
-        $part->{decllist} = \@args;
+      if ($newpart) {
+        $self->finalize_part($part) if $part;
+        $newpart->{decllist} = \@args;
+        $part = $newpart;
       }
     }
     elsif ($self->can("build_$kind")) {
-      # yatt:widget, action
+      $self->finalize_part($part) if $part;
+      # yatt:widget, entity
       my (@args) = $self->parse_attlist(\$str, 1); # To delay entity parsing.
       my $saved_attlist = [@args];
 
@@ -357,6 +361,7 @@ sub parse_decl {
   # widget->{cf_endln} は, (視覚上の最後の行)より一つ先の行を指す。(末尾の改行を数える分,多い)
   $part->{cf_endln} = $self->{endln} += numLines($str);
 
+  $self->finalize_part($part);
   $self->finalize_template($tmpl);
 }
 
@@ -843,6 +848,13 @@ sub declare_constants {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
   $tmpl->{cf_constants} = \@args;
   undef;
+}
+
+sub finalize_part {
+  (my MY $self, my Part $part) = @_;
+  my $finalizer = $self->can("finalize__" . $part->{cf_kind})
+    or return;
+  $finalizer->($self, $part)
 }
 
 #========================================
