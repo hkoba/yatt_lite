@@ -1080,6 +1080,21 @@ sub add_args {
 sub add_argmacro {
   (my MY $self, my Part $part, my $node) = @_;
   # widget 宣言の中で argmacro を呼び出す
+
+  my ArgMacro $argmacro = $self->find_argmacro($node);
+
+sub find_argmacro {
+  (my MY $self, my $node) = @_;
+  my $macroName = $node->[NODE_PATH];
+  # XXX: %yatt:foo; namespace の扱い
+
+  # XXX: 親folder, 継承先からの検索
+  my Template $tmpl = $self->{template};
+  $tmpl->{argmacro_dict}{$macroName} or do {
+    die $self->synerror_at($node->[NODE_LNO]
+                           , "Unknown argmacro '%s'"
+                           , $macroName)
+  };
 }
 
 sub add_url_params {
