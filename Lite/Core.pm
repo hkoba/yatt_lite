@@ -57,6 +57,9 @@ use YATT::Lite::Breakpoint ();
          , -constants => [[item_category => 'entity']]
        ]
       , [ArgMacro => ()
+         , -fields => [qw(
+           on_declare
+         )]
        ]
     ]
 

@@ -894,7 +894,16 @@ sub declare_argmacro {
 
   my $partName = $nameAtt->[NODE_PATH];
 
+  if ($tmpl->{argmacro_dict}{$partName}) {
+    die $self->synerror_at($self->{startln}, q{Duplicate argmacro %s in %s\n%s}
+                           , $partName
+                           , $declkind
+                           , nonmatched($tmpl->{cf_string}));
+  }
+
   my Part $newpart = $self->build($ns, $kind => $kind, $partName, startln => $self->{startln});
+
+  Scalar::Util::weaken($tmpl->{argmacro_dict}{$partName} = $newpart);
 
   $self->add_args($newpart, @args);
 
@@ -906,6 +915,21 @@ sub finalize_part {
   my $finalizer = $self->can("finalize__" . $part->{cf_kind})
     or return;
   $finalizer->($self, $part)
+}
+
+sub finalize__argmacro {
+  (my MY $self, my ArgMacro $argmacro) = @_;
+  require YATT::Lite::CGen::ArgMacro;
+  my $builder = YATT::Lite::CGen::ArgMacro->new(
+    vfs => $self->{cf_vfs}
+  );
+
+  $argmacro->{on_declare} = $builder->with_template(
+    $self->{template},
+    generate_on_declare => ($argmacro),
+  );
+
+  $argmacro;
 }
 
 #========================================

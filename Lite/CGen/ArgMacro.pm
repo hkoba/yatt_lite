@@ -8,4 +8,12 @@ sub MY () {'YATT::Lite::CGen::ArgMacro'}
 use base qw(YATT::Lite::CGen::Perl);
 use YATT::Lite::MFields;
 
+use YATT::Lite::Core qw(ArgMacro Part);
+sub generate_on_declare {
+  (my MY $self, my ArgMacro $argmacro) = @_;
+
+  return sub {
+  };
+}
+
 1;
