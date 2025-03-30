@@ -36,7 +36,7 @@ use fields qw/re_decl
 	      _original_entpath
 	    /;
 
-use YATT::Lite::Core qw(Part Widget Page Action Data Entity Template);
+use YATT::Lite::Core qw(Part Widget Page Action Data Entity Template ArgMacro);
 use YATT::Lite::VarTypes;
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand);
@@ -478,7 +478,10 @@ sub parse_attlist_with_lvalue {
 
     my AttMatch $m = \%+;
     next if $m->{ws} || $m->{comment};
-    next if $m->{macro};		#XXX: 今はまだ argmacro を無視！
+    if ($m->{macro}) {
+      push @result, $self->mkargmacro($start, $m->{macro});
+      next;
+    }
 
     my @common = ($start, $self->{curpos}, $curln);
     my $mklval = sub {
@@ -595,6 +598,26 @@ sub parse_attlist_with_lvalue {
   wantarray ? @result : \@result;
 }
 
+sub mkargmacro {
+  (my MY $self, my ($start, $string)) = @_;
+  local $_ = $string;
+
+  my $node = [];
+  $node->[NODE_TYPE] = TYPE_ATT_MACRO;
+  @{$node}[NODE_BEGIN, NODE_END, NODE_LNO] = ($start, $self->{curpos}, $self->{startln});
+
+  s/^%(\w+)// or do {
+    die $self->synerror_at($self->{startln}
+                           , q{Invalid decl entity: %s}, $string);
+  };
+
+  $node->[NODE_PATH] = $1;
+
+  splice @$node, NODE_BODY, 0, $self->_parse_entpath;
+
+  $node;
+}
+
 sub mkentity {
   (my MY $self) = shift;
   # assert @_ == 3;
@@ -705,6 +728,8 @@ sub build_action { shift->Action->new(@_) }
 sub build_data { shift->Data->new(@_) }
 
 sub build_entity { shift->Entity->new(@_) }
+
+sub build_argmacro { shift->ArgMacro->new(@_) }
 
 #========================================
 # declare
@@ -850,6 +875,32 @@ sub declare_constants {
   undef;
 }
 
+sub declare_argmacro {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+  my $kind = 'argmacro';
+  my $declkind = join(":", $ns, $kind);
+
+  my $nameAtt = YATT::Lite::Constants::cut_first_att(\@args) or do {
+    die $self->synerror_at($self->{startln}, q{No part name in %s\n%s}
+                           , $declkind
+                           , nonmatched($tmpl->{cf_string}));
+  };
+
+  if ($nameAtt->[NODE_TYPE] != TYPE_ATT_NAMEONLY) {
+    die $self->synerror_at($self->{startln}, q{Invalid part name in %s\n%s}
+                           , $declkind
+                           , nonmatched($tmpl->{cf_string}));
+  }
+
+  my $partName = $nameAtt->[NODE_PATH];
+
+  my Part $newpart = $self->build($ns, $kind => $kind, $partName, startln => $self->{startln});
+
+  $self->add_args($newpart, @args);
+
+  $newpart;
+}
+
 sub finalize_part {
   (my MY $self, my Part $part) = @_;
   my $finalizer = $self->can("finalize__" . $part->{cf_kind})
@@ -955,6 +1006,11 @@ sub add_args {
   foreach my $argSpec (@_) {
 
     # XXX: comment もあるし、 %yatt:argmacro; もある。
+    if ($argSpec->[NODE_TYPE] == TYPE_ATT_MACRO) {
+      $self->add_argmacro($part, $argSpec);
+      next;
+    }
+
     my ($type, $argName, $nextArgNo, $lno, $node_type, $dflag, $default)
       = my @argSpec = $self->parse_arg_spec_for_part($part, $argSpec);
     unless (defined $argName) {
@@ -995,6 +1051,11 @@ sub add_args {
     }
   }
   $self;
+}
+
+sub add_argmacro {
+  (my MY $self, my Part $part, my $node) = @_;
+  # widget 宣言の中で argmacro を呼び出す
 }
 
 sub add_url_params {

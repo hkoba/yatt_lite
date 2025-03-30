@@ -56,6 +56,8 @@ use YATT::Lite::Breakpoint ();
       , [Entity => ()
          , -constants => [[item_category => 'entity']]
        ]
+      , [ArgMacro => ()
+       ]
     ]
 
      , [Template => -base => MY->File
