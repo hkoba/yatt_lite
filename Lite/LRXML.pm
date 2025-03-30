@@ -1083,6 +1083,18 @@ sub add_argmacro {
 
   my ArgMacro $argmacro = $self->find_argmacro($node);
 
+  require YATT::Lite::CGen::ArgMacro;
+  my $builder = YATT::Lite::CGen::ArgMacro->new(
+    vfs => $self->{cf_vfs}
+  );
+  $builder->with_template(
+    $self->{template},
+    $argmacro->{on_declare} => ($self, $part, $node)
+  );
+
+  return;
+}
+
 sub find_argmacro {
   (my MY $self, my $node) = @_;
   my $macroName = $node->[NODE_PATH];
