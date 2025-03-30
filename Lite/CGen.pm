@@ -66,7 +66,13 @@ sub with_template {
     $task->($self, @args);
   } else {
     my ($meth, @rest) = YATT::Lite::Util::lexpand($task);
-    $self->$meth(@rest, @args);
+    unless ($meth) {
+      Carp::croak "meth is undef";
+    }
+    my $sub = $self->can($meth) or do {
+      Carp::croak "No such method $meth";
+    };
+    $sub->($self, @rest, @args);
   }
 }
 
