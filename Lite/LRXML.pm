@@ -926,10 +926,11 @@ sub parse_arg_spec_for_part {
       = @{$attNode}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY];
   my ($type, $dflag, $default);
   if ($node_type == TYPE_ATT_NESTED) {
-    $type = $desc->[NODE_PATH] || $desc->[NODE_BODY];
+    my $headDesc = $desc->[0];
+    $type = $headDesc->[NODE_PATH] || $headDesc->[NODE_BODY];
     # primary of [primary key=val key=val] # delegate:foo の時は BODY に入る？
   } else {
-    ($type, $dflag, $default) = split m{([|/?!])}, $desc || '', 2;
+    ($type, $dflag, $default) = $self->parse_type_dflag_default($desc);
   };
   ($type, $argName, nextArgNo($part)
    , $lno, $node_type, $dflag
@@ -940,23 +941,13 @@ sub parse_arg_spec_for_part {
 sub add_args {
   (my MY $self, my Part $part) = splice @_, 0, 2;
   foreach my $argSpec (@_) {
-    # XXX: Rewrite this with parse_arg_spec_for_part!
 
-    # XXX: text もあるし、 %yatt:argmacro; もある。
-    my ($node_type, $lno, $argName, $desc)
-      = @{$argSpec}[NODE_TYPE, NODE_LNO, NODE_PATH, NODE_BODY];
+    # XXX: comment もあるし、 %yatt:argmacro; もある。
+    my ($type, $argName, $nextArgNo, $lno, $node_type, $dflag, $default)
+      = my @argSpec = $self->parse_arg_spec_for_part($part, $argSpec);
     unless (defined $argName) {
       die $self->synerror_at($self->{startln}, 'argName is empty!');
     }
-
-    my ($type, $dflag, $default);
-    if ($node_type == TYPE_ATT_NESTED) {
-      my $headDesc = $desc->[0];
-      $type = $headDesc->[NODE_PATH] || $headDesc->[NODE_BODY];
-      # primary of [primary key=val key=val] # delegate:foo の時は BODY に入る？
-    } else {
-      ($type, $dflag, $default) = $self->parse_type_dflag_default($desc);
-    };
 
     if (my $var = $part->{arg_dict}{$argName}) {
       if ($var->from_route) {
@@ -969,9 +960,7 @@ sub add_args {
                                , $argName, $part->{cf_kind}, $part->{cf_name});
       }
     } else {
-      my $var = $self->mkvar_at($self->{startln}
-                                , $type, $argName, nextArgNo($part)
-                                , $lno, $node_type);
+      my $var = $self->mkvar_at($self->{startln}, @argSpec);
       $self->set_dflag_default_to($var, $dflag, $default);
 
       my $type = $var->type->[0];
@@ -979,9 +968,10 @@ sub add_args {
         # XXX: [delegate:type ...], [code  ...] の ... が来る
         # 仮想的な widget にする？ のが一番楽そうではあるか。そうすれば add_args 出来る。
         # $self->add_arg_of_delegate/code/...へ。
-        my $sub = $self->can("add_arg_of_type_$type")
-          or die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $type);
-        $sub->($self, $part, $var, $desc);
+        my $sub = $self->can("add_arg_of_type_$type") or do {
+          die $self->synerror_at($self->{startln}, "Unknown arg type in arg '%s': %s", $argName, $type)
+        };
+        $sub->($self, $part, $var, $argSpec->[NODE_BODY]);
       } else {
         if (my $sub = $self->can("add_arg_of_type_$type")) {
           $sub->($self, $part, $var, []);
