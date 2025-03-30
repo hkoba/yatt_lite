@@ -36,6 +36,11 @@ sub expand_all_argmacro {
 sub generate_on_declare {
   (my MY $self, my ArgMacro $argmacro) = @_;
 
+  $argmacro->{on_expand} = sub {
+    my ($cgen, $args, $argmacro) = @_;
+    return;
+  };
+
   return sub {
     (my MY $self, my $parser, my Part $part, my $node) = @_;
 
