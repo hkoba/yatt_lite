@@ -9,6 +9,30 @@ use base qw(YATT::Lite::CGen::Perl);
 use YATT::Lite::MFields;
 
 use YATT::Lite::Core qw(ArgMacro Part);
+sub expand_all_argmacro {
+  my ($class, $cgen, $primary, $triggers, $macroList, $macroDict) = @_;
+  my (%found, @rest);
+  foreach my $arg (@$primary) {
+    my $argName = YATT::Lite::CGen::Perl::argName($arg);
+    if (my $instName = $triggers->{$argName}) {
+      push @{$found{$instName}}, $arg;
+    } else {
+      push @rest, $arg;
+    }
+  }
+  return $primary if not %found;
+
+  [(map {
+    if (my $args = $found{$_}) {
+      my ArgMacro $argmacro = $macroDict->{$_};
+
+      $argmacro->{on_expand}->($cgen, $args, $argmacro);
+    } else {
+      ()
+    }
+  } @$macroList), @rest];
+}
+
 sub generate_on_declare {
   (my MY $self, my ArgMacro $argmacro) = @_;
 
