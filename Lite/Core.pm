@@ -623,6 +623,7 @@ sub synerror {
     undef $tmpl->{product};
     undef $tmpl->{parse_ok};
     undef $tmpl->{cf_subroutes};
+    undef $tmpl->{argmacro_dict};
     # delpkg($tmpl->{cf_package}); # No way to avoid redef error.
   }
   sub YATT::Lite::Core::Template::refresh {
