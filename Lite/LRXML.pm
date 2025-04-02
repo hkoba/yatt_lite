@@ -900,10 +900,9 @@ sub declare_argmacro {
   };
 
   if ($tmpl->{argmacro_dict}{$partName}) {
-    die $self->synerror_at($self->{startln}, q{Duplicate argmacro %s in %s\n%s}
+    die $self->synerror_at($self->{startln}, q{Duplicate argmacro %s in %s}
                            , $partName
-                           , $declkind
-                           , nonmatched($tmpl->{cf_string}));
+                           , $declkind);
   }
 
   my Part $newpart = $self->build(
