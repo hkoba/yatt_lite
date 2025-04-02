@@ -1,0 +1,19 @@
+# -*- coding: utf-8 -*-
+
+TITLE: pair => x, y
+IN:
+ <!yatt:args>
+ <yatt:foo pair="3, 8"/>
+ 
+ <!yatt:argmacro test1=[x y] pair>
+ my ($x, $y) = split /\s*,\s*/, $cgen->node_value($args->{pair});
+ $result->{x} = $x;
+ $result->{y} = $y;
+ 
+ <!yatt:widget foo %test1; >
+ <h2>&yatt:x;</h2>
+ &yatt:y;
+OUT:
+ <h2>3</h2>
+ 8
+ 

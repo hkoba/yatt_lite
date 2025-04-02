@@ -613,7 +613,12 @@ sub mkargmacro {
 
   $node->[NODE_PATH] = $1;
 
-  splice @$node, NODE_BODY, 0, $self->_parse_entpath;
+  # _parse_entpath だと curpos を移動させてしまうため
+  splice @$node, NODE_BODY, 0, $self->_parse_pipeline;
+  if ($_ ne ';') {
+    die $self->synerror_at($self->{startln}
+                           , q{Invalid decl entity: %s (%s remains)}, $string, $_);
+  }
 
   $node;
 }
