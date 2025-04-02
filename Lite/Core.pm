@@ -61,6 +61,7 @@ use YATT::Lite::Breakpoint ();
        ]
       , [ArgMacro => ()
          , -fields => [qw(
+           cf_output_args
            on_declare
            on_expand
          )]

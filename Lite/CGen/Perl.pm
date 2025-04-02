@@ -398,13 +398,13 @@ use YATT::Lite::Constants;
       and not $primary and not $body;
 
     if ($widget->{argmacro_instance_list}) {
-      $primary = [YATT::Lite::CGen::ArgMacro->expand_all_argmacro(
+      $primary = YATT::Lite::CGen::ArgMacro->expand_all_argmacro(
         $self,
         $primary,
         $widget->{argmacro_trigger_dict},
         $widget->{argmacro_instance_list},
         $widget->{argmacro_instance_dict},
-      )];
+      );
     }
 
     my $wname = join ":", @$path;

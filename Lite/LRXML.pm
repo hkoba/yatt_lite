@@ -886,13 +886,18 @@ sub declare_argmacro {
                            , nonmatched($tmpl->{cf_string}));
   };
 
-  if ($nameAtt->[NODE_TYPE] != TYPE_ATT_NAMEONLY) {
-    die $self->synerror_at($self->{startln}, q{Invalid part name in %s\n%s}
-                           , $declkind
-                           , nonmatched($tmpl->{cf_string}));
-  }
-
   my $partName = $nameAtt->[NODE_PATH];
+
+  my $output_args = do {
+    if ($nameAtt->[NODE_TYPE] == TYPE_ATT_NESTED) {
+      $nameAtt->[NODE_BODY]
+    } else {
+      my $node = [];
+      $node->[NODE_TYPE] = TYPE_ATT_NAMEONLY;
+      $node->[NODE_PATH] = $partName;
+      [$node];
+    }
+  };
 
   if ($tmpl->{argmacro_dict}{$partName}) {
     die $self->synerror_at($self->{startln}, q{Duplicate argmacro %s in %s\n%s}
@@ -901,7 +906,10 @@ sub declare_argmacro {
                            , nonmatched($tmpl->{cf_string}));
   }
 
-  my Part $newpart = $self->build($ns, $kind => $kind, $partName, startln => $self->{startln});
+  my Part $newpart = $self->build(
+    $ns, $kind => $kind, $partName, startln => $self->{startln},
+    output_args => $output_args,
+  );
 
   Scalar::Util::weaken($tmpl->{argmacro_dict}{$partName} = $newpart);
 
