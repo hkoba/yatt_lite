@@ -606,15 +606,23 @@ sub mkargmacro {
   $node->[NODE_TYPE] = TYPE_ATT_MACRO;
   @{$node}[NODE_BEGIN, NODE_END, NODE_LNO] = ($start, $self->{curpos}, $self->{startln});
 
-  s/^%(\w+)// or do {
-    die $self->synerror_at($self->{startln}
-                           , q{Invalid decl entity: %s}, $string);
-  };
-
-  $node->[NODE_PATH] = $1;
+  # namespace-less なケースも扱いたいので % を : に置換
+  s/^%/:/;
 
   # _parse_entpath だと curpos を移動させてしまうため
-  splice @$node, NODE_BODY, 0, $self->_parse_pipeline;
+  my (@path) = $self->_parse_pipeline;
+
+  $node->[NODE_PATH] = do {
+    if (@path >= 2 and $path[0][0] eq 'var') {
+      my $head = shift @path;
+      $head->[1];
+    } else {
+      undef;
+    }
+  };
+
+  splice @$node, NODE_BODY, 0, @path;
+
   if ($_ ne ';') {
     die $self->synerror_at($self->{startln}
                            , q{Invalid decl entity: %s (%s remains)}, $string, $_);
@@ -880,6 +888,7 @@ sub declare_constants {
   undef;
 }
 
+# <!yatt:argmacro macroName=[...output_args...] ...args>
 sub declare_argmacro {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
   my $kind = 'argmacro';
@@ -1089,6 +1098,7 @@ sub add_args {
   $self;
 }
 
+# %macroName(renameTo=renameFrom);
 sub add_argmacro {
   (my MY $self, my Part $part, my $node) = @_;
   # widget 宣言の中で argmacro を呼び出す
@@ -1109,16 +1119,28 @@ sub add_argmacro {
 
 sub find_argmacro {
   (my MY $self, my $node) = @_;
-  my $macroName = $node->[NODE_PATH];
+
+  my $ns = $node->[NODE_PATH];
+  my ($call, $macroName, $renameSpec) = @{$node->[NODE_BODY]};
+
   # XXX: %yatt:foo; namespace の扱い
 
-  # XXX: 親folder, 継承先からの検索
   my Template $tmpl = $self->{template};
-  $tmpl->{argmacro_dict}{$macroName} or do {
-    die $self->synerror_at($node->[NODE_LNO]
-                           , "Unknown argmacro '%s'"
-                           , $macroName)
-  };
+  my ArgMacro $argmacro = $tmpl->{argmacro_dict}{$macroName};
+  return $argmacro if $argmacro;
+
+  # XXX: ディレクトリからの追加を許すか否か、その場合の意味論…
+  foreach my Part $part ($tmpl->list_base) {
+    next unless $part->isa(Template);
+    my Template $base = $part;
+    if ($argmacro = $base->{argmacro_dict}{$macroName}) {
+      return $argmacro
+    }
+  }
+
+  die $self->synerror_at($node->[NODE_LNO]
+                         , "Unknown argmacro '%s'"
+                         , $macroName)
 }
 
 sub add_url_params {
@@ -1299,7 +1321,7 @@ sub AUTOLOAD {
   (my $meth = $sub) =~ s/.*:://;
   my $sym = $YATT::Lite::LRXML::{$meth}
     or croak "No such method: $meth";
-  if ($meth =~ /ent/) {
+  if ($meth =~ /ent|pipeline/) {
     require YATT::Lite::LRXML::ParseEntpath
   }
   elsif ($meth =~ /body/) {
