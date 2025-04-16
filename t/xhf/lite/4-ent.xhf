@@ -33,7 +33,7 @@ OUT:
 TITLE: &yatt:template();
 IN:
  <!yatt:config usage="For template entity">
- &yatt:template(){cf_usage};.
+ &yatt:template(){usage};.
 OUT:
  For template entity.
 

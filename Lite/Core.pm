@@ -6,22 +6,22 @@ use Carp;
 use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
 
 use parent qw(YATT::Lite::VFS);
-use YATT::Lite::MFields qw/cf_namespace cf_debug_cgen cf_no_lineinfo cf_check_lineno
-			   cf_index_name
-	      cf_tmpl_encoding
-	      cf_debug_parser
-	      cf_parse_while_loading cf_only_parse
-	      cf_die_in_error cf_error_handler
-	      cf_special_entities
-	      cf_lcmsg_sink
-              cf_match_argsroute_first
-              cf_body_argument
-              cf_body_argument_type
+use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
+			   index_name
+	      tmpl_encoding
+	      debug_parser
+	      parse_while_loading only_parse
+	      die_in_error error_handler
+	      special_entities
+	      lcmsg_sink
+              match_argsroute_first
+              body_argument
+              body_argument_type
 
-              cf_stash_unknown_params_to
-	      cf_prefer_call_for_entity
+              stash_unknown_params_to
+	      prefer_call_for_entity
 
-	      n_compiles
+	      _n_compiles
 	    /;
 use YATT::Lite::Util;
 use YATT::Lite::Constants;
@@ -37,20 +37,20 @@ use YATT::Lite::Breakpoint ();
   use YATT::Lite::VFS qw(Folder Item);
   use YATT::Lite::Types
     ([Part => -base => MY->Item
-      , -fields => [qw(toks arg_dict arg_order
-                       argmacro_instance_dict
-                       argmacro_instance_list
-                       argmacro_trigger_dict
-                       decllist
-		       cf_namespace cf_kind cf_folder cf_data
-                       cf_decl
-		       cf_implicit cf_suppressed
-		       cf_startln cf_bodyln cf_endln
-		       cf_startpos cf_bodypos cf_bodylen
-		       cf_subpattern
+      , -fields => [qw(_toks _arg_dict _arg_order
+                       _argmacro_instance_dict
+                       _argmacro_instance_list
+                       _argmacro_trigger_dict
+                       _decllist
+		       namespace kind folder data
+                       decl
+		       implicit suppressed
+		       startln bodyln endln
+		       startpos bodypos bodylen
+		       subpattern
 		     )]
       , -constants => [[public => 0]]
-      , [Widget => -fields => [qw(tree var_dict has_required_arg)]
+      , [Widget => -fields => [qw(_tree _var_dict _has_required_arg)]
 	 , [Page => (), -constants => [[public => 1]]]]
       , [Action => (), -constants => [[public => 1],
                                       [item_category => 'do'],
@@ -61,13 +61,13 @@ use YATT::Lite::Breakpoint ();
        ]
       , [ArgMacro => ()
          , -fields => [qw(
-           cf_output_args
-           on_declare
-           on_expand
-           cf_to_name
-           cf_from_name
-           cf_rename_map
-           cf_resolve_map
+           output_args
+           _on_declare
+           _on_expand
+           to_name
+           from_name
+           rename_map
+           resolve_map
          )]
        ]
     ]
@@ -75,29 +75,30 @@ use YATT::Lite::Breakpoint ();
      , [Template => -base => MY->File
 	, -alias => 'vfs_file'
 	, -constants => [[can_generate_code => 1]]
-	, -fields => [qw(product parse_ok cf_mtime cf_utf8 cf_age
-			 cf_usage cf_constants
-			 cf_ignore_trailing_newlines
-			 cf_subroutes
+	, -fields => [qw(_product _parse_ok
+                         mtime utf8 age
+			 usage constants
+			 ignore_trailing_newlines
+			 subroutes
 		      )]]
 
-     , [ParsingState => -fields => [qw(startln endln
-				       startpos curpos
-				       cf_path
+     , [ParsingState => -fields => [qw(_startln _endln
+				       _startpos _curpos
+				       path
                                     )]]
 
-     , [AbstParser => -fields => [qw(cf_body_argument
-                                     cf_body_argument_type
+     , [AbstParser => -fields => [qw(body_argument
+                                     body_argument_type
                                   )]]
     );
 
   sub YATT::Lite::Core::Part::public_name {
     (my Part $part) = @_;
-    $part->{cf_name};
+    $part->{name};
   }
   sub YATT::Lite::Core::Part::decl_kind {
     (my Part $part) = @_;
-    join(":", $part->{cf_namespace}, $part->{cf_decl});
+    join(":", $part->{namespace}, $part->{decl});
   }
   sub YATT::Lite::Core::Part::syntax_keyword {
     (my Part $part) = @_;
@@ -107,11 +108,11 @@ use YATT::Lite::Breakpoint ();
   *YATT::Lite::Core::Part::syntax_name = *YATT::Lite::Core::Part::public_name;
   sub YATT::Lite::Core::Widget::syntax_name {
     (my Widget $widget) = @_;
-    $widget->{cf_decl} eq 'args' ? () : $widget->{cf_name};
+    $widget->{decl} eq 'args' ? () : $widget->{name};
   }
   sub YATT::Lite::Core::Action::syntax_name {
     (my Action $action) = @_;
-    $action->{cf_name} eq '' ? q{''} : $action->{cf_name};
+    $action->{name} eq '' ? q{''} : $action->{name};
   }
 
   sub YATT::Lite::Core::Widget::callsite_name {
@@ -127,40 +128,40 @@ use YATT::Lite::Breakpoint ();
   sub YATT::Lite::Core::Part::method_name {...}
   sub YATT::Lite::Core::Widget::method_name {
     (my Widget $widget) = @_;
-    "render_$widget->{cf_name}";
+    "render_$widget->{name}";
   }
   sub YATT::Lite::Core::Action::method_name {
     (my Action $action) = @_;
-    "do_$action->{cf_name}";
+    "do_$action->{name}";
   }
   sub YATT::Lite::Core::Action::item_key {
     (my Action $action) = @_;
-    "do\0$action->{cf_name}";
+    "do\0$action->{name}";
   }
 
   sub YATT::Lite::Core::Entity::method_name {
     (my Entity $entity) = @_;
-    "entity_$entity->{cf_name}";
+    "entity_$entity->{name}";
   }
   sub YATT::Lite::Core::Entity::item_key {
     (my Entity $entity) = @_;
-    "entity\0$entity->{cf_name}";
+    "entity\0$entity->{name}";
   }
 
   sub YATT::Lite::Core::Part::configure_folder {
     (my Part $part, my Folder $folder) = @_;
-    Scalar::Util::weaken($part->{cf_folder} = $folder);
-    # die "Can't weaken!" unless Scalar::Util::isweak($part->{cf_folder});
+    Scalar::Util::weaken($part->{folder} = $folder);
+    # die "Can't weaken!" unless Scalar::Util::isweak($part->{folder});
   }
 
   sub YATT::Lite::Core::ArgMacro::clone_with_renamespec {
     (my ArgMacro $orig, my ($toName, $fromName)) = @_;
     my ArgMacro $new = fields::new(ArgMacro);
     %$new = %$orig;
-    Scalar::Util::weaken($new->{cf_folder});
-    $new->{cf_output_args} = YATT::Lite::Util::deep_copy_array($orig->{cf_output_args});
-    $new->{cf_to_name} = $toName;
-    $new->{cf_from_name} = $fromName;
+    Scalar::Util::weaken($new->{folder});
+    $new->{output_args} = YATT::Lite::Util::deep_copy_array($orig->{output_args});
+    $new->{to_name} = $toName;
+    $new->{from_name} = $fromName;
     $new;
   }
 
@@ -170,13 +171,13 @@ use YATT::Lite::Breakpoint ();
 #  }
   sub YATT::Lite::Core::Template::source_length {
     (my Template $self) = @_;
-    length $self->{cf_string};
+    length $self->{string};
   }
   sub YATT::Lite::Core::Template::list_parts {
     (my Template $self, my $type) = @_;
-    return unless $self->{partlist};
-    return @{$self->{partlist}} unless defined $type;
-    grep { UNIVERSAL::isa($_, $type) } @{$self->{partlist}}
+    return unless $self->{_partlist};
+    return @{$self->{_partlist}} unless defined $type;
+    grep { UNIVERSAL::isa($_, $type) } @{$self->{_partlist}}
   }
   sub YATT::Lite::Core::Template::node_source {
     (my Template $tmpl, my $node) = @_;
@@ -206,10 +207,10 @@ use YATT::Lite::Breakpoint ();
   sub YATT::Lite::Core::Template::source_substr {
     (my Template $tmpl, my ($offset, $len)) = @_;
     unless (defined $len) {
-      substr $tmpl->{cf_string}, $offset;
+      substr $tmpl->{string}, $offset;
     } else {
       return undef if $len < 0;
-      substr $tmpl->{cf_string}, $offset, $len;
+      substr $tmpl->{string}, $offset, $len;
     }
   }
 
@@ -219,11 +220,11 @@ use YATT::Lite::Breakpoint ();
     return @$orig_params if ref $orig_params eq 'ARRAY';
     my $params = +{%$orig_params};
     my @params;
-    foreach my $name (map($_ ? @$_ : (), $widget->{arg_order})) {
+    foreach my $name (map($_ ? @$_ : (), $widget->{_arg_order})) {
       push @params, delete $params->{$name};
     }
     if (my @unknown = grep {/^[a-z]\w*$/i} keys %$params) {
-      die "Unknown args for $widget->{cf_name}: " . join(", ", @unknown)
+      die "Unknown args for $widget->{name}: " . join(", ", @unknown)
 	. "\n";
     }
     wantarray ? @params : \@params;
@@ -234,18 +235,18 @@ use YATT::Lite::Breakpoint ();
     (my MY $self, my Widget $widget, my ($cgi, $list)) = @_;
     $list ||= [];
     my $stash;
-    if ($self->{cf_stash_unknown_params_to}) {
-      $stash = $cgi->stash->{$self->{cf_stash_unknown_params_to}} //= +{};
+    if ($self->{stash_unknown_params_to}) {
+      $stash = $cgi->stash->{$self->{stash_unknown_params_to}} //= +{};
     }
     foreach my $name ($cgi->param) {
       next unless $name =~ /^[a-z]\w*$/i;
-      my $argdecl = $widget->{arg_dict}{$name} or do {
+      my $argdecl = $widget->{_arg_dict}{$name} or do {
         if ($stash) {
           push @{$stash->{$name}}, $cgi->multi_param($name);
           next;
         } else {
-          my $wname = $widget->{cf_name}
-            ? " for widget '$widget->{cf_name}'" : "";
+          my $wname = $widget->{name}
+            ? " for widget '$widget->{name}'" : "";
           die "Unknown args$wname: $name\n";
         }
       };
@@ -265,8 +266,8 @@ use YATT::Lite::Breakpoint ();
 #========================================
 sub configure_rc_script {
   (my MY $vfs, my $script) = @_;
-  my Folder $f = $vfs->{root};
-  my $pkg = $f->{cf_entns}
+  my Folder $f = $vfs->{_root};
+  my $pkg = $f->{entns}
     or die $vfs->error("package name is not specified for configure rc_script");
   # print STDERR "#### $pkg \n";
   # XXX: base は設定済みだったはずだけど...
@@ -291,7 +292,7 @@ sub declare_base {
     $vfs->synerror($state, q{No base arg});
   }
 
-  my $base = $tmpl->{cf_base} //= [];
+  my $base = $tmpl->{base} //= [];
   if (@$base) {
     $vfs->synerror($state, "Duplicate base decl! was=%s, new=%s"
 		   , terse_dump($base), terse_dump(\@args));
@@ -306,7 +307,7 @@ sub declare_base {
     nonempty(my $fn = $vfs->node_value($att))
       or $vfs->synerror($state, q{base spec is empty!});
 
-    if ($vfs->{on_memory}) {
+    if ($vfs->{_on_memory}) {
       my $o = $vfs->find_file($fn)
 	or $vfs->synerror($state, q{No such base path: %s}, $fn);
       push @$base, $o;
@@ -325,8 +326,8 @@ sub declare_base {
 sub synerror {
   (my MY $vfs, my ParsingState $state, my ($fmt, @opts)) = @_;
   my $opts = {depth => 2};
-  $opts->{tmpl_file} = $state->{cf_path} if $state->{cf_path};
-  $opts->{tmpl_line} = $state->{startln} if $state->{startln};
+  $opts->{tmpl_file} = $state->{path} if $state->{path};
+  $opts->{tmpl_line} = $state->{_startln} if $state->{_startln};
   die $vfs->error($opts, $fmt, @opts);
 }
 
@@ -361,14 +362,14 @@ sub synerror {
 	  , [debug_parser => 'debug']
 	  , [tmpl_encoding => 'encoding']
 	 )
-	 , $self->{cf_parse_while_loading} ? (all => 1) : ()
+	 , $self->{parse_while_loading} ? (all => 1) : ()
 	 , @_);
   }
   sub ensure_parsed {
     (my MY $self, my Part $part) = @_;
     my $parser = $self->get_parser;
-    my Template $tmpl = $part->{cf_folder};
-    return if $tmpl->{parse_ok};
+    my Template $tmpl = $part->{folder};
+    return if $tmpl->{_parse_ok};
     $parser->parse_decllist_entities($tmpl);
     $parser->parse_body($tmpl);
   }
@@ -411,14 +412,14 @@ sub synerror {
     my $ignore_error = delete $opts{ignore_error};
     my Template $tmpl;
     my Part $part;
-    if (UNIVERSAL::isa($self->{root}, Template)) {
-      $tmpl = $self->{root};
+    if (UNIVERSAL::isa($self->{_root}, Template)) {
+      $tmpl = $self->{_root};
       $part = $self->find_part($name);
     } else {
       $tmpl = $self->find_file($name)
 	or ($ignore_error and return)
 	  or croak "No such template file: $name";
-      $part = $tmpl->{Item}{''};
+      $part = $tmpl->{_Item}{''};
     }
     # XXX: それとも、 $part から $tmpl が引けるようにするか? weaken して...
     wantarray ? ($part, $tmpl) : $part;
@@ -430,7 +431,7 @@ sub synerror {
 
     my @wpath = ref $widgetPath ? @$widgetPath : split ":", $widgetPath;
 
-    my $part = $self->find_part_from($self->{root}, @wpath ? @wpath : '')
+    my $part = $self->find_part_from($self->{_root}, @wpath ? @wpath : '')
       or ($ignore_error and return)
       or croak "No such widget: ".join(":", @wpath);
 
@@ -457,13 +458,13 @@ sub synerror {
     my ($partName, $kind, $pureName, @rest)
       = ref $nameSpec ? @$nameSpec : $nameSpec;
 
-    $partName ||= $self->{cf_index_name};
+    $partName ||= $self->{index_name};
 
     my Template $tmpl = do {
-      if (UNIVERSAL::isa($self->{root}, Template)) {
+      if (UNIVERSAL::isa($self->{_root}, Template)) {
         # Special case.
         # XXX: Should add action tests for this case.
-        $self->{root};
+        $self->{_root};
 
       } else {
         # General container case.
@@ -478,7 +479,7 @@ sub synerror {
       if (not defined $kind and not defined $pureName) {
         foreach my $k (qw(page action)) {
           (my $itemKey, $meth) = $self->can("_itemKey_$k")->($self, '');
-          $p = $tmpl->{Item}{$itemKey}
+          $p = $tmpl->{_Item}{$itemKey}
             and last;
         }
       }
@@ -492,7 +493,7 @@ sub synerror {
 
         my ($itemKey, $meth) = $self->can("_itemKey_$kind")->($self, $pureName);
 
-        $p = $tmpl->{Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
+        $p = $tmpl->{_Item}{$itemKey} || $self->find_part_from($tmpl, $itemKey)
           or ($ignore_error and return)
           or croak "No such $kind in file $partName: $pureName";
 
@@ -519,16 +520,16 @@ sub synerror {
   #
   sub add_root_action_handler {
     (my MY $self, my ($name, $sub, $callinfo)) = @_;
-    my Folder $root = $self->{root};
+    my Folder $root = $self->{_root};
 
     my ($callpack, $filename, $lineno) = @$callinfo;
 
     # XXX: This means do_$A.yatt will conflict with "Action $A" in .htyattrc.pl
     my $action_name = "do_$name";
 
-    *{globref($root->{cf_entns}, $action_name)} = $sub;
+    *{globref($root->{entns}, $action_name)} = $sub;
 
-    $root->{Item}{"do\0$name"}
+    $root->{_Item}{"do\0$name"}
       = $self->Action->new(name => $action_name, kind => 'action'
 			   , folder => $root
 			   , startln => $lineno
@@ -546,7 +547,7 @@ sub synerror {
   # DirHandler INST 固有 CGEN_perl の生成
   sub get_cgen_class {
     (my MY $self, my $type) = @_;
-    $self->{cf_facade}->get_cgen_class($type);
+    $self->{facade}->get_cgen_class($type);
   }
 
   # XXX: Action only コンパイルは？
@@ -554,12 +555,12 @@ sub synerror {
     (my MY $self, my $spec, my Template $tmpl, my %opts) = @_;
     my ($type, $kind) = ref $spec ? @$spec : $spec;
     # local $YATT = $self;
-    unless ($tmpl->{product}{$type}) {
+    unless ($tmpl->{_product}{$type}) {
       my $cgen = $self->build_cgen_of($type, \%opts);
       # 二重生成防止のため、代入自体は ensure_generated の中で行う。
       $cgen->ensure_generated($spec => $tmpl);
     };
-    $tmpl->{product}{$type};
+    $tmpl->{_product}{$type};
   }
 
   sub build_cgen_of {
@@ -574,17 +575,17 @@ sub synerror {
        , parser => $self->get_parser
        , sink => $opts->{sink} || sub {
          my ($info, @script) = @_;
-         if ($self->{cf_debug_cgen}) {
-           my Template $real = $info->{folder};
-           print STDERR "# compiling @{[$type//'undef']} code of @{[$real->{cf_path}//'undef']}\n";
-           if ($self->{cf_debug_cgen} >= 2) {
+         if ($self->{debug_cgen}) {
+           my Template $real = $info->{folder}; # XXX: type???
+           print STDERR "# compiling @{[$type//'undef']} code of @{[$real->{path}//'undef']}\n";
+           if ($self->{debug_cgen} >= 2) {
              print STDERR "#--BEGIN--\n";
              print STDERR @script, "\n";
              print STDERR "#--END--\n\n"
            }
          }
          #
-         $self->{n_compiles}++;
+         $self->{_n_compiles}++;
 
          ckeval(@script);
        })
@@ -602,7 +603,7 @@ sub synerror {
     require Locale::PO;
     $msglist //= [];
     $msgdict //= {};
-    local $self->{cf_lcmsg_sink} = sub {
+    local $self->{lcmsg_sink} = sub {
       $self->define_lcmsg_in($msglist, $msgdict, @_);
     };
     my $type = 'perl';
@@ -638,60 +639,60 @@ sub synerror {
     (my Template $tmpl, my MY $self) = @_;
     # XXX: ここでは SUPER が使えない。
     $tmpl->YATT::Lite::VFS::File::after_create($self);
-    ($tmpl->{cf_name}) = $tmpl->{cf_path} =~ m{(\w+)\.\w+$}
-      or $self->error("Can't extract part name from '%s'", [$tmpl->{cf_path}])
-	if not defined $tmpl->{cf_name} and defined $tmpl->{cf_path};
+    ($tmpl->{name}) = $tmpl->{path} =~ m{(\w+)\.\w+$}
+      or $self->error("Can't extract part name from '%s'", [$tmpl->{path}])
+	if not defined $tmpl->{name} and defined $tmpl->{path};
   }
   sub YATT::Lite::Core::Template::reset {
     (my Template $tmpl) = @_;
     $tmpl->YATT::Lite::VFS::File::reset;
-    undef $tmpl->{product};
-    undef $tmpl->{parse_ok};
-    undef $tmpl->{cf_subroutes};
-    undef $tmpl->{argmacro_dict};
-    # delpkg($tmpl->{cf_package}); # No way to avoid redef error.
+    undef $tmpl->{_product};
+    undef $tmpl->{_parse_ok};
+    undef $tmpl->{subroutes};
+    undef $tmpl->{_argmacro_dict};
+    # delpkg($tmpl->{package}); # No way to avoid redef error.
   }
   sub YATT::Lite::Core::Template::refresh {
     (my Template $tmpl, my MY $self) = @_;
 
-    my $old_product = $tmpl->{product};
+    my $old_product = $tmpl->{_product};
 
-    if ($tmpl->{cf_path}) {
-      printf STDERR "template_refresh(%s)\n", $tmpl->{cf_path} if DEBUG_REBUILD;
-      my $mtime = stat_mtime($tmpl->{cf_path});
+    if ($tmpl->{path}) {
+      printf STDERR "template_refresh(%s)\n", $tmpl->{path} if DEBUG_REBUILD;
+      my $mtime = stat_mtime($tmpl->{path});
       if (not defined $mtime) {
 	printf STDERR " => deleted\n" if DEBUG_REBUILD;
 	return; # XXX: ファイルが消された
-      } elsif (not defined $tmpl->{cf_mtime}) {
+      } elsif (not defined $tmpl->{mtime}) {
         if (DEBUG_REBUILD) {
           printf STDERR " => found new. mtime($mtime) for tmpl=$tmpl\n";
         }
-      } elsif ($tmpl->{cf_mtime} >= $mtime) {
+      } elsif ($tmpl->{mtime} >= $mtime) {
 	if (DEBUG_REBUILD) {
-	  printf STDERR " => use cached. mtime(was=$tmpl->{cf_mtime}"
+	  printf STDERR " => use cached. mtime(was=$tmpl->{mtime}"
 	    .", now=$mtime) for tmpl=$tmpl\n";
 	}
-	$self->refresh_deps_for($tmpl) if $self->{cf_always_refresh_deps};
+	$self->refresh_deps_for($tmpl) if $self->{always_refresh_deps};
 	return; # timestamp は、キャッシュと同じかむしろ古い
       } else {
         if (DEBUG_REBUILD) {
           printf STDERR " => found update. mtime($mtime) for tmpl=$tmpl\n";
         }
       }
-      $tmpl->{cf_mtime} = $mtime;
+      $tmpl->{mtime} = $mtime;
       my $parser = $self->get_parser;
       # decl のみ parse.
-      # XXX: $tmpl->{cf_package} の指すパッケージをこの段階で map {undef $_}
+      # XXX: $tmpl->{package} の指すパッケージをこの段階で map {undef $_}
       # すべきではないか?
-      $parser->load_file_into($tmpl, $tmpl->{cf_path});
-    } elsif ($tmpl->{cf_string} and not $tmpl->{cf_mtime}) {
+      $parser->load_file_into($tmpl, $tmpl->{path});
+    } elsif ($tmpl->{string} and not $tmpl->{mtime}) {
       # To avoid recompilation, use mtime to express generated time.
       # Not so good.
-      $tmpl->{cf_mtime} = time;
+      $tmpl->{mtime} = time;
 
       my $parser = $self->get_parser;
-      $parser->load_string_into($tmpl, $tmpl->{cf_string}
-				, scheme => "data", path => $tmpl->{cf_name});
+      $parser->load_string_into($tmpl, $tmpl->{string}
+				, scheme => "data", path => $tmpl->{name});
     } else {
       return;
     }
@@ -707,33 +708,33 @@ sub synerror {
   }
   sub YATT::Lite::Core::Widget::fixup {
     (my Widget $widget, my Template $tmpl, my AbstParser $parser) = @_;
-    foreach my $argName (@{$widget->{arg_order}}) {
-      $widget->{has_required_arg} = 1
-	if $widget->{arg_dict}{$argName}->is_required;
+    foreach my $argName (@{$widget->{_arg_order}}) {
+      $widget->{_has_required_arg} = 1
+	if $widget->{_arg_dict}{$argName}->is_required;
     }
-    $widget->{arg_dict}{$parser->{cf_body_argument}} ||= do {
+    $widget->{_arg_dict}{$parser->{body_argument}} ||= do {
       my ($type, @dflag_default) = $parser->parse_type_dflag_default(
-        $parser->{cf_body_argument_type}
+        $parser->{body_argument_type}
       );
 
-      # lineno も入れるべきかも。 $widget->{cf_bodyln} あたり.
+      # lineno も入れるべきかも。 $widget->{bodyln} あたり.
       my $var = $parser->mkvar_at(undef
                                   , $type
-                                  , $parser->{cf_body_argument}
-				  , scalar @{$widget->{arg_order} ||= []});
+                                  , $parser->{body_argument}
+				  , scalar @{$widget->{_arg_order} ||= []});
       # body_argument の印を付ける。public からは受理しないように.
       $var->mark_body_argument;
       $parser->set_dflag_default_to($var, @dflag_default);
 
-      push @{$widget->{arg_order}}, $parser->{cf_body_argument};
+      push @{$widget->{_arg_order}}, $parser->{body_argument};
       $var;
     };
   }
 
   sub YATT::Lite::Core::Template::match_subroutes {
     my Template $tmpl = shift;
-    return unless $tmpl->{cf_subroutes};
-    $tmpl->{cf_subroutes}->match($_[0]);
+    return unless $tmpl->{subroutes};
+    $tmpl->{subroutes}->match($_[0]);
   }
 }
 
