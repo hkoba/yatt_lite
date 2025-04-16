@@ -39,13 +39,13 @@ describe "mode: reload requested only", sub {
     describe "compilation counter of internal vfs", sub {
       my $ncomps;
       it "should be equal to 3 (index, foo, bar)", sub {
-	expect($ncomps = $yatt_vfs->{n_compiles})->to_be(3);
+	expect($ncomps = $yatt_vfs->{_n_compiles})->to_be(3);
       };
 
       it "should be unchanged after repeative access", sub {
 	$site->render("index") for 0..9;
 
-	expect($yatt_vfs->{n_compiles})->to_be($ncomps);
+	expect($yatt_vfs->{_n_compiles})->to_be($ncomps);
       };
     };
 
@@ -62,7 +62,7 @@ describe "mode: reload requested only", sub {
 
     describe "Compilation counter of internal vfs", sub {
       it "should be equal to 4 now.", sub {
-	expect($yatt_vfs->{n_compiles})->to_be(4);
+	expect($yatt_vfs->{_n_compiles})->to_be(4);
       };
     };
   };
@@ -78,7 +78,7 @@ describe "mode: reload requested only", sub {
 
     describe "Compilation counter of internal vfs", sub {
       it "should be equal to 4 still.", sub {
-	expect($yatt_vfs->{n_compiles})->to_be(4);
+	expect($yatt_vfs->{_n_compiles})->to_be(4);
       };
     };
   };
@@ -107,13 +107,13 @@ describe "mode: always_refresh_deps", sub {
     describe "compilation counter of internal vfs", sub {
       my $ncomps;
       it "should be equal to 3 (index, foo, bar)", sub {
-	expect($ncomps = $yatt_vfs->{n_compiles})->to_be(3);
+	expect($ncomps = $yatt_vfs->{_n_compiles})->to_be(3);
       };
 
       it "should be unchanged after repeative access", sub {
 	$site->render("index") for 0..9;
 
-	expect($yatt_vfs->{n_compiles})->to_be($ncomps);
+	expect($yatt_vfs->{_n_compiles})->to_be($ncomps);
       };
     };
 
@@ -130,7 +130,7 @@ describe "mode: always_refresh_deps", sub {
 
     describe "Compilation counter of internal vfs", sub {
       it "should be equal to 4 now.", sub {
-	expect($yatt_vfs->{n_compiles})->to_be(4);
+	expect($yatt_vfs->{_n_compiles})->to_be(4);
       };
     };
   };
@@ -146,7 +146,7 @@ describe "mode: always_refresh_deps", sub {
 
     describe "Compilation counter of internal vfs", sub {
       it "should be equal to 5 now.", sub {
-	expect($yatt_vfs->{n_compiles})->to_be(5);
+	expect($yatt_vfs->{_n_compiles})->to_be(5);
       };
     };
   };
@@ -163,13 +163,13 @@ describe "mode: always_refresh_deps", sub {
     describe "Compilation counter of internal vfs", sub {
       my $ncomps = 6;
       it "should be equal to 6 now.", sub {
-	expect($yatt_vfs->{n_compiles})->to_be($ncomps);
+	expect($yatt_vfs->{_n_compiles})->to_be($ncomps);
       };
 
       it "should be unchanged after repeative access", sub {
 	$site->render("index") for 0..9;
 
-	expect($yatt_vfs->{n_compiles})->to_be($ncomps);
+	expect($yatt_vfs->{_n_compiles})->to_be($ncomps);
       };
     };
   };
