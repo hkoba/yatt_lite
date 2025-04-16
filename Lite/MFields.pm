@@ -132,7 +132,11 @@ sub fields {
 
 sub has {
   (my MY $self, my $nameSpec, my @atts) = @_;
+  print STDERR YATT::Lite::Util::terse_dump($nameSpec, \@atts), "\n"
+    if DEBUG_IMPORT;
   (my $attName, @atts) = ($self->parse_field_spec($nameSpec), @atts);
+  print STDERR YATT::Lite::Util::terse_dump("=> ", $attName, \@atts), "\n"
+    if DEBUG_IMPORT;
   if (my $old = $self->{_fields}->{$attName}) {
     carp "Redefinition of field $self->{package}.$attName is prohibited!";
   }
@@ -176,7 +180,7 @@ sub make_accessor_type_glob {
 sub parse_field_spec {
   my ($pack, $spec) = @_;
   my @atts;
-  if ($spec =~ s/\^(\w+)\z//) {
+  if ($spec =~ s/\^(\w+)\z/$1/) {
     push @atts, getter => $1;
   }
   if ($spec !~ m{^_}) {
