@@ -104,13 +104,13 @@ sub cmd_ctags_symbols {
     widget => sub {
       my ($args) = @_;
       my Part $widget = $args->{part};
-      my Template $tmpl = $widget->{cf_folder};
-      my $path = $tmpl->{cf_path};
-      $self->emit_ctags($args->{kind}, $args->{name}, $path, $widget->{cf_startln});
+      my Template $tmpl = $widget->{folder};
+      my $path = $tmpl->{path};
+      $self->emit_ctags($args->{kind}, $args->{name}, $path, $widget->{startln});
     },
     item => sub {
       my ($args) = @_;
-      my $path = $args->{tree}->cget('path');
+      my $path = $args->{_tree}->cget('path');
       my ($kind, $name) = do {
         if (-l $path) {
           (symlink => readlink($path))
@@ -180,14 +180,14 @@ sub apply_changes {
 
   my Template $tmpl = $core->find_file($baseName);
 
-  my $lines = [defined $tmpl->{cf_string} && $tmpl->{cf_string} ne ""
-               ? (split /\n/, $tmpl->{cf_string}, -1) : ("")];
+  my $lines = [defined $tmpl->{string} && $tmpl->{string} ne ""
+               ? (split /\n/, $tmpl->{string}, -1) : ("")];
 
   foreach my TextDocumentContentChangeEvent $change (@changes) {
     $lines = $self->apply_change_to_lines($lines, $change);
   }
 
-  $tmpl->{cf_mtime} = time;
+  $tmpl->{mtime} = time;
   my $changed = join("\n", @$lines);
 
   if ($self->debug_changes_dir_exists) {
@@ -200,7 +200,7 @@ sub apply_changes {
   try {
     $core->get_parser->load_string_into($tmpl, $changed, all => 1);
   } catch {
-    $tmpl->{cf_string} = $changed;
+    $tmpl->{string} = $changed;
     $result //= +{};
     if (not ref $_) {
       $self->strerror2lintresult($tmpl, $_, $result //= {});
@@ -364,7 +364,7 @@ sub lint : method {
       my $pkg = $core->find_product(perl => $tmpl);
 
       $result->{is_success} = JSON()->true;
-      $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}];
+      $result->{info}{mtime} = [$mtime, $tmpl->{mtime}];
 
     });
   } catch {
@@ -375,13 +375,13 @@ sub lint : method {
         $self->strerror2lintresult($tmpl, $_, $result //= {});
       } elsif (UNIVERSAL::isa($_, 'YATT::Lite::Error')) {
         $self->yatterror2lintresult($_, $result //= +{});
-        $backtrace = $_->{cf_backtrace};
+        $backtrace = $_->{backtrace};
       } else {
         $result->{message} = $_;
         $result->{info}{from} = ["line: ", __LINE__];
       }
 
-      $result->{info}{mtime} = [$mtime, $tmpl->{cf_mtime}] if defined $mtime;
+      $result->{info}{mtime} = [$mtime, $tmpl->{mtime}] if defined $mtime;
       $result->{info}{backtrace} = $self->backtrace2list($backtrace) if $backtrace;
     }
   };
@@ -393,26 +393,26 @@ sub yatterror2lintresult {
   (my MY $self, my YATT::Lite::Error $err, my LintResult $result) = @_;
   use YATT::Lite::Util::AllowRedundantSprintf;
   $result->{info}{from} = 'yatterror2lintresult';
-  $result->{file} = $err->{cf_tmpl_file};
+  $result->{file} = $err->{tmpl_file};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
-  $diag->{message} = $err->{cf_reason} // do {
+  $diag->{message} = $err->{reason} // do {
     my $str;
     try {
-      $str = sprintf($err->{cf_format}, @{$err->{cf_args}});
+      $str = sprintf($err->{format}, @{$err->{args}});
     } catch {
-      $str = terse_dump([$_, $err->{cf_format}, @{$err->{cf_args}}]);
+      $str = terse_dump([$_, $err->{format}, @{$err->{args}}]);
     };
     $str;
   };
-  $diag->{range} = $self->make_line_range($err->{cf_tmpl_line} - 1);
+  $diag->{range} = $self->make_line_range($err->{tmpl_line} - 1);
   $result;
 }
 
 sub strerror2lintresult {
   (my MY $self, my Template $tmpl, my $errStr, my LintResult $result) = @_;
   $result->{info}{from} = 'strerror2lintresult';
-  $result->{file} = $tmpl->{cf_path};
+  $result->{file} = $tmpl->{path};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
   $errStr =~ s/\n.*\z//s;
@@ -536,8 +536,8 @@ sub filename2uri {
 
 sub part_filename {
   (my MY $self, my Part $part) = @_;
-  my Template $tmpl = $part->{cf_folder};
-  $tmpl->{cf_path};
+  my Template $tmpl = $part->{folder};
+  $tmpl->{path};
 }
 
 sub describe_symbol {
@@ -652,13 +652,13 @@ sub md_quote_code_as {
 
 sub widget_signature_md {
   (my MY $self, my Widget $widget, my $detail) = @_;
-  my $wname = "yatt:$widget->{cf_name}";
+  my $wname = "yatt:$widget->{name}";
   my $args = join("", map {
-    my $var = $widget->{arg_dict}{$_};
+    my $var = $widget->{_arg_dict}{$_};
     " ".join("=", $_, q{"}.$var->spec_string.q{"}).($detail ? "\n" : "");
-  } @{$widget->{arg_order}});
+  } @{$widget->{_arg_order}});
   if ($detail) {
-    $self->md_quote_code_as(yatt => "($widget->{cf_kind}) <$wname$args/>");
+    $self->md_quote_code_as(yatt => "($widget->{kind}) <$wname$args/>");
   } else {
     $args;
   }
@@ -670,7 +670,7 @@ sub list_parts_in {
   my @result;
   foreach my Part $part ($tmpl->list_parts) {
     push @result, my DocumentSymbol $sym = {};
-    $sym->{name} = "$part->{cf_kind} $part->{cf_name}";
+    $sym->{name} = "$part->{kind} $part->{name}";
     $sym->{kind} = $part->isa(Widget) ? SymbolKind__Constructor
       : SymbolKind__Method;
     $sym->{detail} = $self->widget_signature_md($part);
@@ -745,8 +745,8 @@ sub augment_defs {
   my $zipperList = $self->flatten_zipper_top2bottom($cursor);
   my Zipper $outermost = $zipperList->[0];
   $outermost->{defs}{$_}
-    //= $self->make_document_symbol_from_argument($part->{arg_dict}{$_})
-    for keys %{$part->{arg_dict}};
+    //= $self->make_document_symbol_from_argument($part->{_arg_dict}{$_})
+    for keys %{$part->{_arg_dict}};
   $self->augment_defs_1($zipperList, 0);
   $cursor;
 }
@@ -904,7 +904,7 @@ sub dump_part_decllist {
     = $self->find_part_of_file_line($fileName, $line)
     or return;
 
-  $part->{decllist}
+  $part->{_decllist}
 }
 
 sub dump_part_tree {
@@ -916,12 +916,12 @@ sub dump_part_tree {
     or return;
 
   unless (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
-    Carp::croak "part $part->{cf_kind} $part->{cf_name} is not a widget";
+    Carp::croak "part $part->{kind} $part->{name} is not a widget";
   }
 
   $core->ensure_parsed($part);
   my Widget $widget = $part;
-  $widget->{tree}
+  $widget->{_tree}
 }
 
 sub dump_tokens_at_file_position {
@@ -932,9 +932,9 @@ sub dump_tokens_at_file_position {
     = $self->find_part_of_file_line($fileName, $line)
     or return;
 
-  return unless defined $tmpl->{cf_nlines};
+  return unless defined $tmpl->{nlines};
 
-  unless ($line <= $tmpl->{cf_nlines} - 1) {
+  unless ($line <= $tmpl->{nlines} - 1) {
     # warn?
     return;
   }
@@ -942,15 +942,15 @@ sub dump_tokens_at_file_position {
   # my $yatt = $self->find_yatt_for_template($fileName);
   $core->ensure_parsed($part);
 
-  $part->{cf_endln} //= $tmpl->{cf_nlines}; # XXX:
+  $part->{endln} //= $tmpl->{nlines}; # XXX:
 
-  my $declkind = [$part->{cf_namespace}, $part->{cf_kind}];
+  my $declkind = [$part->{namespace}, $part->{kind}];
 
-  if ($line < $part->{cf_bodyln} - 1) {
+  if ($line < $part->{bodyln} - 1) {
     # At declaration
     [decllist => $declkind
      , $self->part_decl_range($part)
-     , $self->alttree($tmpl, $part->{decllist})
+     , $self->alttree($tmpl, $part->{_decllist})
      , $part
    ];
   } elsif (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
@@ -958,7 +958,7 @@ sub dump_tokens_at_file_position {
     my Widget $widget = $part;
     [body => $declkind
      , $self->part_body_range($part)
-     , $self->alttree($tmpl, $widget->{tree})
+     , $self->alttree($tmpl, $widget->{_tree})
      , $part
    ];
   } else {
@@ -966,7 +966,7 @@ sub dump_tokens_at_file_position {
     # XXX: TODO extract tokens for host language.
     [body_string => $declkind
      , $self->part_body_range($part)
-     , $part->{toks}
+     , $part->{_toks}
      , $part
    ];
   }
@@ -975,8 +975,8 @@ sub dump_tokens_at_file_position {
 sub part_decl_range {
   (my MY $self, my Part $part) = @_;
   my Range $range;
-  $range->{start} = $self->make_line_position($part->{cf_startln} - 1);
-  $range->{end} = $self->make_line_position($part->{cf_bodyln} - 1);
+  $range->{start} = $self->make_line_position($part->{startln} - 1);
+  $range->{end} = $self->make_line_position($part->{bodyln} - 1);
   $range;
 }
 
@@ -991,10 +991,10 @@ sub make_line_position {
 sub part_body_range {
   (my MY $self, my Part $part) = @_;
   my Range $range;
-  $range->{start} = $self->make_line_position($part->{cf_bodyln} - 1);
-  my Template $tmpl = $part->{cf_folder};
-  my $hasLastNL = $tmpl->{cf_string} =~ /\n\z/ ? 1 : 0;
-  $range->{end} = $self->make_line_position($part->{cf_endln}
+  $range->{start} = $self->make_line_position($part->{bodyln} - 1);
+  my Template $tmpl = $part->{folder};
+  my $hasLastNL = $tmpl->{string} =~ /\n\z/ ? 1 : 0;
+  $range->{end} = $self->make_line_position($part->{endln}
                                             - ($hasLastNL ? 1 : 0));
   $range;
 }
@@ -1005,7 +1005,7 @@ sub find_part_of_file_line {
   my ($tmpl, $core) = $self->find_template($fileName);
   my Part $prev;
   foreach my Part $part ($tmpl->list_parts) {
-    last if $line < $part->{cf_startln} - 1;
+    last if $line < $part->{startln} - 1;
     $prev = $part;
   }
 
@@ -1249,11 +1249,11 @@ sub cmd_list_parts {
         # XXX: 
         return;
       }
-      my Template $tmpl = $widget->{cf_folder};
-      my $path = $tmpl->{cf_path};
+      my Template $tmpl = $widget->{folder};
+      my $path = $tmpl->{path};
       my $args = $self->{detail}
         ? [$self->list_part_args_internal($widget)]
-        : $widget->{arg_order};
+        : $widget->{_arg_order};
       my @result = ((map {$_ => $found->{$_}} sort keys %$found)
                       , args => $args, path => $self->clean_path($path));
       # Emit as an array for readability in normal mode.
@@ -1262,7 +1262,7 @@ sub cmd_list_parts {
     },
     item => sub {
       my ($args) = @_;
-      # print "# ", $args->{tree}->cget('path'), "\n";
+      # print "# ", $args->{_tree}->cget('path'), "\n";
     },
   );
 
@@ -1275,9 +1275,9 @@ sub list_part_args_internal {
   (my MY $self, my Part $part, my $nameRe) = @_;
   my @result;
   my @fields = YATT::Lite::VarTypes->list_field_names;
-  foreach my $argName ($part->{arg_order} ? @{$part->{arg_order}} : ()) {
+  foreach my $argName ($part->{_arg_order} ? @{$part->{_arg_order}} : ()) {
     next if $nameRe and not $argName =~ $nameRe;
-    my $argObj = $part->{arg_dict}{$argName};
+    my $argObj = $part->{_arg_dict}{$argName};
     push @result, my $spec = {};
     foreach my $i (0 .. $#fields) {
       my $val = $argObj->[$i];
