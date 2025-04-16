@@ -753,7 +753,7 @@ sub YATT::Lite::EntNS::entity_template {
 sub YATT::Lite::EntNS::entity_stash {
   my $this = shift;
   my $prop = $CON->prop;
-  my $stash = $prop->{stash} //= {};
+  my $stash = $prop->{_stash} //= {};
   unless (@_) {
     $stash
   } elsif (@_ > 1) {
@@ -761,7 +761,7 @@ sub YATT::Lite::EntNS::entity_stash {
   } elsif (not defined $_[0]) {
     carp "Undefined argument for :stash()";
   } elsif (ref $_[0]) {
-    $prop->{stash} = $_[0]
+    $prop->{_stash} = $_[0]
   } else {
     $stash->{$_[0]};
   }
