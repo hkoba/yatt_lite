@@ -135,7 +135,7 @@ BEGIN {
     my $self = shift;
     $self->[VSLOT_WIDGET] = shift;
     Scalar::Util::weaken($self->[VSLOT_WIDGET])
-	if $self->[VSLOT_WIDGET]->{cf_folder};
+	if $self->[VSLOT_WIDGET]->{folder};
     $self;
   }
 }
