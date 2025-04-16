@@ -142,9 +142,12 @@ sub find_neighbor {
 #
 sub cget_all {
   (my MY $self, my $name) = @_;
+  if ($name =~ /^_/) {
+    croak "Private field is prohibited: $name";
+  }
   (map($_->cget_all($name)
        , $self->list_base_obj)
-   , lexpand($self->{"cf_$name"}));
+   , lexpand($self->{$name}));
 }
 
 sub list_base_obj {
