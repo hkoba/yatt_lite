@@ -22,13 +22,13 @@ require_ok(VFS);
 {
   package DummyFacade; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::Object);
-  use fields qw/cf_opts/;
+  use fields qw/opts/;
   sub error {
     shift; die @_;
   }
   sub find_neighbor {
     (my MY $self, my $dir) = @_;
-    YATT::Lite::VFS->new([dir => $dir], facade => $self, @{$self->{cf_opts}})
+    YATT::Lite::VFS->new([dir => $dir], facade => $self, @{$self->{opts}})
 	->root;
   }
 }
