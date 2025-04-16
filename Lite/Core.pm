@@ -117,11 +117,11 @@ use YATT::Lite::Breakpoint ();
 
   sub YATT::Lite::Core::Widget::callsite_name {
     (my Widget $widget) = @_;
-    if ($widget->{cf_decl} eq 'args') {
-      my Template $tmpl = $widget->{cf_folder};
-      join(":", $widget->{cf_namespace}, $tmpl->{cf_name});
+    if ($widget->{decl} eq 'args') {
+      my Template $tmpl = $widget->{folder};
+      join(":", $widget->{namespace}, $tmpl->{name});
     } else {
-      join(":", $widget->{cf_namespace}, $widget->{cf_name});
+      join(":", $widget->{namespace}, $widget->{name});
     }
   }
 
