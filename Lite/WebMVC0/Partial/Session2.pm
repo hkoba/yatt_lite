@@ -29,9 +29,9 @@ use YATT::Lite::Partial
 		  /]
    , fields => [qw/
                     _session_middleware
-                    cf_session_middleware_class
-                    cf_session_state
-                    cf_session_store
+                    session_middleware_class
+                    session_state
+                    session_store
 		  /]
    , -Entity, -CON
   );
@@ -309,16 +309,16 @@ sub prepare_app {
   dputs('START') if DEBUG >= 3;
 
   my $mw = $self->{_session_middleware} = do {
-    my $class = $self->{cf_session_middleware_class}
+    my $class = $self->{session_middleware_class}
       || $self->default_session_middleware_class;
 
-    my $state = ($self->{cf_session_state}
-                    ? $self->create_session_backend(State => $self->{cf_session_state}) : $self->default_session_state->new());
+    my $state = ($self->{session_state}
+                    ? $self->create_session_backend(State => $self->{session_state}) : $self->default_session_state->new());
 
     $class->new({app => sub {[200, [], []]}
                  , state => $state
-                 , ($self->{cf_session_store}
-                    ? (store => $self->create_session_backend(Store => $self->{cf_session_store})) : ())
+                 , ($self->{session_store}
+                    ? (store => $self->create_session_backend(Store => $self->{session_store})) : ())
                });
   };
 
