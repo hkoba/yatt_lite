@@ -67,10 +67,10 @@ END
 
   {
     my $name = 'bar';
-    is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
       , "tmpl Item '$name'";
 
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 -
  FOO
@@ -158,9 +158,9 @@ END
 
   {
     my $name = 'foo';
-    is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
       , "tmpl Item '$name'";
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 - <h2>
 {
@@ -264,8 +264,8 @@ sub eq_or_diff_of_lrxml_alt_tree_with_xhf ($$) {
   my $tmpl = $CLASS->Template->new;
   $parser->load_string_into($tmpl, $lrxml);
 
-  my $w = $tmpl->{Item}{''};
-  eq_or_diff alt_tree_xhf_for($lrxml, $w->{tree}), $xhf, "at line: $line";
+  my $w = $tmpl->{_Item}{''};
+  eq_or_diff alt_tree_xhf_for($lrxml, $w->{_tree}), $xhf, "at line: $line";
 }
 
 {
@@ -497,9 +497,9 @@ END
 
   ;
   my $name = '';
-  my $w = $tmpl->{Item}{$name};
+  my $w = $tmpl->{_Item}{$name};
 
-  my $alttree = alt_tree_for($tmpl->{cf_string}, $w->{tree});
+  my $alttree = alt_tree_for($tmpl->{string}, $w->{_tree});
   # print YATT::Lite::Util::terse_dump($alttree), "\n";
   my ($elem_foo, undef) = @$alttree;
   my ($att_bar) = @{$elem_foo->{subtree}};
