@@ -151,10 +151,10 @@ $i++;
   {
     package MyBackend1; sub MY () {__PACKAGE__}
     use base qw/YATT::Lite::Object/;
-    use fields qw/cf_models cf_name/;
+    use fields qw/models name/;
     sub model {
       (my MY $self, my $name) = @_;
-      $self->{cf_models}{$name};
+      $self->{models}{$name};
     }
   }
   my $backend = MyBackend1->new

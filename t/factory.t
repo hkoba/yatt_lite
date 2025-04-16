@@ -196,7 +196,7 @@ END
   {
     package MyYATTBaz;
     use parent qw(YATT::Lite); use YATT::Lite::Inc;
-    use YATT::Lite::MFields qw(cf_other_config cf_other_config_list);
+    use YATT::Lite::MFields qw(other_config other_config_list);
     sub baz {$baz_res}
   }
   
@@ -226,7 +226,7 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 sub root_method {
   (my MY $self) = @_;
-  $self->{cf_other_config}
+  $self->{other_config}
 }
 END
 
@@ -281,7 +281,7 @@ END
   {
     package MyYATTQux;
     use parent qw(YATT::Lite); use YATT::Lite::Inc;
-    use YATT::Lite::MFields qw/cf_other_config2/;
+    use YATT::Lite::MFields qw/other_config2/;
     sub qux {$qux_res}
   }
   
@@ -305,7 +305,7 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 sub root_method {
   (my MY $self) = @_;
-  $self->{cf_other_config2}
+  $self->{other_config2}
 }
 END
 );
@@ -777,7 +777,7 @@ END
     );
 
   my %lite = map {
-    ($$_[0] =~ /^cf_(\w+)/) ? ($1 => 1) : ()
+    ($$_[0] =~ /^([a-z]\w*)/i) ? ($1 => 1) : ()
   } YATT::Lite::MFields->get_meta("YATT::Lite")->fields;
 
   delete $lite{$_} for YATT::Lite::Factory->_cf_delegates;
@@ -804,7 +804,7 @@ END
    );
 
   my %core = map {
-    ($$_[0] =~ /^cf_(\w+)/) ? ($1 => 1) : ()
+    ($$_[0] =~ /^([a-z]\w*)/i) ? ($1 => 1) : ()
   } YATT::Lite::MFields->get_meta("YATT::Lite::Core")->fields;
 
   delete $core{$_} for YATT::Lite->_cf_delegates;
