@@ -66,7 +66,6 @@ OUT:
 TITLE: add argmacros with renaming
 IN:
  <!yatt:argmacro enum=[list=list] first="value/0" last="value!">
- $DB::single = 1;
  my $firstExpr = $args->{first} ? $cgen->node_value($args->{first}) : $vars->{first}->default;
  my $lastExpr = $cgen->node_value($args->{last});
  $result->{list} = sprintf(q{%s .. %s}, $firstExpr, $lastExpr);
