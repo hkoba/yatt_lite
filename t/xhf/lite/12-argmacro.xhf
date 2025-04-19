@@ -1,5 +1,38 @@
 # -*- coding: utf-8 -*-
 
+TITLE: just declare common args
+IN:
+ <!yatt:argmacro common=[
+   name=!
+   file=!
+   session="value!"
+   required="bool/0"
+ ]>
+ 
+ <!yatt:widget foo %common;>
+   name=&yatt:name;
+   file=&yatt:file;
+   session=&yatt:session;
+   required=&yatt:required;
+ 
+ <!yatt:args>
+  <yatt:foo name="q1" file="aa" session="{}" required/>
+  --
+  <yatt:foo name="q2" file="bb" session="{}" />
+OUT:
+   name=q1
+   file=aa
+   session={}
+ 
+   required=1
+  --
+   name=q2
+   file=bb
+   session={}
+ 
+   required=0
+ 
+
 TITLE: pair => x, y
 FILE: test1impl.yatt
 IN:
@@ -63,3 +96,4 @@ OUT:
     3 2
  
  
+
