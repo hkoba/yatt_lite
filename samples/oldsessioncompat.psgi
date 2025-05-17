@@ -65,7 +65,7 @@ use List::MoreUtils qw/last_index/;
   use YATT::Lite::WebMVC0::Partial::Session;
 
   # To add other option, use MFields like this:
-  # use YATT::Lite::MFields qw/cf_dbi_dsn cf_auto_deploy /;
+  # use YATT::Lite::MFields qw/dbi_dsn auto_deploy /;
   #
 
   my $site = MY->load_factory_for_psgi
