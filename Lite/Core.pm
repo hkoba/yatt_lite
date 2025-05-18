@@ -115,6 +115,16 @@ use YATT::Lite::Breakpoint ();
     $action->{name} eq '' ? q{''} : $action->{name};
   }
 
+  sub YATT::Lite::Core::Widget::callsite_name {
+    (my Widget $widget) = @_;
+    if ($widget->{decl} eq 'args') {
+      my Template $tmpl = $widget->{folder};
+      join(":", $widget->{namespace}, $tmpl->{name});
+    } else {
+      join(":", $widget->{namespace}, $widget->{name});
+    }
+  }
+
   sub YATT::Lite::Core::Part::method_name {...}
   sub YATT::Lite::Core::Widget::method_name {
     (my Widget $widget) = @_;
