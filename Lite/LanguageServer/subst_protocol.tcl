@@ -85,7 +85,6 @@ proc extract_previous_types fn {
 
 proc generate {defsList args} {
     set jsonArray [json::write array {*}$defsList]
-    puts "# make_typedefs_from: $args"
     RUN $::cgen --output=pairlist make_typedefs_from $jsonArray {*}$args
 }
 
@@ -138,9 +137,13 @@ if {$opts(P) ne ""} {
 
     puts -nonewline $outFH $header
 
+    set newTypes [list {*}[extract_previous_types $targetFn] \
+                      {*}$::argv]
+
+    puts $outFH "# make_typedefs_from: $newTypes"
+
     generate [split [parse_spec $specFn] \n] \
-        {*}[extract_previous_types $targetFn] \
-        {*}$::argv >@ $outFH
+        {*}$newTypes >@ $outFH
 
     puts -nonewline $outFH $footer
 
