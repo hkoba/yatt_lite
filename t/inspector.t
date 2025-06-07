@@ -77,17 +77,15 @@ require_ok('YATT::Lite::Inspector');
 
 }
 
-# Widget completion tests
+# Widget and Entity completion tests
 SKIP: {
   my $base_dir = dirname($FindBin::Bin);
   my $dir = "$base_dir/samples/basic/1";
-  skip "Sample directory not found", 11 unless -d $dir;
+  skip "Sample directory not found", 24 unless -d $dir;
   
-  my $inspector;
-  eval {
-    $inspector = YATT::Lite::Inspector->new(dir => $dir);
-  };
-  skip "Can't create inspector: $@", 11 if $@;
+  my $inspector = YATT::Lite::Inspector->new(dir => $dir);
+  
+  # Widget completion tests
   
   # Test macro widget completion
   {
@@ -122,6 +120,56 @@ SKIP: {
     is($foo->{detail}, "widget yatt:foo", "foo detail should be correct");
     like($foo->{documentation}, qr/a: text/, "foo should have 'a' argument");
     like($foo->{documentation}, qr/body: code/, "foo should have body argument");
+  }
+  
+  # Entity completion tests
+  
+  # Test entity macro completion
+  {
+    my @items = $inspector->complete_entities("html/index.yatt", "yatt", "", 0);
+    my @macros = grep { $_->{detail} =~ /entity macro/ } @items;
+    ok(@macros > 0, "Should have entity macros");
+    
+    my ($if_macro) = grep { $_->{label} eq 'if' } @macros;
+    ok($if_macro, "Should find 'if' entity macro");
+    is($if_macro->{detail}, "entity macro yatt:if", "if entity macro detail should be correct");
+  }
+  
+  # Test entity variable completion in default widget
+  {
+    my @items = $inspector->complete_entities("html/foobar.yatt", "yatt", "", 1);  # Line 2 in editor (0-based: 1)
+    my @vars = grep { $_->{kind} == 13 } @items; # SymbolKind__Variable = 13
+    ok(@vars > 0, "Should have variables from default widget arguments");
+    
+    my ($x_var) = grep { $_->{label} eq 'x' } @vars;
+    ok($x_var, "Should find 'x' variable");
+    is($x_var->{detail}, "var x: text", "variable 'x' detail should be correct");
+    
+    my ($y_var) = grep { $_->{label} eq 'y' } @vars;
+    ok($y_var, "Should find 'y' variable");
+    is($y_var->{detail}, "var y: text", "variable 'y' detail should be correct");
+  }
+  
+  # Test entity variable completion in foo widget
+  {
+    my @items = $inspector->complete_entities("html/foobar.yatt", "yatt", "", 5);  # Line 6 in editor (0-based: 5)
+    my @vars = grep { $_->{kind} == 13 } @items;
+    
+    my ($a_var) = grep { $_->{label} eq 'a' } @vars;
+    ok($a_var, "Should find 'a' variable in foo widget");
+    is($a_var->{detail}, "var a: text", "variable 'a' detail should be correct");
+    
+    # Check that x and y are NOT present
+    my ($x_var) = grep { $_->{label} eq 'x' } @vars;
+    ok(!$x_var, "Should NOT find 'x' variable in foo widget");
+  }
+  
+  # Test entity completion with prefix 'd'
+  {
+    my @items = $inspector->complete_entities("html/index.yatt", "yatt", "d", 0);
+    my ($default) = grep { $_->{label} eq 'default' } @items;
+    ok($default, "Should find 'default' entity function");
+    is($default->{detail}, "entity yatt:default", "default entity detail should be correct");
   }
 }
 

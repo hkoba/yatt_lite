@@ -755,17 +755,23 @@ sub get_completion_items {
   # Determine completion context
   my @items;
   
-  # Check for widget completion: <namespace:widgetname
-  foreach my $ns (@namespaces) {
-    if ($prefix =~ /<($ns):(\w*(?::\w*)*)$/) {
-      my $namespace = $1;
-      my $widgetPath = $2 // '';
-      push @items, $self->complete_widgets($fileName, $namespace, $widgetPath);
-      last; # Only one namespace match expected
-    }
+  # Create namespace pattern
+  my $ns_pattern = join('|', map { quotemeta } @namespaces);
+  
+  # Check for widget or entity completion
+  if ($prefix =~ /<($ns_pattern):(\w*(?::\w*)*)$/) {
+    # Widget completion: <namespace:widgetname
+    my $namespace = $1;
+    my $widgetPath = $2 // '';
+    push @items, $self->complete_widgets($fileName, $namespace, $widgetPath);
+  }
+  elsif ($prefix =~ /&($ns_pattern):(\w*)$/) {
+    # Entity completion: &namespace:entity
+    my $namespace = $1;
+    my $entityName = $2 // '';
+    push @items, $self->complete_entities($fileName, $namespace, $entityName, $line);
   }
   
-  # TODO: Entity completion (&namespace:entity;)
   # TODO: Declaration completion (<!namespace:widget)
   # TODO: Widget argument completion
   
@@ -790,6 +796,31 @@ sub complete_widgets {
     # Simple completion like w*
     push @items, $self->complete_widgets_simple($fileName, $namespace, $partialName);
   }
+  
+  # Remove duplicates while preserving order
+  my %seen;
+  my @unique;
+  foreach my $item (@items) {
+    next if $seen{$item->{label}}++;
+    push @unique, $item;
+  }
+  
+  return @unique;
+}
+
+sub complete_entities {
+  (my MY $self, my ($fileName, $namespace, $prefix, $line)) = @_;
+  
+  my @items;
+  
+  # 1. Entity macros (highest priority)
+  push @items, $self->complete_entity_macros($fileName, $namespace, $prefix);
+  
+  # 2. Variables (widget arguments)
+  push @items, $self->complete_entity_variables($fileName, $namespace, $prefix, $line);
+  
+  # 3. Entity functions
+  push @items, $self->complete_entity_functions($fileName, $namespace, $prefix);
   
   # Remove duplicates while preserving order
   my %seen;
@@ -1024,6 +1055,100 @@ sub list_methods_starting_with {
   # Remove duplicates
   my %seen;
   grep { !$seen{$_}++ } @methods;
+}
+
+sub complete_entity_macros {
+  (my MY $self, my ($fileName, $namespace, $prefix)) = @_;
+  
+  my @items;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $core;
+  
+  # Get the code generator
+  my $cgen = $core->build_cgen_of('perl');
+  
+  # Find all entmacro_* methods
+  my $cgen_class = ref($cgen) || $cgen;
+  my @methods = $self->list_methods_starting_with($cgen_class, 'entmacro_');
+  
+  foreach my $method (@methods) {
+    my $entity_name = $method;
+    $entity_name =~ s/^entmacro_//;
+    
+    next unless $entity_name =~ /^\Q$prefix/;
+    
+    my CompletionItem $item = {};
+    $item->{label} = $entity_name;
+    $item->{kind} = SymbolKind__Function;
+    $item->{detail} = "entity macro $namespace:$entity_name";
+    $item->{documentation} = "Built-in entity macro";
+    
+    push @items, $item;
+  }
+  
+  @items;
+}
+
+sub complete_entity_variables {
+  (my MY $self, my ($fileName, $namespace, $prefix, $line)) = @_;
+  
+  my @items;
+  
+  # Find the part (widget) at the current line
+  (my Part $part, my Template $tmpl, my $core)
+    = $self->find_part_of_file_line($fileName, $line)
+      or return;
+  
+  # List all arguments of the current widget
+  foreach my $argName (@{$part->{_arg_order} || []}) {
+    next unless $argName =~ /^\Q$prefix/;
+    
+    my $arg = $part->{_arg_dict}{$argName};
+    my CompletionItem $item = {};
+    $item->{label} = $argName;
+    $item->{kind} = SymbolKind__Variable;
+    $item->{detail} = "var $argName" . ($arg->type ? ": " . join(":", lexpand($arg->type)) : "");
+    
+    if ($arg->is_required) {
+      $item->{documentation} = "Required argument";
+    }
+    
+    push @items, $item;
+  }
+  
+  @items;
+}
+
+sub complete_entity_functions {
+  (my MY $self, my ($fileName, $namespace, $prefix)) = @_;
+  
+  my @items;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $tmpl;
+  
+  # Get the entns for this template
+  my $entns = $tmpl->cget('entns');
+  return unless $entns;
+  
+  # Find all entity_* methods in the entns and its parents
+  my @methods = $self->list_methods_starting_with($entns, 'entity_');
+  
+  foreach my $method (@methods) {
+    my $entity_name = $method;
+    $entity_name =~ s/^entity_//;
+    
+    next unless $entity_name =~ /^\Q$prefix/;
+    
+    my CompletionItem $item = {};
+    $item->{label} = $entity_name;
+    $item->{kind} = SymbolKind__Function;
+    $item->{detail} = "entity $namespace:$entity_name";
+    $item->{documentation} = "User-defined entity function";
+    
+    push @items, $item;
+  }
+  
+  @items;
 }
 
 sub locate_node_at_file_position {
