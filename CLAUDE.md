@@ -98,17 +98,50 @@ YATT uses LRXML (Loose but Recursive XML) syntax. The namespace prefix (commonly
 
 ### Macro System
 
-Widgets like `<yatt:if>`, `<yatt:foreach>`, etc. are implemented as a Lisp-like macro system:
+YATT implements a Lisp-like macro system for both widgets and entities:
 
-- These are methods in `YATT::Lite::CGen::Perl` class with names starting with `macro_*`
+#### Widget Macros
+Widgets like `<yatt:if>`, `<yatt:foreach>`, etc.:
+- Methods in `YATT::Lite::CGen::Perl` with names starting with `macro_*`
 - Examples: `macro_if`, `macro_foreach`, `macro_my`, etc.
-- Can be extended by inheriting `YATT::Lite::CGen::Perl`
-- To get the complete list of available macros for a template:
-  ```perl
-  my ($tmpl, $core) = $self->find_template($fileName);
-  my $cgen = $core->build_cgen_of('perl');
-  # Then inspect methods starting with 'macro_' in $cgen
-  ```
+
+#### Entity Macros
+Entity functions like `&yatt:if(cond,then,else);`:
+- Methods in `YATT::Lite::CGen::Perl` with names starting with `entmacro_*`
+- Examples: `entmacro_if`, `entmacro_unless`, etc.
+- Evaluated at code generation time
+
+Both can be extended by inheriting `YATT::Lite::CGen::Perl`.
+
+To get the complete list of available macros:
+```perl
+my ($tmpl, $core) = $self->find_template($fileName);
+my $cgen = $core->build_cgen_of('perl');
+# For widget macros: methods starting with 'macro_'
+# For entity macros: methods starting with 'entmacro_'
+```
+
+### Entity Functions
+
+Two types of entity functions exist:
+
+1. **Entity Macros** - Compile-time macros (`entmacro_*` methods)
+2. **Regular Entities** - Runtime functions (`entity_*` methods)
+   - Defined with `<!yatt:entity name ...>` in templates
+   - Generated as `entity_name` methods in compiled classes
+   - Inherited through class hierarchy
+   
+To list all available entities, recursively check methods starting with `entity_*` in the generated class and its parents (see `cmd_list_entities` in Inspector.pm).
+
+### Entity Resolution Order
+
+Entity Path Expressions like `&yatt:foo;` or `&yatt:foo();` are resolved in the following priority order:
+
+1. **Entity macro (entmacro)** - If `entmacro_foo` exists, it's used with highest priority
+2. **Variable reference** - If variable `foo` exists, its value is referenced (`&yatt:foo();` invokes code-type variables)
+3. **Entity function** - Calls `entity_foo` method
+
+This means macros have the highest priority, followed by variables, and finally entity functions.
 
 ### Namespace Configuration
 
