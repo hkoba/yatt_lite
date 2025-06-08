@@ -81,7 +81,7 @@ require_ok('YATT::Lite::Inspector');
 SKIP: {
   my $base_dir = dirname($FindBin::Bin);
   my $dir = "$base_dir/samples/basic/1";
-  skip "Sample directory not found", 32 unless -d $dir;
+  skip "Sample directory not found", 39 unless -d $dir;
   
   my $inspector = YATT::Lite::Inspector->new(dir => $dir);
   
@@ -101,11 +101,21 @@ SKIP: {
   # Test widget completion with prefix 'e'
   {
     my @items = $inspector->complete_widgets("html/index.yatt", "yatt", "e");
-    my ($envelope) = grep { $_->{label} eq 'envelope' } @items;
-    ok($envelope, "Should find 'envelope' widget");
-    is($envelope->{detail}, "template yatt:envelope (default widget)", "envelope detail should be correct");
-    like($envelope->{documentation}, qr/title: html/, "envelope should have title argument");
-    like($envelope->{documentation}, qr/body: code/, "envelope should have body argument");
+    my @envelope_items = grep { $_->{label} =~ /^envelope/ } @items;
+    is(scalar(@envelope_items), 2, "Should have two envelope completion items");
+    
+    my ($envelope_open) = grep { $_->{label} eq 'envelope' } @envelope_items;
+    ok($envelope_open, "Should find 'envelope' widget (open/close)");
+    is($envelope_open->{detail}, "template yatt:envelope (default widget)", "envelope detail should be correct");
+    like($envelope_open->{documentation}, qr/title: html/, "envelope should have title argument");
+    like($envelope_open->{documentation}, qr/body: code/, "envelope should have body argument");
+    is($envelope_open->{insertText}, 'envelope>$1</yatt:envelope>', "envelope open/close insertText should be correct");
+    is($envelope_open->{insertTextFormat}, 2, "envelope open/close should use snippet format");
+    
+    my ($envelope_self) = grep { $_->{label} eq 'envelope (self-closing)' } @envelope_items;
+    ok($envelope_self, "Should find 'envelope (self-closing)' widget");
+    is($envelope_self->{insertText}, 'envelope/>', "envelope self-closing insertText should be correct");
+    is($envelope_self->{insertTextFormat}, 1, "envelope self-closing should use plain text format");
   }
   
   # Test widget completion from foobar.yatt
