@@ -251,6 +251,8 @@ sub head_as_json_array {
 
 sub debug_changes_dir_exists {
   (my MY $self) = @_;
+  defined $self->{dir}
+    &&
   -e "$self->{dir}/DEBUG_YATT_LANGSERVER"
     &&
   -d "$self->{dir}/$self->{debug_changes_dir}";
