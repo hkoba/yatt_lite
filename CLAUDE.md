@@ -73,6 +73,141 @@ scripts/yatt render html/index.yatt
 - `.ydo` files handle form actions
 - XHF format used for configuration and testing
 
+### YATT Syntax Overview
+
+YATT uses LRXML (Loose but Recursive XML) syntax. The namespace prefix (commonly `yatt:`) is configurable and multiple namespaces can be defined. All widgets (both user-defined and built-in) use the same syntax:
+
+1. **Widget invocation**: `<yatt:widgetname/>` or `<yatt:widgetname>...</yatt:widgetname>`
+   - Examples: `<yatt:foo/>`, `<yatt:if var="x">...</yatt:if>`, `<yatt:my var="x" value="1"/>`
+   - No syntax distinction between user-defined and built-in widgets
+
+2. **Attribute elements**: `<:yatt:argname>...</:yatt:argname>` 
+   - For passing complex arguments containing tags
+
+3. **Entity references**: `&yatt:varname;` or `&yatt:entity();`
+   - Variable interpolation and function calls
+
+4. **Declarations**: `<!yatt:widget name args...>`, `<!yatt:args vars...>`
+   - Widget definitions and argument declarations
+
+5. **Comments**: `<!--#yatt ... -->`
+   - Ignored by parser
+
+6. **Processing instructions**: `<?yatt ... ?>`, `<?perl ... ?>`
+   - Direct target language embedding
+
+### Macro System
+
+Widgets like `<yatt:if>`, `<yatt:foreach>`, etc. are implemented as a Lisp-like macro system:
+
+- These are methods in `YATT::Lite::CGen::Perl` class with names starting with `macro_*`
+- Examples: `macro_if`, `macro_foreach`, `macro_my`, etc.
+- Can be extended by inheriting `YATT::Lite::CGen::Perl`
+- To get the complete list of available macros for a template:
+  ```perl
+  my ($tmpl, $core) = $self->find_template($fileName);
+  my $cgen = $core->build_cgen_of('perl');
+  # Then inspect methods starting with 'macro_' in $cgen
+  ```
+
+### Namespace Configuration
+
+YATT namespaces are configurable and multiple namespaces can be defined:
+
+- Default namespace is often `yatt`, but this is configurable per application
+- Multiple namespaces can be active simultaneously
+- To get current namespace configuration in Inspector:
+  ```perl
+  my @namespace = YATT::Lite::Util::lexpand($self->{_SITE}->cget('namespace'))
+  ```
+- This affects all syntax elements: `<ns:widget>`, `&ns:entity;`, `<!ns:declaration>`, etc.
+
+### Widget Search Order
+
+YATT searches for widgets in the following order:
+1. **Macros (built-in widgets)** - `if`, `foreach`, `my`, etc. implemented as `macro_*` methods in `YATT::Lite::CGen::Perl`
+2. **Same file** - widgets defined in the current template file
+3. **Same directory** - widgets in other files in the same directory
+4. **Other template directories** - configured template directories
+
+The search is performed at **compile time** and results in a compilation error if not found.
+
+Key implementation details:
+- `from_element` in CGen/Perl.pm implements the search priority (macro first, then regular widgets)
+- `lookup_widget` in CGen.pm searches both with and without namespace
+- `find_part_from` in VFS.pm implements the actual search logic for user-defined widgets
+- Widget paths can use `:` separator for subdirectories (e.g., `foo:bar` for `foo/bar.yatt`)
+- The same search order applies to entity functions
+
+### Widget Path Resolution
+
+Widget names can be paths using `:` as separator (e.g., `<yatt:foo:bar/>`). 
+
+#### File vs Directory Priority
+When both `foo.yatt` file and `foo/` directory exist:
+1. **File widget takes precedence**: `foo.yatt` containing `<!yatt:widget bar>` is checked first
+2. **Directory fallback**: `foo/bar.yatt` with default widget (`<!yatt:args>`) is checked second
+
+#### Namespace Directory Priority
+Widget lookup performs two searches:
+1. **With namespace**: If `yatt/` directory exists, searches `yatt/foo/bar.yatt` or `yatt/foo.yatt` first
+2. **Without namespace**: Falls back to `foo/bar.yatt` or `foo.yatt`
+
+This allows organizing widgets under namespace directories (useful for organization/project names).
+
+### Template Inheritance System
+
+YATT implements OOP-style inheritance for template directories:
+
+#### Default Inheritance
+- `public/` automatically inherits from `ytmpl/`
+- Any widget in `public/` can call widgets from `ytmpl/`
+
+#### Directory-level Inheritance
+- Set via `.htyattconfig.xhf` with `base:` element
+- Can specify multiple parent directories (multiple inheritance)
+- Examples:
+  ```
+  base: ../shared/templates
+  ```
+  or for multiple inheritance:
+  ```
+  base[
+  - ../lib1
+  - ../lib2
+  ]
+  ```
+
+#### File-level Inheritance
+- Declared with `<!yatt:base file="...">` or `<!yatt:base dir="...">`
+- Overrides directory-level inheritance for that specific file
+
+#### Implementation Details
+- `lookup_base` in VFS.pm traverses the inheritance chain
+- Search order when inheritance is involved:
+  1. Current location (file/directory)
+  2. Base directories/files in declaration order
+  3. Recursive search through base's bases
+- The entire widget search order (macros → same file → same dir → other dirs) applies at each inheritance level
+
+### VFS and Template Organization
+
+YATT uses a Virtual File System (VFS) that is directory-specific, not global:
+
+- **Per-directory VFS**: Each directory has its own VFS instance managed by YATT
+- **Core extends VFS**: `YATT::Lite::Core` inherits from `YATT::Lite::VFS`
+- **Accessing VFS**: Use `find_template` method to get template and core:
+  ```perl
+  (my Template $tmpl, my $core) = $self->find_template($fileName);
+  # $core is a YATT::Lite::Core instance (which IS-A VFS)  
+  # $tmpl is the template object
+  # Always use typed variable declarations for better static checking
+  ```
+- **Key methods**:
+  - `find_template($fileName)`: Returns template and core for a file
+  - `find_yatt_for_template($fileName)`: Gets YATT instance for a directory
+  - `$core->find_part_from($tmpl, @path)`: Searches widgets following VFS rules
+
 ### Error Handling
 
 The framework emphasizes compile-time error detection. When developing:
@@ -94,6 +229,14 @@ The framework emphasizes compile-time error detection. When developing:
 - Template tests use XHF format (eXtended Header Format)
 - PSGI app tests use Plack::Test
 - Coverage reports generated with Devel::Cover
+
+### Static Analysis
+
+Always run `perlminlint` after modifying Perl modules:
+```bash
+perlminlint Lite/Inspector.pm
+```
+This helps catch type errors and other issues at compile time.
 
 ### Language Server
 
