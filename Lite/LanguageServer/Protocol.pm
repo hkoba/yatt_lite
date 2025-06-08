@@ -88,6 +88,18 @@ undef() => [
     'triggerCharacter',
   ],
 ],
+undef() => [
+  [
+    'constant',
+    'InsertTextFormat__PlainText',
+    1,
+  ],
+  [
+    'constant',
+    'InsertTextFormat__Snippet',
+    2,
+  ],
+],
 'CompletionItem' => [
   [
     'fields',
@@ -99,6 +111,7 @@ undef() => [
     'preselect',
     'sortText',
     'filterText',
+    'insertText',
     'insertTextFormat',
     'textEdit',
     'additionalTextEdits',

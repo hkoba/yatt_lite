@@ -80,6 +80,7 @@ use YATT::Lite::LanguageServer::Protocol
     /
   , qr/^DiagnosticSeverity__/
   , qr/^SymbolKind__/
+  , qr/^InsertTextFormat__/
   ;
 
 #========================================
@@ -916,8 +917,28 @@ sub complete_entities {
     push @unique, $item;
   }
   
-  $self->debug_log("Total unique entities: " . scalar(@unique));
-  return @unique;
+  # Sort to show variables first, then entity macros, then entity functions
+  my @sorted = sort {
+    # Variables (kind == 13) come first
+    my $a_is_var = $a->{kind} == 13 ? 0 : 1;
+    my $b_is_var = $b->{kind} == 13 ? 0 : 1;
+    if ($a_is_var != $b_is_var) {
+      return $a_is_var <=> $b_is_var;
+    }
+    
+    # Then entity macros
+    my $a_is_macro = ($a->{detail} && $a->{detail} =~ /entity macro/) ? 0 : 1;
+    my $b_is_macro = ($b->{detail} && $b->{detail} =~ /entity macro/) ? 0 : 1;
+    if ($a_is_macro != $b_is_macro) {
+      return $a_is_macro <=> $b_is_macro;
+    }
+    
+    # Finally sort by label
+    return $a->{label} cmp $b->{label};
+  } @unique;
+  
+  $self->debug_log("Total unique entities: " . scalar(@sorted));
+  return @sorted;
 }
 
 sub complete_macro_widgets {
@@ -964,8 +985,7 @@ sub complete_widgets_simple {
     next if $widget->{name} eq '';  # Skip default widget
     next unless $widget->{name} =~ /^\Q$prefix/;
     
-    my CompletionItem $item = $self->make_widget_completion_item($widget, $namespace);
-    push @items, $item if $item;
+    push @items, $self->make_widget_completion_item($widget, $namespace);
   }
   
   # Search in current directory and inherited directories
@@ -995,11 +1015,17 @@ sub complete_widgets_with_path {
         next if $widget->{name} eq '';
         next unless $widget->{name} =~ /^\Q$prefix/;
         
-        my CompletionItem $item = $self->make_widget_completion_item($widget, $namespace);
-        if ($item) {
+        foreach my CompletionItem $item ($self->make_widget_completion_item($widget, $namespace)) {
           # Adjust label to include full path
-          $item->{label} = join(':', @path, $widget->{name});
-          $item->{detail} = "widget $namespace:" . $item->{label};
+          my $full_path = join(':', @path, $widget->{name});
+          my $original_label = $item->{label};
+          if ($original_label =~ / \(self-closing\)$/) {
+            $item->{label} = $full_path . " (self-closing)";
+          } else {
+            $item->{label} = $full_path;
+          }
+          $item->{detail} = "widget $namespace:" . $full_path;
+          $item->{filterText} = $full_path;  # Update filter text too
           push @items, $item;
         }
       }
@@ -1068,11 +1094,27 @@ sub complete_widgets_in_folder {
       if ($base_name && $base_name =~ /^\Q$prefix/) {
         # File name matches - suggest the file itself (default widget)
         if (my $default_widget = $tmpl->{_Item}{''}) {
-          my CompletionItem $comp_item = $self->make_widget_completion_item($default_widget, $namespace);
-          if ($comp_item) {
+          foreach my CompletionItem $comp_item ($self->make_widget_completion_item($default_widget, $namespace)) {
             my $full_path = @$pathPrefix ? join(':', @$pathPrefix, $base_name) : $base_name;
-            $comp_item->{label} = $full_path;
+            my $original_label = $comp_item->{label};
+            if ($original_label =~ / \(self-closing\)$/) {
+              $comp_item->{label} = $full_path . " (self-closing)";
+            } else {
+              $comp_item->{label} = $full_path;
+            }
             $comp_item->{detail} = "template $namespace:$full_path (default widget)";
+            $comp_item->{filterText} = $full_path;
+            
+            # Fix insertText for default widgets (which have empty name)
+            if ($comp_item->{insertTextFormat} == InsertTextFormat__Snippet) {
+              # Replace empty widget name with the actual path in snippet
+              $comp_item->{insertText} =~ s/^>/$full_path>/;
+              $comp_item->{insertText} =~ s/<\/\Q$namespace\E:>/<\/$namespace:$full_path>/;
+            } else {
+              # Replace empty widget name in plain text
+              $comp_item->{insertText} =~ s/^\/>/$full_path\/>/;
+            }
+            
             push @items, $comp_item;
           }
         }
@@ -1081,13 +1123,18 @@ sub complete_widgets_in_folder {
         foreach my Widget $widget ($tmpl->widget_list) {
           next if $widget->{name} eq '';
           
-          my CompletionItem $comp_item = $self->make_widget_completion_item($widget, $namespace);
-          if ($comp_item) {
+          foreach my CompletionItem $comp_item ($self->make_widget_completion_item($widget, $namespace)) {
             my $full_path = @$pathPrefix 
               ? join(':', @$pathPrefix, $base_name, $widget->{name})
               : join(':', $base_name, $widget->{name});
-            $comp_item->{label} = $full_path;
+            my $original_label = $comp_item->{label};
+            if ($original_label =~ / \(self-closing\)$/) {
+              $comp_item->{label} = $full_path . " (self-closing)";
+            } else {
+              $comp_item->{label} = $full_path;
+            }
             $comp_item->{detail} = "widget $namespace:$full_path";
+            $comp_item->{filterText} = $full_path;
             push @items, $comp_item;
           }
         }
@@ -1101,24 +1148,78 @@ sub complete_widgets_in_folder {
 sub make_widget_completion_item {
   (my MY $self, my Widget $widget, my ($namespace)) = @_;
   
-  my CompletionItem $item = {};
-  $item->{label} = $widget->{name};
-  $item->{kind} = SymbolKind__Function;
-  $item->{detail} = "widget $namespace:$widget->{name}";
+  # We'll return multiple items for different tag styles
+  my @items;
+  
+  # Base item properties (shared between variants)
+  my $base = {
+    kind => SymbolKind__Function,
+    detail => "widget $namespace:$widget->{name}",
+  };
   
   # Add argument info if available
-  if (my @args = $self->list_part_args_internal($widget)) {
+  my @args = $self->list_part_args_internal($widget);
+  my $doc = '';
+  my @snippet_params;
+  my $param_count = 0;
+  
+  if (@args) {
     my @argSpecs;
+    
     foreach my ArgSpec $arg (@args) {
       my $spec = $arg->{varname};
       $spec .= ": " . $arg->{type}->[0] if $arg->{type};
       $spec .= " (required)" if $arg->{is_required};
       push @argSpecs, $spec;
+      
+      # Build snippet parameters for required arguments
+      if ($arg->{is_required} && $arg->{varname} ne 'body') {
+        $param_count++;
+        push @snippet_params, $arg->{varname} . '="${' . $param_count . ':' . $arg->{varname} . '}"';
+      }
     }
-    $item->{documentation} = join("\n", @argSpecs) if @argSpecs;
+    
+    $doc = join("\n", @argSpecs) if @argSpecs;
   }
   
-  $item;
+  # 1. Self-closing tag variant
+  {
+    my CompletionItem $item = { %$base };
+    $item->{label} = $widget->{name} . " (self-closing)";
+    $item->{sortText} = $widget->{name} . "_1";  # Sort after the main variant
+    $item->{filterText} = $widget->{name};  # Filter by widget name only
+    $item->{documentation} = $doc if $doc;
+    
+    if (@snippet_params) {
+      $item->{insertText} = $widget->{name} . ' ' . join(' ', @snippet_params) . '/>';
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    } else {
+      $item->{insertText} = $widget->{name} . '/>';
+      $item->{insertTextFormat} = InsertTextFormat__PlainText;
+    }
+    push @items, $item;
+  }
+  
+  # 2. Open/close tag variant
+  {
+    my CompletionItem $item = { %$base };
+    $item->{label} = $widget->{name};
+    $item->{sortText} = $widget->{name} . "_0";  # Sort before self-closing
+    $item->{filterText} = $widget->{name};
+    $item->{documentation} = $doc if $doc;
+    
+    my $next_pos = $param_count + 1;
+    if (@snippet_params) {
+      $item->{insertText} = $widget->{name} . ' ' . join(' ', @snippet_params) . '>$' . $next_pos . '</' . $namespace . ':' . $widget->{name} . '>';
+    } else {
+      $item->{insertText} = $widget->{name} . '>$1</' . $namespace . ':' . $widget->{name} . '>';
+    }
+    $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    push @items, $item;
+  }
+  
+  # Return list in list context, single item in scalar context (for backward compatibility)
+  wantarray ? @items : $items[0];
 }
 
 sub list_methods_starting_with {
@@ -1170,6 +1271,29 @@ sub complete_entity_macros {
     $item->{detail} = "entity macro $namespace:$entity_name";
     $item->{documentation} = "Built-in entity macro";
     
+    # Add snippets for common entity macros
+    if ($entity_name eq 'if') {
+      $item->{insertText} = 'if(${1:condition}, ${2:then}, ${3:else});';
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($entity_name eq 'unless') {
+      $item->{insertText} = 'unless(${1:condition}, ${2:then}, ${3:else});';
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($entity_name eq 'ifeq') {
+      $item->{insertText} = 'ifeq(${1:a}, ${2:b}, ${3:then}, ${4:else});';
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($entity_name eq 'value_checked' || $entity_name eq 'value_selected') {
+      $item->{insertText} = $entity_name . '(${1:name}, ${2:value});';
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    else {
+      # Default: just add semicolon
+      $item->{insertText} = $entity_name . ';';
+      $item->{insertTextFormat} = InsertTextFormat__PlainText;
+    }
+    
     push @items, $item;
   }
   
@@ -1199,6 +1323,10 @@ sub complete_entity_variables {
     if ($arg->is_required) {
       $item->{documentation} = "Required argument";
     }
+    
+    # Variables just need a semicolon
+    $item->{insertText} = $argName . ';';
+    $item->{insertTextFormat} = InsertTextFormat__PlainText;
     
     push @items, $item;
   }
@@ -1231,6 +1359,10 @@ sub complete_entity_functions {
     $item->{kind} = SymbolKind__Function;
     $item->{detail} = "entity $namespace:$entity_name";
     $item->{documentation} = "User-defined entity function";
+    
+    # For entity functions, add parentheses and semicolon
+    $item->{insertText} = $entity_name . '($1);';
+    $item->{insertTextFormat} = InsertTextFormat__Snippet;
     
     push @items, $item;
   }
@@ -1280,6 +1412,33 @@ sub complete_declarations {
     $item->{kind} = SymbolKind__Property;  # Using Property as Keyword doesn't exist
     $item->{detail} = "declaration $namespace:$decl";
     $item->{documentation} = "";  # Leave documentation empty as requested
+    
+    # Add snippet support for declarations
+    if ($decl eq 'args') {
+      $item->{insertText} = "args \${1:arguments}>\n\$0";
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($decl eq 'widget') {
+      $item->{insertText} = "widget \${1:name} \${2:args}>\n\$0";
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($decl eq 'entity') {
+      $item->{insertText} = "entity \${1:name} \${2:params}>\n\$0";
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($decl eq 'action') {
+      $item->{insertText} = "action \${1:name}>\n\$0";
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    elsif ($decl eq 'base') {
+      $item->{insertText} = "base \${1:file=\"../base.ytmpl\"}>\n\$0";
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
+    else {
+      # For other declarations, just add the closing > and newline
+      $item->{insertText} = "$decl \$1>\n\$0";
+      $item->{insertTextFormat} = InsertTextFormat__Snippet;
+    }
     
     push @items, $item;
   }
