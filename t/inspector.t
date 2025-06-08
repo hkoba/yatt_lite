@@ -77,11 +77,11 @@ require_ok('YATT::Lite::Inspector');
 
 }
 
-# Widget and Entity completion tests
+# Widget, Entity and Declaration completion tests
 SKIP: {
   my $base_dir = dirname($FindBin::Bin);
   my $dir = "$base_dir/samples/basic/1";
-  skip "Sample directory not found", 24 unless -d $dir;
+  skip "Sample directory not found", 32 unless -d $dir;
   
   my $inspector = YATT::Lite::Inspector->new(dir => $dir);
   
@@ -170,6 +170,37 @@ SKIP: {
     my ($default) = grep { $_->{label} eq 'default' } @items;
     ok($default, "Should find 'default' entity function");
     is($default->{detail}, "entity yatt:default", "default entity detail should be correct");
+  }
+  
+  # Declaration completion tests
+  
+  # Test declaration completion
+  {
+    my @items = $inspector->complete_declarations("html/index.yatt", "yatt", "");
+    ok(@items > 0, "Should have declarations");
+    
+    my ($args) = grep { $_->{label} eq 'args' } @items;
+    ok($args, "Should find 'args' declaration");
+    is($args->{detail}, "declaration yatt:args", "args declaration detail should be correct");
+    
+    my ($widget) = grep { $_->{label} eq 'widget' } @items;
+    ok($widget, "Should find 'widget' declaration");
+    is($widget->{detail}, "declaration yatt:widget", "widget declaration detail should be correct");
+  }
+  
+  # Test declaration completion with prefix 'a'
+  {
+    my @items = $inspector->complete_declarations("html/index.yatt", "yatt", "a");
+    
+    my ($action) = grep { $_->{label} eq 'action' } @items;
+    ok($action, "Should find 'action' declaration");
+    
+    my ($args) = grep { $_->{label} eq 'args' } @items;
+    ok($args, "Should find 'args' declaration with prefix 'a'");
+    
+    # Should NOT find 'widget' with prefix 'a'
+    my ($widget) = grep { $_->{label} eq 'widget' } @items;
+    ok(!$widget, "Should NOT find 'widget' declaration with prefix 'a'");
   }
 }
 

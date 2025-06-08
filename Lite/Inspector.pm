@@ -835,11 +835,17 @@ sub get_completion_items {
     $self->debug_log("Entity completion detected: namespace=$namespace, name='$entityName'");
     push @items, $self->complete_entities($fileName, $namespace, $entityName, $line);
   }
+  elsif ($prefix =~ /<!($ns_pattern):(\w*)$/) {
+    # Declaration completion: <!namespace:declaration
+    my $namespace = $1;
+    my $declName = $2 // '';
+    $self->debug_log("Declaration completion detected: namespace=$namespace, name='$declName'");
+    push @items, $self->complete_declarations($fileName, $namespace, $declName);
+  }
   else {
     $self->debug_log("No completion pattern matched");
   }
   
-  # TODO: Declaration completion (<!namespace:widget)
   # TODO: Widget argument completion
   
   $self->debug_log("Returning " . scalar(@items) . " completion items");
@@ -1229,6 +1235,56 @@ sub complete_entity_functions {
     push @items, $item;
   }
   
+  @items;
+}
+
+sub complete_declarations {
+  (my MY $self, my ($fileName, $namespace, $prefix)) = @_;
+  
+  $self->debug_log("complete_declarations: prefix='$prefix'");
+  
+  my @items;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $core;
+  
+  # Get the parser instance
+  my $parser = $core->Parser;
+  return unless $parser;
+  
+  # Get parser class
+  my $parser_class = ref($parser) || $parser;
+  
+  # Find all build_* and declare_* methods
+  my @build_methods = $self->list_methods_starting_with($parser_class, 'build_');
+  my @declare_methods = $self->list_methods_starting_with($parser_class, 'declare_');
+  
+  # Extract declaration names
+  my %declarations;
+  foreach my $method (@build_methods) {
+    my $decl_name = $method;
+    $decl_name =~ s/^build_//;
+    $declarations{$decl_name} = 1;
+  }
+  foreach my $method (@declare_methods) {
+    my $decl_name = $method;
+    $decl_name =~ s/^declare_//;
+    $declarations{$decl_name} = 1;
+  }
+  
+  # Create completion items
+  foreach my $decl (sort keys %declarations) {
+    next unless $decl =~ /^\Q$prefix/;
+    
+    my CompletionItem $item = {};
+    $item->{label} = $decl;
+    $item->{kind} = SymbolKind__Property;  # Using Property as Keyword doesn't exist
+    $item->{detail} = "declaration $namespace:$decl";
+    $item->{documentation} = "";  # Leave documentation empty as requested
+    
+    push @items, $item;
+  }
+  
+  $self->debug_log("Found " . scalar(@items) . " declarations");
   @items;
 }
 
