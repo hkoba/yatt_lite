@@ -95,6 +95,8 @@ sub after_configure_default {
   };
 
   $self->{_app_root} = $self->{_SITE}->cget('app_root');
+
+  $self->debug_log("Initialized");
 }
 
 
@@ -725,6 +727,17 @@ sub locate_symbol_at_file_position {
   wantarray ? ($info, $cursor) : $info;
 }
 
+sub is_debug_enabled {
+  (my MY $self) = @_;
+  defined $self->{dir} && -e "$self->{dir}/DEBUG_YATT_LANGSERVER";
+}
+
+sub debug_log {
+  (my MY $self, my @message) = @_;
+  return unless $self->is_debug_enabled;
+  print STDERR "[YATT::Lite::Inspector] ", @message, "\n";
+}
+
 sub get_file_line {
   (my MY $self, my ($fileName, $lineNumber)) = @_;
   
@@ -741,16 +754,21 @@ sub get_file_line {
 sub get_completion_items {
   (my MY $self, my ($fileName, $line, $column, $triggerCharacter)) = @_;
   
+  $self->debug_log("get_completion_items called: file=$fileName, line=$line, column=$column, trigger='" . ($triggerCharacter // 'undef') . "'");
+  
   # Get active namespaces
   my @namespaces = lexpand($self->{_SITE}->cget('namespace'));
   @namespaces = ('yatt') unless @namespaces;
+  $self->debug_log("Active namespaces: " . join(", ", @namespaces));
   
   # Get the current line text
   my $lineText = $self->get_file_line($fileName, $line);
   return unless defined $lineText;
+  $self->debug_log("Line text: '$lineText'");
   
   # Extract the prefix before cursor position
   my $prefix = substr($lineText, 0, $column);
+  $self->debug_log("Prefix before cursor: '$prefix'");
   
   # Determine completion context
   my @items;
@@ -763,30 +781,40 @@ sub get_completion_items {
     # Widget completion: <namespace:widgetname
     my $namespace = $1;
     my $widgetPath = $2 // '';
+    $self->debug_log("Widget completion detected: namespace=$namespace, path='$widgetPath'");
     push @items, $self->complete_widgets($fileName, $namespace, $widgetPath);
   }
   elsif ($prefix =~ /&($ns_pattern):(\w*)$/) {
     # Entity completion: &namespace:entity
     my $namespace = $1;
     my $entityName = $2 // '';
+    $self->debug_log("Entity completion detected: namespace=$namespace, name='$entityName'");
     push @items, $self->complete_entities($fileName, $namespace, $entityName, $line);
+  }
+  else {
+    $self->debug_log("No completion pattern matched");
   }
   
   # TODO: Declaration completion (<!namespace:widget)
   # TODO: Widget argument completion
   
+  $self->debug_log("Returning " . scalar(@items) . " completion items");
   return @items;
 }
 
 sub complete_widgets {
   (my MY $self, my ($fileName, $namespace, $widgetPath)) = @_;
   
+  $self->debug_log("complete_widgets: widgetPath='$widgetPath'");
+  
   my @items;
   my @path = split /:/, $widgetPath;
   my $partialName = pop @path // '';
+  $self->debug_log("Widget path parts: [" . join(", ", @path) . "], partial='$partialName'");
   
   # 1. First, add macro widgets (built-in widgets have highest priority)
   push @items, $self->complete_macro_widgets($fileName, $namespace, $partialName);
+  $self->debug_log("Found " . scalar(grep { $_->{detail} =~ /macro/ } @items) . " macro widgets");
   
   # 2. Then search for user-defined widgets
   if (@path) {
@@ -811,16 +839,24 @@ sub complete_widgets {
 sub complete_entities {
   (my MY $self, my ($fileName, $namespace, $prefix, $line)) = @_;
   
+  $self->debug_log("complete_entities: prefix='$prefix', line=$line");
+  
   my @items;
   
   # 1. Entity macros (highest priority)
   push @items, $self->complete_entity_macros($fileName, $namespace, $prefix);
+  $self->debug_log("Found " . scalar(grep { $_->{detail} =~ /entity macro/ } @items) . " entity macros");
   
   # 2. Variables (widget arguments)
+  my $var_count_before = @items;
   push @items, $self->complete_entity_variables($fileName, $namespace, $prefix, $line);
+  my $var_count = scalar(grep { $_->{kind} == 13 } @items) - scalar(grep { $_->{kind} == 13 } @items[0..$var_count_before-1]);
+  $self->debug_log("Found $var_count variables");
   
   # 3. Entity functions
+  my $func_count_before = @items;
   push @items, $self->complete_entity_functions($fileName, $namespace, $prefix);
+  $self->debug_log("Found " . (@items - $func_count_before) . " entity functions");
   
   # Remove duplicates while preserving order
   my %seen;
@@ -830,6 +866,7 @@ sub complete_entities {
     push @unique, $item;
   }
   
+  $self->debug_log("Total unique entities: " . scalar(@unique));
   return @unique;
 }
 
