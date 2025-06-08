@@ -344,6 +344,48 @@ sub apply_change_to_lines {
   }
 }
 
+sub append_file {
+  (my MY $self, my ($fileName, $text)) = @_;
+
+  my Range $ending = $self->file_ending_range($fileName);
+
+  $self->apply_changes($fileName, +{
+    range => $ending, rangeLength => 0, text => $text
+  });
+}
+
+sub file_ending_range {
+  (my MY $self, my ($fileNameOrTemplate)) = @_;
+
+  my Template $tmpl = do {
+    if (ref $fileNameOrTemplate) {
+      unless ($fileNameOrTemplate->isa(Template)) {
+        Carp::croak "Invalid argument type: ". ref($fileNameOrTemplate)
+      }
+      $fileNameOrTemplate
+    } else {
+      $self->find_template($fileNameOrTemplate);
+    }
+  };
+
+  my ($lineNo, $colNo) = do {
+    my $lines = [defined $tmpl->{string} && $tmpl->{string} ne ""
+                 ? (split /\n/, $tmpl->{string}, -1) : ("")];
+
+    my $lastLine = $lines->[-1];
+
+    ($#$lines, length($lastLine));
+  };
+
+  my Position $start = +{};
+  $start->{line} = $lineNo; $start->{character} = $colNo;
+  my Position $end = +{};
+  $end->{line} = $lineNo; $end->{character} = $colNo;
+  my Range $range = +{};
+  $range->{start} = $start; $range->{end} = $end;
+  $range;
+}
+
 sub lint : method {
   (my MY $self, my $fileName) = @_;
 
