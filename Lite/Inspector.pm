@@ -19,7 +19,7 @@ use MOP4Import::Base::CLI_JSON -as_base
 
 use JSON::MaybeXS;
 
-use MOP4Import::Util qw/lexpand symtab terse_dump/;
+use MOP4Import::Util qw/lexpand symtab terse_dump globref isa_array/;
 
 use MOP4Import::Types
   Zipper => [[fields => qw/array index path defs/]]
@@ -56,6 +56,15 @@ use YATT::Lite::Factory;
 use YATT::Lite::LRXML;
 use YATT::Lite::Core qw/Part Widget Template/;
 use YATT::Lite::CGen::Perl;
+use YATT::Lite::VFS qw/Folder/;
+
+use MOP4Import::Types
+  ArgSpec => [
+    [fields => 
+      YATT::Lite::VarTypes->list_field_names,
+      'is_required',
+    ]
+  ];
 
 use YATT::Lite::LRXML::AltTree qw/column_of_source_pos AltNode/;
 
@@ -67,6 +76,7 @@ use YATT::Lite::LanguageServer::Protocol
      Diagnostic
      TextDocumentContentChangeEvent
      DocumentSymbol
+     CompletionItem
     /
   , qr/^DiagnosticSeverity__/
   , qr/^SymbolKind__/
@@ -715,6 +725,307 @@ sub locate_symbol_at_file_position {
   wantarray ? ($info, $cursor) : $info;
 }
 
+sub get_file_line {
+  (my MY $self, my ($fileName, $lineNumber)) = @_;
+  
+  my ($tmpl) = $self->find_template($fileName);
+  return unless $tmpl && defined $tmpl->{string};
+  
+  # Split template string into lines
+  my @lines = split /\n/, $tmpl->{string};
+  
+  return $lines[$lineNumber] if $lineNumber < @lines;
+  return;
+}
+
+sub get_completion_items {
+  (my MY $self, my ($fileName, $line, $column, $triggerCharacter)) = @_;
+  
+  # Get active namespaces
+  my @namespaces = lexpand($self->{_SITE}->cget('namespace'));
+  @namespaces = ('yatt') unless @namespaces;
+  
+  # Get the current line text
+  my $lineText = $self->get_file_line($fileName, $line);
+  return unless defined $lineText;
+  
+  # Extract the prefix before cursor position
+  my $prefix = substr($lineText, 0, $column);
+  
+  # Determine completion context
+  my @items;
+  
+  # Check for widget completion: <namespace:widgetname
+  foreach my $ns (@namespaces) {
+    if ($prefix =~ /<($ns):(\w*(?::\w*)*)$/) {
+      my $namespace = $1;
+      my $widgetPath = $2 // '';
+      push @items, $self->complete_widgets($fileName, $namespace, $widgetPath);
+      last; # Only one namespace match expected
+    }
+  }
+  
+  # TODO: Entity completion (&namespace:entity;)
+  # TODO: Declaration completion (<!namespace:widget)
+  # TODO: Widget argument completion
+  
+  return @items;
+}
+
+sub complete_widgets {
+  (my MY $self, my ($fileName, $namespace, $widgetPath)) = @_;
+  
+  my @items;
+  my @path = split /:/, $widgetPath;
+  my $partialName = pop @path // '';
+  
+  # 1. First, add macro widgets (built-in widgets have highest priority)
+  push @items, $self->complete_macro_widgets($fileName, $namespace, $partialName);
+  
+  # 2. Then search for user-defined widgets
+  if (@path) {
+    # Complex path like foo:bar:w*
+    push @items, $self->complete_widgets_with_path($fileName, $namespace, \@path, $partialName);
+  } else {
+    # Simple completion like w*
+    push @items, $self->complete_widgets_simple($fileName, $namespace, $partialName);
+  }
+  
+  # Remove duplicates while preserving order
+  my %seen;
+  my @unique;
+  foreach my $item (@items) {
+    next if $seen{$item->{label}}++;
+    push @unique, $item;
+  }
+  
+  return @unique;
+}
+
+sub complete_macro_widgets {
+  (my MY $self, my ($fileName, $namespace, $prefix)) = @_;
+  
+  my @items;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $core;
+  
+  # Get the code generator
+  my $cgen = $core->build_cgen_of('perl');
+  
+  # Find all macro_* methods
+  my $cgen_class = ref($cgen) || $cgen;
+  my @methods = $self->list_methods_starting_with($cgen_class, 'macro_');
+  
+  foreach my $method (@methods) {
+    my $widget_name = $method;
+    $widget_name =~ s/^macro_//;
+    
+    next unless $widget_name =~ /^\Q$prefix/;
+    
+    my CompletionItem $item = {};
+    $item->{label} = $widget_name;
+    $item->{kind} = SymbolKind__Constructor;
+    $item->{detail} = "macro $namespace:$widget_name";
+    $item->{documentation} = "Built-in macro widget";
+    
+    push @items, $item;
+  }
+  
+  @items;
+}
+
+sub complete_widgets_simple {
+  (my MY $self, my ($fileName, $namespace, $prefix)) = @_;
+  
+  my @items;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $tmpl && $core;
+  
+  # Search in current template first
+  foreach my Widget $widget ($tmpl->widget_list) {
+    next if $widget->{name} eq '';  # Skip default widget
+    next unless $widget->{name} =~ /^\Q$prefix/;
+    
+    my CompletionItem $item = $self->make_widget_completion_item($widget, $namespace);
+    push @items, $item if $item;
+  }
+  
+  # Search in current directory and inherited directories
+  if (my Folder $folder = $tmpl->{parent}) {
+    push @items, $self->complete_widgets_in_folder_recursive($folder, $fileName, $namespace, $prefix, $tmpl);
+  }
+  
+  @items;
+}
+
+sub complete_widgets_with_path {
+  (my MY $self, my ($fileName, $namespace, $pathRef, $prefix)) = @_;
+  
+  my @items;
+  my @path = @$pathRef;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $tmpl && $core;
+  
+  # Try with namespace first, then without
+  my $target = $core->find_part_from($tmpl, $namespace, @path)
+            || $core->find_part_from($tmpl, @path);
+  
+  if ($target) {
+    if ($target->isa($self->Template)) {
+      # Found a template file, complete widgets within it
+      foreach my Widget $widget ($target->widget_list) {
+        next if $widget->{name} eq '';
+        next unless $widget->{name} =~ /^\Q$prefix/;
+        
+        my CompletionItem $item = $self->make_widget_completion_item($widget, $namespace);
+        if ($item) {
+          # Adjust label to include full path
+          $item->{label} = join(':', @path, $widget->{name});
+          $item->{detail} = "widget $namespace:" . $item->{label};
+          push @items, $item;
+        }
+      }
+    } elsif ($target->isa('YATT::Lite::VFS::Folder')) {
+      # Found a folder, complete files/widgets within it
+      push @items, $self->complete_widgets_in_folder($target, $fileName, $namespace, $prefix, undef, \@path);
+    }
+  }
+  
+  @items;
+}
+
+sub complete_widgets_in_folder_recursive {
+  (my MY $self, my Folder $folder, my ($fileName, $namespace, $prefix, $exclude_tmpl)) = @_;
+  
+  my @items;
+  my %seen;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $core;
+  
+  # Search current folder
+  push @items, $self->complete_widgets_in_folder($folder, $fileName, $namespace, $prefix, $exclude_tmpl);
+  
+  # Search in base folders (inheritance)
+  my @queue = ($folder);
+  while (@queue) {
+    my Folder $cur = shift @queue;
+    next if $seen{$cur}++;
+    
+    if (my $base = $cur->{base}) {
+      my @bases = ref($base) eq 'ARRAY' ? @$base : $base;
+      foreach my Folder $base_folder (@bases) {
+        push @items, $self->complete_widgets_in_folder($base_folder, $fileName, $namespace, $prefix);
+        push @queue, $base_folder;
+      }
+    }
+  }
+  
+  @items;
+}
+
+sub complete_widgets_in_folder {
+  (my MY $self, my Folder $folder, my ($fileName, $namespace, $prefix, $exclude_tmpl, $pathPrefix)) = @_;
+  
+  my @items;
+  $pathPrefix //= [];
+  my ($tmpl, $core) = $self->find_template($fileName);
+  return unless $core;
+  
+  # Refresh folder to ensure we have latest content
+  $folder->refresh($core);
+  
+  # Get all parts in this folder
+  foreach my Part $part ($folder->list_parts) {
+    next unless $part;
+    
+    if ($part->isa($self->Template)) {
+      my Template $tmpl = $part;
+      next if $exclude_tmpl && $tmpl == $exclude_tmpl;
+      
+      # Extract base name without extension
+      my $base_name = $tmpl->{name};
+      $base_name =~ s/\.\w+$// if defined $base_name;
+      
+      # Check if this matches our prefix
+      if ($base_name && $base_name =~ /^\Q$prefix/) {
+        # File name matches - suggest the file itself (default widget)
+        if (my $default_widget = $tmpl->{_Item}{''}) {
+          my CompletionItem $comp_item = $self->make_widget_completion_item($default_widget, $namespace);
+          if ($comp_item) {
+            my $full_path = @$pathPrefix ? join(':', @$pathPrefix, $base_name) : $base_name;
+            $comp_item->{label} = $full_path;
+            $comp_item->{detail} = "template $namespace:$full_path (default widget)";
+            push @items, $comp_item;
+          }
+        }
+        
+        # Also suggest widgets within this file
+        foreach my Widget $widget ($tmpl->widget_list) {
+          next if $widget->{name} eq '';
+          
+          my CompletionItem $comp_item = $self->make_widget_completion_item($widget, $namespace);
+          if ($comp_item) {
+            my $full_path = @$pathPrefix 
+              ? join(':', @$pathPrefix, $base_name, $widget->{name})
+              : join(':', $base_name, $widget->{name});
+            $comp_item->{label} = $full_path;
+            $comp_item->{detail} = "widget $namespace:$full_path";
+            push @items, $comp_item;
+          }
+        }
+      }
+    }
+  }
+  
+  @items;
+}
+
+sub make_widget_completion_item {
+  (my MY $self, my Widget $widget, my ($namespace)) = @_;
+  
+  my CompletionItem $item = {};
+  $item->{label} = $widget->{name};
+  $item->{kind} = SymbolKind__Function;
+  $item->{detail} = "widget $namespace:$widget->{name}";
+  
+  # Add argument info if available
+  if (my @args = $self->list_part_args_internal($widget)) {
+    my @argSpecs;
+    foreach my ArgSpec $arg (@args) {
+      my $spec = $arg->{varname};
+      $spec .= ": " . $arg->{type}->[0] if $arg->{type};
+      $spec .= " (required)" if $arg->{is_required};
+      push @argSpecs, $spec;
+    }
+    $item->{documentation} = join("\n", @argSpecs) if @argSpecs;
+  }
+  
+  $item;
+}
+
+sub list_methods_starting_with {
+  (my MY $self, my ($class, $prefix)) = @_;
+  
+  my @methods;
+  my $symtab = symtab($class);
+  
+  foreach my $name (keys %$symtab) {
+    next unless $name =~ /^\Q$prefix/;
+    my $glob = MOP4Import::Util::globref($class, $name);
+    next unless defined *{$glob}{CODE};
+    push @methods, $name;
+  }
+  
+  # Also check parent classes
+  foreach my $parent (@{MOP4Import::Util::isa_array($class)}) {
+    push @methods, $self->list_methods_starting_with($parent, $prefix);
+  }
+  
+  # Remove duplicates
+  my %seen;
+  grep { !$seen{$_}++ } @methods;
+}
+
 sub locate_node_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
   $line //= 0;
@@ -1278,11 +1589,13 @@ sub list_part_args_internal {
   foreach my $argName ($part->{_arg_order} ? @{$part->{_arg_order}} : ()) {
     next if $nameRe and not $argName =~ $nameRe;
     my $argObj = $part->{_arg_dict}{$argName};
-    push @result, my $spec = {};
+    push @result, my ArgSpec $spec = {};
     foreach my $i (0 .. $#fields) {
       my $val = $argObj->[$i];
       $spec->{$fields[$i]} = $val;
     }
+    # Add is_required field
+    $spec->{is_required} = $argObj->is_required;
   }
   @result;
 }
