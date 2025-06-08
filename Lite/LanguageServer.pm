@@ -212,8 +212,8 @@ sub lspcall__textDocument__completion {
 
   my TextDocumentIdentifier $docId = $params->{textDocument};
   
-  # Skip if the document has error
-  return undef if $self->last_error($docId);
+  # Don't skip even if the document has error - completion is often triggered while typing
+  # and the document may be in an incomplete/error state
 
   my $fn = $self->uri2localpath($docId->{uri});
   my Position $pos = $params->{position};
