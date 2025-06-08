@@ -46,7 +46,7 @@ sub lspcall__initialize {
   $svcap->{hoverProvider} = JSON()->true;
   $svcap->{documentSymbolProvider} = JSON()->true;
   $svcap->{completionProvider} = my CompletionOptions $copts = {};
-  $copts->{triggerCharacters} = ['<', ':', '$', '&', '=', '"', "'"];
+  $copts->{triggerCharacters} = ['<', ':', "\$", '&', '=', '"', "'"];
   $copts->{resolveProvider} = JSON()->false;
   $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
   $sopts->{openClose} = JSON()->true;
