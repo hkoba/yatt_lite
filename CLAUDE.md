@@ -256,12 +256,68 @@ The framework emphasizes compile-time error detection. When developing:
 - Backend logic goes in SiteApp subclasses or Entity modules
 - Use `<!yatt:args>` for declaring widget parameters with types
 
+### Widget Argument Declaration Syntax
+
+In YATT declarations, argument types are specified after `=`:
+
+```html
+<!yatt:args varname=type>
+<!yatt:widget widgetname varname=type>
+```
+
+- **Type specification**: The type appears on the right side of `=`
+- **Default type**: If type is omitted, it defaults to `text`
+- **Required/Optional flags**: 
+  - `!` suffix means required argument
+  - `?` suffix means has default value (shows default when empty string or undef)
+  
+Examples:
+```html
+<!yatt:args title="text!" body=code>
+<!yatt:widget mywidget a="text!" b=text c="text!">
+```
+
 ### Testing Approach
 
 - Unit tests use standard Perl testing (Test::More)
 - Template tests use XHF format (eXtended Header Format)
 - PSGI app tests use Plack::Test
 - Coverage reports generated with Devel::Cover
+
+### Testing Inspector.pm and CLI_JSON Modules
+
+Inspector.pm inherits from `MOP4Import::Base::CLI_JSON`, making it a Modulino that can be executed directly from command line. This allows testing methods without writing Perl one-liners.
+
+**Basic usage:**
+```bash
+./Lite/Inspector.pm [--constructor-args] subcommand [method args...]
+```
+
+**Constructor arguments:**
+- Pass before the subcommand using `--name=value` format
+- For HASH or ARRAY values, use JSON format
+
+**Return values:**
+- References (HASH/ARRAY): returned as JSONL (JSON Lines)
+- Plain strings: returned as line-by-line plain text
+
+**Example - Testing widget completion:**
+```bash
+# Good: Direct execution as Modulino
+./Lite/Inspector.pm --dir=samples/basic/1 complete_widgets html/index.yatt yatt e
+
+# Bad: Using perl -I with one-liner
+perl -I./lib -MYATT::Lite::Inspector -E 'my $inspector = YATT::Lite::Inspector->new(dir => "samples/basic/1"); print $inspector->complete_widgets("html/index.yatt","yatt","e");'
+```
+
+**Development workflow for Inspector.pm changes:**
+1. Edit the module (e.g., improve `complete_widgets` method)
+2. Run static type checking: `perlminlint Lite/Inspector.pm`
+3. Test as Modulino: `./Lite/Inspector.pm --dir=samples/basic/1 complete_widgets ...`
+4. Add/update tests in `t/inspector.t`
+5. Run tests: `prove -bv t/inspector.t`
+
+This approach applies to any module inheriting from `MOP4Import::Base::CLI_JSON`.
 
 ### Static Analysis
 
