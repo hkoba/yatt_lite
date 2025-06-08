@@ -1537,7 +1537,11 @@ sub find_template {
   my $tmpl = $core->find_file($fn);
 
   # perl コードの生成を行わないと、継承が設定されないため。
-  $core->find_product(perl => $tmpl);
+  try {
+    $core->find_product(perl => $tmpl);
+  } catch {
+    # XXX
+  };
 
   wantarray ? ($tmpl, $core) : $tmpl;
 }
