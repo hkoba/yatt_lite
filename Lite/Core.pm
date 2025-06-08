@@ -179,6 +179,10 @@ use YATT::Lite::Breakpoint ();
     return @{$self->{_partlist}} unless defined $type;
     grep { UNIVERSAL::isa($_, $type) } @{$self->{_partlist}}
   }
+  sub YATT::Lite::Core::Template::widget_list {
+     (my Template $self) = @_;
+     $self->list_parts(Widget);
+  }
   sub YATT::Lite::Core::Template::node_source {
     (my Template $tmpl, my $node) = @_;
     unless (ref $node eq 'ARRAY') {

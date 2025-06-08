@@ -49,6 +49,11 @@ require File::Basename;
     my $isa = mro::get_linear_isa($folder->{entns});
     wantarray ? @$isa : $isa;
   }
+  sub YATT::Lite::VFS::Folder::list_parts {
+    (my Folder $folder) = @_;
+    return unless $folder->{_Item};
+    values %{$folder->{_Item}};
+  }
 
   package YATT::Lite::VFS; BEGIN {$INC{"YATT/Lite/VFS.pm"} = 1}
   sub VFS () {__PACKAGE__}
