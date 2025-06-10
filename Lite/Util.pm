@@ -545,12 +545,20 @@ BEGIN {
   package
     YATT::Lite::Util::named_attr;
   BEGIN {our @ISA = ('YATT::Lite::Util::escapable')};
-  use overload qw("" as_string);
+  use overload qw("" as_string eq streq ne strne);
   sub as_string {
     shift->[-1];
   }
   sub as_escaped {
     sprintf q{ %s="%s"}, $_[0][0], $_[0][1];
+  }
+  sub streq {
+    my ($self, $other) = @_;
+    $self->[-1] eq (ref $other ? $other->[-1] : $other);
+  }
+  sub strne {
+    my ($self, $other) = @_;
+    $self->[-1] ne (ref $other ? $other->[-1] : $other);
   }
 }
 
