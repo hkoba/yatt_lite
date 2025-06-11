@@ -87,7 +87,7 @@ foreach my MY $sect (@section) {
   ok(my $yatt = new YATT::Lite(app_ns => myapp($i)
 			       , vfs => $spec
 			       , debug_cgen => $ENV{DEBUG}
-			       , debug_parser => 1
+			       , debug_parser => 0
 			       , lexpand($sect->{YATT_CONFIG})
 			       , $sect->{YATT_RC}
 			       ? (rc_script => $sect->{YATT_RC}) : ()
