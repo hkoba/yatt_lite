@@ -96,3 +96,17 @@ OUT:
  
  
 
+TITLE: argmacro -> args
+IN:
+ <!yatt:argmacro foo=[x y]>
+ 
+ <!yatt:args %foo;>
+ <h2>&yatt:x;</h2>
+ &yatt:y;
+PARAM[
+- foo
+- bar
+]
+OUT:
+ <h2>foo</h2>
+ bar
