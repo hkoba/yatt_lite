@@ -1065,7 +1065,23 @@ sub add_args {
     my ($type, $argName, $nextArgNo, $lno, $node_type, $dflag, $default)
       = my @argSpec = $self->parse_arg_spec_for_part($part, $argSpec);
     unless (defined $argName) {
-      die $self->synerror_at($self->{_startln}, 'argName is empty!');
+      # argmacro と勘違いして &yatt:argmacro; と書いた時に気づきやすいように
+      if ($argSpec->[NODE_TYPE] == TYPE_ATT_TEXT
+          and @{$argSpec->[NODE_BODY]} == 1
+          and (my $entity = $argSpec->[NODE_BODY][0])->[NODE_TYPE]
+          == TYPE_ENTITY) {
+          die $self->synerror_at(
+            $self->{_startln},
+            'Use of entity(%s) is not allowed here. (Did you mean %%%s;?)',
+            $self->{_template}->node_source($argSpec),
+            $entity->[NODE_BODY][1],
+          );
+      } else {
+          die $self->synerror_at(
+            $self->{_startln}, 'Invalid argument spec: %s',
+            $self->{_template}->node_source($argSpec),
+          );
+      }
     }
 
     if (my $var = $part->{_arg_dict}{$argName}) {
