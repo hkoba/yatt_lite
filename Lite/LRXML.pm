@@ -299,15 +299,22 @@ sub parse_decl {
     my $declkind = $+{declname};
     my ($ns, $kind) = split /:/, $declkind, 2;
     if (my $sub = $self->can("declare_$kind")) {
+      # yatt:args, base, action, argmacro...
+
       # add_part を自分で呼びたい、又は add_part 自体を呼びたくないものは
-      # declare_ で処理する
+      # declare_ で処理する.
+
+      # 最初に、ここまでの宣言で作られた part を finalize
+      # （ただし、宣言抜きで作られた default widget の場合は何もしない）
+      if ($part and not $part->{implicit}) {
+        $self->finalize_part($part);
+      }
 
       # 戻り値が undef なら、同じ $part を用いつづける。
       my @args = $self->parse_attlist(\$str, 1);
       my $newpart = $sub->($self, $tmpl, $ns, @args);
 
       if ($newpart) {
-        $self->finalize_part($part) if $part;
         $newpart->{_decllist} = \@args;
         $part = $newpart;
       }
