@@ -110,3 +110,19 @@ PARAM[
 OUT:
  <h2>foo</h2>
  bar
+
+
+TITLE: better error message for argmacro
+IN:
+ <!yatt:argmacro foo=[
+   x
+   y
+ ]>
+ 
+ <!yatt:args bar &yatt:foo; >
+ <h2>&yatt:x;</h2>
+ &yatt:y;
+ <!yatt:widget baz>
+ xxx
+ERROR: ^Use of entity\(&yatt:foo;\) is not allowed here. \(Did you mean %foo;\?\)
+
