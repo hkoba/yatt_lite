@@ -52,7 +52,7 @@ use Time::HiRes ();
 use Try::Tiny;
 
 use YATT::Lite;
-use YATT::Lite::Factory;
+use YATT::Lite::Factory; sub Factory () {'YATT::Lite::Factory'}
 use YATT::Lite::LRXML;
 use YATT::Lite::Core qw/Part Widget Template/;
 use YATT::Lite::CGen::Perl;
@@ -2029,7 +2029,8 @@ sub list_part_args_internal {
 
 sub is_in_template_dir {
   (my MY $self, my $path) = @_;
-  foreach my $dir (lexpand($self->{_SITE}->{tmpldirs})) {
+  my Factory $factory = $self->{_SITE};
+  foreach my $dir (lexpand($factory->{_tmpldirs})) {
     if (length $dir <= length $path
         and substr($dir, 0, length $path) eq $path) {
       return 1;
