@@ -93,6 +93,7 @@ sub param {
     return keys %$ixh unless @_;
     defined (my $key = shift)
       or croak "undefined key!";
+    $key =~ s/\[\]\z// if not $prop->{no_nested_query};
     if (@_) {
       if (@_ >= 2) {
 	$ixh->{$key} = [@_]
