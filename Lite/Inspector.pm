@@ -730,7 +730,9 @@ sub list_parts_in {
     $sym->{name} = "$part->{kind} $part->{name}";
     $sym->{kind} = $part->isa(Widget) ? SymbolKind__Constructor
       : SymbolKind__Method;
-    $sym->{detail} = $self->widget_signature_md($part);
+    if ($part->isa(Widget)) {
+      $sym->{detail} = $self->widget_signature_md($part);
+    }
     $sym->{range} = $self->part_decl_range($part);
     $sym->{selectionRange} = $self->part_decl_range($part);
   }
