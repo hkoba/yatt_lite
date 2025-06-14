@@ -767,10 +767,19 @@ sub YATT::Lite::EntNS::entity_stash {
   }
 };
 
+# drop "[]" from "qname[]" and returns "qname"
+sub YATT::Lite::EntNS::entity_trim_array_suffix {
+  my ($this, $name) = @_;
+  $name =~ s/\[\]\z//;
+  $name;
+}
+
 sub YATT::Lite::EntNS::entity_mkhidden {
   my ($this) = shift;
+  my $no_nested_query = $CON->prop->{no_nested_query};
   \ join "\n", map {
     my $name = $_;
+    $name =~ s/\[\]\z// if not $no_nested_query;
     map {
       my $v = $_;
       if (ref $v eq 'HASH') {
