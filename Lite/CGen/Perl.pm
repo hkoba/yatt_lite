@@ -1323,7 +1323,7 @@ sub entmacro_value_selected {
 
 sub entmacro_lexpand {
   (my MY $self, my $node) = @_;
-  q|@{|.$self->gen_entpath(undef, map {lxnest($_)} entx($node)).q|}|;
+  q|@{|.$self->gen_entpath(undef, map {lxnest($_)} entx($node)).q| // []}|;
 }
 
 sub entmacro_render {
