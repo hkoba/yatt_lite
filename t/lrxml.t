@@ -1289,6 +1289,26 @@ END
   like $@, qr/^yatt:widget got wrong token for route spec: ENTITY/, "Unclosed <!yatt:widget\\n &yatt:foo;";
 }
 
+TODO: {
+  local $TODO = "Perl >= 5.30 only" unless $] >= 5.030;
+  my $tmpl = $CLASS->Template->new;
+  eval {
+    $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<!yatt:args x y>
+default widget
+<!yatt:action foo>
+;# action foo
+#  <!yatt:widget bar>
+;# this too.
+END
+  };
+
+  is_deeply [map {[$_->{kind}, $_->{name}]} $tmpl->list_parts]
+    , [[widget => ''], [action => 'foo']]
+    , "YATT Declarations should be recognized only when they are at the line start";
+}
+
+
 # (- (region-end) (region-beginning))
 #
 done_testing();

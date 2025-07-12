@@ -70,7 +70,8 @@ sub after_new {
   $self->{namespace} ||= [qw(yatt perl)];
   my $nspat = qr!@{[join "|", $self->namespace]}!;
   $self->{_re_name} ||= $self->re_name;
-  $self->{_re_decl} ||= qr{(?<=\A|\n)<!(?<declname>$nspat(?::\w++)+)\b
+  my $decl_prefix = $] >= 5.030 ? q{(?<=\A|\n)} : "";
+  $self->{_re_decl} ||= qr{$decl_prefix<!(?<declname>$nspat(?::\w++)+)\b
 			  |(?:<!--\#(?<comment>$nspat(?::\w++)*))\b}xs;
   my $entOpen = do {
     # qq なので注意
