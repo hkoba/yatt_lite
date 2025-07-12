@@ -101,8 +101,8 @@ use YATT::Lite::Constants;
   sub generate_widget {
     (my MY $self, my Widget $widget, my ($widget_name, $tmpl_path)) = @_;
     if ($widget->{suppressed}) {
-      # First line is alread used for package declaration.
-      return "\n" x ((($widget->{endln} - 1) - $widget->{startln}) - 2);
+      # Implicit default widget which contains no content.
+      return $self->sync_curline($widget->{endln});
     }
     break_cgen();
     local $self->{_curwidget} = $widget;
