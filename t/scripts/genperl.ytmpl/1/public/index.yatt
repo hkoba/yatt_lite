@@ -4,4 +4,5 @@
 <yatt:layout>
   <h2>hello!</h2>
   <yatt:foo/>
+  &yatt:bar();
 </yatt:layout>

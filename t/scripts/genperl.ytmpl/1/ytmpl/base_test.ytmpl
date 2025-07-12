@@ -1,2 +1,5 @@
 <!yatt:widget foo>
 This is foo
+
+<!yatt:entity bar>
+'bar'
