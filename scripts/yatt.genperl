@@ -35,23 +35,26 @@ use YATT::Lite::Types
 
 my Opts $opts = Opts->new(MY->parse_opts(\@ARGV));
 
-local $SYS = my $dispatcher = YATT::Lite::Factory->load_factory_offline
-  || do {
-  require YATT::Lite::WebMVC0::SiteApp;
-  YATT::Lite::WebMVC0::SiteApp->new
-      (app_ns => 'MyYATT'
-       , namespace => ['yatt', 'perl', 'js']
-       , header_charset => 'utf-8'
-       , debug_cgen => $ENV{DEBUG}
-       , debug_cgi  => $ENV{DEBUG_CGI}
-       # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
-       # , tmpl_encoding => 'utf-8'
-      );
-};
+my %sites;
 
 my $nerror = 0;
 foreach my $fn (@ARGV) {
-  my $dir = File::Basename::dirname($dispatcher->rel2abs($fn));
+  my $dir = File::Basename::dirname(File::Spec->rel2abs($fn));
+  local $SYS = my $dispatcher = $sites{$dir} //= do {
+    YATT::Lite::Factory->load_factory_offline(dir => $dir) || do {
+      require YATT::Lite::WebMVC0::SiteApp;
+      YATT::Lite::WebMVC0::SiteApp->new
+        (app_ns => 'MyYATT' . (keys %sites || ''),
+         , namespace => ['yatt', 'perl', 'js']
+         , header_charset => 'utf-8'
+         , debug_cgen => $ENV{DEBUG}
+         , debug_cgi  => $ENV{DEBUG_CGI}
+         # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
+         # , tmpl_encoding => 'utf-8'
+       );
+    };
+  };
+
   my $dirhandler = $dispatcher->get_dirhandler($dir);
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   my $trans = $dirhandler->open_trans;
@@ -61,13 +64,20 @@ foreach my $fn (@ARGV) {
     next;
   };
   # XXX: encoding
-  my $pkg = $trans->find_product(perl => $tmpl, sink => sub {
-					my ($info, @script) = @_;
-					if (not $opts->{cf_all}) {
-					  return unless $info->{'depth'} == 1;
-				        }
-					print @script;
-				      });
+  $trans->find_product(
+    perl => $tmpl, sink => sub {
+      my ($info, @script) = @_;
+      if (not $opts->{cf_all}) {
+        return unless $info->{'depth'} == 1;
+      }
+      print @script;
+
+      eval {
+        # @script を eval しないと、 entity 定義が実体化しない
+        YATT::Lite::Util::ckeval(@script);
+        # けど生成コードにエラーが有るかもなので catch
+      };
+    });
 }
 
 exit 1 if $nerror;
