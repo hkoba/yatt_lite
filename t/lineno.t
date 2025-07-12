@@ -363,4 +363,26 @@ END
   run_list($THEME, \@list, $pkg, render_ => ([["FOO"]]));
 }
 
+$i = 10;
+{
+  my $THEME = "suppressed implicit";
+  my $yatt = new YATT::Lite(app_ns => myapp($i), vfs => [data => {}], @OPT);
+  my $SUB = 'index';
+  ok(my $tmpl = $yatt->add_to($SUB => inject <<'END', \ my @list), "$THEME - add_to $SUB");
+<!yatt:base>
+
+<!yatt:widget foo>
+foo
+<!yatt:args>
+<!--6-->
+END
+
+
+  $yatt->ensure_parsed($yatt->find_part($SUB, ''));
+
+  my $pkg = $yatt->find_product(perl => $tmpl);
+  run_list($THEME, \@list, $pkg, render_ => ([["FOO"]]));
+}
+
+
 done_testing();
