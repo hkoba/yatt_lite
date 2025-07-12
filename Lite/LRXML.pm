@@ -344,10 +344,9 @@ sub parse_decl {
       die $self->synerror_at($self->{_startln}, q{Unknown declarator (<!%s:%s >)}, $ns, $kind);
     }
     unless ($str =~ s{^>([\ \t]*\r?\n)?}{}s) {
-      # XXX: たくさん出しすぎ
       die $self->synerror_at($self->{_startln}, q{Declarator '<!%s:%s' is not closed with '>': %s}
 		   , $ns, $kind
-		   , $str);
+		   , _firstline_only($str));
     }
     # <!yatt:...> の直後には改行が必要、とする。
     unless ($1) {
@@ -1318,6 +1317,12 @@ sub shortened_original_entpath {
   (my MY $self) = @_;
   my $str = $self->{_original_entpath};
   $str =~ s/\n.*\z//s;
+  $str;
+}
+
+sub _firstline_only {
+  my ($str) = @_;
+  $str =~ s/\n.*\z/.../s;
   $str;
 }
 
