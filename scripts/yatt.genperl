@@ -31,7 +31,7 @@ use YATT::Lite::CGen::Perl; # Just for debugging aid.
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
 
 use YATT::Lite::Types
-  ([Opts => -fields => [qw/cf_all/]]);
+  ([Opts => -fields => [qw/all/]]);
 
 my Opts $opts = Opts->new(MY->parse_opts(\@ARGV));
 
@@ -67,11 +67,7 @@ foreach my $fn (@ARGV) {
   $trans->find_product(
     perl => $tmpl, sink => sub {
       my ($info, @script) = @_;
-      if (not $opts->{cf_all}) {
-        return unless $info->{'depth'} == 1;
-      }
-      print @script;
-
+      print @script if $opts->{all} || $info->{'depth'} == 1;
       eval {
         # @script を eval しないと、 entity 定義が実体化しない
         YATT::Lite::Util::ckeval(@script);
