@@ -253,7 +253,9 @@ Currently only RHEL is supported."
       (message "opening error file: %s" file)
       (find-file-other-window file))
     (when (and file line)
-      (goto-line (string-to-number line)))
+      (goto-line (string-to-number line))
+      ;; To make sure point is synchronized by (pm--synchronize-points)
+      (run-hooks 'pre-command-hook))
     (message "%s"
 	     (cond ((> (length err) 0)
 		    err)
