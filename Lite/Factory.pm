@@ -1065,6 +1065,11 @@ sub _list_base_spec_in {
   $visits->finish_node($in);
 }
 
+sub get_yatt_by_entns {
+  (my MY $self, my $entns) = @_;
+  $self->{_entns2vfs_item}{$entns};
+}
+
 #========================================
 
 sub buildns {

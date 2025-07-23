@@ -1895,14 +1895,23 @@ sub cmd_list_entities {
 sub describe_entns_entity {
   (my MY $self, my ($entns, $entityName, %opts)) = @_;
 
-  require Sub::Identify;
+  if (my $vfs_item = $self->{_SITE}->get_yatt_by_entns($entns)) {
+    my $entity = $vfs_item->get_type_item(entity => $entityName);
 
-  my $entSub = $entns->can("entity_$entityName");
+    [name => $entityName, entns => $entns
+     , file => $entity->{folder}{path}, line => $entity->{startln}];
+    
+  } else {
+    require Sub::Identify;
 
-  my ($file, $line) = Sub::Identify::get_code_location($entSub);
+    my $entSub = $entns->can("entity_$entityName");
 
-  [name => $entityName, entns => $entns
-   , file => $file // $opts{path}, line => $line];
+    my ($file, $line) = Sub::Identify::get_code_location($entSub);
+
+    [name => $entityName, entns => $entns
+     , file => $file // $opts{path}, line => $line];
+  }
+
 }
 
 sub cmd_list_vfs_folders {

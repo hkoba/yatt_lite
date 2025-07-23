@@ -218,6 +218,19 @@ use YATT::Lite::Breakpoint ();
     }
   }
 
+  sub YATT::Lite::Core::Template::get_type_item {
+    (my Template $tmpl, my ($type, $name)) = @_;
+    if ($type eq 'action') {
+      $tmpl->{_Item}{"do\0$name"}
+    }
+    elsif ($type eq 'entity') {
+      $tmpl->{_Item}{"entity\0$name"}
+    }
+    else {
+      Carp::croak "Unknown type: $type";
+    }
+  }
+
   sub YATT::Lite::Core::Part::reorder_hash_params {
     (my Widget $widget, my ($orig_params)) = @_;
     return unless $orig_params;
