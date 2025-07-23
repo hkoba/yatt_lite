@@ -12,12 +12,10 @@ jobs:
   perl:
 
     runs-on: ubuntu-latest
-    container: debian:buster-slim
 
     strategy:
       matrix:
         perl-version:
-          - '5.16-buster'
           - '5.30'
           - '5.32'
           - '5.34'
