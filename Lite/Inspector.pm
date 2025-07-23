@@ -1855,7 +1855,7 @@ sub cmd_list_entities {
 
       my @result = @{$self->describe_entns_entity($entns, $entityName, path => $path)};
       $self->cli_output(
-        $self->{detail} ? [+{@result}] : \@result
+        $self->{detail} ? [[+{@result}]] : [\@result]
       );
     }
   };
