@@ -12,6 +12,7 @@ jobs:
   perl:
 
     runs-on: ubuntu-latest
+    container: debian:buster-slim
 
     strategy:
       matrix:
