@@ -317,12 +317,14 @@ sub declare_base {
       push @$base, $o;
     } else {
       defined(my $realfn = $vfs->resolve_path_from($tmpl, $fn))
-	or $vfs->synerror($state, q{Can't find object path for: %s}, $fn);
+	or $vfs->synerror($state, q{Can\'t find object path for: %s}, $fn);
 
       -e $realfn
 	or $vfs->synerror($state, q{No such base path: %s}, $realfn);
 
-      push @$base, $vfs->find_neighbor_type(undef, $realfn);
+      push @$base, my $o = $vfs->find_neighbor_type(undef, $realfn);
+
+      $tmpl->add_dependency($realfn, $o);
     }
   }
 }
