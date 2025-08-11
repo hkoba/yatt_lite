@@ -1895,8 +1895,11 @@ sub cmd_list_entities {
 sub describe_entns_entity {
   (my MY $self, my ($entns, $entityName, %opts)) = @_;
 
-  if (my $vfs_item = $self->{_SITE}->get_yatt_by_entns($entns)) {
-    my $entity = $vfs_item->get_type_item(entity => $entityName);
+  my $vfs_item = $self->{_SITE}->get_yatt_by_entns($entns);
+  my $entity;
+
+  if ($vfs_item
+      and $entity = $vfs_item->get_type_item(entity => $entityName)) {
 
     [name => $entityName, entns => $entns
      , file => $entity->{folder}{path}, line => $entity->{startln}];
