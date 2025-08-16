@@ -2004,11 +2004,12 @@ sub cmd_list_parts {
       my $args = $self->{detail}
         ? [$self->list_part_args_internal($widget)]
         : $widget->{_arg_order};
-      my @result = ((map {$_ => $found->{$_}} sort keys %$found)
-                      , args => $args, path => $self->clean_path($path));
-      # Emit as an array for readability in normal mode.
-      my $result = $self->{detail} ? +{@result} : \@result;
-      $self->cli_output($result);
+      # XXX: 残念ながら、encode_json の keyword 順を制御できていない
+      tie my %result, 'Tie::IxHash', (
+        (map {$_ => $found->{$_}} sort keys %$found)
+        , args => $args, path => $self->clean_path($path)
+      );
+      $self->cli_output([\%result]);
     },
     item => sub {
       my ($args) = @_;
