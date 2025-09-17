@@ -344,18 +344,19 @@ yatt のタグは widget の呼び出しだけではなく、
 ## `yatt:foreach`
 
 
-ループを書く時に使います。 `list="..."` にリストを作る式を渡すと、
-そのリストに対してループします。 `my=var` でループ変数を宣言出来ます。
-宣言を省略した場合は `&yatt:_;` が使われます。
+ループを書く時に使います。`varName`, `varName=typeName` または `varName:typeName`
+でループ変数を宣言します。（typeName を省略したときは text 型になります）
+ループ対象のリストを作る式は `list="..."` で渡します。
+ループ変数の宣言を省略した場合は `&yatt:_;` が使われます。
 
 ```html
-<yatt:foreach my=row list="&yatt:some_db_query();">
+<yatt:foreach row:value list="&yatt:some_db_query();">
   ...DB から取り出した一行毎に...
 </yatt:foreach>
 ```
 
-my で変数を宣言する時に型を指定するには、(変則的ですが)
-`my:型名=` のように、 `my` と `=` の間に `:型名` で型を指定します。
+ループ変数の宣言には `my=varName`, `my:typeName=varName` とする別記法も存在します。
+現在も有効ですが、他の変数宣言と並びが異なり覚えにくいため、徐々に廃止予定です。
 
 ```html
 <yatt:foreach my:list=row list="&yatt:some_db_query();">
