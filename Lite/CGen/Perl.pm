@@ -1088,13 +1088,27 @@ sub take_spread_name {
 }
 
 {
-  MY->make_arg_spec(\ my %args, \ my @args, qw(list my nth));
+  MY->make_arg_spec(\ my %args, \ my @args, qw(list nth));
   sub macro_foreach {
     (my MY $self, my ($node, $opts)) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);
-    $self->feed_arg_spec($primary, \%args, \@args
-			 , my ($list, $my, $nth))
+    my @primary = lexpand($primary)
       or die $self->generror("Not enough arguments for <yatt:foreach>!");
+
+    my ($varDecl, $list, $nth) = do {
+      if (@primary == 1) {
+        my $name = $primary[0][NODE_PATH];
+        if (defined $name and $name ne 'list') {
+          die $self->generror("Invalid list argument for <yatt:foreach>!");
+        }
+        (undef, $primary[0], undef)
+      } else {
+        my $declArg = shift @primary;
+        $self->feed_arg_spec(\@primary, \%args, \@args
+                             , my ($list, $nth));
+        ($declArg, $list, $nth);
+      }
+    };
 
     my ($prologue, $continue, $epilogue) = ('', '', '');
 
@@ -1104,14 +1118,29 @@ sub take_spread_name {
 
     my %local;
     my $loopvar = do {
-      if ($my) {
-	my ($x, @type) = lexpand($my->[NODE_PATH]);
-	my $varname = $my->[NODE_VALUE];
-	$local{$varname} = $self->mkvar_at(undef, $type[0] || '' => $varname);
-	"my \$" . $varname;
-      } else {
-	# _ は？ entity 自体に処理させるか…
-	''
+      if (not $varDecl) {
+        # _ は？ entity 自体に処理させるか…
+        ''
+      }
+      else {
+        my ($varName, $typeName) = do {
+          my ($head, @rest) = lexpand($varDecl->[NODE_PATH]);
+          my $valuePart = $varDecl->[NODE_VALUE];
+          if ($head eq 'my') {
+            ($valuePart, $rest[0] || '');
+          }
+          elsif (not $valuePart) {
+            ($head, $rest[0]);
+          }
+          elsif (not $rest[0]) {
+            ($head, $valuePart);
+          }
+          else {
+            die $self->generror("conflicting typespec: $rest[0] vs $valuePart")
+          }
+        };
+        $local{$varName} = $self->mkvar_at(undef, $typeName || '' => $varName);
+        "my \$" . $varName;
       }
     };
 
