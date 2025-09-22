@@ -1898,8 +1898,10 @@ sub describe_entns_entity {
   my $vfs_item = $self->{_SITE}->get_yatt_by_entns($entns);
   my $entity;
 
+  my $sub;
   if ($vfs_item
-      and $entity = $vfs_item->get_type_item(entity => $entityName)) {
+      and $sub = $vfs_item->can("get_type_item")
+      and $entity = $sub->($vfs_item, entity => $entityName)) {
 
     [name => $entityName, entns => $entns
      , file => $entity->{folder}{path}, line => $entity->{startln}];
