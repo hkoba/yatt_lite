@@ -226,6 +226,8 @@ SKIP: {
 
   $list_widgets->exit_is_num(0);
 
+  is $list_widgets->stderr_value, '', "list_widgets runs without error";
+
   is_deeply [map {MOP4Import::Base::CLI_JSON->new->cli_decode_json($_)} split /\n/
              , $list_widgets->stdout_value]
     , [
@@ -292,6 +294,8 @@ SKIP: {
   ]);
 
   $list_entities->exit_is_num(0);
+
+  is $list_entities->stderr_value, '', "list_entities runs without error";
 
   is_deeply [
     map {
