@@ -293,6 +293,22 @@ SKIP: {
   ]);
 
   $list_entities->exit_is_num(0);
+
+  is_deeply [
+    map {
+      my $dict = +{@{JSON::decode_json($_)}};
+      $dict->{file} =~ s,^.*?(\.htyattrc\.pl)\z,$1,;
+      $dict;
+    }
+    grep {/\.htyattrc\.pl/}
+    split /\n/, $list_entities->stdout_value
+  ], [
+      {name => 'foo',
+       entns => 'MyYATT::INST1::EntNS',
+       file => '.htyattrc.pl',
+       line => 6
+     },
+  ], "list_entities contains .htyattrc.pl";
 }
 
 done_testing();
