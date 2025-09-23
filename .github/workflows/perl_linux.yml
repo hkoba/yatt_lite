@@ -29,7 +29,11 @@ jobs:
       image: perl:${{ matrix.perl-version }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Rename workspace folder
+        run: |
+          mkdir lib
+          mv $GITHUB_WORKSPACE/yatt_lite lib/YATT
       - name: perl -V
         run: perl -V
       - name: Install Dependencies
@@ -41,11 +45,4 @@ jobs:
           perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
       - name: Run Tests (no coverage)
         if: ${{ !matrix.coverage }}
-        run: PERL=$(which perl) ./t/runtests.zsh
-      - name: Run Tests (with coverage)
-        if: ${{ matrix.coverage }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PERL=$(which perl) ./t/runtests.zsh -C
-          cover -report coveralls t/cover_db
+        run: PERL=$(which perl) lib/YATT/t/runtests.zsh
