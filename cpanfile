@@ -94,4 +94,5 @@ on test => sub {
  requires 'CGI::Compile';
 
  requires 'YAML::Tiny';
+ requires 'Test::Command';
 };
