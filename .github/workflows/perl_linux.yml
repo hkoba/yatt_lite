@@ -35,6 +35,7 @@ jobs:
       - name: perl -V
         run: perl -V
       - name: Install Dependencies
+        working-directory: 'lib/YATT'
         run: |
           apt-get update -y
           apt-get install -y zsh
