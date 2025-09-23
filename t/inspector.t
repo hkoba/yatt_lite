@@ -10,7 +10,6 @@ BEGIN { do "$FindBin::Bin/t_lib.pl" }
 
 use Test::More;
 use Test::Command;
-use JSON;
 
 require_ok('YATT::Lite::Inspector');
 
@@ -227,7 +226,7 @@ SKIP: {
 
   $list_widgets->exit_is_num(0);
 
-  is_deeply [map {JSON::decode_json($_)} split /\n/
+  is_deeply [map {MOP4Import::Base::CLI_JSON->new->cli_decode_json($_)} split /\n/
              , $list_widgets->stdout_value]
     , [
       {
@@ -296,7 +295,7 @@ SKIP: {
 
   is_deeply [
     map {
-      my $dict = +{@{JSON::decode_json($_)}};
+      my $dict = +{@{MOP4Import::Base::CLI_JSON->new->cli_decode_json($_)}};
       $dict->{file} =~ s,^.*?(\.htyattrc\.pl)\z,$1,;
       $dict;
     }
