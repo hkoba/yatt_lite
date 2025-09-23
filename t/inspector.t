@@ -9,8 +9,12 @@ BEGIN { do "$FindBin::Bin/t_lib.pl" }
 #----------------------------------------
 
 use Test::More;
+use Test::Command;
+use JSON;
 
 require_ok('YATT::Lite::Inspector');
+
+my $distDir = dirname($FindBin::Bin);
 
 {
   my $test = sub {
@@ -212,6 +216,83 @@ SKIP: {
     my ($widget) = grep { $_->{label} eq 'widget' } @items;
     ok(!$widget, "Should NOT find 'widget' declaration with prefix 'a'");
   }
+}
+
+{
+  my $list_widgets = Test::Command->new(cmd => [
+    "$distDir/Lite/Inspector.pm",
+    "--dir=$distDir/samples/basic/1/",
+    "list_widgets",
+  ]);
+
+  $list_widgets->exit_is_num(0);
+
+  is_deeply [map {JSON::decode_json($_)} split /\n/
+             , $list_widgets->stdout_value]
+    , [
+      {
+        'args' => [
+          'x',
+          'y',
+          'body',
+        ],
+        'kind' => 'page',
+        'name' => 'foobar',
+        'path' => 'html/foobar.yatt',
+      },
+      {
+        'args' => [
+          'a',
+          'body',
+        ],
+        'kind' => 'widget',
+        'name' => 'foobar:foo',
+        'path' => 'html/foobar.yatt',
+      },
+      {
+        'args' => [
+          'body',
+        ],
+        'kind' => 'page',
+        'name' => 'index',
+        'path' => 'html/index.yatt',
+      },
+      {
+        'args' => [
+          'body',
+        ],
+        'kind' => 'page',
+        'name' => 'perlerr',
+        'path' => 'html/perlerr.yatt',
+      },
+      {
+        'args' => [
+          'body',
+        ],
+        'kind' => 'page',
+        'name' => 'varerr',
+        'path' => 'html/varerr.yatt',
+      },
+      {
+        'args' => [
+          'title',
+          'body',
+        ],
+        'kind' => 'widget',
+        'name' => 'envelope',
+        'path' => 'html/envelope.ytmpl',
+      },
+    ], "list_widgets result"
+}
+
+{
+  my $list_entities = Test::Command->new(cmd => [
+    "$distDir/Lite/Inspector.pm",
+    "--dir=$distDir/samples/more/1/",
+    "list_entities",
+  ]);
+
+  $list_entities->exit_is_num(0);
 }
 
 done_testing();
