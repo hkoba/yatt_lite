@@ -30,10 +30,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Rename workspace folder
-        run: |
-          mkdir lib
-          mv $GITHUB_WORKSPACE/yatt_lite lib/YATT
+        with:
+          path: 'lib/YATT'
       - name: perl -V
         run: perl -V
       - name: Install Dependencies
