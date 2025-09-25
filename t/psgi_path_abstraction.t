@@ -29,10 +29,14 @@ my $CT = ["Content-Type", q{text/html; charset="utf-8"}];
 
 my $cwd = cwd();
 
-foreach my $test (combination(['', '/foo/bar']
-                              , [[path_translated => 1], [direct => 0]]))
+foreach my $test (
+  combination(['', '/foo/bar']
+              , [[path_translated => 1], [direct => 0]]),
+  ['/foo/', ['direct, trailing/', 0], '/foo'],
+)
 {
-  my ($script_name, $mode) = @$test;
+  my ($script_name, $mode, $expected_script_name) = @$test;
+  $expected_script_name //= $script_name;
   my ($theme, $use_path_translated) = @$mode;
 
   my $make_test_env = sub {
@@ -90,7 +94,7 @@ foreach my $test (combination(['', '/foo/bar']
     ($real_dir, $site, $mkpsgi);
   };
 
-  describe "When expected script_name is ($script_name) with $theme mode,", sub {
+  describe "When expected script_name is ($expected_script_name) with $theme mode,", sub {
 
     {
       my ($real_dir, $site, $mkpsgi) = $make_test_env->();
@@ -112,9 +116,9 @@ foreach my $test (combination(['', '/foo/bar']
 
           describe "&yatt:script_name(); for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
 
-            it "should return ($script_name)", sub {
+            it "should return ($expected_script_name)", sub {
 
-              expect($site->call($psgi))->to_be([200, $CT, ["($script_name)"]]);
+              expect($site->call($psgi))->to_be([200, $CT, ["($expected_script_name)"]]);
             };
           };
         }
@@ -142,9 +146,9 @@ foreach my $test (combination(['', '/foo/bar']
 
           describe "&yatt:file_location(); for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
 
-            it "should return ($script_name$path)", sub {
+            it "should return ($expected_script_name$path)", sub {
 
-              expect($site->call($psgi))->to_be([200, $CT, ["($script_name$path)"]]);
+              expect($site->call($psgi))->to_be([200, $CT, ["($expected_script_name$path)"]]);
             };
           };
         }

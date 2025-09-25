@@ -528,7 +528,7 @@ sub set_yatt_script_name {
       #
       # Normal case.
       #
-      my $copy = $env->{SCRIPT_NAME};
+      my $copy = $env->{SCRIPT_NAME} // '';
       $copy =~ s,/+\z,,;
       $copy;
     }
