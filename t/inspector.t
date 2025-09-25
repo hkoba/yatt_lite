@@ -228,62 +228,67 @@ SKIP: {
 
   is $list_widgets->stderr_value, '', "list_widgets runs without error";
 
-  is_deeply [map {MOP4Import::Base::CLI_JSON->new->cli_decode_json($_)} split /\n/
-             , $list_widgets->stdout_value]
-    , [
-      {
-        'args' => [
-          'x',
-          'y',
-          'body',
-        ],
-        'kind' => 'page',
-        'name' => 'foobar',
-        'path' => 'html/foobar.yatt',
-      },
-      {
-        'args' => [
-          'a',
-          'body',
-        ],
-        'kind' => 'widget',
-        'name' => 'foobar:foo',
-        'path' => 'html/foobar.yatt',
-      },
-      {
-        'args' => [
-          'body',
-        ],
-        'kind' => 'page',
-        'name' => 'index',
-        'path' => 'html/index.yatt',
-      },
-      {
-        'args' => [
-          'body',
-        ],
-        'kind' => 'page',
-        'name' => 'perlerr',
-        'path' => 'html/perlerr.yatt',
-      },
-      {
-        'args' => [
-          'body',
-        ],
-        'kind' => 'page',
-        'name' => 'varerr',
-        'path' => 'html/varerr.yatt',
-      },
-      {
-        'args' => [
-          'title',
-          'body',
-        ],
-        'kind' => 'widget',
-        'name' => 'envelope',
-        'path' => 'html/envelope.ytmpl',
-      },
-    ], "list_widgets result"
+  is_deeply +{
+    map {
+      my $json = MOP4Import::Base::CLI_JSON->new->cli_decode_json($_);
+      ($json->{name} => $json)
+    } split /\n/
+    , $list_widgets->stdout_value
+  }, +{
+    'foobar' => {
+      'args' => [
+        'x',
+        'y',
+        'body',
+      ],
+      'kind' => 'page',
+      'name' => 'foobar',
+      'path' => 'html/foobar.yatt',
+    },
+    'foobar:foo' => {
+      'args' => [
+        'a',
+        'body',
+      ],
+      'kind' => 'widget',
+      'name' => 'foobar:foo',
+      'path' => 'html/foobar.yatt',
+    },
+    'index' => {
+      'args' => [
+        'body',
+      ],
+      'kind' => 'page',
+      'name' => 'index',
+      'path' => 'html/index.yatt',
+    },
+    'perlerr' => {
+      'args' => [
+        'body',
+      ],
+      'kind' => 'page',
+      'name' => 'perlerr',
+      'path' => 'html/perlerr.yatt',
+    },
+    'varerr' => {
+      'args' => [
+        'body',
+      ],
+      'kind' => 'page',
+      'name' => 'varerr',
+      'path' => 'html/varerr.yatt',
+    },
+    'envelope' => {
+      'args' => [
+        'title',
+        'body',
+      ],
+      'kind' => 'widget',
+      'name' => 'envelope',
+      'path' => 'html/envelope.ytmpl',
+    },
+
+  }, "list_widgets result"
 }
 
 {
