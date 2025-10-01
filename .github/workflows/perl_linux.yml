@@ -42,8 +42,8 @@ jobs:
       - name: Install Dependencies
         working-directory: 'lib/YATT'
         run: |
-          apt-get update -y
-          apt-get install -y zsh
+          sudo apt-get update -y
+          sudo apt-get install -y zsh
           cpm install -g --show-build-log-on-failure --with-recommends --with-test
       - name: Run Tests
         run: PERL=$(which perl) lib/YATT/t/runtests.zsh
