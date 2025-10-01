@@ -2,9 +2,11 @@ name: linux
 
 on:
   push:
-    branches: [ '**' ]
+    branches:
+      - '*'
+    tags-ignore:
+      - '*'
   pull_request:
-    branches: [ dev ]
 
 jobs:
   perl:
@@ -12,13 +14,8 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
       matrix:
-        threaded: [ true, false ]
         perl-version:
-          - '5.16'
-          - '5.26'
-          - '5.28'
           - '5.30'
           - '5.32'
           - '5.34'
@@ -26,24 +23,26 @@ jobs:
           - '5.38'
           - '5.40'
           - '5.42'
-          - '5'
-        target:
-          - { name: Linux, os: ubuntu-latest, triple: x86_64-unknown-linux-gnu }
+          - 'latest'
+          - 'threaded'
+
+    container:
+      image: perl:${{ matrix.perl-version }}
 
     steps:
       - uses: actions/checkout@v4
         with:
           path: 'lib/YATT'
-      - name: Set up Perl ${{ matrix.perl-version }}
-        uses: shogo82148/actions-setup-perl@v1
-        with:
-          perl-version: ${{ matrix.perl-version }}
-          multi-thread: ${{ matrix.threaded }}
+      - name: perl -V
+        run: perl -V
       - name: Install Dependencies
         working-directory: 'lib/YATT'
         run: |
           apt-get update -y
           apt-get install -y zsh
-          cpm install -g --show-build-log-on-failure --with-recommends --with-test
-      - name: Run Tests
+          curl -fsSL --compressed https://raw.githubusercontent.com/skaji/cpm/main/cpm > cpm
+          perl ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::Report::Coveralls 
+          perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
+      - name: Run Tests (no coverage)
+        if: ${{ !matrix.coverage }}
         run: PERL=$(which perl) lib/YATT/t/runtests.zsh
