@@ -43,7 +43,7 @@ jobs:
         working-directory: 'lib/YATT'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y zsh build-essential libaio-dev libperl-dev
+          sudo apt-get install -y zsh build-essential libaio-dev
           cpm install -g Test::Requires B::Debug
           cpm install -g --show-build-log-on-failure --with-recommends --with-test
       - name: Run Tests
