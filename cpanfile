@@ -36,8 +36,7 @@ requires 'Cookie::Baker';
 requires 'CGI', '>= 4.40';
 requires 'HTML::Entities';
 
-recommends 'Sub::Identify';
-recommends 'Sub::Inspector';
+requires 'Sub::Identify'; # For LanguageServer
 
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 
