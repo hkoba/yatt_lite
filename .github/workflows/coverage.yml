@@ -22,6 +22,7 @@ jobs:
         working-directory: 'lib/YATT'
         run: PERL5OPT=-MDevel::Cover="-ignore,^t/,-ignore,^/usr" yath test --qvf t
       - name: push coverage report
+        working-directory: 'lib/YATT'
         run: cover -report coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
