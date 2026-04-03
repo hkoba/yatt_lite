@@ -39,9 +39,16 @@ my %sites;
 
 my $nerror = 0;
 foreach my $fn (@ARGV) {
-  my $dir = File::Basename::dirname(File::Spec->rel2abs($fn));
-  local $SYS = my $dispatcher = $sites{$dir} //= do {
-    YATT::Lite::Factory->load_factory_offline(dir => $dir) || do {
+  my $tmplDir = File::Basename::dirname(File::Spec->rel2abs($fn));
+  my $siteDir = do {
+    if (my $psgi = YATT::Lite::Factory->find_factory_script($fn)) {
+      File::Basename::dirname($psgi);
+    } else {
+      $tmplDir;
+    }
+  };
+  local $SYS = my $dispatcher = $sites{$siteDir} //= do {
+    YATT::Lite::Factory->load_factory_offline(dir => $siteDir) || do {
       require YATT::Lite::WebMVC0::SiteApp;
       YATT::Lite::WebMVC0::SiteApp->new
         (app_ns => 'MyYATT' . (keys %sites || ''),
@@ -55,7 +62,7 @@ foreach my $fn (@ARGV) {
     };
   };
 
-  my $dirhandler = $dispatcher->get_dirhandler($dir);
+  my $dirhandler = $dispatcher->get_dirhandler($tmplDir);
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   my $trans = $dirhandler->open_trans;
   my $tmpl = $trans->find_file(File::Basename::basename($fn)) or do {
@@ -77,4 +84,3 @@ foreach my $fn (@ARGV) {
 }
 
 exit 1 if $nerror;
-
