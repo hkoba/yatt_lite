@@ -130,13 +130,22 @@ F<.yatt> と同様に public なファイルです。
 
 =item C<.htyattconfig.yml>, C<.htyattconfig.xhf>
 
-ディレクトリ毎の L<YATT::Lite> をロードする時に渡される設定パラメータを記述します。
+(B<private>) ディレクトリ毎の L<YATT::Lite> をロードする時に渡される設定パラメータを記述します。
 書式は YAML か L<XHF|YATT::Lite::XHF::Syntax> 形式です。
 
 =item C<.htyattrc.pl>
 
-ディレクトリ毎の Entity 関数を定義したい時や、
+(B<private>) ディレクトリ毎の Entity 関数を定義したい時や、
 ディレクトリ毎の各種ハンドラをオーバロードしたい時に使います。
+
+これらの設定ファイルがいずれも C<.ht> で始まる名前になっているのは意図的な設計です。
+一般的な Web サーバの C<document_root> 配下にテンプレートを直接置くような運用でも、
+Web サーバ側の設定でまとめてアクセスを遮断できるようにするためです。
+例えば Apache では以下のような設定で保護できます。
+
+  <Files ".ht*">
+      Require all denied
+  </Files>
 
 
 
