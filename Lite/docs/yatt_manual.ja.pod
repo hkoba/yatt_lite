@@ -230,7 +230,42 @@ C<name=> を省略して引数を書く話
 
 =head2 Implicit arguments
 
-=head3 XXX: this, CON
+=head3 暗黙の引数: $this と $CON
+
+widget の本体（C<render_*> サブルーチン）と action の本体（C<do_*> サブルーチン）は、
+いずれも YATT が自動生成するコードにより、次の2変数を受け取ります。
+
+=over
+
+=item $this
+
+widget が属するパッケージ（クラス名の文字列）です。
+entity 関数を dispatch するために使われます。
+テンプレートを書く上では通常意識する必要はありません。
+
+=item $CON
+
+リクエスト/レスポンスの facade オブジェクトです。
+widget と action の両方において、YATT が自動的に渡すコードを生成するため、
+ユーザーが C<my ($this, $CON) = @_;> を手書きする必要はありません。
+宣言した引数（例: C<<!yatt:action foo x y>>）も YATT が自動的に展開します。
+
+=back
+
+=head4 Entity 関数での $CON の扱い
+
+Entity 関数（C<Entity name =E<gt> sub { ... }> や C<<!yatt:entity name>>）の中では、
+C<$CON> は引数としては渡されません。
+代わりに、リクエスト開始時に YATT がリクエストスコープのグローバル変数として設定します
+（C<local $CON = ...>）。
+C<use YATT::Lite qw/*CON*/> をしたパッケージであれば、引数なしで参照できます。
+
+B<設計の背景>: Entity 関数はユーザーが記述し、そこから別の関数を呼び出すこともあります。
+すべての呼び出しに C<$CON> の受け渡しを義務づけると、
+Perl では引数の渡し忘れは実行時にしか発覚しないため、
+特に初心者にとって大きな負担・障害になります。
+widget と action では YATT 自身がコード生成を代行できるため引数渡しを採用しましたが、
+Entity 関数ではグローバル参照の方式を選びました。
 
 =head3 body argument
 X<body>
@@ -766,8 +801,8 @@ L<XXX: (未完) prog_action|YATT::Lite::docs::prog_action> を参照してくだ
      <input type="submit" name="!register" value="登録">
     </form>
 
-    <!yatt:action register>
-    ...(ここからperl のプログラム)...
+    <!yatt:action register email>
+    ...(ここから perl のプログラム。$this と $CON は YATT が自動的に用意します)...
 
 =head1 Request Sigil Mapping
 
