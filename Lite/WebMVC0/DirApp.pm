@@ -314,7 +314,8 @@ sub error_handler {
 
   print STDERR "# error_handler(normal): $msg\n" if DEBUG_ERROR;
 
-  my $is_psgi = $self->CON->cget('is_psgi');
+  my $maybeCON = $self->CON;
+  my $is_psgi = $maybeCON ? $maybeCON->cget('is_psgi') : undef;
 
   # error.ytmpl を探し、あれば呼び出す。
   my ($sub, $pkg);
