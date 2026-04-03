@@ -387,8 +387,14 @@ yatt の Entity Path 式 は C<&yatt> で始まり C<;> で終わります。
   &yatt:list[:x];                  <!-- 配列 list の要素参照 -->
 
 重要な注意点ですが、一部の例外を除き、 Entity Path式の中には B<スペースをそのまま含めることは出来ません>。
+これは引数の値の中だけでなく、B<引数と引数の間（カンマの後）も同様>です。
 
-  &yatt:func( space separated text );  <!-- エラー！ -->
+  &yatt:func( space separated text );  <!-- エラー！ (引数値の中のスペース) -->
+  &yatt:func(:dict{name}, :list[:x]);  <!-- エラー！ (カンマの後のスペース) -->
+
+正しくは:
+
+  &yatt:func(:dict{name},:list[:x]);   <!-- 正常 -->
 
 これは意図的に加えた制限です。あまり複雑な構文を用意しても、
 既存の HTML/XML エディタとの相性が悪化するだけだから、という理由です。
