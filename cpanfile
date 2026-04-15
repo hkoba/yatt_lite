@@ -25,6 +25,7 @@ requires 'File::AddInc';
 requires 'MOP4Import::Declare', '>= 0.052';
 
 requires 'JSON::MaybeXS';
+requires 'Text::Glob';
 
 # YATT::Lite::Partial::Gettext
 requires 'Locale::PO';
