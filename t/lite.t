@@ -89,7 +89,7 @@ END
 	, "$theme $SUB EntNS isa tree";
 
     ok(my $part = $yatt->find_part('foo', 'bar'), "$theme find_part");
-    is_deeply $part->{arg_order}, [qw(x y body)], "$theme arg_order";
+    is_deeply $part->{_arg_order}, [qw(x y body)], "$theme arg_order";
     ok(my $tmpl = $yatt->find_file('foo'), "$theme find_file $SUB");
     is my $pkg = $yatt->find_product(perl => $tmpl), "MyTest_lite_${i}::EntNS::$SUB"
       , "$theme find_product $SUB";
@@ -293,7 +293,7 @@ END
     ok my $part = $yatt->find_part($SUB => "main")
       , "$theme find_part <yatt:${SUB}:main>";
 
-    is_deeply $part->{arg_order}, [qw/x z w body/]
+    is_deeply $part->{_arg_order}, [qw/x z w body/]
       , "$theme Argument list of <yatt:${SUB}:main>, synthesized from delegate type";
 
     my $pos_p = $yatt->find_product(perl => $pos_t);
@@ -307,10 +307,10 @@ END
     ok($yatt->add_to(error => <<'END'), "$theme add_to $SUB");
 <!yatt:args error>
 <h2>&yatt:error:reason();</h2>
-file: &yatt:error{cf_tmpl_file};<br>
-line: &yatt:error{cf_tmpl_line};<br>
-perl file: &yatt:error{cf_file};<br>
-perl line: &yatt:error{cf_line};<br>
+file: &yatt:error{tmpl_file};<br>
+line: &yatt:error{tmpl_line};<br>
+perl file: &yatt:error{file};<br>
+perl line: &yatt:error{line};<br>
 END
 
 require_ok("YATT::Lite::Error");
@@ -620,7 +620,7 @@ END
   ok my $tmpl = $core->find_file('index.yatt'), "core->find_file is ok";
 
   # Direct Template->refresh to interested code path.
-  undef $tmpl->{cf_mtime};
+  undef $tmpl->{mtime};
   ok $tmpl->refresh($core), "Template->refresh is safe still";
 }
 

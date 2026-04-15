@@ -45,6 +45,9 @@ sub lspcall__initialize {
   $svcap->{implementationProvider} = JSON()->true;
   $svcap->{hoverProvider} = JSON()->true;
   $svcap->{documentSymbolProvider} = JSON()->true;
+  $svcap->{completionProvider} = my CompletionOptions $copts = {};
+  $copts->{triggerCharacters} = ['<', ':', "\$", '&', '=', '"', "'"];
+  $copts->{resolveProvider} = JSON()->false;
   $svcap->{textDocumentSync} = my TextDocumentSyncOptions $sopts = +{};
   $sopts->{openClose} = JSON()->true;
   $sopts->{save} = JSON()->true;
@@ -202,6 +205,35 @@ sub lspcall__textDocument__documentSymbol {
   } else {
     undef;
   }
+}
+
+sub lspcall__textDocument__completion {
+  (my MY $self, my CompletionParams $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  
+  # Don't skip even if the document has error - completion is often triggered while typing
+  # and the document may be in an incomplete/error state
+
+  my $fn = $self->uri2localpath($docId->{uri});
+  my Position $pos = $params->{position};
+  my CompletionContext $context = $params->{context};
+
+  # Get completion items from inspector
+  my @items = $self->inspector->get_completion_items(
+    $fn, $pos->{line}, $pos->{character},
+    $context ? $context->{triggerCharacter} : undef
+  );
+
+  unless (@items) {
+    return undef;
+  }
+
+  my CompletionList $result = {};
+  $result->{isIncomplete} = JSON()->false;
+  $result->{items} = \@items;
+  
+  $result;
 }
 
 #----------------------------------------

@@ -39,7 +39,7 @@ sub expand_all_argmacro {
 sub apply_argmacro {
   (my $class, my $cgen, my ArgMacro $argmacro, my $args) = @_;
 
-  my $result = $argmacro->{on_expand}->($cgen, $args, $argmacro->{arg_dict}, $argmacro);
+  my $result = $argmacro->{_on_expand}->($cgen, $args, $argmacro->{_arg_dict}, $argmacro);
   return if not keys %$result;
 
   map {
@@ -47,9 +47,9 @@ sub apply_argmacro {
     my $node = [];
     $node->[NODE_TYPE] = TYPE_ATT_TEXT;
     $node->[NODE_PATH] = $attName;
-    $node->[NODE_BODY] = $result->{$argmacro->{cf_resolve_map}{$attName}};
+    $node->[NODE_BODY] = $result->{$argmacro->{resolve_map}{$attName}};
     $node;
-  } @{$argmacro->{cf_output_args}}
+  } @{$argmacro->{output_args}}
 
 }
 
@@ -58,7 +58,7 @@ sub generate_on_declare {
 
   my $script = $self->generate_on_expand($argmacro);
   my $code = YATT::Lite::Util::ckeval($script);
-  $argmacro->{on_expand} = $code;
+  $argmacro->{_on_expand} = $code;
 
   return sub {
     (my MY $self, my $parser, my Part $part, my $node) = @_;
@@ -79,40 +79,40 @@ sub generate_on_declare {
       }
     };
 
-    my $instName = join(":", $argmacro->{cf_namespace}, $argmacro->{cf_name}
+    my $instName = join(":", $argmacro->{namespace}, $argmacro->{name}
                         , ($toName ? $toName : ()));
     my ArgMacro $instance = $argmacro->clone_with_renamespec($toName, $fromName);
-    foreach my $outArg (@{$instance->{cf_output_args}}) {
+    foreach my $outArg (@{$instance->{output_args}}) {
       my $formalName = $outArg->[NODE_PATH];
       if ($toName) {
         my $actualName = _apply_rename($formalName, $toName, $fromName);
-        $instance->{cf_rename_map}{$formalName} = $actualName;
-        $instance->{cf_resolve_map}{$actualName} = $formalName;
+        $instance->{rename_map}{$formalName} = $actualName;
+        $instance->{resolve_map}{$actualName} = $formalName;
       } else {
-        $instance->{cf_rename_map}{$formalName} = $formalName;
-        $instance->{cf_resolve_map}{$formalName} = $formalName;
+        $instance->{rename_map}{$formalName} = $formalName;
+        $instance->{resolve_map}{$formalName} = $formalName;
       }
     }
 
-    if ($part->{argmacro_instance_dict}{$instName}) {
+    if ($part->{_argmacro_instance_dict}{$instName}) {
       $self->synerror_at($node->[NODE_LNO],
                          "Duplicate use of argmacro '%s'", $instName);
     }
-    $part->{argmacro_instance_dict}{$instName} = $instance;
-    push @{$part->{argmacro_instance_list}}, $instName;
+    $part->{_argmacro_instance_dict}{$instName} = $instance;
+    push @{$part->{_argmacro_instance_list}}, $instName;
 
-    foreach my $argName (@{$argmacro->{arg_order}}) {
+    foreach my $argName (@{$argmacro->{_arg_order}}) {
       my $actualName = _apply_rename($argName, $toName, $fromName);
-      $part->{argmacro_trigger_dict}{$actualName} = [$instName, $argName];
+      $part->{_argmacro_trigger_dict}{$actualName} = [$instName, $argName];
     }
 
     $parser->add_args(
       $part,
       map {
         my $formalName = $_->[NODE_PATH];
-        $_->[NODE_PATH] = $instance->{cf_rename_map}{$formalName};
+        $_->[NODE_PATH] = $instance->{rename_map}{$formalName};
         $_;
-      } @{$instance->{cf_output_args}}
+      } @{$instance->{output_args}}
     );
 
     return $part; # debugging aid
@@ -133,17 +133,17 @@ sub _apply_rename {
 sub generate_on_expand {
   (my MY $self, my ArgMacro $argmacro) = @_;
 
-  my Template $tmpl = $self->{curtmpl};
+  my Template $tmpl = $self->{_curtmpl};
 
   my $cgenType = ref $self;
   my $macroType = ArgMacro;
-  my $argsType = "$tmpl->{cf_entns}::args_$argmacro->{cf_name}";
-  my $varsType = "$tmpl->{cf_entns}::vars_$argmacro->{cf_name}";
-  my $resultType = "$tmpl->{cf_entns}::result_$argmacro->{cf_name}";
+  my $argsType = "$tmpl->{entns}::args_$argmacro->{name}";
+  my $varsType = "$tmpl->{entns}::vars_$argmacro->{name}";
+  my $resultType = "$tmpl->{entns}::result_$argmacro->{name}";
 
   my @output_names = map {
     $_->[NODE_PATH];
-  } @{$argmacro->{cf_output_args}};
+  } @{$argmacro->{output_args}};
 
   my @script;
   push @script, q(use YATT::Lite::Constants; );
@@ -155,19 +155,19 @@ sub generate_on_expand {
   push @script, sprintf(
     qq{{package %s; use fields qw(%s)}},
     $argsType,
-    join(" ", @{$argmacro->{arg_order} // []}),
+    join(" ", @{$argmacro->{_arg_order} // []}),
   );
   push @script, sprintf(
     qq{{package %s; use fields qw(%s)}},
     $varsType,
-    join(" ", @{$argmacro->{arg_order} // []}),
+    join(" ", @{$argmacro->{_arg_order} // []}),
   );
   push @script, sprintf(
     q{(my %s $cgen, my %s $args, my %s $vars, my %s $argmacro) = @_; my %s $result = +{};},
     $cgenType, $argsType, $varsType, $macroType, $resultType
   );
 
-  push @script, @{$argmacro->{toks}};
+  push @script, @{$argmacro->{_toks}};
   push @script, q(return $result);
 
   my $script = sprintf(q{use strict; use warnings; sub {%s}}, join "", @script);

@@ -16,13 +16,13 @@ jobs:
     strategy:
       matrix:
         perl-version:
-          - '5.16-buster'
           - '5.30'
           - '5.32'
           - '5.34'
           - '5.36'
           - '5.38'
           - '5.40'
+          - '5.42'
           - 'latest'
           - 'threaded'
 
@@ -30,10 +30,13 @@ jobs:
       image: perl:${{ matrix.perl-version }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          path: 'lib/YATT'
       - name: perl -V
         run: perl -V
       - name: Install Dependencies
+        working-directory: 'lib/YATT'
         run: |
           apt-get update -y
           apt-get install -y zsh
@@ -42,11 +45,4 @@ jobs:
           perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
       - name: Run Tests (no coverage)
         if: ${{ !matrix.coverage }}
-        run: PERL=$(which perl) ./t/runtests.zsh
-      - name: Run Tests (with coverage)
-        if: ${{ matrix.coverage }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PERL=$(which perl) ./t/runtests.zsh -C
-          cover -report coveralls t/cover_db
+        run: PERL=$(which perl) lib/YATT/t/runtests.zsh

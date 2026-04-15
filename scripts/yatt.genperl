@@ -31,28 +31,38 @@ use YATT::Lite::CGen::Perl; # Just for debugging aid.
 # XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
 
 use YATT::Lite::Types
-  ([Opts => -fields => [qw/cf_all/]]);
+  ([Opts => -fields => [qw/all/]]);
 
 my Opts $opts = Opts->new(MY->parse_opts(\@ARGV));
 
-local $SYS = my $dispatcher = YATT::Lite::Factory->load_factory_offline
-  || do {
-  require YATT::Lite::WebMVC0::SiteApp;
-  YATT::Lite::WebMVC0::SiteApp->new
-      (app_ns => 'MyYATT'
-       , namespace => ['yatt', 'perl', 'js']
-       , header_charset => 'utf-8'
-       , debug_cgen => $ENV{DEBUG}
-       , debug_cgi  => $ENV{DEBUG_CGI}
-       # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
-       # , tmpl_encoding => 'utf-8'
-      );
-};
+my %sites;
 
 my $nerror = 0;
 foreach my $fn (@ARGV) {
-  my $dir = File::Basename::dirname($dispatcher->rel2abs($fn));
-  my $dirhandler = $dispatcher->get_dirhandler($dir);
+  my $tmplDir = File::Basename::dirname(File::Spec->rel2abs($fn));
+  my $siteDir = do {
+    if (my $psgi = YATT::Lite::Factory->find_factory_script($fn)) {
+      File::Basename::dirname($psgi);
+    } else {
+      $tmplDir;
+    }
+  };
+  local $SYS = my $dispatcher = $sites{$siteDir} //= do {
+    YATT::Lite::Factory->load_factory_offline(dir => $siteDir) || do {
+      require YATT::Lite::WebMVC0::SiteApp;
+      YATT::Lite::WebMVC0::SiteApp->new
+        (app_ns => 'MyYATT' . (keys %sites || ''),
+         , namespace => ['yatt', 'perl', 'js']
+         , header_charset => 'utf-8'
+         , debug_cgen => $ENV{DEBUG}
+         , debug_cgi  => $ENV{DEBUG_CGI}
+         # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
+         # , tmpl_encoding => 'utf-8'
+       );
+    };
+  };
+
+  my $dirhandler = $dispatcher->get_dirhandler($tmplDir);
   $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   my $trans = $dirhandler->open_trans;
   my $tmpl = $trans->find_file(File::Basename::basename($fn)) or do {
@@ -61,14 +71,16 @@ foreach my $fn (@ARGV) {
     next;
   };
   # XXX: encoding
-  my $pkg = $trans->find_product(perl => $tmpl, sink => sub {
-					my ($info, @script) = @_;
-					if (not $opts->{cf_all}) {
-					  return unless $info->{'depth'} == 1;
-				        }
-					print @script;
-				      });
+  $trans->find_product(
+    perl => $tmpl, sink => sub {
+      my ($info, @script) = @_;
+      print @script if $opts->{all} || $info->{'depth'} == 1;
+      eval {
+        # @script を eval しないと、 entity 定義が実体化しない
+        YATT::Lite::Util::ckeval(@script);
+        # けど生成コードにエラーが有るかもなので catch
+      };
+    });
 }
 
 exit 1 if $nerror;
-

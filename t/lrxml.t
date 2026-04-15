@@ -65,13 +65,13 @@ END
 
   {
     my $name = 'bar';
-    is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
       , "tmpl Item '$name'";
     eq_or_diff $tmpl->source_region
-      ($w->{cf_startpos}, $w->{cf_bodypos})
+      ($w->{startpos}, $w->{bodypos})
 	, qq{<!yatt:widget bar x y>\n}, "part $name source_range decl";
 
-    eq_or_diff $tmpl->source_substr($w->{cf_bodypos}, $w->{cf_bodylen})
+    eq_or_diff $tmpl->source_substr($w->{bodypos}, $w->{bodylen})
       , q{FOO
 <yatt:foo x y>
 bar
@@ -81,16 +81,16 @@ BAZ
 }, "part $name source_range body";
 
     my $i = -1;
-    is $w->{tree}[++$i], "FOO\n", "render_$name node $i";
-    is_deeply $tmpl->node_source($w->{tree}[++$i])
+    is $w->{_tree}[++$i], "FOO\n", "render_$name node $i";
+    is_deeply $tmpl->node_source($w->{_tree}[++$i])
       , q{<yatt:foo x y>
 bar
 </yatt:foo>}, "render_$name node $i";
-    is $w->{tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n が嬉しくない
+    is $w->{_tree}[++$i], "\nBAZ", "render_$name node $i"; # XXX \n が嬉しくない
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n"; exit;
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n"; exit;
     
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 -
  FOO
@@ -138,28 +138,28 @@ END
 
   {
     my $name = 'foo';
-    is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
       , "tmpl Item '$name'";
     eq_or_diff $tmpl->source_region
-      ($w->{cf_startpos}, $w->{cf_bodypos})
+      ($w->{startpos}, $w->{bodypos})
 	, qq{<!yatt:widget foo x y>\n}, "part $name source_range decl";
 
-    eq_or_diff $tmpl->source_substr($w->{cf_bodypos}, $w->{cf_bodylen})
+    eq_or_diff $tmpl->source_substr($w->{bodypos}, $w->{bodylen})
       , q{<h2>&yatt:x;</h2>
 &yatt:y;
 }, "part $name source_range body";
 
     my $i = -1;
-    is $w->{tree}[++$i], "<h2>", "render_$name node $i";
-    is_deeply $tmpl->node_source($w->{tree}[++$i])
+    is $w->{_tree}[++$i], "<h2>", "render_$name node $i";
+    is_deeply $tmpl->node_source($w->{_tree}[++$i])
       , '&yatt:x;', "render_$name node $i";
-    is $w->{tree}[++$i], "</h2>\n", "render_$name node $i";
-    is_deeply $tmpl->node_source($w->{tree}[++$i])
+    is $w->{_tree}[++$i], "</h2>\n", "render_$name node $i";
+    is_deeply $tmpl->node_source($w->{_tree}[++$i])
       , '&yatt:y;', "render_$name node $i";
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";
 
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 - <h2>
 {
@@ -229,13 +229,13 @@ END
 
   {
     my $name = '';
-    is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
       , "tmpl Item '$name'";
     eq_or_diff $tmpl->source_region
-      ($w->{cf_startpos}, $w->{cf_bodypos})
+      ($w->{startpos}, $w->{bodypos})
 	, qq{<!yatt:args x=list y="scalar?0">\n}, "part $name source_range decl";
 
-    eq_or_diff $tmpl->source_substr($w->{cf_bodypos}, $w->{cf_bodylen})
+    eq_or_diff $tmpl->source_substr($w->{bodypos}, $w->{bodylen})
       , q{FOO
 <!--#yatt 1 -->
 <?yatt A ?>
@@ -263,13 +263,13 @@ BAZ
 
     foreach my $test (@test) {
       my ($i, $want) = @$test;
-      is $tmpl->node_source($w->{tree}[$i]), $want
+      is $tmpl->node_source($w->{_tree}[$i]), $want
 	, "render_$name node $i ($want)";
     }
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";exit;
 
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 -
  FOO
@@ -401,13 +401,13 @@ END
 
   {
     my $name = 'foo';
-    is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+    is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
       , "tmpl Item '$name'";
     eq_or_diff $tmpl->source_region
-      ($w->{cf_startpos}, $w->{cf_bodypos})
+      ($w->{startpos}, $w->{bodypos})
 	, qq{<!yatt:widget foo x=list y="scalar?0">\n}, "part $name source_range decl";
 
-    eq_or_diff $tmpl->source_substr($w->{cf_bodypos}, $w->{cf_bodylen})
+    eq_or_diff $tmpl->source_substr($w->{bodypos}, $w->{bodylen})
       , q{FOO
 <!--#yatt 1 -->
 <?yatt A ?>
@@ -433,12 +433,12 @@ BAZ
 
     foreach my $test (@test) {
       my ($i, $want) = @$test;
-      is $tmpl->node_source($w->{tree}[$i]), $want
+      is $tmpl->node_source($w->{_tree}[$i]), $want
 	, "render_$name node $i ($want)";
     }
 
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";exit;
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 -
  FOO
@@ -581,14 +581,14 @@ END
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
   TODO: {
     # local $TODO = "Not yet solved";
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";exit;
 
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 -
  <h2>Hello</h2>
@@ -709,13 +709,13 @@ END
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
   {
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";exit;
 
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 {
 kind: ELEMENT
@@ -798,13 +798,13 @@ END
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
   {
-    # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+    # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";
 
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 {
 kind: ELEMENT
@@ -855,12 +855,12 @@ END
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
-  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+  # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";
 
-  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+  eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 {
 kind: ELEMENT
@@ -929,12 +929,12 @@ END
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
-  #print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";exit;
+  #print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";exit;
 
-  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+  eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 {
 kind: ELEMENT
@@ -1029,12 +1029,12 @@ if (1) {
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
-  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+  # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";
 
-  eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+  eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 - <h2>
 {
@@ -1142,14 +1142,14 @@ z=&yatt:z;
 END
 
   my $name = '';
-  is ref (my $w = $tmpl->{Item}{$name}), 'YATT::Lite::Core::Widget'
+  is ref (my $w = $tmpl->{_Item}{$name}), 'YATT::Lite::Core::Widget'
     , "tmpl Item '$name'";
 
-  # print STDERR alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), "\n";
+  # print STDERR alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), "\n";
 
   TODO: {
     local $TODO = "Not yet solved";
-    eq_or_diff alt_tree_xhf_for($tmpl->{cf_string}, $w->{tree}), <<'END';
+    eq_or_diff alt_tree_xhf_for($tmpl->{string}, $w->{_tree}), <<'END';
 [
 {
 kind: ELEMENT
@@ -1288,6 +1288,26 @@ END
   };
   like $@, qr/^yatt:widget got wrong token for route spec: ENTITY/, "Unclosed <!yatt:widget\\n &yatt:foo;";
 }
+
+TODO: {
+  local $TODO = "Perl >= 5.30 only" unless $] >= 5.030;
+  my $tmpl = $CLASS->Template->new;
+  eval {
+    $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1);
+<!yatt:args x y>
+default widget
+<!yatt:action foo>
+;# action foo
+#  <!yatt:widget bar>
+;# this too.
+END
+  };
+
+  is_deeply [map {[$_->{kind}, $_->{name}]} $tmpl->list_parts]
+    , [[widget => ''], [action => 'foo']]
+    , "YATT Declarations should be recognized only when they are at the line start";
+}
+
 
 # (- (region-end) (region-beginning))
 #

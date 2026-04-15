@@ -79,13 +79,13 @@ foreach my $cmd (@command) {
   my ($dirhandler, $file, $parameters) = @$cmd;
 
     # XXX: そもそも、ここでの DONE に疑問が.
-  local $dirhandler->{cf_at_done} = sub {
+  local $dirhandler->{at_done} = sub {
     # ここで at_done が呼ばれるのは error_handler からだけ。
     exit;
   };
 
   local $YATT = $dirhandler;
-  local $dirhandler->{cf_at_done} = sub {};
+  local $dirhandler->{at_done} = sub {};
   # $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
   local $ENV{REQUEST_URI} = $ENV{REQUEST_URI} // $file;
   local $ENV{SCRIPT_NAME} = $ENV{SCRIPT_NAME} // $file;

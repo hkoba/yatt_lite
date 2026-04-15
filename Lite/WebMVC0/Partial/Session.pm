@@ -9,12 +9,12 @@ use YATT::Lite::Partial
 		   app_path_ensure_existing
 		   app_path_var_tmp
 		  /]
-   , fields => [qw/cf_session_driver
-		   cf_session_config
-		   cf_session_debug
-		   cf_session_path
-		   cf_csrftok_name
-		   cf_tmpdir
+   , fields => [qw/session_driver
+		   session_config
+		   session_debug
+		   session_path
+		   csrftok_name
+		   tmpdir
 		  /]
    , -Entity, -CON
   );
@@ -72,7 +72,7 @@ Entity csrf_token_check => sub {
     Entity $meth => sub {
       my $this = shift;
       my ConnProp $prop = $CON->prop;
-      my MY $self = $prop->{cf_system};
+      my MY $self = $prop->{system};
       $self->$meth($CON, @_);
     };
   }
@@ -94,7 +94,7 @@ sub session_regenerate_id {
   (my MY $self, my ($con, @with_init)) = @_;
   my ConnProp $prop = $con->prop;
 
-  if (defined $prop->{session}) {
+  if (defined $prop->{_session}) {
     $self->session_delete($con);
   }
 
@@ -106,20 +106,20 @@ sub session_regenerate_id {
 sub session_resume {
   (my MY $self, my ($con)) = @_;
   $con->logbacktrace("session.resume")
-    if num_is_ge($self->{cf_session_debug}, 2);
+    if num_is_ge($self->{session_debug}, 2);
 
   my ConnProp $prop = $con->prop;
 
-  if (exists $prop->{session}) {
+  if (exists $prop->{_session}) {
     $con->logdump("session.resume" => "session is already loaded")
-      if $self->{cf_session_debug};
-    return $prop->{session};
+      if $self->{session_debug};
+    return $prop->{_session};
   }
-  $prop->{session} = undef;
+  $prop->{_session} = undef;
 
   my $sid = $self->session_sid($con) or do {
     $con->logdump("session.resume" => "sid is empty")
-       if $self->{cf_session_debug};
+       if $self->{session_debug};
     return undef;
   };
 
@@ -130,23 +130,23 @@ sub session_resume {
  CHK: {
     if ($sess->is_expired) {
       $con->logdump("session.resume" => expired => $sid)
-	if $self->{cf_session_debug};
+	if $self->{session_debug};
     } elsif (not $sess->id) {
       $con->logdump("session.resume" => "id is empty"
 		    , claimed_sid => $sid, sessobj => $sess)
-	if $self->{cf_session_debug};
+	if $self->{session_debug};
     } else {
       last CHK;
     }
     # not ok.
-    delete $prop->{session}; # To allow calling session_start.
+    delete $prop->{_session}; # To allow calling session_start.
     return undef; # XXX: Should we notify?
   };
 
   $con->logdump("session.resume" => OK => sid => $sid)
-    if $self->{cf_session_debug};
+    if $self->{session_debug};
 
-  $prop->{session} = $sess;
+  $prop->{_session} = $sess;
 }
 
 # This will be called back from $CON->start_session.
@@ -161,14 +161,14 @@ sub session_start {
   }
 
   $con->logbacktrace("session.start")
-    if num_is_ge($self->{cf_session_debug}, 2);
+    if num_is_ge($self->{session_debug}, 2);
 
   my ConnProp $prop = $con->prop;
 
-  if (defined $prop->{session}) {
-    $self->error("session is called twice! sid=%s", $prop->{session}->id);
+  if (defined $prop->{_session}) {
+    $self->error("session is called twice! sid=%s", $prop->{_session}->id);
   }
-  $prop->{session} = undef;
+  $prop->{_session} = undef;
 
   my $sess = $self->session_create_by(new => $con)
     or $self->error("Can't create new session: %s", CGI::Session->errstr);
@@ -179,7 +179,7 @@ sub session_start {
   $sess->clear;
   $self->session_init($con, $sess, @with_init) if @with_init;
 
-  $prop->{session} = $sess;
+  $prop->{_session} = $sess;
 }
 
 sub session_create_by {
@@ -187,7 +187,7 @@ sub session_create_by {
   require CGI::Session;
 
   my ($type, %driver_opts) = $self->session_driver;
-  my Config $opts = $self->{cf_session_config};
+  my Config $opts = $self->{session_config};
 
   my $expire = delete($opts->{expire}) // $self->default_session_expire;
   if (my $sess = CGI::Session->$method($type, $sid, \%driver_opts, $opts)) {
@@ -225,8 +225,8 @@ sub session_init {
 
 sub session_driver {
   (my MY $self) = @_;
-  $self->{cf_session_driver}
-    ? lexpand($self->{cf_session_driver})
+  $self->{session_driver}
+    ? lexpand($self->{session_driver})
       : $self->default_session_driver;
 }
 
@@ -241,17 +241,17 @@ sub session_delete {
   }
 
   $con->logbacktrace("session.delete")
-    if num_is_ge($self->{cf_session_debug}, 2);
+    if num_is_ge($self->{session_debug}, 2);
 
-  if (my $sess = delete $prop->{session}) {
+  if (my $sess = delete $prop->{_session}) {
     my $sid = $sess->id;
     $sess->delete;
     $sess->flush;
     $con->logdump("session.delete" => OK => sid => $sid)
-      if $self->{cf_session_debug};
+      if $self->{session_debug};
   } else {
     $con->logdump("session.delete" => 'NOP')
-      if $self->{cf_session_debug};
+      if $self->{session_debug};
   }
   my $name = $self->session_sid_name;
   my @rm = ($name, '', -expires => '-10y', -path => $path);
@@ -261,12 +261,12 @@ sub session_delete {
 sub session_flush {
   my MY $self = shift;
   my ConnProp $prop = (my $glob = shift)->prop;
-  my $sess = $prop->{session}
+  my $sess = $prop->{_session}
     or return;
   return if $sess->errstr;
   $sess->flush;
   if (my $err = $sess->errstr) {
-    local $prop->{session};
+    local $prop->{_session};
     $self->error("Can't flush session: %s", $err);
   }
 }
@@ -274,20 +274,20 @@ sub session_flush {
 sub configure_use_session {
   (my MY $self, my $value) = @_;
   if ($value) {
-    $self->{cf_session_config}
+    $self->{session_config}
       //= ref $value ? +{lexpand($value)} : +{$self->default_session_config};
-    $self->{cf_session_driver} //= [$self->default_session_driver];
+    $self->{session_driver} //= [$self->default_session_driver];
   }
 }
 
 sub session_path {
   (my MY $self, my ($con)) = @_;
-  $self->{cf_session_path} || $con->site_location;
+  $self->{session_path} || $con->site_location;
 }
 
 sub session_sid_name {
   (my MY $self) = @_;
-  my Config $opts = $self->{cf_session_config};
+  my Config $opts = $self->{session_config};
   $opts->{name} || $self->default_session_sid_name;
 }
 
@@ -297,7 +297,7 @@ sub default_session_config  {}
 
 sub default_session_driver  {
   (my MY $self) = @_;
-  my $tmpdir = $self->{cf_tmpdir} //= $self->app_path_var_tmp('sess');
+  my $tmpdir = $self->{tmpdir} //= $self->app_path_var_tmp('sess');
   ("driver:file"
    , Directory => $tmpdir
   )
@@ -319,7 +319,7 @@ sub cmd_session_list {
 
 sub csrftok_name {
   (my MY $self) = @_;
-  $self->{cf_csrftok_name} || $self->default_csrftok_name;
+  $self->{csrftok_name} || $self->default_csrftok_name;
 }
 
 sub default_csrftok_name { '--csrftok' }

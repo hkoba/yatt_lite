@@ -25,6 +25,7 @@ requires 'File::AddInc';
 requires 'MOP4Import::Declare', '>= 0.052';
 
 requires 'JSON::MaybeXS';
+requires 'Text::Glob';
 
 # YATT::Lite::Partial::Gettext
 requires 'Locale::PO';
@@ -36,8 +37,7 @@ requires 'Cookie::Baker';
 requires 'CGI', '>= 4.40';
 requires 'HTML::Entities';
 
-recommends 'Sub::Identify';
-recommends 'Sub::Inspector';
+requires 'Sub::Identify'; # For LanguageServer
 
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 
@@ -61,6 +61,7 @@ configure_requires 'Module::CPANfile';
 configure_requires 'Module::Build';
 
 on test => sub {
+ requires 'Test::Spec';
  requires 'Test::Kantan';
  requires 'Test::More';
  requires 'Test::Differences', '>= 0.67';
@@ -93,4 +94,5 @@ on test => sub {
  requires 'CGI::Compile';
 
  requires 'YAML::Tiny';
+ requires 'Test::Command';
 };

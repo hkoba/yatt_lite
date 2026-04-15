@@ -545,12 +545,20 @@ BEGIN {
   package
     YATT::Lite::Util::named_attr;
   BEGIN {our @ISA = ('YATT::Lite::Util::escapable')};
-  use overload qw("" as_string);
+  use overload qw("" as_string eq streq ne strne);
   sub as_string {
     shift->[-1];
   }
   sub as_escaped {
     sprintf q{ %s="%s"}, $_[0][0], $_[0][1];
+  }
+  sub streq {
+    my ($self, $other) = @_;
+    $self->[-1] eq (ref $other ? $other->[-1] : $other);
+  }
+  sub strne {
+    my ($self, $other) = @_;
+    $self->[-1] ne (ref $other ? $other->[-1] : $other);
   }
 }
 
@@ -565,23 +573,32 @@ sub named_attr {
 {
   # XXX: These functions are deprecated. Use att_value_in() instead.
 
-  sub value_checked  { _value_checked($_[0], $_[1], checked => '') }
-  sub value_selected { _value_checked($_[0], $_[1], selected => '') }
+  sub value_checked  { _value_checked($_[0], $_[1], $_[2], checked => '') }
+  sub value_selected { _value_checked($_[0], $_[1], $_[2], selected => '') }
 
   sub _value_checked {
-    my ($value, $hash, $then, $else) = @_;
-    sprintf q|value="%s"%s|, escape($value)
-      , _if_checked($hash, $value, $then, $else);
+    my ($value, $hashOrArray, $isDefault, $then, $else) = @_;
+    sprintf q|value="%s"%s|, escape($value), do {
+      if (_if_checked($hashOrArray, $value) // $isDefault) {
+        " $then"
+      } else {
+        $else // ''
+      }
+    };
   }
 
   sub _if_checked {
-    my ($in, $value, $then, $else) = @_;
-    $else //= '';
-    return $else unless defined $in;
-    if (ref $in ? $in->{$value // ''} : ($in eq $value)) {
-      " $then"
+    my ($in, $value) = @_;
+    if (not defined $in) {
+      undef
+    } elsif (not ref $in) {
+      ($in eq $value)
+    } elsif (ref $in eq 'HASH') {
+      $in->{$value // ''}
+    } elsif (ref $in eq 'ARRAY') {
+      grep {$value eq $_} @$in
     } else {
-      $else;
+      undef
     }
   }
 }
