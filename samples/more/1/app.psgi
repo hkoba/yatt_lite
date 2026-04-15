@@ -1,9 +1,7 @@
 # -*- perl -*-
 use strict;
-use warnings qw(FATAL all NONFATAL misc);
-use File::Basename;
+use warnings;
 use FindBin;
-my $app_root; BEGIN {$app_root = $FindBin::Bin}
 
 #
 # use lib "$FindBin::Bin/lib", "$FindBin::Bin/local/lib/perl5";
@@ -11,12 +9,13 @@ my $app_root; BEGIN {$app_root = $FindBin::Bin}
 
 #----------------------------------------
 # Distribution-specific @INC setting.
+use File::Basename;
 my ($dist_root);
 BEGIN {
-  $dist_root = dirname(dirname(dirname($app_root)));
+  $dist_root = dirname(dirname(dirname($FindBin::Bin)));
 
   require lib; lib->import(do {
-    if (-d ((my $dn = "$app_root/lib") . "/YATT")) {
+    if (-d ((my $dn = "$FindBin::Bin/lib") . "/YATT")) {
       # Prefer YATT submodule
       $dn;
     } elsif (basename($dist_root) eq "YATT") {
@@ -30,11 +29,16 @@ BEGIN {
 #----------------------------------------
 
 use YATT::Lite::WebMVC0::SiteApp -as_base;
+# use ViewFunctions -as_base, -entns;
+# use YATT::Lite::WebMVC0::Partial::Session2 -as_base;
+
 use YATT::Lite qw/Entity *CON/; # For Entity and $CON.
 
 use Plack::Builder;
 
 {
+  my $app_root = $FindBin::Bin;
+
   # To add other option to $SITE, use MFields like this:
   # use YATT::Lite::MFields qw/dbi_dsn auto_deploy /;
   #
