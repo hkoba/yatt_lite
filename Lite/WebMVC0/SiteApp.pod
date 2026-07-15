@@ -155,3 +155,143 @@ If specified, C<< $con->flush >> will flush buffered contents to $parent_fh.
 
 =head2 before_dirhandler($dirapp, $connection, $filename)
 
+=head1 ENTITY FUNCTIONS
+
+SiteApp registers following entity functions (usable in every
+template as C<&yatt:NAME(ARGS);>). This section covers URL-related
+ones. Most of them delegate to the same-named method of
+L<$CON|YATT::Lite::WebMVC0::Connection>.
+
+=head2 URL builders
+
+X<GH-251> Recommended way to build app-internal links.
+C<*_path> returns a path, C<*_url> returns an absolute url,
+and both respect the mount point of the site. See
+L<YATT::Lite::WebMVC0::Connection/URL BUILDING METHODS> for details.
+
+  <a href="&yatt:site_path(/admin/);">admin</a>
+  <a href="&yatt:site_path(/list,[page,2]);">page 2</a>
+
+  <a href="&yatt:current_path([page,2]);">page 2 of this page</a>
+
+  &yatt:site_url(/confirm);   (absolute; for emails etc.)
+  &yatt:current_url();
+
+=over 4
+
+=item &yatt:site_path(PATH,QUERY);
+
+=item &yatt:site_url(PATH,QUERY);
+
+=item &yatt:current_path(QUERY);
+
+=item &yatt:current_url(QUERY);
+
+QUERY is optional and must be C<[key,value,...]> array form.
+
+=back
+
+=head2 Redirect
+
+=over 4
+
+=item &yatt:raise_redirect(URL);
+
+=item &yatt:redirect(URL);
+
+Same as C<< $CON->raise_redirect >>. Html made so far is discarded
+and the rendering stops there.
+See L<YATT::Lite::WebMVC0::Connection/REDIRECT>.
+
+=back
+
+=head2 Location inspection
+
+These entities answer I<where this page is served>.
+As a general rule, B<lowercase entities return yatt-normalized
+values and are recommended>; UPPERCASE ones return raw PSGI env
+values as-is (mainly for debugging).
+
+Suppose the app is deployed at C</myapp> via Apache
+C<Action> + C<AddHandler> (so raw C<SCRIPT_NAME> contains the
+handler script path) behind a reverse proxy which sets
+C<X-Forwarded-Proto: https>, and
+C<https://example.com/myapp/auth/test?q=1> is served by
+F<auth/test.yatt>:
+
+  &yatt:script_name();    /myapp
+  &yatt:SCRIPT_NAME();    /myapp/cgi-bin/runplack.cgi
+
+  &yatt:script_dir();     /myapp/
+
+  &yatt:script_uri();     https://example.com/myapp/auth/test
+  &yatt:SCRIPT_URI();     http://example.com/myapp/auth/test
+
+  &yatt:script_url();     /myapp/auth/test
+  &yatt:SCRIPT_URL();     /myapp/auth/test
+
+  &yatt:dir_location();   /myapp/auth/
+  &yatt:file_location();  /myapp/auth/test
+
+  &yatt:absrequest();     /auth/test
+  &yatt:abspath();        /auth/test.yatt
+
+  &yatt:request_uri();    /myapp/auth/test?q=1
+  &yatt:path_info();      /auth/test
+
+=over 4
+
+=item &yatt:script_name();
+
+The mount point of the site, without trailing C</>
+(C<< $env->{'yatt.script_name'} >> - normalized C<SCRIPT_NAME>;
+handler artifacts of Apache Action mapping are trimmed).
+The most basic building block for path abstraction.
+Note: this usually equals to C<< &yatt:site_prefix(); >>
+(explicit L</site_prefix> config wins if given).
+
+=item &yatt:script_dir();
+
+C<script_name> + C</>.
+
+=item &yatt:script_uri();
+
+Absolute url of the current page. Unlike raw C<SCRIPT_URI>,
+this respects C<X-Forwarded-Proto> (GH-205).
+
+=item &yatt:script_url();
+
+Path-only version of C<script_uri>.
+
+=item &yatt:dir_location(); &yatt:file_location();
+
+Mount-prefix aware location of the current directory / page
+(file name is extension-less; omitted for F<index.yatt>).
+See L<YATT::Lite::WebMVC0::Connection/LOCATION INSPECTION METHODS>.
+
+=item &yatt:abspath();
+
+C<location> + C<file> (physical file name), without mount prefix.
+
+=item &yatt:absrequest();
+
+C<REQUEST_URI> minus C<script_name>, query string stripped.
+Since C<REQUEST_URI> typically does not contain F<index.yatt>,
+this is not suitable to get the physical file name.
+
+=item &yatt:is_current_file(PATH); &yatt:is_current_page(PAGE);
+
+Current page predicates, useful for navigation highlighting.
+
+=item &yatt:path_info(); &yatt:request_uri(); &yatt:script_filename();
+
+Raw C<PATH_INFO> / C<REQUEST_URI> / C<SCRIPT_FILENAME>.
+
+=back
+
+=head1 SEE ALSO
+
+L<YATT::Lite::WebMVC0::Connection>,
+L<YATT::Lite::WebMVC0::DirApp>,
+L<YATT::Lite>
+
