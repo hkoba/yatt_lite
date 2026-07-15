@@ -357,6 +357,82 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 	 , "/bar");
 
   }
+
+  # GH-251: site_path/site_url/current_path/current_url
+  {
+    $THEME = 'GH-251';
+    my %env = (%base_env
+	       , qw{HTTP_HOST       0.0.0.0:5000
+		    PATH_INFO       /foo
+		    REQUEST_URI     /myblog/foo?q=1});
+    my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
+
+    is $con->site_path, '/myblog/', "[$THEME] site_path()";
+    is $con->site_path("/admin/"), '/myblog/admin/'
+      , "[$THEME] site_path(/admin/)";
+    is $con->site_path("/admin/", {q => 'x y'}), '/myblog/admin/?q=x+y'
+      , "[$THEME] site_path(/admin/, {query})";
+    is $con->site_path("/admin/", [q => 'x', page => 2])
+      , '/myblog/admin/?q=x&page=2'
+      , "[$THEME] site_path(/admin/, [query])";
+
+    is $con->site_url("/admin/"), 'http://0.0.0.0:5000/myblog/admin/'
+      , "[$THEME] site_url(/admin/)";
+
+    is $con->current_path, '/myblog/foo', "[$THEME] current_path()";
+    is $con->current_path([page => 2]), '/myblog/foo?page=2'
+      , "[$THEME] current_path([query])";
+    is $con->current_url([page => 2])
+      , 'http://0.0.0.0:5000/myblog/foo?page=2'
+      , "[$THEME] current_url([query])";
+
+    like do {local $@; eval {$con->site_path("admin/")}; $@}
+      , qr{site_path requires a '/'-leading path}
+      , "[$THEME] site_path(relative) should croak";
+
+    like do {local $@; eval {$con->site_path("/admin/", "q")}; $@}
+      , qr{query for site_path must be a HASH/ARRAY ref}
+      , "[$THEME] site_path with non-ref query should croak";
+
+    like do {local $@; eval {$con->site_path("/admin/", q => 1)}; $@}
+      , qr{Too many arguments for site_path}
+      , "[$THEME] site_path with flat key=>value pairs should croak";
+
+    like do {local $@; eval {$con->current_path(page => 2)}; $@}
+      , qr{Too many arguments for current_path}
+      , "[$THEME] current_path with flat key=>value pairs should croak";
+  }
+
+  {
+    $THEME = 'GH-251 current_path(CON)';
+    require Hash::MultiValue;
+    my $con = $mux->make_connection
+      (undef, noheader => 1
+       , hmv => Hash::MultiValue->new(foo => 'a', foo => 'b', bar => 'baz')
+       , env => +{%base_env
+		  , qw{PATH_INFO   /foo
+		       REQUEST_URI /myblog/foo}});
+    is $con->current_path($con), "/myblog/foo?foo=a&foo=b&bar=baz"
+      , "[$THEME] current_path(CON) inherits current query params";
+  }
+
+  {
+    $THEME = 'GH-251 raise_redirect';
+    my %env = (%base_env
+	       , qw{HTTP_HOST   0.0.0.0:5000
+		    PATH_INFO   /foo
+		    REQUEST_URI /myblog/foo});
+    my $con = $mux->make_connection(undef, env => \%env, noheader => 1);
+    my $err = do {
+      local $@;
+      eval { $con->raise_redirect($con->site_path("/auth/")) };
+      $@;
+    };
+    is ref $err, 'ARRAY', "[$THEME] raise_redirect dies with PSGI tuple";
+    is $err->[0], 302, "[$THEME] status 302";
+    is +{@{$err->[1]}}->{Location}, '/myblog/auth/'
+      , "[$THEME] Location header";
+  }
 }
 
 done_testing();

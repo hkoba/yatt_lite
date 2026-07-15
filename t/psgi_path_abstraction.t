@@ -154,6 +154,43 @@ foreach my $test (
         }
       }
     }
+
+    # GH-251: site_path/current_path entities.
+    {
+      my ($real_dir, $site, $mkpsgi) = $make_test_env->();
+
+      my $item = 0;
+      $item++;
+      foreach my $req (
+        ['/' => 'index'],
+        ["/test$item", "test$item"],
+        ['/zzz/?test=foo' => 'zzz/index'],
+      ) {
+        my ($url, $wname) = @$req;
+        my $path = URI->new($url)->path;
+
+        {
+          MY->mkfile("$real_dir/$wname.yatt"
+                     , qq{<!yatt:args test>\n}
+                     . qq{(&yatt:site_path();)}
+                     . qq{(&yatt:site_path(/admin/,[page,2]);)}
+                     . qq{(&yatt:current_path();)});
+
+          my Env $psgi = $mkpsgi->($url);
+
+          describe "&yatt:site_path(); family for (SCRIPT_NAME=$psgi->{SCRIPT_NAME}) in (url=$url file=$script_name/$wname.yatt)", sub {
+
+            it "should return prefix-aware paths", sub {
+
+              expect($site->call($psgi))->to_be
+                ([200, $CT, ["($expected_script_name/)"
+                             . "($expected_script_name/admin/?page=2)"
+                             . "($path)"]]);
+            };
+          };
+        }
+      }
+    }
   };
 }
 
