@@ -46,6 +46,7 @@ use YATT::Lite::Test::XHFTest2;
 use base qw(YATT::Lite::Test::XHFTest2);
 use YATT::Lite::MFields;
 use YATT::t::t_preload; # To make Devel::Cover happy.
+use CGI::Session; do {CGI::Session->new}; # To avoid module load error during rendering.
 
 my MY $tests = MY->load_tests([dir => "$FindBin::Bin/../html"]
 			      , @ARGV ? @ARGV : $FindBin::Bin);
