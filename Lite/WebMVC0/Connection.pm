@@ -452,7 +452,17 @@ sub mkpath {
 
   my $req = do {
     if ($used_mapped_path) {
-      $glob->mapped_path;
+      # GH-251: file_location + subpath, not mapped_path itself.
+      # Unlike mapped_path, this base contains yatt.script_name and
+      # uses url-form (extension-less, index-omitted) file name,
+      # so it stays consistent with the request_path based one.
+      my $base = $glob->file_location;
+      if (defined (my $sp = $prop->{subpath})) {
+        $base =~ s,/+\z,,;
+        $sp =~ s!^/*!/!;
+        $base .= $sp;
+      }
+      $base;
     } else {
       $glob->request_path;
     }
