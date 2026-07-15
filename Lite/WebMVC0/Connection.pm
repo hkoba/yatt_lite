@@ -435,31 +435,7 @@ sub mkurl {
   my PROP $prop = (my $glob = shift)->prop;
   my ($file, $param, %opts) = @_;
 
-  my $req = do {
-    if ($opts{mapped_path}) {
-      $glob->mapped_path;
-    } else {
-      $glob->request_path;
-    }
-  };
-
-  my $path = do {
-    if (defined $file and $file =~ m!^/!) {
-      $glob->site_prefix.$file;
-    } else {
-      my ($orig, $dir) = ('');
-      if (($dir = $req) =~ s{([^/]+)$}{}) {
-	$orig = $1;
-      }
-      if (not defined $file or $file eq '') {
-	$dir . $orig;
-      } elsif ($file eq '.') {
-	$dir
-      } else {
-	$dir . $file;
-      }
-    }
-  };
+  my $path = $glob->mkpath($file, $opts{mapped_path});
 
   # XXX: /../ truncation
   # XXX: If sep is '&', scalar ref quoting is required.
@@ -468,6 +444,35 @@ sub mkurl {
   $url .= $glob->mkprefix unless $opts{local};
   $url .= $path . $glob->mkquery($param, $opts{separator});
   $url;
+}
+
+sub mkpath {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($file, $used_mapped_path) = @_;
+
+  my $req = do {
+    if ($used_mapped_path) {
+      $glob->mapped_path;
+    } else {
+      $glob->request_path;
+    }
+  };
+
+  if (defined $file and $file =~ m!^/!) {
+    $glob->site_prefix.$file;
+  } else {
+    my ($orig, $dir) = ('');
+    if (($dir = $req) =~ s{([^/]+)$ }{}x) {
+      $orig = $1;
+    }
+    if (not defined $file or $file eq '') {
+      $dir . $orig;
+    } elsif ($file eq '.') {
+      $dir
+    } else {
+      $dir . $file;
+    }
+  }
 }
 
 sub mkprefix {
