@@ -433,6 +433,41 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     is +{@{$err->[1]}}->{Location}, '/myblog/auth/'
       , "[$THEME] Location header";
   }
+
+  # GH-251: mkurl(,,mapped_path=>1) should keep mount prefix
+  # and use url-form (extension-less) file name.
+  {
+    $THEME = 'GH-251 mkpath mapped_path';
+    my %env = (%base_env
+	       , 'yatt.script_name' => '/myblog'
+	       , qw{HTTP_HOST   0.0.0.0:5000
+		    PATH_INFO   /item/detail/3
+		    REQUEST_URI /myblog/item/detail/3});
+    my $con = $mux->make_connection
+      (undef, env => \%env, noheader => 1
+       , location => "/", file => "item.yatt", subpath => "/detail/3");
+
+    is $con->mkurl(undef, undef, mapped_path => 1, local => 1)
+      , '/myblog/item/detail/3'
+      , "[$THEME] mapped_path base keeps mount prefix + url-form file name";
+
+    is scalar($con->mapped_path), '/item.yatt/detail/3'
+      , "[$THEME] mapped_path method itself is unchanged";
+
+    my %env2 = (%base_env
+		, 'yatt.script_name' => '/myblog'
+		, qw{HTTP_HOST   0.0.0.0:5000
+		     PATH_INFO   /zzz/detail/4
+		     REQUEST_URI /myblog/zzz/detail/4});
+    my $con2 = $mux->make_connection
+      (undef, env => \%env2, noheader => 1
+       , location => "/zzz/", file => "index.yatt", subpath => "/detail/4"
+       , is_index => 1);
+
+    is $con2->mkurl(undef, undef, mapped_path => 1, local => 1)
+      , '/myblog/zzz/detail/4'
+      , "[$THEME] is_index case should not produce double slash";
+  }
 }
 
 done_testing();

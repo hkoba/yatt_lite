@@ -242,6 +242,52 @@ foreach my $test (
 
 }
 
+{
+  # GH-251: mkurl(,,mapped_path,1,local,1) should keep mount prefix.
+  my $theme = 'gh251_mapped_path';
+  my $app_root = "$tempdir/t" . ++$testno . $theme;
+  my $real_dir = "$app_root/html";
+  make_path($real_dir);
+
+  my $site = YATT::Lite::WebMVC0::SiteApp
+    ->new(app_ns => "Test$testno"
+          , app_root => $app_root
+          , doc_root => $real_dir);
+
+  MY->mkfile("$real_dir/item.yatt"
+             , qq{<!yatt:args>\ntop\n}
+             . qq{<!yatt:page detail="/detail/:id">\n}
+             . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)});
+
+  MY->mkfile("$real_dir/zzz/index.yatt"
+             , qq{<!yatt:args>\ntop\n}
+             . qq{<!yatt:page detail="/detail/:id">\n}
+             . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)});
+
+  describe "mkurl(undef, undef, mapped_path => 1, local => 1)", sub {
+
+    foreach my $mount ([root_mount => ''], [subpath_mount => '/myapp']) {
+      my ($label, $script_name) = @$mount;
+
+      foreach my $case (
+        ['/item/detail/3'],
+        ['/zzz/detail/4'],
+      ) {
+        my ($path) = @$case;
+
+        it "should return ($script_name$path) for ($label url=$path)", sub {
+          my Env $psgi = (GET "http://example.com$path")->to_psgi;
+          $psgi->{SCRIPT_NAME} = $script_name;
+          $psgi->{PATH_INFO}   = $path;
+          $psgi->{REQUEST_URI} = "$script_name$path";
+
+          expect($site->call($psgi))->to_be([200, $CT, ["($script_name$path)"]]);
+        };
+      }
+    }
+  };
+}
+
 chdir($cwd);
 
 done_testing();
