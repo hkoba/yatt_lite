@@ -1,4 +1,5 @@
 .gitattributes
+.github/workflows/coverage.yml
 .github/workflows/perl_linux.yml
 .htaccess
 .shipit
@@ -50,7 +51,9 @@ Lite/LanguageServer.pod
 Lite/LanguageServer/Generic.pm
 Lite/LanguageServer/Protocol.pm
 Lite/LanguageServer/Spec2Types.pm
+Lite/LanguageServer/specification.md
 Lite/LanguageServer/SpecParser.pm
+Lite/LanguageServer/subst_protocol.tcl
 Lite/LanguageServer/subst_protocol.zsh
 Lite/LRXML.pm
 Lite/LRXML/AltTree.pm
@@ -344,6 +347,9 @@ samples/db_backed/2/ytmpl/std.ytmpl/envelope.ytmpl
 samples/db_backed/2/ytmpl/warn.ytmpl
 samples/find_yatt_lib.pl
 samples/minimum.psgi
+samples/more/1/app.psgi
+samples/more/1/public/.htyattrc.pl
+samples/more/1/public/index.yatt
 samples/mysql-use-htdbpass.zsh
 samples/oldsessioncompat.psgi
 samples/README
@@ -661,6 +667,10 @@ t/error.t
 t/factory.t
 t/factory_crossbase.t
 t/factory_invoke_sub.t
+t/gh241_mkhidden_nested_query/app/app.psgi
+t/gh241_mkhidden_nested_query/app/public/mkhidden_test.yatt
+t/gh241_mkhidden_nested_query/app/public/param_test.yatt
+t/gh241_mkhidden_nested_query/psgi.t
 t/inspector.t
 t/instpkg.t
 t/lib/.symlinks
@@ -709,6 +719,11 @@ t/psgi_ydo_error.t
 t/reload.t
 t/runtests.zsh
 t/scripts/app.psgi
+t/scripts/genperl.t
+t/scripts/genperl.ytmpl/1/app.psgi
+t/scripts/genperl.ytmpl/1/public/index.yatt
+t/scripts/genperl.ytmpl/1/ytmpl/base_test.ytmpl
+t/scripts/genperl.ytmpl/1/ytmpl/layout.ytmpl
 t/scripts/lint.t
 t/scripts/lint.ytmpl/1/index.err
 t/scripts/lint.ytmpl/1/index.yatt

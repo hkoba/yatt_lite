@@ -28,7 +28,6 @@
             "Coro::AIO" : "0",
             "Devel::StackTrace::WithLexicals" : "0.08",
             "IO::AIO" : "0",
-            "Sub::Identify" : "0",
             "Sub::Inspector" : "0",
             "Test::Requires" : "0",
             "Time::Piece" : "0"
@@ -47,6 +46,7 @@
             "Locale::PO" : "0",
             "MOP4Import::Declare" : "0.052",
             "Plack" : "0",
+            "Sub::Identify" : "0",
             "Text::Glob" : "0",
             "Tie::IxHash" : "0",
             "URI::Escape" : "0",
@@ -75,17 +75,19 @@
             "Plack::Middleware::Session" : "0",
             "Plack::Test" : "0",
             "Pod::Simple::SimpleTree" : "0",
+            "Test::Command" : "0",
             "Test::Differences" : "0.67",
             "Test::Kantan" : "0",
             "Test::More" : "0",
             "Test::Refcount" : "0",
+            "Test::Spec" : "0",
             "Test::WWW::Mechanize::PSGI" : "0",
             "Time::HiRes" : "0",
             "YAML::Tiny" : "0"
          }
       }
    },
-   "release_status" : "stable",
+   "release_status" : "testing",
    "resources" : {
       "license" : [
          "http://dev.perl.org/licenses/"
@@ -94,6 +96,6 @@
          "url" : "https://github.com/hkoba/yatt_lite"
       }
    },
-   "version" : "0.131",
+   "version" : "0.199_001",
    "x_serialization_backend" : "JSON::PP version 4.16"
 }

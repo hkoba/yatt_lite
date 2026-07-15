@@ -1,5 +1,19 @@
 Revision history for YATT::Lite
 
+0.199_001 2026-07-15
+    * GH-251 - better URL generation methods/entities, add raise_redirect alias.
+    * GH-250 - trim trailing `/` of `&yatt:script_name;`
+    * GH-249 - Add `yatt:foreach` alternate syntax `var=value`
+    * GH-248 - Fix inspector to correctly locate inline entity
+    * GH-247 - `<!yatt:base>` is now always checked during refresh
+    * GH-246 - extend `&yatt:value_checked();` `&yatt:value_selected();`
+    * GH-244 - Fix line number glitch for suppressed default widget
+    * GH-243 - genperl now works with `<!yatt:base>`
+    * GH-242 - Restrict `<!yatt:...` linestart only
+    * GH-241 - `:mkhidden(name[])`, `:param(name[])` works as expected (for nested_query)
+    * GH-239 - LSP: textDocument/completion (partial support)
+    * GH-233 - Drop `cf_` prefix
+
 0.131 2025-05-18
     * GH-237 - Fix module deps
 

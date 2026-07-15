@@ -11,9 +11,13 @@ BEGIN { do "$FindBin::Bin/t_lib.pl" }
 use Test::More;
 use Test::Command;
 
-require_ok('YATT::Lite::Inspector');
-
 my $distDir = dirname($FindBin::Bin);
+
+unless ([File::Spec->splitdir($distDir)]->[-1] eq "YATT") {
+  plan skip_all => "This test only works when \$distDir ends with 'YATT'";
+}
+
+require_ok('YATT::Lite::Inspector');
 
 {
   my $test = sub {
