@@ -133,6 +133,22 @@ require File::Spec;
   # $fn:r
   sub rootname { my $fn = shift; $fn =~ s/\.\w+$//; join "", $fn, @_ }
   # $fn:r:t
+
+  # GH-251: trim_ext($fn, $ext_or_list)
+  # Trims one trailing ".$ext" only when $ext is a KNOWN extension.
+  # (cf. cut_ext, which extracts ANY last extension)
+  # This follows Apache mod_mime/mod_negotiation model: "foo.tar.yatt"
+  # minus known ext "yatt" is "foo.tar", and "foo.bar" with unknown
+  # ext is left as-is.
+  sub trim_ext {
+    my ($fn, $ext_or_list) = @_;
+    return undef unless defined $fn;
+    foreach my $ext (lexpand($ext_or_list // 'yatt')) {
+      (my $e = $ext) =~ s/^\.//;
+      return $fn if $fn =~ s/\.\Q$e\E\z//;
+    }
+    $fn;
+  }
   sub appname {
     my $fn = shift;
     $fn =~ s/\.\w+$//;
@@ -235,17 +251,23 @@ require File::Spec;
 
     $dir .= "/" if $dir !~ m{/$};
     my $subpath = substr($path, $pos);
+    # GH-251: $request_file keeps the file name part as it appeared
+    # in $path (empty when the name is totally omitted).
+    my $request_file;
     if (not defined $file) {
       if ($subpath =~ m{^/(\w+)(?:/|$)} and -e "$dir/$1.$default_ext") {
 	$subpath = substr($subpath, 1+length $1);
+	$request_file = $1;
 	$file = "$1.$default_ext";
       } elsif (-e "$dir/index.$default_ext") {
 	# index.yatt should subsume all subpath.
       } elsif ($subpath =~ s{^/([^/]+)$}{}) {
 	# Note: Actually, $file is not accesible in this case.
 	# This is just for better error diag.
-	$file = $1;
+	$file = $request_file = $1;
       }
+    } else {
+      $request_file = $file;
     }
 
     my $loc = substr($dir, length($startDir));
@@ -260,6 +282,7 @@ require File::Spec;
      , $file // ''
      , $subpath
      , (not defined $file)
+     , $request_file // ''
     );
   }
 
@@ -292,20 +315,23 @@ require File::Spec;
 	my $base = "$dir$loc/$cur";
 	if (defined $ext and -r "$base$ext") {
 	  # If extension is specified and it is readable, use it.
-	  return ($dir, "$loc/", "$cur$ext", $pi);
+	  return ($dir, "$loc/", "$cur$ext", $pi, 0, "$cur$ext");
 	} elsif ($pi =~ m{^/} and -d $base) {
 	  # path_info has '/' and directory exists.
 	  next; # candidate
 	} else {
           foreach my $want_ext ($ext1, @ext) {
             if (-r (my $fn = "$base.$want_ext")) {
-              return ($dir, "$loc/", "$cur.$want_ext", $pi);
+              # GH-251: request_file (the 6th) reproduces the request
+              # even when requested ext differs from $want_ext.
+              return ($dir, "$loc/", "$cur.$want_ext", $pi
+                      , 0, "$cur".($ext // ''));
             }
           }
           if ($use_subpath
               and -r (my $alt = "$dir$loc/$ixfn")) {
             $ext //= "";
-            return ($dir, "$loc/", $ixfn, "/$cur$ext$pi", 1);
+            return ($dir, "$loc/", $ixfn, "/$cur$ext$pi", 1, '');
           } else {
             # Neither dir nor $cur$want_ext exists, it should be ignored.
             undef $dir;
@@ -323,7 +349,7 @@ require File::Spec;
 
     foreach my $dir (@dirlist) {
       next unless -r "$dir$loc/$ixfn";
-      return ($dir, "$loc/", "$ixfn", "", 1);
+      return ($dir, "$loc/", "$ixfn", "", 1, '');
     }
 
       print STDERR terse_dump('at_last'), "\n" if DEBUG_LOOKUP_PATH;

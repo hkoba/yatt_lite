@@ -16,6 +16,7 @@ use YATT::Lite::Util::File qw(mkfile);
 BEGIN {
   use_ok('YATT::Lite::Util', qw(split_path lookup_path
                                 trim_common_suffix_from
+                                trim_ext
                              ));
 }
 
@@ -47,45 +48,52 @@ my $i = 1;
       , "split_path: $loc";
   };
 
-  my $res;
+  # GH-251: 6th element is $request_file (file name part as it
+  # appeared in the request; ext-less when request omitted the ext).
   $test->(html => "/index.yatt"
-	  , $res = [$docroot, "/", "index.yatt", "", '']);
+	  , [$docroot, "/", "index.yatt", "", '', 'index.yatt']);
 
   $test->(html => "/unknown.png"
-	  , $res = [$docroot, "/", "", "/unknown.png", 1]);
+	  , [$docroot, "/", "", "/unknown.png", 1, '']);
 
   $test->(html => "/auth.yatt"
-	  , $res = [$docroot, "/", "auth.yatt", "", '']);
-  $test->(html => "/auth", $res);
+	  , [$docroot, "/", "auth.yatt", "", '', 'auth.yatt']);
+  $test->(html => "/auth"
+	  , [$docroot, "/", "auth.yatt", "", '', 'auth']);
 
   $test->(html => "/auth.yatt/foo"
-	  , $res = [$docroot, "/", "auth.yatt", "/foo", '']);
-  $test->(html => "/auth/foo", $res);
+	  , [$docroot, "/", "auth.yatt", "/foo", '', 'auth.yatt']);
+  $test->(html => "/auth/foo"
+	  , [$docroot, "/", "auth.yatt", "/foo", '', 'auth']);
 
   $test->(html => "/auth.yatt/foo/bar"
-	  , $res = [$docroot, "/", "auth.yatt", "/foo/bar", '']);
-  $test->(html => "/auth/foo/bar", $res);
+	  , [$docroot, "/", "auth.yatt", "/foo/bar", '', 'auth.yatt']);
+  $test->(html => "/auth/foo/bar"
+	  , [$docroot, "/", "auth.yatt", "/foo/bar", '', 'auth']);
 
   $test->(ytmpl => "/foo.yatt"
-	  , $res = [$ytmpl, "/", "foo.yatt", "", '']);
-  $test->(ytmpl => "/foo", $res);
+	  , [$ytmpl, "/", "foo.yatt", "", '', 'foo.yatt']);
+  $test->(ytmpl => "/foo"
+	  , [$ytmpl, "/", "foo.yatt", "", '', 'foo']);
 
   $test->(html => "/d1/f1.yatt"
-	  , $res = [$docroot, "/d1/", "f1.yatt", "", '']);
-  $test->(html => "/d1/f1", $res);
+	  , [$docroot, "/d1/", "f1.yatt", "", '', 'f1.yatt']);
+  $test->(html => "/d1/f1"
+	  , [$docroot, "/d1/", "f1.yatt", "", '', 'f1']);
 
   $test->(ytmpl => "/d1/f2.yatt"
-	  , $res = [$ytmpl, "/d1/", "f2.yatt", "", '']);
-  $test->(ytmpl => "/d1/f2", $res);
+	  , [$ytmpl, "/d1/", "f2.yatt", "", '', 'f2.yatt']);
+  $test->(ytmpl => "/d1/f2"
+	  , [$ytmpl, "/d1/", "f2.yatt", "", '', 'f2']);
 
   $test->(html => "/code.ydo"
-	  , $res = [$docroot, '/', 'code.ydo', '', '']);
+	  , [$docroot, '/', 'code.ydo', '', '', 'code.ydo']);
 
   $test->(html => "/img/bg.png"
-	  , [$docroot, "/img/", "bg.png", "", '']);
+	  , [$docroot, "/img/", "bg.png", "", '', 'bg.png']);
 
   $test->(html => "/img/missing.png"
-	  , [$docroot, "/img/", "missing.png", "", '']);
+	  , [$docroot, "/img/", "missing.png", "", '', 'missing.png']);
 }
 
 $i++;
@@ -121,70 +129,83 @@ $i++;
       , $want, "lookup_path: $loc";
   };
 
-  my $res;
+  # GH-251: 5th is $is_index (now always present), 6th is $request_file.
   $test->("/index.yatt"
-	  , $res = [$tmpl, '/', 'index.yatt', '']);
-  $test->("/index", $res);
-  $test->("/", [$tmpl, '/', 'index.yatt', '', 1]);
+	  , [$tmpl, '/', 'index.yatt', '', 0, 'index.yatt']);
+  $test->("/index"
+	  , [$tmpl, '/', 'index.yatt', '', 0, 'index']);
+  $test->("/", [$tmpl, '/', 'index.yatt', '', 1, '']);
 
   $test->("/index.yatt/foo/bar"
-	  , $res = [$tmpl, '/', 'index.yatt', '/foo/bar']);
-  $test->("/index/foo/bar", $res);
+	  , [$tmpl, '/', 'index.yatt', '/foo/bar', 0, 'index.yatt']);
+  $test->("/index/foo/bar"
+	  , [$tmpl, '/', 'index.yatt', '/foo/bar', 0, 'index']);
 
   $test->("/test.yatt"
-	  , $res = [$html, '/', 'test.yatt', '']);
-  $test->("/test", $res);
+	  , [$html, '/', 'test.yatt', '', 0, 'test.yatt']);
+  $test->("/test"
+	  , [$html, '/', 'test.yatt', '', 0, 'test']);
 
   $test->("/test.yatt/foo/bar"
-	  , $res = [$html, '/', 'test.yatt', '/foo/bar']);
-  $test->("/test/foo/bar", $res);
+	  , [$html, '/', 'test.yatt', '/foo/bar', 0, 'test.yatt']);
+  $test->("/test/foo/bar"
+	  , [$html, '/', 'test.yatt', '/foo/bar', 0, 'test']);
 
   $test->("/real/index.yatt"
-	  , $res = [$html, '/real/', 'index.yatt', '']);
-  $test->("/real/index", $res);
-  $test->("/real/", [$html, '/real/', 'index.yatt', '', 1]);
+	  , [$html, '/real/', 'index.yatt', '', 0, 'index.yatt']);
+  $test->("/real/index"
+	  , [$html, '/real/', 'index.yatt', '', 0, 'index']);
+  $test->("/real/", [$html, '/real/', 'index.yatt', '', 1, '']);
 
   $test->("/real/index.yatt/foo/bar"
-	  , $res = [$html, '/real/', 'index.yatt', '/foo/bar']);
-  $test->("/real/index/foo/bar", $res);
+	  , [$html, '/real/', 'index.yatt', '/foo/bar', 0, 'index.yatt']);
+  $test->("/real/index/foo/bar"
+	  , [$html, '/real/', 'index.yatt', '/foo/bar', 0, 'index']);
 
   $test->("/real/test.yatt"
-	  , $res = [$html, '/real/', 'test.yatt', '']);
-  $test->("/real/test", $res);
+	  , [$html, '/real/', 'test.yatt', '', 0, 'test.yatt']);
+  $test->("/real/test"
+	  , [$html, '/real/', 'test.yatt', '', 0, 'test']);
 
   $test->("/real/code.ydo"
-	  , $res = [$html, '/real/', 'code.ydo', '']);
+	  , [$html, '/real/', 'code.ydo', '', 0, 'code.ydo']);
   $test->("/rootcode.ydo"
-	  , $res = [$html, '/', 'rootcode.ydo', '']);
+	  , [$html, '/', 'rootcode.ydo', '', 0, 'rootcode.ydo']);
   $test->("/virt/code.ydo"
-	  , $res = [$tmpl, '/virt/', 'code.ydo', '']);
+	  , [$tmpl, '/virt/', 'code.ydo', '', 0, 'code.ydo']);
   $test->("/virtcode.ydo"
-	  , $res = [$tmpl, '/', 'virtcode.ydo', '']);
+	  , [$tmpl, '/', 'virtcode.ydo', '', 0, 'virtcode.ydo']);
 
   $test->("/js/jquery/jquery.min.js"
-	  , $res = [$html, '/js/jquery/', 'jquery.min.js', '']);
+	  , [$html, '/js/jquery/', 'jquery.min.js', '', 0, 'jquery.min.js']);
   $test->("/js/jquery/jquery.min.js/foo/bar"
-	  , $res = [$html, '/js/jquery/', 'jquery.min.js', '/foo/bar']);
+	  , [$html, '/js/jquery/', 'jquery.min.js', '/foo/bar'
+	     , 0, 'jquery.min.js']);
 
   $test->("/virt/index.yatt"
-	  , $res = [$tmpl, '/virt/', 'index.yatt', '']);
-  $test->("/virt/index", $res);
-  $test->("/virt/", [$tmpl, '/virt/', 'index.yatt', '', 1]);
+	  , [$tmpl, '/virt/', 'index.yatt', '', 0, 'index.yatt']);
+  $test->("/virt/index"
+	  , [$tmpl, '/virt/', 'index.yatt', '', 0, 'index']);
+  $test->("/virt/", [$tmpl, '/virt/', 'index.yatt', '', 1, '']);
   $test->("/virt/index.yatt/foo/bar"
-	  , $res = [$tmpl, '/virt/', 'index.yatt', '/foo/bar']);
-  $test->("/virt/index/foo/bar", $res);
+	  , [$tmpl, '/virt/', 'index.yatt', '/foo/bar', 0, 'index.yatt']);
+  $test->("/virt/index/foo/bar"
+	  , [$tmpl, '/virt/', 'index.yatt', '/foo/bar', 0, 'index']);
 
   $test->("/virt/test.yatt"
-	  , $res = [$tmpl, '/virt/', 'test.yatt', '']);
-  $test->("/virt/test", $res);
+	  , [$tmpl, '/virt/', 'test.yatt', '', 0, 'test.yatt']);
+  $test->("/virt/test"
+	  , [$tmpl, '/virt/', 'test.yatt', '', 0, 'test']);
 
   $test->("/virt/test.yatt/foo/bar"
-	  , $res = [$tmpl, '/virt/', 'test.yatt', '/foo/bar']);
-  $test->("/virt/test/foo/bar", $res);
+	  , [$tmpl, '/virt/', 'test.yatt', '/foo/bar', 0, 'test.yatt']);
+  $test->("/virt/test/foo/bar"
+	  , [$tmpl, '/virt/', 'test.yatt', '/foo/bar', 0, 'test']);
 
-  $test->('/filevsdir',  [$tmpl, '/', 'filevsdir.yatt', '']);
-  $test->('/filevsdir/', [$tmpl, '/filevsdir/', 'index.yatt', '', 1]);
-  $test->('/filevsdir/real/foo', [$tmpl, '/filevsdir/', 'real.yatt', '/foo']);
+  $test->('/filevsdir',  [$tmpl, '/', 'filevsdir.yatt', '', 0, 'filevsdir']);
+  $test->('/filevsdir/', [$tmpl, '/filevsdir/', 'index.yatt', '', 1, '']);
+  $test->('/filevsdir/real/foo'
+	  , [$tmpl, '/filevsdir/', 'real.yatt', '/foo', 0, 'real']);
  TODO: {
     local our $TODO = "Util::lookup_path file vs dir subpath priority";
     # Which is better?
@@ -215,6 +236,32 @@ $i++;
           , '/var/www/experimental/apps/foobar/1/cgi-bin/runplack.cgi'
           => '/experimental/foobar/1/-');
 
+}
+
+{
+  # GH-251: trim_ext trims one trailing ".$ext" only for KNOWN extensions.
+  my $test = sub {
+    my ($fn, $extlist, $expect) = @_;
+    is trim_ext($fn, $extlist), $expect
+      , "trim_ext(".YATT::Lite::Util::terse_dump($fn, $extlist).") => "
+      . ($expect // 'undef');
+  };
+
+  $test->("test.yatt", undef, "test");            # default ext is 'yatt'
+  $test->("test.yatt", 'yatt', "test");
+  $test->("test.yatt", ['yatt', 'ydo'], "test");
+  $test->("code.ydo", ['yatt', 'ydo'], "code");
+
+  # Apache mod_mime style: only the known extension is trimmed.
+  $test->("foo.tar.yatt", 'yatt', "foo.tar");
+  $test->("foo.bar", 'yatt', "foo.bar");          # unknown ext, as-is
+  $test->("foo.yatt.gz", 'yatt', "foo.yatt.gz");  # not at the tail, as-is
+
+  # Leading dot in ext spec is allowed.
+  $test->("test.yatt", '.yatt', "test");
+
+  $test->("noext", 'yatt', "noext");
+  $test->(undef, 'yatt', undef);
 }
 
 {
