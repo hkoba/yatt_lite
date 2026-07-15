@@ -935,6 +935,12 @@ foreach my $name (qw/
 		      dir_location
 		      is_current_file
 		      is_current_page
+
+		      site_path
+		      site_url
+		      current_path
+		      current_url
+		      raise_redirect
 		    /
 		) {
   my $method = $name;

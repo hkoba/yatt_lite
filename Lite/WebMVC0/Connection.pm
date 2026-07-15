@@ -559,6 +559,51 @@ sub mkquery {
   }
 }
 
+# GH-251: Mount-prefix aware link builders.
+# Naming follows the widespread "*_path = path only / *_url = absolute URL"
+# convention. $query accepts only HASH/ARRAY ref or query object (like $CON).
+
+sub site_path {
+  my ($glob, $path, $query) = splice @_, 0, 3;
+  if (@_) {
+    croak "Too many arguments for site_path!"
+      . " (query parameters must be passed as one HASH/ARRAY ref)";
+  }
+  if (not defined $path or $path eq '') {
+    $path = '/';
+  } elsif ($path !~ m{^/}) {
+    croak "site_path requires a '/'-leading path: $path";
+  }
+  $glob->site_prefix . $path . $glob->_query_string_of(site_path => $query);
+}
+
+sub site_url {
+  my $glob = shift;
+  $glob->mkprefix . $glob->site_path(@_);
+}
+
+sub current_path {
+  my ($glob, $query) = splice @_, 0, 2;
+  if (@_) {
+    croak "Too many arguments for current_path!"
+      . " (query parameters must be passed as one HASH/ARRAY ref)";
+  }
+  $glob->request_path . $glob->_query_string_of(current_path => $query);
+}
+
+sub current_url {
+  my $glob = shift;
+  $glob->mkprefix . $glob->current_path(@_);
+}
+
+sub _query_string_of {
+  my ($glob, $caller, $query) = @_;
+  if (defined $query and not ref $query) {
+    croak "query for $caller must be a HASH/ARRAY ref or query object: $query";
+  }
+  scalar $glob->mkquery($query);
+}
+
 sub dir_location {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{env};
@@ -645,6 +690,9 @@ sub request_uri {
 
 #========================================
 
+# GH-251: raise_redirect is the preferred name (raise_* family tells
+# this never returns to the caller). redirect is kept for compatibility.
+*raise_redirect = *redirect; *raise_redirect = *redirect;
 sub redirect {
   my PROP $prop = (my $glob = shift)->prop;
   croak "undefined url" unless @_ and defined $_[0];
