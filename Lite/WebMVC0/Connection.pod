@@ -44,6 +44,7 @@ YATT::Lite::WebMVC0::Connection - output buffer with request properties
                dir         => "/var/www/webapps/mysite/html",
                location    => "/",
                file        => "user.yatt",
+               request_file => "user",  # file name part as requested
                subpath     => "/hkoba",
 
                # cgi => Plack::Request->new($env),
@@ -55,7 +56,8 @@ YATT::Lite::WebMVC0::Connection - output buffer with request properties
 A connection object represents one HTTP request/response cycle.
 It is a blessed GLOB which buffers output printed to it,
 and also carries request properties (PSGI env, query parameters,
-and the I<location quad>: C<dir>, C<location>, C<file>, C<subpath>).
+the I<location quad>: C<dir>, C<location>, C<file>, C<subpath>,
+and L</request_file>).
 
 Most methods below are also exposed to templates as same-named
 entity functions (e.g. C<< $CON->site_path(...) >> as
@@ -196,9 +198,15 @@ C<auth/test.yatt>. Then:
   location       /auth/
   dir_location   /myapp/auth/
   file_location  /myapp/auth/test
-  mapped_path    /auth/test.yatt
+  request_file   test
+  mapped_path    /myapp/auth/test
   request_path   /myapp/auth/test
   request_uri    /myapp/auth/test?q=1
+
+(If the request were C</myapp/auth/test.yatt?q=1> instead,
+C<request_file> would be C<test.yatt> and C<mapped_path> would be
+C</myapp/auth/test.yatt> - they reproduce how the request spelled
+the file name. Others are not affected.)
 
 =head2 site_prefix
 
@@ -225,15 +233,25 @@ Like L</location>, but B<with> the mount prefix prepended.
 =head2 file_location
 
 The canonical url path of the current page:
-L</dir_location> + file name without extension
-(file name is omitted for C<index.yatt>).
+L</dir_location> + file name without the last extension
+(C<foo.tar.yatt> gives C<foo.tar>, following Apache mod_mime model;
+file name is omitted for C<index.yatt>).
+
+=head2 request_file
+
+X<GH-251> The file name part B<as it appeared in the request>:
+extension-less when the request omitted it, extension-ful when the
+request spelled it, and empty when the file name was totally omitted
+(index requests). In other words,
+C<file - request_file = the extension supplemented by the dispatcher>.
 
 =head2 mapped_path
 
-The I<logical> path of the current request:
-C<location> + C<file> + C<subpath>. Note that this contains
-the physical file name (with extension) and B<no> mount prefix.
-In list context, returns C<($location_file, $subpath)>.
+X<GH-251> Reconstruction of the url path of the current request from
+the mapping result: C<site_prefix + location + request_file + subpath>.
+Usually this equals L</request_path>; they differ when C<REQUEST_URI>
+does not represent the logical location (e.g. url rewriting).
+In list context, returns C<($prefix_location_file, $subpath)>.
 
 =head2 request_path
 
@@ -292,9 +310,10 @@ Omit C<scheme://host> part (return path only).
 
 =item mapped_path => 1
 
-Use the logical path (L</file_location> + subpath) as the base,
-instead of C<REQUEST_URI>. Useful when C<REQUEST_URI> does not
-represent the logical location (e.g. subpath dispatch).
+Use L</mapped_path> (reconstruction of the requested url path from
+the mapping result) as the base, instead of C<REQUEST_URI>.
+Useful when C<REQUEST_URI> does not represent the logical location
+(e.g. url rewriting).
 
 =item separator => $sep
 
@@ -355,7 +374,7 @@ Also:
 
 Delegated to L<Plack::Request>. PSGI mode only.
 
-=head2 file, subpath, parameters
+=head2 file, subpath, parameters, request_file
 
 Read-only accessors of connection properties.
 
