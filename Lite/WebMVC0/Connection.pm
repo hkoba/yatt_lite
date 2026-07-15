@@ -617,21 +617,25 @@ sub dir_location {
   ($env->{'yatt.script_name'} // '').($prop->{location} // "/");
 }
 
-# script_name + path_info - subpage
-# (script_name == location of this dir (DirApp))
+# The url path of the current page: dir_location + request_file.
+# GH-251: Like mapped_path, this follows how the request spelled the
+# file name (Apache content-negotiation model: the requested name is
+# the base name; negotiation just appends extensions to it).
 #
 sub file_location {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{env};
   my $loc = $glob->dir_location;
-  if (not $prop->{is_index}
-      and my $fn = $prop->{file}) {
-    # GH-251: Trim the last extension only ("foo.tar.yatt" => "foo.tar"),
-    # following Apache mod_mime model. (Was: s/\..*//)
+  if (defined (my $rf = $prop->{request_file})) {
+    $loc . $rf;
+  } elsif (not $prop->{is_index} and my $fn = $prop->{file}) {
+    # Fallback for old-style connections without request_file:
+    # trim the last extension ("foo.tar.yatt" => "foo.tar").
     $fn =~ s/\.\w+\z//;
-    $loc .= $fn;
+    $loc . $fn;
+  } else {
+    $loc;
   }
-  $loc;
 }
 
 # XXX: not yet tested.

@@ -204,9 +204,9 @@ C<auth/test.yatt>. Then:
   request_uri    /myapp/auth/test?q=1
 
 (If the request were C</myapp/auth/test.yatt?q=1> instead,
-C<request_file> would be C<test.yatt> and C<mapped_path> would be
-C</myapp/auth/test.yatt> - they reproduce how the request spelled
-the file name. Others are not affected.)
+C<request_file> would be C<test.yatt>, and C<file_location> /
+C<mapped_path> would be C</myapp/auth/test.yatt> - they reproduce
+how the request spelled the file name. Others are not affected.)
 
 =head2 site_prefix
 
@@ -232,10 +232,12 @@ Like L</location>, but B<with> the mount prefix prepended.
 
 =head2 file_location
 
-The canonical url path of the current page:
-L</dir_location> + file name without the last extension
-(C<foo.tar.yatt> gives C<foo.tar>, following Apache mod_mime model;
-file name is omitted for C<index.yatt>).
+The url path of the current page:
+L</dir_location> + L</request_file>.
+Like L</mapped_path>, this follows how the request spelled the
+file name (Apache content-negotiation model: the requested name is
+the base name and negotiation just appends extensions to it).
+The file name part is empty for index requests.
 
 =head2 request_file
 
@@ -267,6 +269,9 @@ C<request_path> is the same with query string stripped.
 Compares given page against the current request.
 Useful for navigation highlighting.
 C<is_current_page> also matches subpage (subpath) part.
+Note: C<is_current_file> compares against L</file_location>, which
+follows the request form; for identity comparison independent of
+how the url was spelled, use C<is_current_page>.
 
 =head1 LOW LEVEL URL METHODS
 

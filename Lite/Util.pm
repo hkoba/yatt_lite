@@ -322,10 +322,13 @@ require File::Spec;
 	} else {
           foreach my $want_ext ($ext1, @ext) {
             if (-r (my $fn = "$base.$want_ext")) {
-              # GH-251: request_file (the 6th) reproduces the request
-              # even when requested ext differs from $want_ext.
-              return ($dir, "$loc/", "$cur.$want_ext", $pi
-                      , 0, "$cur".($ext // ''));
+              # GH-251: request_file must be a dot-boundary prefix of
+              # the resolved file name (Apache MultiViews model), so
+              # that only substrings of real file names can flow into
+              # url reconstruction. Thus a mismatching requested ext
+              # (e.g. request "foo.html" resolved to "foo.yatt") is
+              # NOT reproduced here; $cur is used instead.
+              return ($dir, "$loc/", "$cur.$want_ext", $pi, 0, $cur);
             }
           }
           if ($use_subpath

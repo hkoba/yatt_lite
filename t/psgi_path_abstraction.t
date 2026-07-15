@@ -257,36 +257,40 @@ foreach my $test (
   MY->mkfile("$real_dir/item.yatt"
              , qq{<!yatt:args>\ntop\n}
              . qq{<!yatt:page detail="/detail/:id">\n}
-             . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)});
+             . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)}
+             . qq{(&yatt:file_location();)});
 
   MY->mkfile("$real_dir/zzz/index.yatt"
              , qq{<!yatt:args>\ntop\n}
              . qq{<!yatt:page detail="/detail/:id">\n}
-             . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)});
+             . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)}
+             . qq{(&yatt:file_location();)});
 
   describe "mkurl(undef, undef, mapped_path => 1, local => 1)", sub {
 
     foreach my $mount ([root_mount => ''], [subpath_mount => '/myapp']) {
       my ($label, $script_name) = @$mount;
 
-      # GH-251: mapped_path reproduces the requested url path,
-      # including how the request spelled the file name
-      # (with/without ext, explicit index).
+      # GH-251: mapped_path reproduces the requested url path and
+      # file_location the page part of it, including how the request
+      # spelled the file name (with/without ext, explicit index).
       foreach my $case (
-        ['/item/detail/3'],
-        ['/item.yatt/detail/3'],
-        ['/zzz/detail/4'],
-        ['/zzz/index/detail/4'],
+        # [request path, file_location part]
+        ['/item/detail/3'      => '/item'],
+        ['/item.yatt/detail/3' => '/item.yatt'],
+        ['/zzz/detail/4'       => '/zzz/'],
+        ['/zzz/index/detail/4' => '/zzz/index'],
       ) {
-        my ($path) = @$case;
+        my ($path, $floc) = @$case;
 
-        it "should return ($script_name$path) for ($label url=$path)", sub {
+        it "should return ($script_name$path)($script_name$floc) for ($label url=$path)", sub {
           my Env $psgi = (GET "http://example.com$path")->to_psgi;
           $psgi->{SCRIPT_NAME} = $script_name;
           $psgi->{PATH_INFO}   = $path;
           $psgi->{REQUEST_URI} = "$script_name$path";
 
-          expect($site->call($psgi))->to_be([200, $CT, ["($script_name$path)"]]);
+          expect($site->call($psgi))->to_be
+            ([200, $CT, ["($script_name$path)($script_name$floc)"]]);
         };
       }
     }
@@ -298,14 +302,14 @@ foreach my $test (
     # (MultiViews) even when the request omitted the ext, so
     # request_file must be corrected using REQUEST_URI.
     foreach my $case (
-      # [request path, PATH_TRANSLATED]
-      ['/item/detail/3',      "$real_dir/item/detail/3"],
-      ['/item.yatt/detail/3', "$real_dir/item.yatt/detail/3"],
-      ['/item/detail/3',      "$real_dir/item.yatt/detail/3"],
+      # [request path, PATH_TRANSLATED, file_location part]
+      ['/item/detail/3',      "$real_dir/item/detail/3",      '/item'],
+      ['/item.yatt/detail/3', "$real_dir/item.yatt/detail/3", '/item.yatt'],
+      ['/item/detail/3',      "$real_dir/item.yatt/detail/3", '/item'],
     ) {
-      my ($path, $pt) = @$case;
+      my ($path, $pt, $floc) = @$case;
 
-      it "should return (/myapp$path) for (url=$path PT=...$pt)", sub {
+      it "should return (/myapp$path)(/myapp$floc) for (url=$path PT=...$pt)", sub {
         my Env $psgi = (GET "http://example.com$path")->to_psgi;
         $psgi->{SCRIPT_NAME}     = "/myapp/cgi-bin/dispatch.cgi";
         $psgi->{SCRIPT_FILENAME} = "$real_dir/cgi-bin/dispatch.cgi";
@@ -315,7 +319,8 @@ foreach my $test (
         $psgi->{PATH_INFO}       = $path;
         $psgi->{REQUEST_URI}     = "/myapp$path";
 
-        expect($site->call($psgi))->to_be([200, $CT, ["(/myapp$path)"]]);
+        expect($site->call($psgi))->to_be
+          ([200, $CT, ["(/myapp$path)(/myapp$floc)"]]);
       };
     }
   };

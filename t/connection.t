@@ -493,6 +493,14 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     is scalar($con_legacy->mapped_path), '/myblog/item.yatt/detail/3'
       , "[$THEME] legacy fallback uses physical file name";
 
+    # file_location also follows the request form (GH-251).
+    is $con->file_location, '/myblog/item'
+      , "[$THEME] file_location follows request form (ext-less)";
+    is $con_ext->file_location, '/myblog/item.yatt'
+      , "[$THEME] file_location follows request form (ext spelled)";
+    is $con_legacy->file_location, '/myblog/item'
+      , "[$THEME] file_location legacy fallback trims last ext";
+
     my %env2 = (%base_env
 		, 'yatt.script_name' => '/myblog'
 		, qw{HTTP_HOST   0.0.0.0:5000

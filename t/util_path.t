@@ -151,6 +151,14 @@ $i++;
   $test->("/test/foo/bar"
 	  , [$html, '/', 'test.yatt', '/foo/bar', 0, 'test']);
 
+  # GH-251: request_file must be a dot-boundary prefix of the
+  # resolved file name, so a mismatching requested ext is NOT
+  # reproduced (though the request itself is still served).
+  $test->("/test.html"
+	  , [$html, '/', 'test.yatt', '', 0, 'test']);
+  $test->("/test.html/foo/bar"
+	  , [$html, '/', 'test.yatt', '/foo/bar', 0, 'test']);
+
   $test->("/real/index.yatt"
 	  , [$html, '/real/', 'index.yatt', '', 0, 'index.yatt']);
   $test->("/real/index"
