@@ -501,6 +501,25 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     is $con_legacy->file_location, '/myblog/item'
       , "[$THEME] file_location legacy fallback trims last ext";
 
+    # page_location is canonical, independent of the request spelling.
+    is $con->page_location, '/myblog/item'
+      , "[$THEME] page_location is canonical";
+    is $con_ext->page_location, '/myblog/item'
+      , "[$THEME] page_location ignores request spelling";
+
+    # is_current_file($path): site-rooted literal, same form as
+    # site_path's argument.
+    ok $con->is_current_file("/item")
+      , "[$THEME] is_current_file(/item) (canonical form)";
+    ok $con->is_current_file("/item.yatt")
+      , "[$THEME] is_current_file(/item.yatt) (physical form)";
+    ok $con_ext->is_current_file("/item")
+      , "[$THEME] is_current_file is request-spelling independent";
+    ok !$con->is_current_file("/other")
+      , "[$THEME] is_current_file(/other) => false";
+    ok !$con->is_current_file("/myblog/item")
+      , "[$THEME] is_current_file is mount-prefix independent";
+
     my %env2 = (%base_env
 		, 'yatt.script_name' => '/myblog'
 		, qw{HTTP_HOST   0.0.0.0:5000
@@ -514,6 +533,9 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
     is $con2->mkurl(undef, undef, mapped_path => 1, local => 1)
       , '/myblog/zzz/detail/4'
       , "[$THEME] is_index case should not produce double slash";
+
+    ok $con2->is_current_file("/zzz/")
+      , "[$THEME] is_current_file(/zzz/) (directory form for index)";
   }
 }
 

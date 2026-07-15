@@ -638,11 +638,36 @@ sub file_location {
   }
 }
 
-# XXX: not yet tested.
+# page_location: canonical form of file_location, based on the
+# physical file name. Unlike file_location, this is NOT affected by
+# how the request spelled the url.
+# (page = spelling-independent identity, cf. is_current_page)
+sub page_location {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $loc = $glob->dir_location;
+  if (not $prop->{is_index} and my $fn = $prop->{file}) {
+    $fn =~ s/\.\w+\z//;
+    $loc .= $fn;
+  }
+  $loc;
+}
+
+# is_current_file($path): true when $path addresses the current page.
+# $path is a site-rooted literal (same form as site_path's argument):
+# canonical (/auth/login), physical (/auth/login.yatt), or directory
+# form for index pages (/auth/). Mount prefix and request spelling
+# do not affect the result. Subpath is ignored (cf. is_current_page).
 sub is_current_file {
   my PROP $prop = (my $glob = shift)->prop;
-  my ($fn) = @_;
-  $glob->file_location eq $fn
+  my ($path) = @_;
+  return 0 unless defined $path;
+  my $loc = $glob->location;
+  my $fn  = $prop->{file} // '';
+  (my $canon = $fn) =~ s/\.\w+\z//;
+  return 1 if $path eq $loc . $canon;
+  return 1 if $path eq $loc . $fn;
+  return 1 if $prop->{is_index} and $path eq $loc;
+  0;
 }
 
 sub is_current_page {

@@ -232,6 +232,7 @@ F<auth/test.yatt>:
 
   &yatt:dir_location();   /myapp/auth/
   &yatt:file_location();  /myapp/auth/test
+  &yatt:page_location();  /myapp/auth/test
 
   &yatt:absrequest();     /auth/test
   &yatt:abspath();        /auth/test.yatt
@@ -263,10 +264,13 @@ this respects C<X-Forwarded-Proto> (GH-205).
 
 Path-only version of C<script_uri>.
 
-=item &yatt:dir_location(); &yatt:file_location();
+=item &yatt:dir_location(); &yatt:file_location(); &yatt:page_location();
 
-Mount-prefix aware location of the current directory / page
-(file name is extension-less; omitted for F<index.yatt>).
+Mount-prefix aware location of the current directory / page.
+C<file_location> follows how the request spelled the file name
+(with/without extension), while C<page_location> is always the
+canonical (extension-less) form. Both omit the file name for
+F<index.yatt> requests.
 See L<YATT::Lite::WebMVC0::Connection/LOCATION INSPECTION METHODS>.
 
 =item &yatt:abspath();

@@ -198,6 +198,7 @@ C<auth/test.yatt>. Then:
   location       /auth/
   dir_location   /myapp/auth/
   file_location  /myapp/auth/test
+  page_location  /myapp/auth/test
   request_file   test
   mapped_path    /myapp/auth/test
   request_path   /myapp/auth/test
@@ -206,7 +207,9 @@ C<auth/test.yatt>. Then:
 (If the request were C</myapp/auth/test.yatt?q=1> instead,
 C<request_file> would be C<test.yatt>, and C<file_location> /
 C<mapped_path> would be C</myapp/auth/test.yatt> - they reproduce
-how the request spelled the file name. Others are not affected.)
+how the request spelled the file name. C<page_location> stays
+canonical (C</myapp/auth/test>) regardless. Others are not
+affected.)
 
 =head2 site_prefix
 
@@ -239,6 +242,14 @@ file name (Apache content-negotiation model: the requested name is
 the base name and negotiation just appends extensions to it).
 The file name part is empty for index requests.
 
+=head2 page_location
+
+X<GH-251> Canonical url path of the current page, based on the
+physical file name: L</dir_location> + file name without the last
+extension (file name part is omitted for index pages). Unlike
+L</file_location>, this is B<not> affected by how the request
+spelled the url. Use this for canonical links.
+
 =head2 request_file
 
 X<GH-251> The file name part B<as it appeared in the request>:
@@ -262,16 +273,28 @@ In list context, returns C<($prefix_location_file, $subpath)>.
 C<request_uri> is C<< $env->{REQUEST_URI} >> (query string included).
 C<request_path> is the same with query string stripped.
 
-=head2 is_current_file($file_location)
+=head2 is_current_file($path)
+
+X<GH-251> True when C<$path> addresses the current page.
+C<$path> is a site-rooted literal - the same form as the argument
+of L<site_path|/"site_path($path, $query)">, so a nav link and its
+current-page test can share one literal:
+
+  <yatt:if "&yatt:is_current_file(/auth/login);">
+    <b>login</b>
+  <:yatt:else/>
+    <a href="&yatt:site_path(/auth/login);">login</a>
+  </yatt:if>
+
+Accepted forms: canonical (C</auth/login>), physical
+(C</auth/login.yatt>), and directory form for index pages
+(C</auth/>). Mount prefix and how the request spelled the url do
+not affect the result. Subpath is ignored.
 
 =head2 is_current_page($file, $page)
 
-Compares given page against the current request.
-Useful for navigation highlighting.
-C<is_current_page> also matches subpage (subpath) part.
-Note: C<is_current_file> compares against L</file_location>, which
-follows the request form; for identity comparison independent of
-how the url was spelled, use C<is_current_page>.
+Compares the page B<name> (directory-independent) and subpage
+(subpath) against the current request.
 
 =head1 LOW LEVEL URL METHODS
 
