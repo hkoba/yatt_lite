@@ -43,9 +43,12 @@ use YATT::Lite::MFields
    # Raw path_info. should match with env->{PATH_INFO}
    , qw/path_info/
 
-   # Location quad and is_index flag
+   # Location quad, is_index flag and request_file (GH-251).
+   # request_file keeps the file name part as it appeared in the
+   # request. (file - request_file = extension supplemented by lookup)
    , qw/dir location file subpath
-	is_index/
+	is_index
+	request_file/
 
    # Not used..
    , qw/root/

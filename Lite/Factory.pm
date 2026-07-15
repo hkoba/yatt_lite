@@ -131,6 +131,7 @@ use YATT::Lite::Util::AsBase qw/-as_base import/;
 use YATT::Lite::Util qw/lexpand globref untaint_any ckrequire dofile_in
 			lookup_dir fields_hash
 			lookup_path
+			trim_ext
 			secure_text_plain
 			psgi_error
                         psgi_text
@@ -767,10 +768,13 @@ sub make_simple_connection {
 
 sub pi_to_connection_quad {
   (my MY $self, my ($pi)) = @_;
-  my ($tmpldir, $loc, $file, $trailer) = @$pi;
+  my ($tmpldir, $loc, $file, $trailer, $is_index, $request_file) = @$pi;
   my $virtdir = "$self->{doc_root}$loc";
   my $realdir = "$tmpldir$loc";
-  $self->connection_quad([$virtdir, $loc, $file, $trailer]);
+  # GH-251: When request_file is not given (e.g. synthetic quads),
+  # default to the canonical (extension-less) form.
+  $request_file //= $is_index ? '' : trim_ext($file, $self->{ext_public});
+  $self->connection_quad([$virtdir, $loc, $file, $trailer, $request_file]);
 }
 
 sub make_debug_params {
@@ -793,11 +797,12 @@ sub connection_param {
 }
 sub connection_quad {
   (my MY $self, my ($quad)) = @_;
-  my ($virtdir, $loc, $file, $subpath) = @$quad;
+  my ($virtdir, $loc, $file, $subpath, $request_file) = @$quad;
   (dir => $virtdir
    , location => $loc
    , file => $file
-   , subpath => $subpath);
+   , subpath => $subpath
+   , (defined $request_file ? (request_file => $request_file) : ()));
 }
 
 #========================================

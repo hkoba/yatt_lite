@@ -52,6 +52,7 @@ use YATT::Lite::MFields qw/noheader
 
 use YATT::Lite::Util qw(cached_in split_path catch
 			lookup_path nonempty try_invoke
+			trim_ext
 			mk_http_status
 			default ckrequire
 			escape
@@ -264,7 +265,7 @@ sub call {
   }
 
   # XXX: user_dir?
-  my ($tmpldir, $loc, $file, $trailer, $is_index)
+  my ($tmpldir, $loc, $file, $trailer, $is_index, $request_file)
     = my @pi = $self->split_path_info($env);
 
   if (@pi and $loc =~ m{/\.\./}) {
@@ -336,9 +337,12 @@ sub call {
   # To support $con->param and other cgi compat methods.
   my $req = Plack::Request->new($env);
 
+  $request_file //= $is_index ? '' : trim_ext($file, $self->{ext_public});
+
   my @params = (env => $env
 		, path_info => $env->{PATH_INFO}
-		, $self->connection_quad([$virtdir, $loc, $file, $trailer])
+		, $self->connection_quad([$virtdir, $loc, $file, $trailer
+					  , $request_file])
 		, $is_index ? (is_index => 1) : ()
 		, is_psgi => 1);
 
@@ -559,7 +563,7 @@ sub split_path_info {
     # XXX: Is userdir ok? like /~$USER/dir?
     # XXX: should have cut_depth option.
     #
-    my ($tmpldir, $loc, $file, $trailer, $is_index)
+    my ($tmpldir, $loc, $file, $trailer, $is_index, $request_file)
       = split_path($env->{PATH_TRANSLATED}, $self->{app_root}
                    , $self->{use_subpath}
                    , $self->{ext_public}
@@ -577,7 +581,28 @@ sub split_path_info {
       }
     };
 
-    ($tmpldir, $loc, $file, $trailer, $is_index);
+    # GH-251: Likewise, PATH_TRANSLATED alone can not tell whether the
+    # request spelled the file name with or without the extension
+    # (Apache MultiViews may have completed it). So correct
+    # $request_file by selecting the candidate which matches
+    # REQUEST_URI. Note: this only *selects* from known-safe
+    # candidates and never takes substrings of REQUEST_URI itself.
+    #
+    if ($is_index) {
+      $request_file = '';
+    } elsif (nonempty($env->{REQUEST_URI}) and nonempty($file)) {
+      my $req_path = URI->new($env->{REQUEST_URI})->path;
+      $req_path =~ s{\Q$trailer\E\z}{} if nonempty($trailer);
+      foreach my $cand ($file, trim_ext($file, $self->{ext_public})) {
+        next unless $req_path =~ m{/\Q$cand\E\z};
+        $request_file = $cand;
+        last;
+      }
+      # When no candidate matches (e.g. rewritten request),
+      # $request_file from PATH_TRANSLATED is kept as-is.
+    }
+
+    ($tmpldir, $loc, $file, $trailer, $is_index, $request_file);
 
   } elsif (nonempty($env->{PATH_INFO})) {
     #
