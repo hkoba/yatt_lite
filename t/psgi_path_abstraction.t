@@ -269,9 +269,14 @@ foreach my $test (
     foreach my $mount ([root_mount => ''], [subpath_mount => '/myapp']) {
       my ($label, $script_name) = @$mount;
 
+      # GH-251: mapped_path reproduces the requested url path,
+      # including how the request spelled the file name
+      # (with/without ext, explicit index).
       foreach my $case (
         ['/item/detail/3'],
+        ['/item.yatt/detail/3'],
         ['/zzz/detail/4'],
+        ['/zzz/index/detail/4'],
       ) {
         my ($path) = @$case;
 
@@ -284,6 +289,34 @@ foreach my $test (
           expect($site->call($psgi))->to_be([200, $CT, ["($script_name$path)"]]);
         };
       }
+    }
+  };
+
+  describe "mkurl(mapped_path) under PATH_TRANSLATED mode", sub {
+
+    # GH-251: PATH_TRANSLATED may be ext-completed by Apache
+    # (MultiViews) even when the request omitted the ext, so
+    # request_file must be corrected using REQUEST_URI.
+    foreach my $case (
+      # [request path, PATH_TRANSLATED]
+      ['/item/detail/3',      "$real_dir/item/detail/3"],
+      ['/item.yatt/detail/3', "$real_dir/item.yatt/detail/3"],
+      ['/item/detail/3',      "$real_dir/item.yatt/detail/3"],
+    ) {
+      my ($path, $pt) = @$case;
+
+      it "should return (/myapp$path) for (url=$path PT=...$pt)", sub {
+        my Env $psgi = (GET "http://example.com$path")->to_psgi;
+        $psgi->{SCRIPT_NAME}     = "/myapp/cgi-bin/dispatch.cgi";
+        $psgi->{SCRIPT_FILENAME} = "$real_dir/cgi-bin/dispatch.cgi";
+        $psgi->{REDIRECT_HANDLER} = 'x-psgi-handler';
+        $psgi->{REDIRECT_STATUS} = 200;
+        $psgi->{PATH_TRANSLATED} = $pt;
+        $psgi->{PATH_INFO}       = $path;
+        $psgi->{REQUEST_URI}     = "/myapp$path";
+
+        expect($site->call($psgi))->to_be([200, $CT, ["(/myapp$path)"]]);
+      };
     }
   };
 }

@@ -452,17 +452,9 @@ sub mkpath {
 
   my $req = do {
     if ($used_mapped_path) {
-      # GH-251: file_location + subpath, not mapped_path itself.
-      # Unlike mapped_path, this base contains yatt.script_name and
-      # uses url-form (extension-less, index-omitted) file name,
-      # so it stays consistent with the request_path based one.
-      my $base = $glob->file_location;
-      if (defined (my $sp = $prop->{subpath})) {
-        $base =~ s,/+\z,,;
-        $sp =~ s!^/*!/!;
-        $base .= $sp;
-      }
-      $base;
+      # GH-251: mapped_path reproduces the url path of the request
+      # (mount prefix included, request_file based).
+      scalar $glob->mapped_path;
     } else {
       $glob->request_path;
     }
@@ -634,7 +626,9 @@ sub file_location {
   my $loc = $glob->dir_location;
   if (not $prop->{is_index}
       and my $fn = $prop->{file}) {
-    $fn =~ s/\..*//;
+    # GH-251: Trim the last extension only ("foo.tar.yatt" => "foo.tar"),
+    # following Apache mod_mime model. (Was: s/\..*//)
+    $fn =~ s/\.\w+\z//;
     $loc .= $fn;
   }
   $loc;
@@ -665,15 +659,24 @@ sub is_current_page {
   }
 }
 
+# GH-251: mapped_path now reproduces the url path of the request:
+# site_prefix + location + request_file + subpath. Since request_file
+# keeps the file name part as it appeared in the request, extension
+# is reproduced only when the request spelled it. For connections
+# which lack request_file (old-style construction), falls back to
+# the physical file name as before.
 sub mapped_path {
   my PROP $prop = (my $glob = shift)->prop;
   my @path = do {
     my $loc = $prop->{location} // "/";
-    $loc .= $prop->{file} if defined $prop->{file}
-      and not $prop->{is_index};
-    ($loc);
+    $loc .= $prop->{request_file} // do {
+      (defined $prop->{file} and not $prop->{is_index})
+	? $prop->{file} : '';
+    };
+    ($glob->site_prefix . $loc);
   };
   if (defined (my $sp = $prop->{subpath})) {
+    $path[0] =~ s!/+\z!!;
     $sp =~ s!^/*!/!;
     push @path, $sp;
   }

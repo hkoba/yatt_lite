@@ -333,28 +333,50 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
       }
     };
 
-    $t->([], ["/"]);
-    $t->(+{}, "/");
+    # GH-251: mapped_path now reproduces the requested url path:
+    # site_prefix(/myblog) + location + request_file + subpath.
 
+    $t->([], ["/myblog/"]);
+    $t->(+{}, "/myblog/");
+
+    # With request_file, the requested form is reproduced.
+    $t->([location => "/", file => "foo.yatt", request_file => "foo"
+	 , subpath => "/bar"]
+	 , ["/myblog/foo", "/bar"]);
+    $t->({location => "/", file => "foo.yatt", request_file => "foo"
+	 , subpath => "/bar"}
+	 , "/myblog/foo/bar");
+
+    $t->({location => "/", file => "foo.yatt", request_file => "foo.yatt"
+	 , subpath => "/bar"}
+	 , "/myblog/foo.yatt/bar");
+
+    # Without request_file (old-style construction), falls back to
+    # the physical file name.
     $t->([location => "/", file => "foo.yatt", subpath => "/bar"]
-	 , ["/foo.yatt", "/bar"]);
+	 , ["/myblog/foo.yatt", "/bar"]);
     $t->({location => "/", file => "foo.yatt", subpath => "/bar"}
-	 , "/foo.yatt/bar");
+	 , "/myblog/foo.yatt/bar");
 
     # If is_index is on, file should be ignored.
     $t->([location => "/foo", file => "index.yatt", subpath => "/bar"
 	 , is_index => 1]
-	 , ["/foo", "/bar"]);
+	 , ["/myblog/foo", "/bar"]);
     $t->({location => "/foo", file => "index.yatt", subpath => "/bar"
 	 , is_index => 1}
-	 , "/foo/bar");
+	 , "/myblog/foo/bar");
 
     $t->([location => "/", file => "index.yatt", subpath => "/bar"
 	 , is_index => 1]
-	 , ["/", "/bar"]);
+	 , ["/myblog", "/bar"]);
     $t->({location => "/", file => "index.yatt", subpath => "/bar"
 	 , is_index => 1}
-	 , "/bar");
+	 , "/myblog/bar");
+
+    # Explicit "/index" request (request_file given, not is_index).
+    $t->({location => "/", file => "index.yatt", request_file => "index"
+	 , subpath => "/bar"}
+	 , "/myblog/index/bar");
 
   }
 
@@ -435,7 +457,7 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
   }
 
   # GH-251: mkurl(,,mapped_path=>1) should keep mount prefix
-  # and use url-form (extension-less) file name.
+  # and reproduce the requested file name form (request_file).
   {
     $THEME = 'GH-251 mkpath mapped_path';
     my %env = (%base_env
@@ -445,14 +467,31 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
 		    REQUEST_URI /myblog/item/detail/3});
     my $con = $mux->make_connection
       (undef, env => \%env, noheader => 1
-       , location => "/", file => "item.yatt", subpath => "/detail/3");
+       , location => "/", file => "item.yatt", request_file => "item"
+       , subpath => "/detail/3");
 
     is $con->mkurl(undef, undef, mapped_path => 1, local => 1)
       , '/myblog/item/detail/3'
-      , "[$THEME] mapped_path base keeps mount prefix + url-form file name";
+      , "[$THEME] mapped_path base keeps mount prefix + requested form";
 
-    is scalar($con->mapped_path), '/item.yatt/detail/3'
-      , "[$THEME] mapped_path method itself is unchanged";
+    is scalar($con->mapped_path), '/myblog/item/detail/3'
+      , "[$THEME] mapped_path reproduces the requested url path";
+
+    # When the request spelled the extension, it is reproduced.
+    my $con_ext = $mux->make_connection
+      (undef, env => \%env, noheader => 1
+       , location => "/", file => "item.yatt", request_file => "item.yatt"
+       , subpath => "/detail/3");
+    is scalar($con_ext->mapped_path), '/myblog/item.yatt/detail/3'
+      , "[$THEME] requested extension is reproduced";
+
+    # Old-style construction (no request_file) falls back to the
+    # physical file name.
+    my $con_legacy = $mux->make_connection
+      (undef, env => \%env, noheader => 1
+       , location => "/", file => "item.yatt", subpath => "/detail/3");
+    is scalar($con_legacy->mapped_path), '/myblog/item.yatt/detail/3'
+      , "[$THEME] legacy fallback uses physical file name";
 
     my %env2 = (%base_env
 		, 'yatt.script_name' => '/myblog'
