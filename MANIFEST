@@ -2,7 +2,6 @@
 .github/workflows/perl_linux.yml
 .htaccess
 .shipit
-.travis.yml
 Build.PL
 Changes
 cpanfile
