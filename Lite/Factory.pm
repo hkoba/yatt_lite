@@ -20,6 +20,13 @@ use File::Basename qw/dirname/;
 
 use YATT::Lite::PSGIEnv;
 
+#----------------------------------------
+
+# Subclass may override this to 0 to revert old behavior.
+sub use_sibling_config_dir { 1 }
+
+#----------------------------------------
+
 # Note: Definition of default values are not yet gathered here.
 # Some are in YATT::Lite, others are in YATT::Lite::Core, CGen.. and so on.
 
@@ -233,7 +240,7 @@ sub load_factory_for_psgi {
 
   my $env = delete $default{environment};
 
-  my (@cf) = $pack->list_config_files($app_rootname);
+  my (@cf) = $pack->list_app_config_files($app_root, File::Basename::basename($app_rootname));
 
   if (@cf and $env) {
     croak "Can't use environment and @cf at once!";
@@ -265,6 +272,24 @@ sub load_factory_for_psgi {
   }
 
   $self;
+}
+
+sub list_app_config_files {
+  my ($pack, $app_root, $app_base) = @_;
+
+  # When psgi is at $app_root/app.psgi,
+  # test $app_root.config.d/app.{xhf,yml} and return them if exists.
+  # Otherwise list $app_root/app.{xhf,yml}.
+
+  if ($pack->use_sibling_config_dir) {
+    my $sibling_config_dir = "$app_root.config.d";
+    if (-d $sibling_config_dir) {
+      my @cf = $pack->list_config_files("$sibling_config_dir/$app_base");
+      return @cf if @cf;
+    }
+  }
+
+  $pack->list_config_files("$app_root/$app_base");
 }
 
 #
