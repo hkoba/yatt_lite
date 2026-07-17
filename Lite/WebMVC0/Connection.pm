@@ -617,6 +617,13 @@ sub dir_location {
   ($env->{'yatt.script_name'} // '').($prop->{location} // "/");
 }
 
+sub file_page {
+  my PROP $prop = (my $glob = shift)->prop;
+  my $fn = $prop->{file};
+  $fn =~ s/\.\w+\z//;
+  $fn;
+}
+
 # The url path of the current page: dir_location + request_file.
 # GH-251: Like mapped_path, this follows how the request spelled the
 # file name (Apache content-negotiation model: the requested name is
