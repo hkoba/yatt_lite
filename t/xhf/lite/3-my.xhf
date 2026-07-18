@@ -88,6 +88,21 @@ OUT:
    bar
  
 
+TITLE: block var=val
+IN:
+ <yatt:block x="foo" y="bar">
+   &yatt:x;-&yatt:y;
+ </yatt:block>
+ <yatt:block x="bar" y="baz">
+   &yatt:x;-&yatt:y;
+ </yatt:block>
+OUT:
+ 
+   foo-bar
+ 
+   bar-baz
+ 
+
 TITLE: block my error
 IN:
  <yatt:block><yatt:my x="foo"/>

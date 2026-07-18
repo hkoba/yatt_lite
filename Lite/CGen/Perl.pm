@@ -967,10 +967,8 @@ sub take_spread_name {
 }
 
 {
-  sub macro_my {
+  sub make_arg_adder {
     (my MY $self, my $node) = @_;
-    my ($path, $body, $maybeWrappedAttlist, $head, $foot) = nx($node);
-    my $has_body = $body && @$body ? 1 : 0;
     my $simple_adder = sub {
       my ($default_type, $arg, $valNode, $skip) = @_;
       my ($name, $typename) = argName($arg, $skip);
@@ -1038,6 +1036,13 @@ sub take_spread_name {
         $simple_adder->(@_)
       }
     };
+  }
+
+  sub macro_my {
+    (my MY $self, my $node) = @_;
+    my ($path, $body, $maybeWrappedAttlist, $head, $foot) = nx($node);
+    my $has_body = $body && @$body ? 1 : 0;
+    my $adder = $self->make_arg_adder($node);
     my $primary = $self->node_unwrap_attlist($maybeWrappedAttlist);
     my @assign;
     foreach my $arg (@{$primary}[0 .. $#$primary-$has_body]) {
@@ -1075,8 +1080,17 @@ sub take_spread_name {
 
   sub macro_block {
     (my MY $self, my $node) = @_;
-    my ($path, $body, $primary, $head, $foot) = nx($node);
-    $self->macro_scoped_block_of_tokens(+{}, @{argValue($body)});
+    my ($path, $body, $maybeWrappedAttlist, $head, $foot) = nx($node);
+    local $self->{_scope} = $self->mkscope(+{}, $self->{_scope});
+    my $adder = $self->make_arg_adder($node);
+    my $primary = $self->node_unwrap_attlist($maybeWrappedAttlist);
+    my @assign;
+    foreach my $arg (@$primary) {
+      push @assign, $adder->(text => $arg, $arg);
+    }
+    # $self->macro_scoped_block_of_tokens(+{}, @{argValue($body)});
+    local $self->{_curtoks} = [@{argValue($body)}];
+    \ ('{'.join("; ", @assign, "").$self->as_print('}'));
   }
 
   sub macro_scoped_block_of_tokens {
