@@ -78,16 +78,6 @@ OUT:
  <h2>Hello foo world! bar</h2>
  
 
-SKIP: 1
-TITLE: Misplaced widget declaration.
-IN:
- <form>
-  <yatt:hello/>
- 
- <!yatt:widget hello>
-ERROR: Misplaced yatt:widget in: \([^\)]+\), at file \S+ line 4
-
-
 TITLE: comment in widget call
 IN:
  (<yatt:foo
