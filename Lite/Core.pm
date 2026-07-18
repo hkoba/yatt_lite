@@ -302,6 +302,7 @@ sub create_file {
 #
 # called from <!yatt:base>
 #
+my %BASE_ATTS = ('' => 1, qw(file 1 dir 1));
 sub declare_base {
   (my MY $vfs, my ParsingState $state, my Template $tmpl, my ($ns, @args)) = @_;
 
@@ -320,6 +321,11 @@ sub declare_base {
 
     $type == TYPE_ATT_TEXT
       or $vfs->synerror($state, q{Not implemented base decl type: %s}, $att);
+
+    my $key = $vfs->node_path($att);
+    unless ($BASE_ATTS{$key // ''}) {
+      $vfs->synerror($state, q{Unknown base option: %s}, $key // '')
+    }
 
     nonempty(my $fn = $vfs->node_value($att))
       or $vfs->synerror($state, q{base spec is empty!});

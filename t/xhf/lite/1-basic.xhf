@@ -701,6 +701,13 @@ OUT:
  quux
  
 
+TITLE: base option typo error
+IN:
+ <!yatt:base fille="base1.yatt">
+ERROR: Unknown base option: fille
+ 
+
+
 TITLE: [GH #167] Too many arguments error
 IN:
  <yatt:foo "xxx" 'yyy'   "zzz"/>
