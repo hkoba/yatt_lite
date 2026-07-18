@@ -132,6 +132,8 @@ use YATT::Lite::MFields
     (doc => "Type of 'body' argument. (default: code)")]
  , [prefer_call_for_entity =>
     (doc => ":name is interpreted as call if appropriate")]
+ , [no_conditional_call =>
+    (doc => "Disable conditional call (if=/unless= in widget call arguments)")]
 );
 
 use YATT::Lite::Util::AsBase qw/-as_base import/;
@@ -1161,6 +1163,7 @@ sub _cf_delegates {
      body_argument
      body_argument_type
      prefer_call_for_entity
+     no_conditional_call
   );
 }
 

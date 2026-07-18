@@ -367,6 +367,12 @@ use YATT::Lite::Constants;
 
   sub gen_call {
     (my MY $self, my ($node, @path)) = @_;
+    if (my ($kw, $condNode, $stripped) = $self->cut_conditional_arg($node)) {
+      # Generate the condition before the call, like macro_if does.
+      my $cond = join "", $self->as_list(lexpand(argValue($condNode)));
+      my $call = $self->gen_call($stripped, @path);
+      return \ sprintf(q{%s %s (%s)}, $$call, $kw, $cond);
+    }
     my $wname = join ":", @path;
     if (@path == 2 and my $var = $self->find_callable_var($path[-1])) {
       # code 引数の中の引数のデフォルト値の中に、改行が有ったら？？
@@ -391,6 +397,36 @@ use YATT::Lite::Constants;
 	      , $self->gen_putargs($widget, $node)
 	     );
   }
+  # `<yatt:foo if="COND">` (or unless=) makes the call conditional,
+  # like Perl's postfix if/unless. Note this always wins over formal args
+  # named if/unless, as in original yatt (yatt-pm).
+  sub cut_conditional_arg {
+    (my MY $self, my $node) = @_;
+    return if $self->{no_conditional_call};
+    my $attlist = $node->[NODE_ATTLIST];
+    return unless $attlist and ref $attlist eq 'ARRAY';
+    my ($kw, $condNode, @rest);
+    foreach my $arg (@$attlist) {
+      my $name = $arg->[NODE_PATH];
+      if (defined $name and not ref $name
+          and ($name eq 'if' or $name eq 'unless')) {
+        if ($condNode) {
+          die $self->generror(q{Too many conditions in one call: %s and %s}
+                              , $kw, $name);
+        }
+        defined argValue($arg)
+          or die $self->generror(q{Condition '%s' requires a value}, $name);
+        ($kw, $condNode) = ($name, $arg);
+      } else {
+        push @rest, $arg;
+      }
+    }
+    return unless $condNode;
+    my $stripped = [@$node];
+    $stripped->[NODE_ATTLIST] = \@rest;
+    ($kw, $condNode, $stripped);
+  }
+
   sub gen_putargs {
     (my MY $self, my Widget $widget, my $node, my $delegate_vars) = @_;
     my ($path, $body, $primary, $head, $foot) = nx($node);

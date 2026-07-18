@@ -51,6 +51,7 @@ use YATT::Lite::MFields qw/_YATT
               body_argument
               body_argument_type
 	      prefer_call_for_entity
+	      no_conditional_call
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -399,6 +400,7 @@ sub _cf_delegates {
      body_argument
      body_argument_type
      prefer_call_for_entity
+     no_conditional_call
     )
 }
 

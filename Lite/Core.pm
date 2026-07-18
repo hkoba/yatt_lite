@@ -20,6 +20,7 @@ use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
 
               stash_unknown_params_to
 	      prefer_call_for_entity
+	      no_conditional_call
 
 	      _n_compiles
 	    /;
@@ -596,6 +597,7 @@ sub synerror {
       (vfs => $self
        , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
                                prefer_call_for_entity
+                               no_conditional_call
                                lcmsg_sink))
        , parser => $self->get_parser
        , sink => $opts->{sink} || sub {
