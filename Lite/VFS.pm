@@ -28,6 +28,7 @@ require File::Basename;
 	 , [File => -fields => [qw(_partlist string overlay imported
                                    nlines
 				   _dependency
+				   _dependents
 				)]
 	    , -alias => 'vfs_file']
 	 , [Dir  => -fields => [qw(encoding)]
@@ -501,6 +502,17 @@ require File::Basename;
   sub YATT::Lite::VFS::File::add_dependency {
     (my File $file, my $wpath, my File $other) = @_;
     Scalar::Util::weaken($file->{_dependency}{$wpath} = $other);
+    $other->add_dependent($file) if UNIVERSAL::isa($other, File);
+  }
+  sub YATT::Lite::VFS::File::add_dependent {
+    (my File $file, my File $other) = @_;
+    Scalar::Util::weaken($file->{_dependents}{refaddr($other)} = $other);
+  }
+  sub YATT::Lite::VFS::File::list_dependents {
+    (my File $file) = @_;
+    defined (my $deps = $file->{_dependents})
+      or return;
+    grep {defined} values %$deps;
   }
   sub YATT::Lite::VFS::File::list_dependency {
     (my File $file, my $detail) = @_;
