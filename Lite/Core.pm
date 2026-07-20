@@ -507,6 +507,13 @@ sub synerror {
       }
     };
 
+    # part 探索より先にコンパイルする。継承 part の探索 (lookup_base) は
+    # @ISA に依存し、@ISA は setup_inheritance_for (コード生成時) が張るため。
+    # GH-255
+    my $pkg = $self->find_product(perl => $tmpl)
+      or ($ignore_error and return)
+	or croak "Can't compile template file: $partName";
+
     (my Part $part, my $method) = do {
       (my Part $p, my $meth);
       if (not defined $kind and not defined $pureName) {
@@ -533,10 +540,6 @@ sub synerror {
         ($p, $meth);
       };
     };
-
-    my $pkg = $self->find_product(perl => $tmpl)
-      or ($ignore_error and return)
-	or croak "Can't compile template file: $partName";
 
     my $sub = $pkg->can($method)
       or ($ignore_error and return)
@@ -690,6 +693,7 @@ sub synerror {
     (my Template $tmpl, my MY $self) = @_;
 
     my $old_product = $tmpl->{_product};
+    my $old_signature;
 
     if ($tmpl->{path}) {
       printf STDERR "template_refresh(%s)\n", $tmpl->{path} if DEBUG_REBUILD;
@@ -714,6 +718,7 @@ sub synerror {
         }
       }
       $tmpl->{mtime} = $mtime;
+      $old_signature = $tmpl->part_interface_signature;
       my $parser = $self->get_parser;
       # decl のみ parse.
       # XXX: $tmpl->{package} の指すパッケージをこの段階で map {undef $_}
@@ -738,7 +743,47 @@ sub synerror {
       $self->find_product($type => $tmpl);
     }
 
+    # part 宣言のインタフェースが変わった場合は、コンパイル済みの依存元
+    # (呼び出し側) も作り直す。gen_putargs が呼び出し側のコンパイル時に
+    # 名前付き実引数を位置引数へ変換しているため。本文だけの変更なら
+    # 静的呼び出しの CODE slot 差し替えで追随するので再生成しない。
+    # 依存元自体のソースは不変 (re-parse されない) なので、連鎖は一段で止まる。
+    # GH-255
+    if (($old_signature // '') ne $tmpl->part_interface_signature) {
+      $self->rebuild_products_of_dependents($tmpl);
+    }
+
     $tmpl;
+  }
+  sub YATT::Lite::Core::Template::part_interface_signature {
+    (my Template $tmpl) = @_;
+    join ";", map {
+      my Part $part = $_;
+      my $args = join ",", map {
+        my $var = $part->{_arg_dict} && $part->{_arg_dict}{$_};
+        $_ . "=" . (($var && eval {$var->type->[0]}) // '');
+      } map {$_ ? @$_ : ()} $part->{_arg_order};
+      join "\0", $part->{kind} // '', $part->{name} // ''
+        , ($part->public ? 1 : 0), $args;
+    } @{$tmpl->{_partlist} || []};
+  }
+  sub rebuild_products_of_dependents {
+    (my MY $self, my Template $tmpl) = @_;
+    foreach my Template $dep ($tmpl->list_dependents) {
+      my $old = $dep->{_product};
+      next unless $old and %$old;
+      printf STDERR "rebuilding products of dependent: %s\n", $dep->{path}
+        if DEBUG_REBUILD;
+      $dep->{_product} = +{};
+      foreach my $type (keys %$old) {
+        eval { $self->find_product($type => $dep) };
+        if ($@) {
+          # 失敗した product を残すと古い stash が生き続けるので消しておく
+          delete $dep->{_product}{$type};
+          die $@;
+        }
+      }
+    }
   }
   sub YATT::Lite::Core::Widget::fixup {
     (my Widget $widget, my Template $tmpl, my AbstParser $parser) = @_;
