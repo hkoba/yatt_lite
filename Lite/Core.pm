@@ -345,6 +345,13 @@ sub declare_base {
       push @$base, my $o = $vfs->find_neighbor_type(undef, $realfn);
 
       $tmpl->add_dependency($realfn, $o);
+
+      if ($o->{type} eq 'file') {
+        # base がファイルなら、この時点でコンパイルする
+        $vfs->find_product(perl => $o);
+      } else {
+        # XXX: ディレクトリの時はどうするべきか？
+      }
     }
   }
 }
