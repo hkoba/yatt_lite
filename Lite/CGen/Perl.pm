@@ -176,13 +176,10 @@ use YATT::Lite::Constants;
     my Template $tmpl = $self->{_curtmpl};
     my Part $src = $import->resolve_alias($self->{vfs});
     my Template $srcTmpl = $src->{folder};
-    my $prefix = $YATT::Lite::Core::IMPORT_METHOD_PREFIX{$import->{imported_kind}}
-      or die $self->generror(q{Unknown import kind: '%s'}
-                             , $import->{imported_kind} // '(undef)');
     ($self->sync_curline($import->{startln})
-     , sprintf(q{*%s::%s%s = *%s::%s%s; }
-               , $tmpl->{entns}, $prefix, $import->{name}
-               , $srcTmpl->{entns}, $prefix, $src->{name}));
+     , sprintf(q{*%s::%s = *%s::%s; }
+               , $tmpl->{entns}, $import->method_name
+               , $srcTmpl->{entns}, $src->method_name));
   }
 
   #========================================
@@ -798,17 +795,17 @@ use YATT::Lite::Constants;
   sub find_entity {
     (my MY $self, my ($name)) = @_;
     my Template $tmpl = $self->{_curtmpl};
-    $tmpl->{_Item}{"entity\0$name"}
-      // $tmpl->{entns}->can("entity_$name");
+    $tmpl->{_Item}{Entity->item_key_for($name)}
+      // $tmpl->{entns}->can(Entity->method_name_for($name));
   }
   sub ensure_entity_is_declared {
     (my MY $self, my ($name)) = @_;
     my Template $tmpl = $self->{_curtmpl};
-    if ($tmpl->{_Item}{"entity\0$name"}) {
+    if ($tmpl->{_Item}{Entity->item_key_for($name)}) {
       # Found embedded entity definition.
       return;
     }
-    unless ($tmpl->{entns}->can("entity_$name")) {
+    unless ($tmpl->{entns}->can(Entity->method_name_for($name))) {
       die $self->generror(q!No such entity in namespace "%s": %s!
 			  , $tmpl->{entns}, $name);
     }

@@ -777,7 +777,8 @@ sub declare_base {
 #   name := srcName | local=srcName | srcName:kind | local=srcName:kind
 #   kind := widget | page | action | entity | argmacro
 #           (無注釈はソース内で一意な場合のみ自動判定)
-our %IMPORT_KIND = map {$_ => 1} qw(widget page action entity argmacro);
+#   kind の妥当性は vfs 側の _find_kind_part__$kind の有無で判定する
+#   (find_kind_part_from dispatch。kind 追加時に LRXML の変更は不要)
 
 sub declare_import {
   (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
@@ -850,7 +851,7 @@ sub cut_import_spec {
     unless (defined $srcName and $srcName ne '') {
       die $self->synerror_at($self->{_startln}, q{Invalid import name spec});
     }
-    if (defined $kind and not $IMPORT_KIND{$kind}) {
+    if (defined $kind and not $self->{vfs}->can("_find_kind_part__$kind")) {
       die $self->synerror_at($self->{_startln}
                              , q{Unknown import kind '%s' for '%s'}
                              , $kind, $srcName);

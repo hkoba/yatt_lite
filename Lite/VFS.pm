@@ -35,9 +35,15 @@ require File::Basename;
 	    , -alias => 'vfs_dir']]]);
 
   sub YATT::Lite::VFS::Item::after_create {}
+  # item_key の符号化は class メソッド item_key_for($name) に集約する。
+  # Action/Entity などの subclass (YATT::Lite::Core) が override する。GH-256
+  sub YATT::Lite::VFS::Item::item_key_for {
+    (my $class, my $name) = @_;
+    $name;
+  }
   sub YATT::Lite::VFS::Item::item_key {
     (my Item $item) = @_;
-    $item->{name};
+    $item->item_key_for($item->{name});
   }
   # 通常の Item は自分自身を返す。<!yatt:import> の alias Part
   # (YATT::Lite::Core::Import) がこれを override する。GH-256
@@ -231,6 +237,16 @@ require File::Basename;
     my Folder $folder = $vfs->{entns2vfs_item}{$entns}
       or croak "Unknown entns $entns!";
     $vfs->find_part_from($folder, @_);
+  }
+
+  # kind 指定の part 検索 dispatcher。kind ごとの検索ロジック
+  # (item-key の符号化を含む) は _find_kind_part__$kind として
+  # subclass (YATT::Lite::Core) が定義する。GH-256
+  sub find_kind_part_from {
+    (my VFS $vfs, my ($from, $kind, $name)) = @_;
+    my $sub = $vfs->can("_find_kind_part__$kind")
+      or croak "Unknown part kind: $kind";
+    $sub->($vfs, $from, $name);
   }
 
   # To limit call of refresh atmost 1, use this.
