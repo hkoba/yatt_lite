@@ -68,7 +68,7 @@ my @command;
     $dir =~ s,/*$,/,;
     my $dirhandler = $dispatcher->get_dirhandler($dir)
       or die "Can't find dirhandler for $dir";
-    push @command, [$dirhandler, $file, $parameters];
+    push @command, [$dirhandler, File::Basename::basename($file), $parameters];
   }
 }
 
