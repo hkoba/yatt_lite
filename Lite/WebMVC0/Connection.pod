@@ -113,6 +113,13 @@ reproduces the current url with its current parameters
   $CON->current_path([page => 3]);  # => /myapp/item?page=3
   $CON->current_path($CON);         # => /myapp/item?page=2
 
+Since GH-259, when the request has a body
+(C<< $env->{CONTENT_TYPE} >> and C<< $env->{CONTENT_LENGTH} >> are set,
+typically POST), C<< $CON->current_path($CON) >> reproduces only the
+C<QUERY_STRING>-derived parameters - body parameters never leak into
+generated urls. To restore the old merged behavior, set the SiteApp
+option L<mkquery_with_body_params|YATT::Lite::WebMVC0::SiteApp/mkquery_with_body_params>.
+
 =head2 current_url($query)
 
 Absolute url version of L<current_path|/"current_path($query)">.
@@ -368,6 +375,14 @@ or a connection itself (meaning its current parameters).
 In scalar context, returns C<?key=value&...> (C<?> included)
 or an empty string. In list context, returns encoded C<key=value>
 pairs.
+
+When a connection itself is passed and the request has a body
+(C<< $env->{CONTENT_TYPE} >> and C<< $env->{CONTENT_LENGTH} >> are set,
+typically POST), only the C<QUERY_STRING>-derived parameters are used
+(GH-259) so that body parameters never leak into generated urls.
+To restore the old merged behavior, set the SiteApp option
+L<mkquery_with_body_params|YATT::Lite::WebMVC0::SiteApp/mkquery_with_body_params>,
+or pass C<< $CON->queryobj >> explicitly instead of C<$CON>.
 
 =head2 mkprefix(@extras)
 
