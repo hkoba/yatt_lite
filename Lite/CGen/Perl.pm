@@ -126,8 +126,7 @@ use YATT::Lite::Constants;
     # XXX: 改行の調整が必要。
     my @src = ($self->sync_curline($action->{startln})
                , "sub do_$$action{name} {");
-    my $src = $self->{_curtmpl}->source_substr
-      ($action->{bodypos}, $action->{bodylen});
+    my $src = $self->{_curtmpl}->part_body_source($action);
 
     if (lexpand($action->{_arg_order})
         or $src !~ m{^([\ \t\r\n]*)my\s*\([^;\)]+\)\s*=\s*\@_\s*;}) {
@@ -151,8 +150,7 @@ use YATT::Lite::Constants;
     # XXX: 改行の調整が必要。
     my @src = ($self->sync_curline($entity->{startln})
                , "sub entity_$$entity{name} {");
-    my $src = $self->{_curtmpl}->source_substr
-      ($entity->{bodypos}, $entity->{bodylen});
+    my $src = $self->{_curtmpl}->part_body_source($entity);
 
     if (lexpand($entity->{_arg_order})
         or $src !~ m{^([\ \t\r\n]*)my\s*\([^;\)]+\)\s*=\s*\@_\s*;}) {

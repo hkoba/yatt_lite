@@ -25,7 +25,8 @@ require File::Basename;
                                   _argmacro_dict
 				  entns)]
 	 , -eval => q{use YATT::Lite::Util qw(cached_in);}
-	 , [File => -fields => [qw(_partlist string overlay imported
+	 , [File => -fields => [qw(_partlist _boundarylist
+                                   string overlay imported
                                    nlines
 				   _dependency
 				   _dependents
@@ -491,6 +492,7 @@ require File::Basename;
   sub YATT::Lite::VFS::File::reset {
     (my File $file) = @_;
     undef $file->{_partlist};
+    undef $file->{_boundarylist};
     undef $file->{_Item};
     # undef $file->{string};
     undef $file->{base};
