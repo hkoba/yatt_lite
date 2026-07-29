@@ -379,6 +379,28 @@ require File::Spec;
     return $path;
   }
 
+  # GH-260: lexical normalization for filesystem paths (app_root and its
+  # relatives). Unlike normalize_path above (PATH_INFO semantics, where a
+  # trailing slash is significant), this collapses "." and ".." segments and
+  # strips trailing slashes. Symlinks are deliberately not resolved, so a
+  # deployment reached through a symlinked path keeps its spelling.
+  sub normalize_fs_path {
+    my ($path) = @_;
+    return $path unless defined $path and $path ne '';
+    my $abs = substr($path, 0, 1) eq '/';
+    my @out;
+    foreach my $seg (split '/', $path) {
+      next if $seg eq '' or $seg eq '.';
+      if ($seg eq '..') {
+        if (@out and $out[-1] ne '..') { pop @out; next; }
+        next if $abs;   # POSIX: "/.." means "/".
+      }
+      push @out, $seg;
+    }
+    my $result = join('/', @out);
+    $abs ? "/$result" : ($result ne '' ? $result : '.');
+  }
+
 
   sub trim_common_suffix_from {
     @_ == 2 or Carp::croak "trim_common_suffix_from(FROM, COMPARE)";

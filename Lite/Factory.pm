@@ -223,7 +223,10 @@ sub load_factory_for_psgi {
   unless (-r $psgi) {
     croak "psgi is not readable: $psgi";
   }
-  (my $app_rootname = $pack->rel2abs($psgi)) =~ s/\.psgi$//;
+  # GH-260: rel2abs does not collapse "..". Without normalization,
+  # "$app_root.config.d" built from ".../t/.." can never exist.
+  (my $app_rootname = YATT::Lite::Util::normalize_fs_path($pack->rel2abs($psgi)))
+    =~ s/\.psgi$//;
 
   $default{app_rootname} //= $app_rootname;
 
@@ -497,6 +500,9 @@ sub after_new {
   (my MY $self) = @_;
   $self->SUPER::after_new;
   $self->{app_root} //= YATT::Lite::Util::maybe_findbin_bin();
+  if (defined $self->{app_root}) {
+    $self->{app_root} = YATT::Lite::Util::normalize_fs_path($self->{app_root});
+  }
   $self->{index_name} //= $self->default_index_name;
   $self->{ext_public} //= $self->default_ext_public;
   $self->{ext_private} //= $self->default_ext_private;
@@ -545,6 +551,11 @@ sub _after_after_new {
   (my MY $self) = @_;
   $self->SUPER::_after_after_new;
 
+  if ($self->{doc_root}) {
+    # GH-260: keep doc_root textually consistent with the normalized
+    # app_root; rel_app_name relies on prefix-length arithmetic.
+    $self->{doc_root} = YATT::Lite::Util::normalize_fs_path($self->{doc_root});
+  }
   if (not $self->{allow_missing_dir}
       and $self->{doc_root}
       and not -d $self->{doc_root}) {
