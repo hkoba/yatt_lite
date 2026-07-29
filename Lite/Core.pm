@@ -136,52 +136,61 @@ use YATT::Lite::Breakpoint ();
     }
   }
 
+  # item_key / method_name の符号化 (do\0 / entity\0, render_ / do_ / entity_)
+  # は各 part class の class メソッド *_for($name) に集約する。
+  # instance メソッドはそこへ委譲するだけ。GH-256
   sub YATT::Lite::Core::Part::method_name {...}
+  sub YATT::Lite::Core::Widget::method_name_for {"render_$_[1]"}
   sub YATT::Lite::Core::Widget::method_name {
     (my Widget $widget) = @_;
-    "render_$widget->{name}";
+    $widget->method_name_for($widget->{name});
   }
+  sub YATT::Lite::Core::Action::method_name_for {"do_$_[1]"}
   sub YATT::Lite::Core::Action::method_name {
     (my Action $action) = @_;
-    "do_$action->{name}";
+    $action->method_name_for($action->{name});
   }
+  sub YATT::Lite::Core::Action::item_key_for {"do\0$_[1]"}
   sub YATT::Lite::Core::Action::item_key {
     (my Action $action) = @_;
-    "do\0$action->{name}";
+    $action->item_key_for($action->{name});
   }
 
+  sub YATT::Lite::Core::Entity::method_name_for {"entity_$_[1]"}
   sub YATT::Lite::Core::Entity::method_name {
     (my Entity $entity) = @_;
-    "entity_$entity->{name}";
+    $entity->method_name_for($entity->{name});
   }
+  sub YATT::Lite::Core::Entity::item_key_for {"entity\0$_[1]"}
   sub YATT::Lite::Core::Entity::item_key {
     (my Entity $entity) = @_;
-    "entity\0$entity->{name}";
+    $entity->item_key_for($entity->{name});
   }
 
   #========================================
   # <!yatt:import> の alias Part (GH-256)
   #========================================
-  our %IMPORT_METHOD_PREFIX
-    = (widget => 'render_', page => 'render_', action => 'do_'
-       , entity => 'entity_');
+
+  # kind 名 → part class の登録簿。_Item 系の名前空間を持つ kind のみ。
+  # (argmacro は _argmacro_dict 系なので含めない)
+  our %PART_KIND_CLASS
+    = (widget => Widget, page => Page, action => Action, entity => Entity);
+
+  sub YATT::Lite::Core::Import::part_class_of_imported_kind {
+    (my Import $import) = @_;
+    $PART_KIND_CLASS{$import->{imported_kind} // ''} // YATT::Lite::Core->Item;
+  }
   sub YATT::Lite::Core::Import::method_name {
     (my Import $import) = @_;
-    $IMPORT_METHOD_PREFIX{$import->{imported_kind}} . $import->{name};
+    $import->part_class_of_imported_kind->method_name_for($import->{name});
   }
   sub YATT::Lite::Core::Import::item_key {
     (my Import $import) = @_;
-    my $k = $import->{imported_kind} // '';
-    if ($k eq 'action') { "do\0$import->{name}" }
-    elsif ($k eq 'entity') { "entity\0$import->{name}" }
-    else { $import->{name} }
+    $import->part_class_of_imported_kind->item_key_for($import->{name});
   }
   sub YATT::Lite::Core::Import::src_item_key {
     (my Import $import) = @_;
-    my $k = $import->{imported_kind} // '';
-    if ($k eq 'action') { "do\0$import->{src_name}" }
-    elsif ($k eq 'entity') { "entity\0$import->{src_name}" }
-    else { $import->{src_name} }
+    $import->part_class_of_imported_kind->item_key_for($import->{src_name});
   }
   sub YATT::Lite::Core::Import::public {
     (my Import $import) = @_;
@@ -293,15 +302,9 @@ use YATT::Lite::Breakpoint ();
 
   sub YATT::Lite::Core::Template::get_type_item {
     (my Template $tmpl, my ($type, $name)) = @_;
-    if ($type eq 'action') {
-      $tmpl->{_Item}{"do\0$name"}
-    }
-    elsif ($type eq 'entity') {
-      $tmpl->{_Item}{"entity\0$name"}
-    }
-    else {
-      Carp::croak "Unknown type: $type";
-    }
+    my $class = $PART_KIND_CLASS{$type}
+      or Carp::croak "Unknown type: $type";
+    $tmpl->{_Item}{$class->item_key_for($name)};
   }
 
   sub YATT::Lite::Core::Part::reorder_hash_params {
@@ -488,37 +491,57 @@ sub import_resolve_source {
 # ソース template から import 対象を探す。$kind が undef なら自動判定。
 # 戻り値: ($kind, $part_or_argmacro)
 #
+#
+# find_kind_part_from (VFS.pm) の kind 別実装。
+# item-key の符号化は各 part class の item_key_for に集約されている。GH-256
+#
+sub _find_kind_part__widget {
+  (my MY $vfs, my ($from, $name)) = @_;
+  my Part $part = $vfs->find_part_from($from, MY->Widget->item_key_for($name))
+    or return undef;
+  # widget と page は同じ名前空間なので kind で照合する
+  ($part->{kind} // '') eq 'widget' ? $part : undef;
+}
+sub _find_kind_part__page {
+  (my MY $vfs, my ($from, $name)) = @_;
+  my Part $part = $vfs->find_part_from($from, MY->Page->item_key_for($name))
+    or return undef;
+  ($part->{kind} // '') eq 'page' ? $part : undef;
+}
+sub _find_kind_part__action {
+  (my MY $vfs, my ($from, $name)) = @_;
+  $vfs->find_part_from($from, MY->Action->item_key_for($name));
+}
+sub _find_kind_part__entity {
+  (my MY $vfs, my ($from, $name)) = @_;
+  $vfs->find_part_from($from, MY->Entity->item_key_for($name));
+}
+sub _find_kind_part__argmacro {
+  (my MY $vfs, my ($from, $name)) = @_;
+  my Folder $folder = $from;
+  my $macro = $folder->{_argmacro_dict} && $folder->{_argmacro_dict}{$name};
+  return $macro if $macro;
+  # find_argmacro (LRXML.pm) と同じく base 1 段のみ探索
+  foreach my Folder $base ($folder->list_base) {
+    next unless UNIVERSAL::isa($base, MY->Template);
+    my Template $baseTmpl = $base;
+    return $baseTmpl->{_argmacro_dict}{$name}
+      if $baseTmpl->{_argmacro_dict} && $baseTmpl->{_argmacro_dict}{$name};
+  }
+  undef;
+}
+
 sub import_find_source_part {
   (my MY $vfs, my ParsingState $state, my Template $src, my ($srcName, $kind)) = @_;
 
   my $srcDesc = $src->{path} // $src->{name};
 
-  my $find_macro = sub {
-    my $macro = $src->{_argmacro_dict} && $src->{_argmacro_dict}{$srcName};
-    return $macro if $macro;
-    # find_argmacro (LRXML.pm) と同じく base 1 段のみ探索
-    foreach my Folder $base ($src->list_base) {
-      next unless UNIVERSAL::isa($base, MY->Template);
-      my Template $baseTmpl = $base;
-      return $baseTmpl->{_argmacro_dict}{$srcName}
-        if $baseTmpl->{_argmacro_dict} && $baseTmpl->{_argmacro_dict}{$srcName};
-    }
-    undef;
-  };
-
-  # 4 つの名前空間を全て探索する (widget/page は同じ名前空間)
+  # 全 kind を probe する (widget/page は同じ名前空間だが kind 照合で区別される)
   my @hits;
-  if (my Part $part = $vfs->find_part_from($src, $srcName)) {
-    push @hits, [$part->{kind} => $part];
-  }
-  if (my Part $part = $vfs->find_part_from($src, "do\0$srcName")) {
-    push @hits, [action => $part];
-  }
-  if (my Part $part = $vfs->find_part_from($src, "entity\0$srcName")) {
-    push @hits, [entity => $part];
-  }
-  if (my $macro = $find_macro->()) {
-    push @hits, [argmacro => $macro];
+  foreach my $k (qw(widget page action entity argmacro)) {
+    if (defined (my $found = $vfs->find_kind_part_from($src, $k, $srcName))) {
+      push @hits, [$k => $found];
+    }
   }
 
   if (defined $kind) {
@@ -736,8 +759,14 @@ sub import_find_source_part {
     ($part, $sub, $pkg, @rest);
   }
 
-  sub _itemKey_page { shift; ($_[0], "render_$_[0]") }
-  sub _itemKey_action { shift; ("do\0$_[0]", "do_$_[0]"); }
+  sub _itemKey_page {
+    shift;
+    (MY->Page->item_key_for($_[0]), MY->Page->method_name_for($_[0]));
+  }
+  sub _itemKey_action {
+    shift;
+    (MY->Action->item_key_for($_[0]), MY->Action->method_name_for($_[0]));
+  }
 
   #
   # Action name => sub {}
@@ -753,7 +782,7 @@ sub import_find_source_part {
 
     *{globref($root->{entns}, $action_name)} = $sub;
 
-    $root->{_Item}{"do\0$name"}
+    $root->{_Item}{MY->Action->item_key_for($name)}
       = $self->Action->new(name => $action_name, kind => 'action'
 			   , folder => $root
 			   , startln => $lineno
