@@ -13,6 +13,8 @@ use YATT::Lite::MFields
 
     no_nested_query
 
+    mkquery_with_body_params
+
     no_unicode_params
 
     _dir_config_cache
@@ -168,14 +170,18 @@ sub collect_request_sigil_by {
   \%dict;
 }
 
+sub has_content {
+  my PROP $prop = (my $glob = shift)->prop;
+  my Env $env = $prop->{env}
+    or return 0;
+  ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) ? 1 : 0;
+}
+
 sub parse_request_sigil_psgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($req) = @_;
 
-
-  my Env $env = $prop->{env};
-
-  if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
+  if ($glob->has_content) {
     $prop->{_sigil_type_item} = do {
       my @bodyParams = $glob->extract_sigil_from_hmv($req->body_parameters);
       my @queryParams = $glob->extract_sigil_from_hmv($req->query_parameters);
@@ -260,6 +266,23 @@ sub validate_request_sigils_dict {
 sub queryobj {
   my PROP $prop = (my $glob = shift)->prop;
   $prop->{parameters} || $prop->{hmv} || $prop->{cgi};
+}
+
+# GH-259: For url reproduction (mkquery($CON), current_path($CON)...),
+# requests with a body should reproduce QUERY_STRING-derived params only.
+# Note: query_parameters below is the sigil-stripped, request-cached
+# Hash::MultiValue (see extract_sigil_from_hmv).
+# Set mkquery_with_body_params to restore the old merged behavior.
+sub queryobj_for_mkquery {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (not $prop->{mkquery_with_body_params}
+      and not $prop->{hmv}
+      and $prop->{is_psgi} and $prop->{cgi}
+      and $glob->has_content) {
+    $prop->{cgi}->query_parameters;
+  } else {
+    $glob->queryobj;
+  }
 }
 
 sub param_exists {
@@ -366,9 +389,8 @@ sub parse_nested_query {
 sub convert_array_param_psgi {
   my PROP $prop = (my $glob = shift)->prop;
   my ($req) = @_;
-  my Env $env = $prop->{env};
   $prop->{parameters} = do {
-    if ($env->{CONTENT_TYPE} and defined $env->{CONTENT_LENGTH}) {
+    if ($glob->has_content) {
       my $body = $glob->parse_nested_query([$req->body_parameters->flatten]);
       my $qs = $glob->parse_nested_query([$req->query_parameters->flatten]);
       foreach my $key (keys %$qs) {
@@ -534,8 +556,8 @@ sub mkquery {
   }
 
   if (UNIVERSAL::isa($param, ref $self)) {
-    # $CON->mkquery($CON) == $CON->mkquery($CON->queryobj)
-    $param = $param->queryobj;
+    # $CON->mkquery($CON) == $CON->mkquery($CON->queryobj_for_mkquery)
+    $param = $param->queryobj_for_mkquery;
   }
 
   if (ref $param eq 'HASH') {

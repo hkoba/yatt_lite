@@ -101,6 +101,16 @@ and L<Ruby on Rails|http://guides.rubyonrails.org/action_controller_overview.htm
 This feature is useful(I hope), but is experimental.
 So if you don't want this feature, turn this config on.
 
+=head2 mkquery_with_body_params
+
+(Compatibility option) Before GH-259, url reproducing APIs
+(C<< $CON->mkquery($CON) >>, C<< $CON->current_path($CON) >>,
+C<< $CON->mkurl(undef, $CON) >>...) reproduced POST body parameters
+too. Since POST is often chosen exactly to keep parameters out of
+access logs, they now reproduce only C<QUERY_STRING>-derived
+parameters when the request has a body. Set this option to 1 to
+restore the old merged behavior.
+
 =head2 psgi_static
 
 Requests other than F<*.yatt>, F<*.ytmpl>, F<*.ydo> are passed to this PSGI app.
