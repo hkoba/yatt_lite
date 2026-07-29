@@ -306,6 +306,66 @@ describe "on-memory (data) vfs", sub {
   };
 };
 
+describe "find_kind_part_from (dispatch interface)", sub {
+  my ($docroot, $site) = $make_app->(
+    'grandlib.ytmpl' => <<'END'
+<!yatt:widget deepw>
+deep widget
+END
+    ,
+    # 注: argmacro は _partlist に入らないため、source_substr ベースの part
+    # (action/entity) の直後に置くと本体境界の fixup が argmacro を飲み込む。
+    # ここでは argmacro を先頭側に置く。
+    'lib.ytmpl' => <<'END'
+<!yatt:base file="grandlib.ytmpl">
+<!yatt:argmacro m1=[x]>
+$result->{x} = "m1";
+
+<!yatt:widget w1>
+w1 body
+<!yatt:page p1>
+p1 body
+<!yatt:action a1>
+print $CON "a1";
+<!yatt:entity e1>
+"e1 value";
+END
+  );
+  my $vfs = $site->get_yatt('/')->get_vfs;
+  my $lib = $vfs->find_file('lib');
+  # base チェーン検索 (lookup_base) は @ISA 確立後に働くので、先にコンパイルしておく
+  $vfs->find_product(perl => $lib);
+
+  it "should find each kind of part", sub {
+    foreach my $case ([widget => 'w1'], [page => 'p1'], [action => 'a1']
+                      , [entity => 'e1'], [argmacro => 'm1']) {
+      my ($kind, $name) = @$case;
+      my $part = $vfs->find_kind_part_from($lib, $kind, $name);
+      expect($part && $part->cget('kind'))->to_be($kind);
+      expect($part && $part->cget('name'))->to_be($name);
+    }
+  };
+
+  it "should distinguish widget vs page in the shared namespace", sub {
+    expect($vfs->find_kind_part_from($lib, page => 'w1'))->to_be(undef);
+    expect($vfs->find_kind_part_from($lib, widget => 'p1'))->to_be(undef);
+  };
+
+  it "should follow the base chain", sub {
+    my $part = $vfs->find_kind_part_from($lib, widget => 'deepw');
+    expect($part && $part->cget('name'))->to_be('deepw');
+  };
+
+  it "should croak for unknown kind", sub {
+    my $err = do {
+      local $@ = '';
+      eval { $vfs->find_kind_part_from($lib, bogus => 'w1') };
+      '' . $@;
+    };
+    expect($err)->to_match(qr/Unknown part kind/);
+  };
+};
+
 describe "error cases", sub {
 
   describe "unknown name", sub {
