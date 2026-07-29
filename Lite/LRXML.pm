@@ -271,6 +271,8 @@ sub parse_decl {
   $self->configure(@config);
   $tmpl->{string} = $str;
   $tmpl->{utf8} = Encode::is_utf8($str);
+  # 宣言/コメントの位置記録。再 parse で重複しないようここで初期化する。GH-258
+  $tmpl->{_boundarylist} = [];
   $self->{_startln} = $self->{_endln} = 1;
   ($self->{_startpos}, $self->{_curpos}, my $total) = (0, 0, length $str);
   my Part $part;
@@ -302,11 +304,20 @@ sub parse_decl {
         $node->[NODE_ATTLIST] = $1;
         $node;
       };
+      # 不変量: substr(string, startpos, endpos - startpos) はコメント全文。GH-258
+      push @{$tmpl->{_boundarylist}}, +{
+        kind => 'comment', declkind => $comment_ns
+        , startpos => $self->{_startpos}, endpos => $self->{_curpos}
+        , lineno => $self->{_startln}, nlines => $nlines
+      };
       $self->{_startln} = $self->{_endln} += $nlines;
       next;
     }
     my $declkind = $+{declname};
     my ($ns, $kind) = split /:/, $declkind, 2;
+    # 宣言境界の先頭 pos/行。この時点の _startpos は宣言先頭を指しており、
+    # part の startpos (build 経由) と同じ値になる。GH-258
+    my ($decl_startpos, $decl_startln) = ($self->{_startpos}, $self->{_startln});
     if (my $sub = $self->can("declare_$kind")) {
       # yatt:args, base, action, argmacro...
 
@@ -362,6 +373,13 @@ sub parse_decl {
     }
     $self->add_posinfo(length $&);
     $self->{_endln} += numLines($1);
+    # 不変量: substr(string, startpos, endpos - startpos) は宣言全文
+    # (閉じ '>' + 改行まで)。endpos は続く part の bodypos に等しい。GH-258
+    push @{$tmpl->{_boundarylist}}, +{
+      kind => 'decl', declkind => $declkind
+      , startpos => $decl_startpos, endpos => $self->{_curpos}
+      , lineno => $decl_startln
+    };
     if ($part) {
       $part->{bodypos} = $self->{_curpos};
       $part->{bodyln} = $self->{_endln}; # part の本体開始行の初期値
@@ -442,17 +460,19 @@ sub fixup_template_foreach_part_posinfo {
   # $default が partlist に足されてなかったら、先頭に足す... 逆か。
   # args が、 $default を先頭から削る?
   # fixup parts.
-  my Part $prev;
+  #
+  # 本体区間は「bodypos 以降で最初の宣言境界」まで (無ければ EOF まで)。
+  # _partlist だけを歩くと <!yatt:argmacro> のような partlist に入らない
+  # 宣言を飲み込んでしまう (GH-258)。コメント境界は part 区間の内部要素
+  # なので区間を切らない (raw 本体からの除去は part_body_source が行う)。
+  my @decl_boundaries = grep {$_->{kind} eq 'decl'} @{$tmpl->{_boundarylist} // []};
   foreach my Part $part (@{$tmpl->{_partlist}}) {
-    if ($prev) {
-      unless (defined $part->{startpos}) {
-	die $self->synerror_at($self->{_startln}, q{startpos is undef});
-      }
-      unless (defined $prev->{bodypos}) {
-	die $self->synerror_at($self->{_startln}, q{prev bodypos is undef});
-      }
-      $prev->{bodylen} = $part->{startpos} - $prev->{bodypos};
+    unless (defined $part->{bodypos}) {
+      die $self->synerror_at($self->{_startln}, q{bodypos is undef});
     }
+    my ($next) = grep {$_->{startpos} >= $part->{bodypos}} @decl_boundaries;
+    $part->{bodylen} = ($next ? $next->{startpos} : length($tmpl->{string}))
+      - $part->{bodypos};
     if ($part->{_toks} and @{$part->{_toks}}) {
       # widget 末尾の連続改行を、単一の改行トークンへ変換。(行番号は解析済みだから大丈夫)
       if ($part->{_toks}[-1] =~ s/(?:\r?\n)+\Z//) {
@@ -463,9 +483,6 @@ sub fixup_template_foreach_part_posinfo {
     if (my $sub = $part->can('fixup')) {
       $sub->($part, $tmpl, $self);
     }
-  } continue { $prev = $part }
-  if ($prev) {
-    $prev->{bodylen} = length($tmpl->{string}) - $prev->{bodypos};
   }
 }
 

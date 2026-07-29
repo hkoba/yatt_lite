@@ -300,6 +300,28 @@ use YATT::Lite::Breakpoint ();
     }
   }
 
+  # source_substr ベースの part (action/entity) の本体抽出。GH-258
+  # (bodypos, bodylen) 区間内の yatt コメント span は「同じ改行数の \n 列」に
+  # 置換して返す (行番号保存)。yatt コメントは宣言より強い構文要素なので、
+  # raw 本体の中でも widget 同様「取り除かれる」意味論を成立させる。
+  # コメントが無ければ source_substr と同一 (バイト単位)。
+  sub YATT::Lite::Core::Template::part_body_source {
+    (my Template $tmpl, my Part $part) = @_;
+    my ($bodypos, $bodylen) = ($part->{bodypos}, $part->{bodylen});
+    my $src = $tmpl->source_substr($bodypos, $bodylen);
+    return $src unless defined $src;
+    my $end = $bodypos + $bodylen;
+    # 後ろから置換すれば手前の offset がずれない
+    foreach my $entry (reverse @{$tmpl->{_boundarylist} // []}) {
+      next unless $entry->{kind} eq 'comment';
+      next unless $entry->{startpos} >= $bodypos and $entry->{endpos} <= $end;
+      substr($src, $entry->{startpos} - $bodypos
+             , $entry->{endpos} - $entry->{startpos})
+        = "\n" x $entry->{nlines};
+    }
+    $src;
+  }
+
   sub YATT::Lite::Core::Template::get_type_item {
     (my Template $tmpl, my ($type, $name)) = @_;
     my $class = $PART_KIND_CLASS{$type}
