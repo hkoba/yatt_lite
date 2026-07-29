@@ -671,6 +671,7 @@ t/gh241_mkhidden_nested_query/app/app.psgi
 t/gh241_mkhidden_nested_query/app/public/mkhidden_test.yatt
 t/gh241_mkhidden_nested_query/app/public/param_test.yatt
 t/gh241_mkhidden_nested_query/psgi.t
+t/gh259_mkquery_post.t
 t/inspector.t
 t/instpkg.t
 t/lib/.symlinks
