@@ -71,6 +71,15 @@ use YATT::Lite::Breakpoint ();
            resolve_map
          )]
        ]
+      # <!yatt:import> が作る alias Part。実体は持たず、lookup 時に
+      # ソース側 Part へ解決される (resolve_alias)。GH-256
+      , [Import => ()
+         , -fields => [qw(
+           imported_kind
+           src_name
+           src_folder
+         )]
+       ]
     ]
 
      , [Template => -base => MY->File
@@ -81,6 +90,7 @@ use YATT::Lite::Breakpoint ();
 			 usage constants
 			 ignore_trailing_newlines
 			 subroutes
+                         _decl_parsing
 		      )]]
 
      , [ParsingState => -fields => [qw(_startln _endln
@@ -147,6 +157,68 @@ use YATT::Lite::Breakpoint ();
   sub YATT::Lite::Core::Entity::item_key {
     (my Entity $entity) = @_;
     "entity\0$entity->{name}";
+  }
+
+  #========================================
+  # <!yatt:import> の alias Part (GH-256)
+  #========================================
+  our %IMPORT_METHOD_PREFIX
+    = (widget => 'render_', page => 'render_', action => 'do_'
+       , entity => 'entity_');
+  sub YATT::Lite::Core::Import::method_name {
+    (my Import $import) = @_;
+    $IMPORT_METHOD_PREFIX{$import->{imported_kind}} . $import->{name};
+  }
+  sub YATT::Lite::Core::Import::item_key {
+    (my Import $import) = @_;
+    my $k = $import->{imported_kind} // '';
+    if ($k eq 'action') { "do\0$import->{name}" }
+    elsif ($k eq 'entity') { "entity\0$import->{name}" }
+    else { $import->{name} }
+  }
+  sub YATT::Lite::Core::Import::src_item_key {
+    (my Import $import) = @_;
+    my $k = $import->{imported_kind} // '';
+    if ($k eq 'action') { "do\0$import->{src_name}" }
+    elsif ($k eq 'entity') { "entity\0$import->{src_name}" }
+    else { $import->{src_name} }
+  }
+  sub YATT::Lite::Core::Import::public {
+    (my Import $import) = @_;
+    my Part $part = eval { $import->resolve_alias };
+    $part ? $part->public : 0;
+  }
+  # alias をソース側 Part へ解決する。$vfs が渡されたときは
+  # ソース template の refresh も行う (常に最新のメタ情報を返すため)。
+  sub YATT::Lite::Core::Import::resolve_alias {
+    (my Import $import, my $vfs) = @_;
+    my Template $src = $import->{src_folder}
+      or croak "import source template is gone (for part '$import->{name}')";
+    if ($vfs) {
+      $src->refresh($vfs)
+        unless $vfs->{mark}{Scalar::Util::refaddr($src)}++;
+    }
+    my $key = $import->src_item_key;
+    my $item = $src->{_Item}{$key}
+      // ($vfs ? $vfs->find_part_from($src, $key) : undef)
+      or croak "No such part '$import->{src_name}' in "
+        . ($src->{path} // $src->{name})
+        . " (imported as '$import->{name}')";
+    # import の import (再輸出) も解決する。循環は宣言時に禁止済み。
+    $item->resolve_alias($vfs);
+  }
+
+  sub YATT::Lite::Core::Template::list_import_sources {
+    (my Template $tmpl) = @_;
+    my (%seen, @result);
+    foreach my Part $part (@{$tmpl->{_partlist} || []}) {
+      next unless UNIVERSAL::isa($part, Import);
+      my Import $import = $part;
+      my Folder $src = $import->{src_folder} or next;
+      next if $seen{Scalar::Util::refaddr($src)}++;
+      push @result, $src;
+    }
+    @result;
   }
 
   sub YATT::Lite::Core::Part::configure_folder {
@@ -364,6 +436,118 @@ sub synerror {
   die $vfs->error($opts, $fmt, @opts);
 }
 
+#
+# called from <!yatt:import> (LRXML::declare_import). GH-256
+#
+sub import_resolve_source {
+  (my MY $vfs, my ParsingState $state, my Template $tmpl, my $fn) = @_;
+
+  my $o = do {
+    if ($vfs->{_on_memory}) {
+      $vfs->find_file($fn)
+        or $vfs->synerror($state, q{No such import path: %s}, $fn);
+    } else {
+      defined(my $realfn = $vfs->resolve_path_from($tmpl, $fn))
+        or $vfs->synerror($state, q{Can't find object path for import: %s}, $fn);
+
+      -e $realfn
+        or $vfs->synerror($state, q{No such import path: %s}, $realfn);
+
+      # find_neighbor_type より前に path で検査する。相手が cached_in の
+      # dict 代入前 (load 途中) だと、find_file が同じファイルの Template を
+      # 二重生成して EntNS confliction になってしまうため。
+      if ($YATT::Lite::LRXML::DECL_PARSING{$realfn}) {
+        $vfs->synerror($state, q{Circular import detected: %s}, $fn);
+      }
+
+      my $found = $vfs->find_neighbor_type(undef, $realfn);
+
+      $tmpl->add_dependency($realfn, $found);
+
+      $found;
+    }
+  };
+
+  unless (UNIVERSAL::isa($o, MY->Template)) {
+    $vfs->synerror($state, q{import from non-template is not supported: %s}, $fn);
+  }
+
+  my Template $src = $o;
+  if ($src->{_decl_parsing}) {
+    $vfs->synerror($state, q{Circular import detected: %s}, $fn);
+  }
+
+  # import 対象は宣言時点でコンパイルしておく (cf. <!yatt:base> declare_base)。
+  # これにより名前検証と @ISA/entns 確立が済んだ状態で以後の処理ができる。
+  $vfs->find_product(perl => $src);
+
+  $src;
+}
+
+#
+# ソース template から import 対象を探す。$kind が undef なら自動判定。
+# 戻り値: ($kind, $part_or_argmacro)
+#
+sub import_find_source_part {
+  (my MY $vfs, my ParsingState $state, my Template $src, my ($srcName, $kind)) = @_;
+
+  my $srcDesc = $src->{path} // $src->{name};
+
+  my $find_macro = sub {
+    my $macro = $src->{_argmacro_dict} && $src->{_argmacro_dict}{$srcName};
+    return $macro if $macro;
+    # find_argmacro (LRXML.pm) と同じく base 1 段のみ探索
+    foreach my Folder $base ($src->list_base) {
+      next unless UNIVERSAL::isa($base, MY->Template);
+      my Template $baseTmpl = $base;
+      return $baseTmpl->{_argmacro_dict}{$srcName}
+        if $baseTmpl->{_argmacro_dict} && $baseTmpl->{_argmacro_dict}{$srcName};
+    }
+    undef;
+  };
+
+  # 4 つの名前空間を全て探索する (widget/page は同じ名前空間)
+  my @hits;
+  if (my Part $part = $vfs->find_part_from($src, $srcName)) {
+    push @hits, [$part->{kind} => $part];
+  }
+  if (my Part $part = $vfs->find_part_from($src, "do\0$srcName")) {
+    push @hits, [action => $part];
+  }
+  if (my Part $part = $vfs->find_part_from($src, "entity\0$srcName")) {
+    push @hits, [entity => $part];
+  }
+  if (my $macro = $find_macro->()) {
+    push @hits, [argmacro => $macro];
+  }
+
+  if (defined $kind) {
+    foreach my $hit (@hits) {
+      return @$hit if $hit->[0] eq $kind;
+    }
+    if (@hits) {
+      $vfs->synerror($state
+                     , q{Import kind mismatch for '%s': expected %s, but %s has %s}
+                     , $srcName, $kind, $srcDesc
+                     , join(", ", map {$_->[0]} @hits));
+    }
+    $vfs->synerror($state, q{No such part to import: %s:%s (in %s)}
+                   , $srcName, $kind, $srcDesc);
+  } else {
+    unless (@hits) {
+      $vfs->synerror($state, q{No such part to import: %s (in %s)}
+                     , $srcName, $srcDesc);
+    }
+    if (@hits > 1) {
+      $vfs->synerror($state
+                     , q{Ambiguous import '%s' in %s (found as: %s); add kind annotation like [%s:%s]}
+                     , $srcName, $srcDesc, join(", ", map {$_->[0]} @hits)
+                     , $srcName, $hits[0][0]);
+    }
+    return @{$hits[0]};
+  }
+}
+
 #========================================
 {
   sub Parser {
@@ -540,6 +724,10 @@ sub synerror {
         ($p, $meth);
       };
     };
+
+    # import alias はソース Part へ解決してから返す
+    # (public 判定や引数 reorder が常に最新のソース側メタで動くように)。GH-256
+    $part = $part->resolve_alias($self);
 
     my $sub = $pkg->can($method)
       or ($ignore_error and return)

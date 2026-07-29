@@ -5,6 +5,9 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
+# 現在宣言 parse 中の template (path キー)。declare_import の循環検出用。GH-256
+our %DECL_PARSING;
+
 use base qw(YATT::Lite::VarMaker);
 use fields qw/_re_decl
 	      _re_body
@@ -36,7 +39,7 @@ use fields qw/_re_decl
 	      _original_entpath
 	    /;
 
-use YATT::Lite::Core qw(Part Widget Page Action Data Entity Template ArgMacro);
+use YATT::Lite::Core qw(Part Widget Page Action Data Entity Template ArgMacro Import);
 use YATT::Lite::VarTypes;
 use YATT::Lite::Constants;
 use YATT::Lite::Util qw(numLines default untaint_unless_tainted lexpand);
@@ -259,6 +262,11 @@ sub parse_decl {
   (my MY $self, my Template $tmpl, my $str, my @config) = @_;
   # local %+; # ← XXX: This causes massive test failure, but why??
   break_parser();
+  # 宣言 parse 中フラグ。declare_import の循環検出に使う。GH-256
+  # (path キーの registry も持つのは、循環相手の Template object が
+  #  cached_in の dict 代入前で、object 経由では検出できないケースがあるため)
+  local $tmpl->{_decl_parsing} = 1;
+  local $DECL_PARSING{$tmpl->{path} // Scalar::Util::refaddr($tmpl)} = 1;
   $self->{_template} = $tmpl;
   $self->configure(@config);
   $tmpl->{string} = $str;
@@ -751,6 +759,8 @@ sub build_entity { shift->Entity->new(@_) }
 
 sub build_argmacro { shift->ArgMacro->new(@_) }
 
+sub build_import { shift->Import->new(@_) }
+
 #========================================
 # declare
 sub declare_base {
@@ -761,6 +771,124 @@ sub declare_base {
     if @args;
 
   undef;
+}
+
+# <!yatt:import [name...]="file" [name...]="file2" ...>   (GH-256)
+#   name := srcName | local=srcName | srcName:kind | local=srcName:kind
+#   kind := widget | page | action | entity | argmacro
+#           (無注釈はソース内で一意な場合のみ自動判定)
+our %IMPORT_KIND = map {$_ => 1} qw(widget page action entity argmacro);
+
+sub declare_import {
+  (my MY $self, my Template $tmpl, my ($ns, @args)) = @_;
+
+  unless (@args) {
+    die $self->synerror_at($self->{_startln}, q{No import arg});
+  }
+
+  foreach my $att (@args) {
+    my ($specs, $fn) = $self->cut_import_spec($att);
+    my Template $src = $self->{vfs}->import_resolve_source($self, $tmpl, $fn);
+    foreach my $spec (@$specs) {
+      $self->import_1($tmpl, $ns, $src, @$spec);
+    }
+  }
+
+  undef;
+}
+
+# ブラケット群 [name...]="file" を ([[local, srcName, kind], ...], $fn) に分解する。
+sub cut_import_spec {
+  (my MY $self, my $att) = @_;
+
+  my $names = $att->[NODE_PATH];
+  unless ($att->[NODE_TYPE] == TYPE_ATT_TEXT
+          and ref $names eq 'ARRAY'
+          and not grep {not ref $_} @$names) {
+    die $self->synerror_at($self->{_startln}
+                           , q{import decl must use bracket form like [name...]="file"});
+  }
+
+  my $fn = $att->[NODE_BODY];
+
+  my @specs;
+  foreach my $node (@$names) {
+    my ($local, $srcSpec);
+    my $type = $node->[NODE_TYPE];
+    if ($type == TYPE_ATT_NAMEONLY) {
+      # srcName または srcName:kind (split_ns 済み)
+      $srcSpec = $node->[NODE_PATH];
+    } elsif ($type == TYPE_ATT_BARENAME or $type == TYPE_ATT_TEXT) {
+      # local=srcName または local="srcName:kind"
+      $local = $node->[NODE_PATH];
+      $srcSpec = $node->[NODE_BODY];
+    } else {
+      die $self->synerror_at($self->{_startln}, q{Invalid import name spec});
+    }
+
+    if (ref $local) {
+      die $self->synerror_at($self->{_startln}
+                             , q{Invalid local name for import: %s}
+                             , join(":", @$local));
+    }
+
+    my ($srcName, $kind) = do {
+      if (ref $srcSpec eq 'ARRAY') {
+        unless (@$srcSpec == 2) {
+          die $self->synerror_at($self->{_startln}
+                                 , q{Invalid import name spec: %s}
+                                 , join(":", @$srcSpec));
+        }
+        @$srcSpec;
+      } elsif (defined $srcSpec and $srcSpec =~ /^([^:]+):([^:]+)$/) {
+        ($1, $2);
+      } else {
+        ($srcSpec, undef);
+      }
+    };
+
+    unless (defined $srcName and $srcName ne '') {
+      die $self->synerror_at($self->{_startln}, q{Invalid import name spec});
+    }
+    if (defined $kind and not $IMPORT_KIND{$kind}) {
+      die $self->synerror_at($self->{_startln}
+                             , q{Unknown import kind '%s' for '%s'}
+                             , $kind, $srcName);
+    }
+
+    push @specs, [$local // $srcName, $srcName, $kind];
+  }
+
+  (\@specs, $fn);
+}
+
+sub import_1 {
+  (my MY $self, my Template $tmpl, my $ns, my Template $src
+   , my ($local, $srcName, $kind)) = @_;
+
+  (my $ikind, my $found)
+    = $self->{vfs}->import_find_source_part($self, $src, $srcName, $kind);
+
+  if ($ikind eq 'argmacro') {
+    if ($tmpl->{_argmacro_dict}{$local}) {
+      die $self->synerror_at($self->{_startln}
+                             , q{Duplicate argmacro %s in %s}
+                             , $local, $tmpl->{path} // $tmpl->{name});
+    }
+    # weak ref でも ArgMacro 自身の _on_declare 自己循環が生存を保証する
+    # (declare_argmacro と同じ)。
+    Scalar::Util::weaken($tmpl->{_argmacro_dict}{$local} = $found);
+  } else {
+    my Import $import = $self->build($ns, import => import => $local);
+    $import->{imported_kind} = $ikind;
+    $import->{src_name} = $srcName;
+    Scalar::Util::weaken($import->{src_folder} = $src);
+    # 本体を持たない part なので、位置情報だけ整えておく
+    # (fixup_template_foreach_part_posinfo が bodypos を要求する)
+    $import->{bodypos} = $self->{_curpos};
+    $import->{bodylen} = 0;
+    $self->add_part($tmpl, $import);
+  }
 }
 
 sub declare_args {
