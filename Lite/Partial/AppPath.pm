@@ -30,9 +30,8 @@ sub app_path_find_dir_in {
 sub app_path_normalize {
   (my MY $self, my ($path, $base)) = @_;
   my $normalized = $path =~ m{^/} ? $path : $self->rel2abs($path, $base);
-  1 while $normalized =~ s{/[^/\.]+/\.\.(?:/|$)}{/};
   # XXX: Should not point outside of $app_root.
-  $normalized;
+  YATT::Lite::Util::normalize_fs_path($normalized);
 }
 
 sub app_path_ensure_existing {

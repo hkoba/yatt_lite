@@ -34,6 +34,7 @@ sub _prepare_config_for_fcgi {
   };
 
   if ((my $dn = $self->{progname}) =~ s{/html/cgi-bin/[^/]+$}{}) {
+    $dn = YATT::Lite::Util::normalize_fs_path($dn);
     $self->{app_root} //= $dn;
     $self->{doc_root} //= "$dn/html";
     push @{$self->{_tmpldirs}}, $self->{doc_root}
