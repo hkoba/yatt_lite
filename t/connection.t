@@ -539,4 +539,126 @@ require_ok('YATT::Lite::WebMVC0::SiteApp');
   }
 }
 
+# GH-259: mkquery($CON) should not reproduce POST body_parameters.
+$i++;
+SKIP:
+{
+  my $THEME = 'GH-259';
+  skip "Plack::Request is not installed", 11
+    if catch {require Plack::Request};
+  require Hash::MultiValue;
+
+  my $mux = YATT::Lite::WebMVC0::SiteApp->new
+    (doc_root => rootname(MY->rel2abs($0)) . ".d"
+     , app_ns => myapp($i)
+     , site_prefix => '/myblog'
+     , die_in_error => 1
+     , debug_cgen => $ENV{DEBUG});
+
+  my %base_env = qw{SERVER_NAME     0
+		    SERVER_PORT     5000
+		    SERVER_PROTOCOL HTTP/1.1
+		    HTTP_REFERER    http://example.com/
+		    psgi.url_scheme http
+		 };
+
+  my $make_con = sub {
+    my ($method, $qs, $body, @rest) = @_;
+    my Env $env = +{%base_env
+		    , REQUEST_METHOD => $method
+		    , PATH_INFO => '/foo'
+		    , REQUEST_URI => '/myblog/foo' . (defined $qs ? "?$qs" : '')
+		    , (defined $qs ? (QUERY_STRING => $qs) : ())};
+    if (defined $body) {
+      $env->{CONTENT_TYPE} = 'application/x-www-form-urlencoded';
+      $env->{CONTENT_LENGTH} = length($body);
+      open my $fh, '<', \ $body or die "Can't open memstream: $!";
+      $env->{'psgi.input'} = $fh;
+    }
+    $mux->make_connection(undef, noheader => 1, is_psgi => 1
+			  , env => $env
+			  , cgi => Plack::Request->new($env), @rest);
+  };
+
+  ok $make_con->(POST => 'q=1', 'nx=secret')->has_content
+    , "[$THEME] has_content: true for POST with body";
+  ok ! $make_con->(GET => 'q=1', undef)->has_content
+    , "[$THEME] has_content: false for GET";
+  ok ! $mux->make_connection(undef, noheader => 1
+			     , hmv => Hash::MultiValue->new(foo => 1))
+    ->has_content
+    , "[$THEME] has_content: false without env";
+
+  {
+    my $con = $make_con->(POST => 'q=1&m=a&m=b', 'nx=secret&token=t1');
+    is scalar($con->mkquery($con)), '?q=1&m=a&m=b'
+      , "[$THEME] mkquery(CON): query params only, original order";
+    is $con->current_path($con), '/myblog/foo?q=1&m=a&m=b'
+      , "[$THEME] current_path(CON): body params do not leak";
+    is $con->mkurl(undef, $con, local => 1), '/myblog/foo?q=1&m=a&m=b'
+      , "[$THEME] mkurl(undef, CON, local): body params do not leak";
+    is $con->param('nx'), 'secret'
+      , "[$THEME] body param is still accessible via param()";
+  }
+
+  {
+    my $con = $make_con->(POST => undef, 'nx=secret');
+    is $con->current_path($con), '/myblog/foo'
+      , "[$THEME] POST without query string => bare path";
+    is scalar($con->mkquery($con)), ''
+      , "[$THEME] POST without query string => empty mkquery";
+  }
+
+  is do {
+    my $con = $make_con->(POST => 'q=1', 'nx=secret'
+			  , mkquery_with_body_params => 1);
+    scalar($con->mkquery($con));
+  }, '?nx=secret&q=1'
+    , "[$THEME] mkquery_with_body_params restores old merged behavior";
+
+  is do {
+    my $con = $make_con->(GET => 'q=1&r=2', undef);
+    scalar($con->mkquery($con));
+  }, '?q=1&r=2'
+    , "[$THEME] GET mkquery(CON) is unchanged";
+}
+
+# GH-259: SiteApp-level mkquery_with_body_params should reach connections.
+$i++;
+SKIP:
+{
+  my $THEME = 'GH-259 siteapp flag';
+  skip "Plack::Request is not installed", 2
+    if catch {require Plack::Request};
+
+  my $mux = YATT::Lite::WebMVC0::SiteApp->new
+    (doc_root => rootname(MY->rel2abs($0)) . ".d"
+     , app_ns => myapp($i)
+     , site_prefix => '/myblog'
+     , die_in_error => 1
+     , mkquery_with_body_params => 1);
+
+  my $body = 'nx=secret';
+  my Env $env = +{qw{SERVER_NAME     0
+		     SERVER_PORT     5000
+		     SERVER_PROTOCOL HTTP/1.1
+		     psgi.url_scheme http}
+		  , REQUEST_METHOD => 'POST'
+		  , PATH_INFO => '/foo'
+		  , REQUEST_URI => '/myblog/foo?q=1'
+		  , QUERY_STRING => 'q=1'
+		  , CONTENT_TYPE => 'application/x-www-form-urlencoded'
+		  , CONTENT_LENGTH => length($body)};
+  open my $fh, '<', \ $body or die "Can't open memstream: $!";
+  $env->{'psgi.input'} = $fh;
+  my $con = $mux->make_connection(undef, noheader => 1, is_psgi => 1
+				  , env => $env
+				  , cgi => Plack::Request->new($env));
+
+  is scalar($con->mkquery($con)), '?nx=secret&q=1'
+    , "[$THEME] flag on SiteApp restores merged behavior";
+  is $con->current_path($con), '/myblog/foo?nx=secret&q=1'
+    , "[$THEME] current_path(CON) with SiteApp-level flag";
+}
+
 done_testing();
