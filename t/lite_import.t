@@ -59,11 +59,15 @@ my $rewrite = sub {
   $future_mtime += 10;
 };
 
-my $catch = sub {
-  my ($sub) = @_;
-  local $@ = '';
-  eval { $sub->() };
-  '' . $@; # エラーオブジェクトは "" overload で文字列化
+# エラー系は PSGI 経由で検査する。DirApp のエラーハンドラが
+# エラーページを描画して DONE で脱出するため、render() 直呼びでは
+# メッセージを捕捉できない (500 レスポンスの body に載る)。
+my $expect_error = sub {
+  my ($site, $path, $pattern) = @_;
+  my $test = Plack::Test->create($site->to_app);
+  my $res = $test->request(GET $path);
+  expect($res->code)->to_be(500);
+  expect($res->content)->to_match($pattern);
 };
 
 describe "widget import", sub {
@@ -246,7 +250,7 @@ END
   it "should resolve inner references on the definition side", sub {
     my $out = $site->render("child");
     expect($out)->to_match(qr/outer\(\s*lib helper\s*\)/);
-    expect($out)->not_to_match(qr/CHILD helper/);
+    expect($out)->not->to_match(qr/CHILD helper/);
   };
 };
 
@@ -310,8 +314,7 @@ describe "error cases", sub {
       'child.yatt' => qq{<!yatt:import [nosuch]="lib.ytmpl">\nbody\n},
     );
     it "should raise No such part error", sub {
-      expect($catch->(sub {$site->render("child")}))
-        ->to_match(qr/No such part to import/i);
+      $expect_error->($site, "/child", qr/No such part to import/i);
     };
   };
 
@@ -321,8 +324,7 @@ describe "error cases", sub {
       'child.yatt' => qq{<!yatt:import [confirm:action]="lib.ytmpl">\nbody\n},
     );
     it "should raise kind mismatch error", sub {
-      expect($catch->(sub {$site->render("child")}))
-        ->to_match(qr/kind mismatch/i);
+      $expect_error->($site, "/child", qr/kind mismatch/i);
     };
   };
 
@@ -338,8 +340,7 @@ END
       'child.yatt' => qq{<!yatt:import [dup]="lib.ytmpl">\nbody\n},
     );
     it "should require kind annotation", sub {
-      expect($catch->(sub {$site->render("child")}))
-        ->to_match(qr/Ambiguous import/i);
+      $expect_error->($site, "/child", qr/Ambiguous import/i);
     };
   };
 
@@ -355,8 +356,7 @@ local confirm
 END
     );
     it "should raise conflict error", sub {
-      expect($catch->(sub {$site->render("child")}))
-        ->to_match(qr/Conflicting part name/i);
+      $expect_error->($site, "/child", qr/Conflicting part name/i);
     };
   };
 
@@ -378,8 +378,7 @@ B w2
 END
     );
     it "should raise circular import error", sub {
-      expect($catch->(sub {$site->render("a")}))
-        ->to_match(qr/Circular import/i);
+      $expect_error->($site, "/a", qr/Circular import/i);
     };
   };
 };

@@ -7,7 +7,7 @@ require 5.010; # For named capture.
 
 use constant DEBUG_MRO => $ENV{DEBUG_YATT_MRO};
 
-use YATT::Lite::Core qw(Folder Template Part Widget Action Entity ArgMacro);
+use YATT::Lite::Core qw(Folder Template Part Widget Action Entity ArgMacro Import);
 use YATT::Lite::Constants;
 
 # Naming convention:
@@ -167,6 +167,22 @@ use YATT::Lite::Constants;
     $self->{_curline} = $entity->{bodyln} + numLines($src)
       + ($has_nl ? 1 : 0);
     (@src, $src, "}");
+  }
+
+  # <!yatt:import> の alias Part は glob 代入として生成する。GH-256
+  # coderef コピー (\&) にするとソース再コンパイルへ追随できないので必ず glob。
+  sub generate_import {
+    (my MY $self, my Import $import) = @_;
+    my Template $tmpl = $self->{_curtmpl};
+    my Part $src = $import->resolve_alias($self->{vfs});
+    my Template $srcTmpl = $src->{folder};
+    my $prefix = $YATT::Lite::Core::IMPORT_METHOD_PREFIX{$import->{imported_kind}}
+      or die $self->generror(q{Unknown import kind: '%s'}
+                             , $import->{imported_kind} // '(undef)');
+    ($self->sync_curline($import->{startln})
+     , sprintf(q{*%s::%s%s = *%s::%s%s; }
+               , $tmpl->{entns}, $prefix, $import->{name}
+               , $srcTmpl->{entns}, $prefix, $src->{name}));
   }
 
   #========================================

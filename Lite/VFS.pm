@@ -39,6 +39,9 @@ require File::Basename;
     (my Item $item) = @_;
     $item->{name};
   }
+  # 通常の Item は自分自身を返す。<!yatt:import> の alias Part
+  # (YATT::Lite::Core::Import) がこれを override する。GH-256
+  sub YATT::Lite::VFS::Item::resolve_alias { $_[0] }
   sub YATT::Lite::VFS::Folder::configure_parent {
     my MY $self = shift;
     # 循環参照対策
@@ -288,6 +291,10 @@ require File::Basename;
       $file->refresh($vfs) unless $vfs->{mark}{refaddr($file)}++;
       my ($name) = lexpand($nameSpec);
       my Item $item = $file->{_Item}{$name};
+      # import alias はここでソース側 Part へ解決する。GH-256
+      # (data vfs では _Item に生の文字列等も入りうるので Item の時だけ)
+      return $item->resolve_alias($vfs)
+        if $item and ref $item and UNIVERSAL::isa($item, Item);
       return $item if $item;
     }
     undef;

@@ -51,6 +51,11 @@ sub ensure_generated {
     if not $kind or not $self->{only_parse}
       or $self->{only_parse}{$kind};
   $self->setup_inheritance_for($spec, $tmpl);
+  # <!yatt:import> のソースも先に generate しておく。
+  # (子の glob 代入が eval される時点でソース側の sub が必要) GH-256
+  if (my @import_srcs = $tmpl->list_import_sources) {
+    $self->ensure_generated_for_folders($spec, @import_srcs);
+  }
   my @res = $self->generate($tmpl, $kind);
   if (my $sub = $self->{sink}) {
     $sub->({folder => $tmpl, package => $pkg, kind => 'body'
