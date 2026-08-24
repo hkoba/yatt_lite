@@ -443,12 +443,14 @@ sub declare_base {
 
       $tmpl->add_dependency($realfn, $o);
 
-      if ($o->{type} eq 'file') {
-        # base がファイルなら、この時点でコンパイルする
-        $vfs->find_product(perl => $o);
-      } else {
-        # XXX: ディレクトリの時はどうするべきか？
-      }
+      # GH-262: ここで find_product(perl => $o) してはいけない。
+      # declare 段階は記述子を置くだけにする(base の decl parse は
+      # find_neighbor_type 経由の create 時に済んでいる)。product の生成は
+      # cgen 時の setup_inheritance_for → ensure_generated_for_folders と
+      # dispatch 時の find_part_handler の事前コンパイルが遅延実行する。
+      # eager に生成すると、この宣言自身を parse 中のテンプレートが
+      # cached_in の dict 登録前(Util.pm:210)のため再 lookup で二重 create
+      # され、EntNS confliction になる(base+widget-use の循環参照が壊れる)。
     }
   }
 }
