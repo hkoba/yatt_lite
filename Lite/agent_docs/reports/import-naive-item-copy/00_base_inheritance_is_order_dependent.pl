@@ -20,7 +20,7 @@ use File::Temp qw(tempdir);
 END {chdir "/"}
 
 use YATT::Lite::WebMVC0::SiteApp;
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 use YATT::Lite::Core; # Preload to set breakpoint.
 use YATT::Lite::LRXML;
 use Plack::Test;
@@ -29,7 +29,7 @@ use HTTP::Request::Common;
 my $TMP = tempdir(CLEANUP => 1);
 my $docroot = "$TMP/app/docs";
 
-YATT::Lite::Util::File->mkfile(
+YATT::Lite::Util::File->mkfile_may_wait(
   "$docroot/form.yatt" => <<'END'
 <h2>form</h2>
 <!yatt:page confirm>

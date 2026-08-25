@@ -10,7 +10,7 @@ use Test::More;
 use File::Temp qw(tempdir);
 use autodie qw(mkdir chdir);
 
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 use YATT::Lite::Util qw(appname catch);
 
 sub myapp {join _ => MyTest => appname($0), @_}
@@ -78,7 +78,7 @@ my $root_sanity = sub {
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/index.yatt", q|FOO|);
+  MY->mkfile_may_wait("$docroot/index.yatt", q|FOO|);
 
   #----------------------------------------
   my $F = Factory->new(app_ns => $CLS
@@ -114,7 +114,7 @@ my $root_sanity = sub {
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/foo.yatt", q|FOO|);
+  MY->mkfile_may_wait("$docroot/foo.yatt", q|FOO|);
 
   #----------------------------------------
   my $F = Factory->new(app_root => $approot
@@ -141,7 +141,7 @@ my $root_sanity = sub {
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/foo.yatt", q|FOO|);
+  MY->mkfile_may_wait("$docroot/foo.yatt", q|FOO|);
 
   #----------------------------------------
   my $F = Factory->new(app_ns => $CLS
@@ -160,7 +160,7 @@ my $root_sanity = sub {
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+  MY->mkfile_may_wait("$docroot/.htyattconfig.xhf" => <<'END'
 base: @ytmpl
 other_config: in docroot
 END
@@ -204,7 +204,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+  MY->mkfile_may_wait("$docroot/.htyattconfig.xhf" => <<'END'
 base: @ytmpl
 other_config: in docroot
 other_config_list[
@@ -289,7 +289,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
   
-  MY->mkfile("$docroot/index.yatt"
+  MY->mkfile_may_wait("$docroot/index.yatt"
 	     => q|my index|
 
 	     , "$docroot/.htyattconfig.xhf" => <<'END'
@@ -347,7 +347,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
   
-  MY->mkfile("$docroot/.htyattconfig.xhf", <<'END');
+  MY->mkfile_may_wait("$docroot/.htyattconfig.xhf", <<'END');
 base[
 - @t_foo
 - @t_bar
@@ -355,7 +355,7 @@ base[
 ]
 END
 
-  MY->mkfile("$docroot/index.yatt"
+  MY->mkfile_may_wait("$docroot/index.yatt"
 	     , q|main index|
 	     , "$approot/t_foo/foo.ytmpl"
 	     , q|FOO|
@@ -391,7 +391,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+  MY->mkfile_may_wait("$docroot/.htyattconfig.xhf" => <<'END'
 base[
 - foo
 ]
@@ -427,7 +427,7 @@ END
   my $docroot = "$approot/docs";
   my $ytmpl   = "$approot/ytmpl";
 
-  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+  MY->mkfile_may_wait("$docroot/.htyattconfig.xhf" => <<'END'
 base[
 - @ytmpl
 ]
@@ -454,7 +454,7 @@ END
   my $docroot = "$approot/docs";
   my $ytmpl   = "$approot/ytmpl";
 
-  MY->mkfile("$docroot/.htyattconfig.xhf" => <<'END'
+  MY->mkfile_may_wait("$docroot/.htyattconfig.xhf" => <<'END'
 base[
 - @ytmpl
 - foo
@@ -492,7 +492,7 @@ END
   my $ytmpl   = "$approot/ytmpl";
 
   # '..' causes error.
-  MY->mkfile("$docroot/subapp/.htyattconfig.xhf" => <<'END'
+  MY->mkfile_may_wait("$docroot/subapp/.htyattconfig.xhf" => <<'END'
 base[
 - ..
 - @ytmpl
@@ -537,9 +537,9 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/html";
 
-  MY->mkfile("$approot/html/index.yatt", q|dummy|);
+  MY->mkfile_may_wait("$approot/html/index.yatt", q|dummy|);
 
-  MY->mkfile(my $fn = "$approot/app.psgi", <<'END');
+  MY->mkfile_may_wait(my $fn = "$approot/app.psgi", <<'END');
 use FindBin;
 use YATT::Lite::WebMVC0::SiteApp -as_base;
 
@@ -568,7 +568,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/foo/index.yatt" => <<'END'
+  MY->mkfile_may_wait("$docroot/foo/index.yatt" => <<'END'
 <!yatt:base file="../base/base.yatt">
 <h2>foo index</h2>
 <yatt:bazzzzzz/>
@@ -618,7 +618,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/base1.yatt" => <<'END'
+  MY->mkfile_may_wait("$docroot/base1.yatt" => <<'END'
 <!yatt:widget foo xa xb>
 <h2>foo: &yatt:xa;</h2>
 &yatt:xb;
@@ -687,7 +687,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/public";
 
-  MY->mkfile(["$docroot/index.yatt" => ':utf8'] => <<'END');
+  MY->mkfile_may_wait(["$docroot/index.yatt" => ':utf8'] => <<'END');
 <!yatt:args x y>
 漢字&yatt:x;ひらがな&yatt:y;<br>
 END
@@ -723,7 +723,7 @@ END
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
 
-  MY->mkfile("$docroot/foo.yatt", q|FOO|);
+  MY->mkfile_may_wait("$docroot/foo.yatt", q|FOO|);
 
   #----------------------------------------
   my $F = Factory->new(app_ns => $CLS

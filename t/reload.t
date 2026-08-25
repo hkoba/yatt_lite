@@ -11,7 +11,7 @@ use File::Temp qw/tempdir/;
 
 use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
-use YATT::Lite::Util::File qw/mkfile/;
+use YATT::Lite::Util::File qw/mkfile_may_wait/;
 
 my $tempdir = tempdir(CLEANUP => 1);
 my $testno = 0;
@@ -20,9 +20,9 @@ describe "mode: reload requested only", sub {
 
   my $dir = "$tempdir/t" . ++$testno;
 
-  MY->mkfile("$dir/html/index.yatt", qq{<yatt:foo/><yatt:bar/>});
-  MY->mkfile("$dir/html/foo.ytmpl", qq{<h2>foo</h2>});
-  MY->mkfile("$dir/html/bar.yatt", qq{<h2>bar</h2>});
+  MY->mkfile_may_wait("$dir/html/index.yatt", qq{<yatt:foo/><yatt:bar/>});
+  MY->mkfile_may_wait("$dir/html/foo.ytmpl", qq{<h2>foo</h2>});
+  MY->mkfile_may_wait("$dir/html/bar.yatt", qq{<h2>bar</h2>});
 
   my $site = YATT::Lite::WebMVC0::SiteApp
     ->new(app_ns => "Test$testno", app_root => $dir, doc_root => "$dir/html"
@@ -52,7 +52,7 @@ describe "mode: reload requested only", sub {
   };
 
   describe "When index.yatt is updated, index.yatt", sub {
-    if (my ($slept) = MY->mkfile("$dir/html/index.yatt", qq{<yatt:foo/>})) {
+    if (my ($slept) = MY->mkfile_may_wait("$dir/html/index.yatt", qq{<yatt:foo/>})) {
       diag("slept $slept to update mtime of $dir/html/index.yatt");
     }
 
@@ -68,7 +68,7 @@ describe "mode: reload requested only", sub {
   };
 
   describe "When foo.ytmpl is updated, index.yatt", sub {
-    if (my ($slept) = MY->mkfile("$dir/html/foo.ytmpl", qq{<h2>FOO</h2>})) {
+    if (my ($slept) = MY->mkfile_may_wait("$dir/html/foo.ytmpl", qq{<h2>FOO</h2>})) {
       diag("slept $slept to update mtime of $dir/html/foo.ytmpl");
     }
 
@@ -88,9 +88,9 @@ describe "mode: always_refresh_deps", sub {
 
   my $dir = "$tempdir/t" . ++$testno;
 
-  MY->mkfile("$dir/html/index.yatt", qq{<yatt:foo/><yatt:bar/>});
-  MY->mkfile("$dir/html/foo.ytmpl", qq{<h2>foo</h2>});
-  MY->mkfile("$dir/html/bar.yatt", qq{<h2>bar</h2>});
+  MY->mkfile_may_wait("$dir/html/index.yatt", qq{<yatt:foo/><yatt:bar/>});
+  MY->mkfile_may_wait("$dir/html/foo.ytmpl", qq{<h2>foo</h2>});
+  MY->mkfile_may_wait("$dir/html/bar.yatt", qq{<h2>bar</h2>});
 
   my $site = YATT::Lite::WebMVC0::SiteApp
     ->new(app_ns => "Test$testno", app_root => $dir, doc_root => "$dir/html"
@@ -120,7 +120,7 @@ describe "mode: always_refresh_deps", sub {
   };
 
   describe "When foo.ytmpl is updated, index.yatt", sub {
-    if (my ($slept) = MY->mkfile("$dir/html/foo.ytmpl", qq{<h2>FOO</h2>})) {
+    if (my ($slept) = MY->mkfile_may_wait("$dir/html/foo.ytmpl", qq{<h2>FOO</h2>})) {
       diag("slept $slept to update mtime of $dir/html/foo.ytmpl");
     }
 
@@ -136,7 +136,7 @@ describe "mode: always_refresh_deps", sub {
   };
 
   describe "When bar.yatt is updated, index.yatt", sub {
-    if (my ($slept) = MY->mkfile("$dir/html/bar.yatt", qq{<h2>BAR</h2>})) {
+    if (my ($slept) = MY->mkfile_may_wait("$dir/html/bar.yatt", qq{<h2>BAR</h2>})) {
       diag("slept $slept to update mtime of $dir/html/foo.ytmpl");
     }
 
@@ -152,7 +152,7 @@ describe "mode: always_refresh_deps", sub {
   };
 
   describe "When index.yatt is updated, index.yatt", sub {
-    if (my ($slept) = MY->mkfile("$dir/html/index.yatt", qq{<yatt:foo/>})) {
+    if (my ($slept) = MY->mkfile_may_wait("$dir/html/index.yatt", qq{<yatt:foo/>})) {
       diag("slept $slept to update mtime of $dir/html/index.yatt");
     }
 
@@ -180,8 +180,8 @@ describe "always_refresh_deps for <!yatt:base> with entity only template", sub {
 
   my $dir = "$tempdir/t" . ++$testno;
 
-  MY->mkfile("$dir/public/index.yatt", qq{<!yatt:base file="super.ytmpl">\n&yatt:baz();});
-  MY->mkfile("$dir/public/super.ytmpl", qq{<!yatt:entity baz>\n return "SUPER"});
+  MY->mkfile_may_wait("$dir/public/index.yatt", qq{<!yatt:base file="super.ytmpl">\n&yatt:baz();});
+  MY->mkfile_may_wait("$dir/public/super.ytmpl", qq{<!yatt:entity baz>\n return "SUPER"});
 
   my $site = YATT::Lite::WebMVC0::SiteApp
     ->new(app_ns => "Test$testno", app_root => $dir, doc_root => "$dir/public"
@@ -211,7 +211,7 @@ describe "always_refresh_deps for <!yatt:base> with entity only template", sub {
   };
 
   describe "When super.ytmpl is updated, index.yatt", sub {
-    if (my ($slept) = MY->mkfile("$dir/public/super.ytmpl", qq{<!yatt:entity baz>\n return "BAZ"})) {
+    if (my ($slept) = MY->mkfile_may_wait("$dir/public/super.ytmpl", qq{<!yatt:entity baz>\n return "BAZ"})) {
       diag("slept $slept to update mtime of $dir/public/super.ytmpl");
     }
 

@@ -37,7 +37,7 @@ use HTTP::Request::Common;
 
 use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
-use YATT::Lite::Util::File qw/mkfile/;
+use YATT::Lite::Util::File qw/mkfile_may_wait/;
 
 my $tempdir = tempdir(CLEANUP => 1);
 END {chdir "/"}
@@ -47,7 +47,7 @@ my $make_app = sub {
   my (%files) = @_;
   my $app_root = "$tempdir/t" . ++$testno;
   my $docroot = "$app_root/docs";
-  YATT::Lite::Util::File->mkfile(
+  YATT::Lite::Util::File->mkfile_may_wait(
     map {("$docroot/$_" => $files{$_})} keys %files
   );
   my $site = YATT::Lite::WebMVC0::SiteApp->new(
@@ -58,13 +58,12 @@ my $make_app = sub {
   ($docroot, Plack::Test->create($site->to_app));
 };
 
-my $future_mtime = time + 100;
 my $rewrite = sub {
   my ($path, $content) = @_;
-  YATT::Lite::Util::File->mkfile($path => $content);
-  # mtime 比較 (Template::refresh) を確実に前進させる
-  utime($future_mtime, $future_mtime, $path);
-  $future_mtime += 10;
+  # mtime 比較 (Template::refresh) の前進は mkfile_may_wait が保証する
+  # (~1 秒眠ることがある)。utime で mtime を進めてはならない (mkfile_may_wait
+  # の待ち条件を汚染し、次の書き換えが mtime 分だけ実時間で眠ってしまう)。
+  YATT::Lite::Util::File->mkfile_may_wait($path => $content);
 };
 
 describe "case 1: inherited page as the very first request", sub {

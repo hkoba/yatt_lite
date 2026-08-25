@@ -9,7 +9,7 @@ use FindBin; BEGIN { do "$FindBin::Bin/t_lib.pl" }
 use Test::More;
 use File::Temp qw(tempdir);
 use autodie qw(mkdir chdir);
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 use YATT::Lite::Util qw(appname catch);
 
 my $TMP = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);
@@ -604,7 +604,7 @@ END
   my $THEME = "[find_file, refresh and reset]";
   my $docroot = "$TMP/app$i";
 
-  MY->mkfile("$docroot/index.yatt", <<'END');
+  MY->mkfile_may_wait("$docroot/index.yatt", <<'END');
 <!yatt:args x y>
 x=&yatt:x; y=&yatt:y;
 

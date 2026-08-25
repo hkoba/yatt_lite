@@ -23,7 +23,7 @@ use HTTP::Request::Common;
 
 use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
-use YATT::Lite::Util::File qw/mkfile/;
+use YATT::Lite::Util::File qw/mkfile_may_wait/;
 
 my $tempdir = tempdir(CLEANUP => 1);
 END {chdir "/"}
@@ -66,7 +66,7 @@ END
 my $make_app = sub {
   my $app_root = "$tempdir/t" . ++$testno;
   my $docroot = "$app_root/docs";
-  YATT::Lite::Util::File->mkfile(
+  YATT::Lite::Util::File->mkfile_may_wait(
     map {("$docroot/$_" => $tmpl_files{$_})} keys %tmpl_files
   );
   my $site = YATT::Lite::WebMVC0::SiteApp->new(

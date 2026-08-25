@@ -12,7 +12,7 @@ use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
 
 use File::Temp qw/tempdir/;
-use YATT::Lite::Util::File qw/mkfile/;
+use YATT::Lite::Util::File qw/mkfile_may_wait/;
 use File::Path qw(make_path);
 use Cwd;
 
@@ -29,8 +29,8 @@ my $TESTNO = 0;
 my $make_app = sub {
   my $app_root = "$TEMPDIR/myapp" . ++$TESTNO;
   make_path("$app_root/t", "$app_root/html");
-  MY->mkfile("$app_root/app.psgi", "# dummy, only the path matters\n");
-  MY->mkfile("$app_root/html/index.yatt", "hello\n");
+  MY->mkfile_may_wait("$app_root/app.psgi", "# dummy, only the path matters\n");
+  MY->mkfile_may_wait("$app_root/html/index.yatt", "hello\n");
   ($app_root, "$app_root.config.d");
 };
 
@@ -57,11 +57,11 @@ describe "YATT::Lite::Util::normalize_fs_path", sub {
 
 describe "load_factory_for_psgi with '..'-containing psgi path", sub {
   my ($app_root, $config_d) = $make_app->();
-  MY->mkfile("$config_d/app.xhf", <<'END');
+  MY->mkfile_may_wait("$config_d/app.xhf", <<'END');
 use_sibling_config_dir: 1
 site_prefix: /prefixed
 END
-  MY->mkfile("$config_d/site_config.xhf", <<'END');
+  MY->mkfile_may_wait("$config_d/site_config.xhf", <<'END');
 bar: baz
 END
 
@@ -92,7 +92,7 @@ END
 
 describe "explicit app_root ending with '..'", sub {
   my ($app_root, $config_d) = $make_app->();
-  MY->mkfile("$config_d/site_config.xhf", <<'END');
+  MY->mkfile_may_wait("$config_d/site_config.xhf", <<'END');
 bar: direct
 END
 
@@ -117,7 +117,7 @@ END
 
 describe "control: psgi path without '..'", sub {
   my ($app_root, $config_d) = $make_app->();
-  MY->mkfile("$config_d/app.xhf", <<'END');
+  MY->mkfile_may_wait("$config_d/app.xhf", <<'END');
 use_sibling_config_dir: 1
 site_prefix: /ctrl
 END
@@ -141,7 +141,7 @@ END
 
 describe "fallback: app.xhf under app_root when no sibling config dir", sub {
   my ($app_root, $config_d) = $make_app->();
-  MY->mkfile("$app_root/app.xhf", <<'END');
+  MY->mkfile_may_wait("$app_root/app.xhf", <<'END');
 site_prefix: /plain
 END
 

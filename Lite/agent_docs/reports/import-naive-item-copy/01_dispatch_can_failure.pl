@@ -17,12 +17,12 @@ use File::Temp qw(tempdir);
 END {chdir "/"}  # tempdir CLEANUP のため
 
 use YATT::Lite::Factory;
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 
 my $TMP = tempdir(CLEANUP => 1);
 my $docroot = "$TMP/app/docs";
 
-YATT::Lite::Util::File->mkfile(
+YATT::Lite::Util::File->mkfile_may_wait(
   "$docroot/form.yatt" => <<'END'
 <h2>form default</h2>
 <!yatt:page confirm>

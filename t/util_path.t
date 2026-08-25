@@ -11,7 +11,7 @@ use File::Temp qw(tempdir);
 use File::Path qw(make_path);
 use Test::More;
 
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 
 BEGIN {
   use_ok('YATT::Lite::Util', qw(split_path lookup_path
@@ -32,15 +32,15 @@ my $i = 1;
 	   , my $ytmpl = "$appdir/ytmpl");
   chdir($appdir);
 
-  MY->mkfile("html/index.yatt", 'top');
-  MY->mkfile("html/auth.yatt", 'auth');
-  MY->mkfile("html/code.ydo", 'code');
-  MY->mkfile("html/img/bg.png", 'background');
-  MY->mkfile("html/d1/f1.yatt", 'in_d1');
+  MY->mkfile_may_wait("html/index.yatt", 'top');
+  MY->mkfile_may_wait("html/auth.yatt", 'auth');
+  MY->mkfile_may_wait("html/code.ydo", 'code');
+  MY->mkfile_may_wait("html/img/bg.png", 'background');
+  MY->mkfile_may_wait("html/d1/f1.yatt", 'in_d1');
 
-  MY->mkfile("ytmpl/foo.yatt", "foo in tmpl");
-  MY->mkfile("ytmpl/d1/f2.yatt", "f2 in tmpl");
-  MY->mkfile("ytmpl/d2/bar.yatt", "bar in tmpl");
+  MY->mkfile_may_wait("ytmpl/foo.yatt", "foo in tmpl");
+  MY->mkfile_may_wait("ytmpl/d1/f2.yatt", "f2 in tmpl");
+  MY->mkfile_may_wait("ytmpl/d2/bar.yatt", "bar in tmpl");
 
   my $test = sub {
     my ($part, $loc, $want, $longtitle) = @_;
@@ -102,24 +102,24 @@ $i++;
   chdir($realdir);
 
   my $html = "$realdir/html";
-  MY->mkfile("$html/test.yatt", 'test1');
-  MY->mkfile("$html/real/index.yatt", 'index in realsub');
-  MY->mkfile("$html/real/test.yatt", 'test in realsub');
-  MY->mkfile("$html/real/code.ydo", 'code in realsub');
-  MY->mkfile("$html/rootcode.ydo", 'rootcode');
+  MY->mkfile_may_wait("$html/test.yatt", 'test1');
+  MY->mkfile_may_wait("$html/real/index.yatt", 'index in realsub');
+  MY->mkfile_may_wait("$html/real/test.yatt", 'test in realsub');
+  MY->mkfile_may_wait("$html/real/code.ydo", 'code in realsub');
+  MY->mkfile_may_wait("$html/rootcode.ydo", 'rootcode');
 
-  MY->mkfile("$html/js/jquery/jquery.min.js", 'yes this is dummy;-)');
+  MY->mkfile_may_wait("$html/js/jquery/jquery.min.js", 'yes this is dummy;-)');
 
   my $tmpl = "$realdir/runyatt.ytmpl";
-  MY->mkfile("$tmpl/index.yatt", 'virtual index');
-  MY->mkfile("$tmpl/virt/index.yatt", 'virtual index in virt');
-  MY->mkfile("$tmpl/virt/test.yatt", 'test in virt');
-  MY->mkfile("$tmpl/virt/code.ydo", 'code in virt');
-  MY->mkfile("$tmpl/virtcode.ydo", 'virtcode');
+  MY->mkfile_may_wait("$tmpl/index.yatt", 'virtual index');
+  MY->mkfile_may_wait("$tmpl/virt/index.yatt", 'virtual index in virt');
+  MY->mkfile_may_wait("$tmpl/virt/test.yatt", 'test in virt');
+  MY->mkfile_may_wait("$tmpl/virt/code.ydo", 'code in virt');
+  MY->mkfile_may_wait("$tmpl/virtcode.ydo", 'virtcode');
 
-  MY->mkfile("$tmpl/filevsdir.yatt", "file vs dir, this is the file");
-  MY->mkfile("$tmpl/filevsdir/index.yatt", "file vs dir, this is dir index");
-  MY->mkfile("$tmpl/filevsdir/real.yatt", "file vs dir, real in dir");
+  MY->mkfile_may_wait("$tmpl/filevsdir.yatt", "file vs dir, this is the file");
+  MY->mkfile_may_wait("$tmpl/filevsdir/index.yatt", "file vs dir, this is dir index");
+  MY->mkfile_may_wait("$tmpl/filevsdir/real.yatt", "file vs dir, real in dir");
 
 
   my @tmpls = map {"$realdir/$_"} qw(html runyatt.ytmpl);

@@ -17,7 +17,7 @@ use HTTP::Message::PSGI;
 use YATT::t::t_preload; # To make Devel::Cover happy.
 use YATT::Lite::WebMVC0::SiteApp;
 use YATT::Lite::Util qw/combination/;
-use YATT::Lite::Util::File qw/mkfile/;
+use YATT::Lite::Util::File qw/mkfile_may_wait/;
 use File::Path qw(make_path);
 use Cwd;
 
@@ -109,7 +109,7 @@ foreach my $test (
         my ($url, $wname) = @$req;
 
         {
-          MY->mkfile("$real_dir/$wname.yatt"
+          MY->mkfile_may_wait("$real_dir/$wname.yatt"
                      , qq{<!yatt:args test>\n(&yatt:script_name();)});
 
           my Env $psgi = $mkpsgi->($url);
@@ -139,7 +139,7 @@ foreach my $test (
         my $path = URI->new($url)->path;
 
         {
-          MY->mkfile("$real_dir/$wname.yatt"
+          MY->mkfile_may_wait("$real_dir/$wname.yatt"
                      , qq{<!yatt:args test>\n(&yatt:file_location();)});
 
           my Env $psgi = $mkpsgi->($url);
@@ -170,7 +170,7 @@ foreach my $test (
         my $path = URI->new($url)->path;
 
         {
-          MY->mkfile("$real_dir/$wname.yatt"
+          MY->mkfile_may_wait("$real_dir/$wname.yatt"
                      , qq{<!yatt:args test>\n}
                      . qq{(&yatt:site_path();)}
                      . qq{(&yatt:site_path(/admin/,[page,2]);)}
@@ -215,7 +215,7 @@ foreach my $test (
       foreach my $test (@tests) {
         my ($loc, $file) = @$test;
         my $urlMain = $exampleUrl.$loc;
-        MY->mkfile("$real_dir/$file"
+        MY->mkfile_may_wait("$real_dir/$file"
                    , qq{<!yatt:args test>\n(&yatt:script_uri();)});
         my $psgi = (GET "http:$urlMain")->to_psgi;
 
@@ -254,14 +254,14 @@ foreach my $test (
           , app_root => $app_root
           , doc_root => $real_dir);
 
-  MY->mkfile("$real_dir/item.yatt"
+  MY->mkfile_may_wait("$real_dir/item.yatt"
              , qq{<!yatt:args>\ntop\n}
              . qq{<!yatt:page detail="/detail/:id">\n}
              . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)}
              . qq{(&yatt:file_location();)}
              . qq{(&yatt:page_location();)});
 
-  MY->mkfile("$real_dir/zzz/index.yatt"
+  MY->mkfile_may_wait("$real_dir/zzz/index.yatt"
              , qq{<!yatt:args>\ntop\n}
              . qq{<!yatt:page detail="/detail/:id">\n}
              . qq{(&yatt:CON:mkurl(,,mapped_path,1,local,1);)}

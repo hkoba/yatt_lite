@@ -24,7 +24,7 @@ use File::Temp qw(tempdir);
 END {chdir "/"}
 
 use YATT::Lite::Factory;
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 use Scalar::Util qw(refaddr);
 
 my $TMP = tempdir(CLEANUP => 1);
@@ -42,7 +42,7 @@ my $FORM_V2 = <<'END';
 x=[&yatt:x;] y=[&yatt:y;]
 END
 
-YATT::Lite::Util::File->mkfile(
+YATT::Lite::Util::File->mkfile_may_wait(
   "$docroot/form.yatt" => $FORM_V1,
   "$docroot/child.yatt" => "<h2>child default</h2>\n",
 );
@@ -80,7 +80,7 @@ my ($out) = naive_dispatch_via_child(x => 'XX', y => 'YY');
 print $out;
 
 # --- form.yatt を編集: 宣言の引数順を x y → y x に入れ替え ---
-YATT::Lite::Util::File->mkfile("$docroot/form.yatt" => $FORM_V2);
+YATT::Lite::Util::File->mkfile_may_wait("$docroot/form.yatt" => $FORM_V2);
 utime(time + 5, time + 5, "$docroot/form.yatt");  # mtime 前進を保証
 
 # --- 新しいリクエストを模倣 ---
@@ -106,7 +106,7 @@ print "  x と y の値が入れ替わって描画される。\n";
 print "\n== (5) 対照: <!yatt:base> の lookup 経由なら編集が正しく反映される ==\n";
 # (検証00の通り、base 継承 lookup は子のコンパイル後にのみ機能する。
 #  ここでは render で child_base をコンパイルしてから示す)
-YATT::Lite::Util::File->mkfile(
+YATT::Lite::Util::File->mkfile_may_wait(
   "$docroot/child_base.yatt" => qq{<!yatt:base file="form.yatt">\n<h2>cb</h2>\n});
 my $F2 = YATT::Lite::Factory->new(
   app_ns => 'TestImport02b',

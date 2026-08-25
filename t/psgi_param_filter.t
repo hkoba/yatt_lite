@@ -15,7 +15,7 @@ use HTTP::Request::Common;
 use YATT::Lite::Breakpoint;
 
 use YATT::t::t_preload; # To make Devel::Cover happy.
-use YATT::Lite::Util::File qw(mkfile);
+use YATT::Lite::Util::File qw(mkfile_may_wait);
 
 use YATT::Lite::WebMVC0::SiteApp ();
 
@@ -29,7 +29,7 @@ my $i = 1;
   my $CLS = 'MyYATTUnknownParams';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
-  MY->mkfile("$docroot/index.yatt", <<'END');
+  MY->mkfile_may_wait("$docroot/index.yatt", <<'END');
 <!yatt:args x y z>
 x=&yatt:x;
 y=&yatt:y;
@@ -112,7 +112,7 @@ END
   my $CLS = 'MyYATTInDevelopment';
   my $approot = "$TMP/app$i";
   my $docroot = "$approot/docs";
-  MY->mkfile("$docroot/index.yatt", <<'END');
+  MY->mkfile_may_wait("$docroot/index.yatt", <<'END');
 <!yatt:args x y z>
 x=&yatt:x;
 y=&yatt:y;
