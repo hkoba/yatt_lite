@@ -8,6 +8,8 @@ use File::Path qw(make_path);
 use Time::HiRes qw/usleep/;
 use File::stat;
 
+use constant DEBUG => $ENV{DEBUG_YATT_UTIL_FILE};
+
 sub mkfile {
   my ($pack) = shift;
   my @slept;
@@ -38,6 +40,8 @@ sub wait_for_time {
   my $now = Time::HiRes::time;
   my $diff = $time - $now;
   return if $diff <= 0;
+  print STDERR "# wait_for_time: $diff secs\n"
+    if DEBUG;
   usleep(int($diff * 1000 * 1000));
   $diff;
 }
@@ -63,7 +67,9 @@ sub wait_if_near_deadline {
 # Auto Export.
 my $symtab = YATT::Lite::Util::symtab(__PACKAGE__);
 our @EXPORT_OK = grep {
-  *{$symtab->{$_}}{CODE}
+  my $entry = $symtab->{$_};
+  # To remove constant;
+  !ref $entry && *{$entry}{CODE}
 } keys %$symtab;
 
 use Exporter qw(import);
