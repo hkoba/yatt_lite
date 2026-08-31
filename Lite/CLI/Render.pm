@@ -34,7 +34,8 @@ sub main {
     if ($res->is_success) {
       print scalar $res->body;
     } else {
-      print STDERR join(" ", $res->status, $res->content), "\n";
+      print STDERR join(" ", grep {defined $_ and $_ ne ''}
+			$res->status, $res->content), "\n";
       $nerror++;
     }
   }
