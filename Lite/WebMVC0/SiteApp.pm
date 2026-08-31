@@ -228,6 +228,7 @@ sub prepare_app {
   $self->{is_psgi} = 1;
   require Plack::Request;
   require Plack::Response;
+  require Plack::Util; # for response_cb in call(). Do not rely on plackup.
   my $backend;
   if ($backend = $self->{backend}
       and my $sub = $backend->can('startup')) {
