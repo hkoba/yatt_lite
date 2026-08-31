@@ -475,10 +475,13 @@ sub strerror2lintresult {
   $result->{file} = $tmpl->{path};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
-  $errStr =~ s/\n.*\z//s;
+  # Keep the whole message (perl may report several errors at once);
+  # the range comes from the first reported line. GH-269
+  $errStr =~ s/\n+\z//;
   $diag->{message} = $errStr;
   if ($errStr =~ / line (\d+)[,\.]/) {
-    $diag->{range} = $self->make_line_range($1+0);
+    # make_line_range takes a 0-based line (cf. yatterror2lintresult).
+    $diag->{range} = $self->make_line_range($1 - 1);
   }
   $result;
 }
