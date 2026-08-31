@@ -187,6 +187,13 @@ my $site = do {
     , "Site->load dies when no app.psgi is found";
 }
 
+{
+  # Like Node's require.cache: one factory script = one site object per
+  # process (a second raw load would collide on app_ns anyway).
+  my $again = YATT::Lite::Site->load(dir => "$app1/public");
+  is $again, $site, "Site->load caches per factory script";
+}
+
 #========================================
 # Site->load_or_default : fallback SiteApp with auto-uniquified app_ns
 #========================================

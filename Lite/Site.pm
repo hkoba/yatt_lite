@@ -44,29 +44,46 @@ sub _facade_factory_class {
 # from $opts{dir}. Dies when not found. Defaults to offline => 1
 # (error_handler passes raw die through) since this entry is mainly for
 # programs and tools; the web entry point is app.psgi itself.
+#
+# Like Node's require.cache, one factory script yields one site object
+# per process: loading the same script twice would collide on app_ns
+# anyway, so subsequent load()s return the cached instance (with any
+# explicitly given opts re-configured onto it).
+our %SCRIPT_CACHE;
 sub load {
   my ($pack, %opts) = @_;
   my $class = $pack->_facade_factory_class;
-  my $dir = $opts{dir} // '.';
+  my $dir = delete $opts{dir} // '.';
+  my ($script) = $class->find_factory_script($dir)
+    or croak "Can't find factory script (app.psgi or runyatt.psgi)"
+    . " at or above: $dir";
+  my $key = YATT::Lite::Util::normalize_fs_path($class->rel2abs($script));
+  if (my $site = $SCRIPT_CACHE{$key}) {
+    $site->configure(%opts) if %opts;
+    return $site;
+  }
   $opts{offline} = 1 unless exists $opts{offline};
-  $class->find_load_factory_script(%opts)
-    // croak "Can't find factory script (app.psgi or runyatt.psgi)"
-       . " at or above: $dir";
+  my $site = $class->load_factory_script($key)
+    or croak "Can't load YATT::Lite::Factory instance from $script";
+  $site->configure(%opts);
+  $SCRIPT_CACHE{$key} = $site;
 }
 
 # Like load, but falls back to a plain SiteApp when no factory script
 # is found. app_ns is auto-uniquified so that multiple default sites
-# can coexist in one process.
+# can coexist in one process. The class of the synthesized site can be
+# overridden with class => 'My::SiteApp'.
 sub load_or_default {
   my ($pack, %opts) = @_;
   my $class = $pack->_facade_factory_class;
+  my $app_class = delete $opts{class} // 'YATT::Lite::WebMVC0::SiteApp';
   if ($class->find_factory_script($opts{dir})) {
     return $pack->load(%opts);
   }
   my $dir = delete $opts{dir};
   $opts{offline} = 1 unless exists $opts{offline};
-  require YATT::Lite::WebMVC0::SiteApp;
-  YATT::Lite::WebMVC0::SiteApp->new
+  YATT::Lite::Util::ckrequire($app_class);
+  $app_class->new
     (app_ns => $pack->_uniq_default_app_ns
      , (defined $dir ? (app_root => $dir, doc_root => $dir) : ())
      , header_charset => 'utf-8'

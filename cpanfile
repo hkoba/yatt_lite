@@ -48,6 +48,8 @@ recommends 'B::Utils' => '!= 0.26';
 
 # For Inspector
 requires 'Text::Glob';
+requires 'File::Slurp';
+requires 'Try::Tiny';
 
 # For LanguageServer support
 recommends 'Coro';

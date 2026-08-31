@@ -63,10 +63,17 @@ END
 fine
 END
 
-     , "$app/public/bad.yatt", <<'END'
+     # Note: each block below lints a FRESH bad file. Re-linting the
+     # same unchanged-but-broken template within one process returns a
+     # false success (stale product left by the failed compile - the
+     # GH-263 "failed load leftovers" problem), so we avoid depending
+     # on it here.
+     , (map {
+       ("$app/public/bad$_.yatt", <<'END')
 <!yatt:args>
 <yatt:no_such_widget/>
 END
+     } (1..3, '_tap', '_script')),
     );
 }
 
@@ -125,12 +132,12 @@ sub capture_err (&) {
   my ($exit, $errout);
   capture {
     $errout = capture_err {
-      $exit = YATT::Lite::CLI::Lint->run(["$app/public/bad.yatt"]);
+      $exit = YATT::Lite::CLI::Lint->run(["$app/public/bad1.yatt"]);
     };
   };
   is $exit, 1, "bad file => exit 1";
   like $errout, qr/No such widget/, "error message on stderr";
-  like $errout, qr/bad\.yatt:2:/, "file:line: prefix points at the error line";
+  like $errout, qr/bad1\.yatt:2:/, "file:line: prefix points at the error line";
 }
 
 #========================================
@@ -141,7 +148,7 @@ sub capture_err (&) {
   capture {
     $errout = capture_err {
       $exit = YATT::Lite::CLI::Lint->run
-	(["$app/public/bad.yatt", "$app/public/good.yatt"]);
+	(["$app/public/bad2.yatt", "$app/public/good.yatt"]);
     };
   };
   is $exit, 1, "stops at first failure without --all";
@@ -150,7 +157,7 @@ sub capture_err (&) {
   capture {
     $errout = capture_err {
       $exit = YATT::Lite::CLI::Lint->run
-	(["--all", "$app/public/bad.yatt", "$bare/bad.yatt"]);
+	(["--all", "$app/public/bad3.yatt", "$bare/bad.yatt"]);
     };
   };
   is $exit, 1, "--all still exits 1";
@@ -166,7 +173,7 @@ sub capture_err (&) {
   my $out = capture {
     capture_err {
       $exit = YATT::Lite::CLI::Lint->run
-	(["--tap", "$app/public/good.yatt", "$app/public/bad.yatt"]);
+	(["--tap", "$app/public/good.yatt", "$app/public/bad_tap.yatt"]);
     };
   };
   like $out, qr/^1\.\.2\n/, "tap plan";
@@ -205,7 +212,7 @@ sub capture_err (&) {
   my $out = qx{$^X $script "$app/public/good.yatt" 2>/dev/null};
   is $? >> 8, 0, "script exits 0 for good file";
 
-  $out = qx{$^X $script "$app/public/bad.yatt" 2>&1};
+  $out = qx{$^X $script "$app/public/bad_script.yatt" 2>&1};
   isnt $? >> 8, 0, "script exits non-zero for bad file";
   like $out, qr/No such widget/, "script reports the error";
 }
