@@ -1,6 +1,15 @@
 Revision history for YATT::Lite
 
-0.199_001 2026-07-15
+0.199_002 2026-08-31
+    * GH-264 - New parser option `allow_bare_entity_in_decl` - quotes around entities in declarations are now omissible
+    * GH-262 - Fix EntNS confliction regression - base <-> widget-use circular references work again (drop eager base compile in declare_base)
+    * GH-260 - Lexically normalize app_root/doc_root (fix silently broken sibling config_dir when app_root ends with `..`)
+    * GH-259 - `mkquery($CON)` no longer reproduces POST body parameters (Compatibility option: `mkquery_with_body_params`)
+    * GH-258 - Fix body boundary of action/entity parts swallowing a following `<!yatt:argmacro>` declaration
+    * GH-256 - Add `<!yatt:import>` declaration (widget/page/action/entity/argmacro)
+    * GH-255 - Fix two `<!yatt:base>` inheritance bugs - first-hit dispatch failure and stale caller-side arg mapping
+    * GH-254 - `<yatt:foo if="COND">` / `unless=` now generates conditional call (port from yatt-pm)
+    * GH-252 - `app.yml` can now be placed in the sibling config dir (`*.config.d/`) too
     * GH-251 - better URL generation methods/entities, add raise_redirect alias.
     * GH-250 - trim trailing `/` of `&yatt:script_name;`
     * GH-249 - Add `yatt:foreach` alternate syntax `var=value`

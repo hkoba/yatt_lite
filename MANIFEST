@@ -1,3 +1,4 @@
+.claude/settings.local.json
 .gitattributes
 .github/workflows/coverage.yml
 .github/workflows/perl_linux.yml
@@ -15,6 +16,13 @@ elisp/yatt-utils.el
 LICENSE
 Lite.pm
 Lite.pod
+Lite/agent_docs/reports/import-naive-item-copy.md
+Lite/agent_docs/reports/import-naive-item-copy/00_base_inheritance_is_order_dependent.pl
+Lite/agent_docs/reports/import-naive-item-copy/01_dispatch_can_failure.pl
+Lite/agent_docs/reports/import-naive-item-copy/02_stale_meta_after_source_edit.pl
+Lite/agent_docs/reports/import-naive-item-copy/03_ghost_part_after_delete.pl
+Lite/agent_docs/reports/import-naive-item-copy/04_circular_reference.pl
+Lite/agent_docs/reports/import-naive-item-copy/05_partlist_recompile_context_shift.pl
 Lite/Breakpoint.pm
 Lite/CGen.pm
 Lite/CGen/ArgMacro.pm
@@ -350,6 +358,12 @@ samples/minimum.psgi
 samples/more/1/app.psgi
 samples/more/1/public/.htyattrc.pl
 samples/more/1/public/index.yatt
+samples/more/2/app.psgi
+samples/more/2/public/foo.yatt
+samples/more/2/public/index.yatt
+samples/more/3/app.psgi
+samples/more/3/public/.htyattconfig.xhf
+samples/more/3/public/index.yatt
 samples/mysql-use-htdbpass.zsh
 samples/oldsessioncompat.psgi
 samples/README
@@ -654,6 +668,8 @@ scripts/yatt.render
 scripts/yatt.xgettext
 scripts/yatt.xhftest
 scripts/yattup
+t/base_inherit_refresh.t
+t/base_widget_cycle.t
 t/cgi.t
 t/cmdline.d/t_cmd1.pl
 t/cmdline.t
@@ -665,6 +681,7 @@ t/dbschema_dbic.t
 t/entpath.t
 t/error.t
 t/factory.t
+t/factory_approot_normalize.t
 t/factory_crossbase.t
 t/factory_invoke_sub.t
 t/gh241_mkhidden_nested_query/app/app.psgi
@@ -677,9 +694,11 @@ t/instpkg.t
 t/lib/.symlinks
 t/lineno.t
 t/lite.t
+t/lite_import.t
 t/lite_xhf.t
 t/lrxml.t
 t/lrxml_alttree_range.t
+t/lrxml_boundarylist.t
 t/object.t
 t/partial.t
 t/psgi.cgi-bin/test1.cgi
@@ -766,6 +785,7 @@ t/tkt209_modcatcherror_in_entity/ytmpl/error.ytmpl
 t/typealias.t
 t/types.t
 t/use.t
+t/util_file.t
 t/util_nestedq.t
 t/util_other.t
 t/util_path.t
@@ -777,6 +797,10 @@ t/xhf/lite/1-basic.xhf
 t/xhf/lite/10-return.xhf
 t/xhf/lite/11-custom_body_argument.xhf
 t/xhf/lite/12-argmacro.xhf
+t/xhf/lite/13-call-if.xhf
+t/xhf/lite/14-call-if-disabled.xhf
+t/xhf/lite/15-decl-boundary.xhf
+t/xhf/lite/16-import.xhf
 t/xhf/lite/2-if.xhf
 t/xhf/lite/3-my.xhf
 t/xhf/lite/4-ent.xhf
