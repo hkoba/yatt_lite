@@ -124,6 +124,7 @@ use YATT::Lite::MFields
 
        match_argsroute_first
        allow_bare_entity_in_decl
+       no_chdir
        /
  , [stash_unknown_params_to => 
     (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
@@ -646,13 +647,7 @@ sub render_encoded {
 
   my ($dh, $con, $widgetSpec) = $self->prepare_processing_context($reqrec, $args);
 
-  $self->invoke_dirhandler
-  (
-    $dh,
-   , render_into => $con
-   , $widgetSpec
-   , $args, @opts
-  );
+  $self->render_into_context($dh, $con, $widgetSpec, $args, @opts);
 
   $con->buffer;
 }
@@ -671,6 +666,25 @@ sub render_into {
 
   $con->configure(yatt => $dh);
 
+  $self->render_into_context($dh, $con, $widgetSpec, $args, @opts);
+}
+
+#
+# Common context wrapper for the render path: sets $SYS/$YATT/$CON,
+# runs before/after_dirhandler (site_config entities) and the chdir
+# guard, but does NOT install the __DIE__/__WARN__ traps - that is the
+# web handle path's intentional distinction (perl -d friendliness).
+# GH-267
+#
+sub render_into_context {
+  (my MY $self, my ($dh, $con, $widgetSpec, $args, @opts)) = @_;
+
+  local ($SYS, $YATT, $CON) = ($self, $dh, $con);
+
+  $self->before_dirhandler($dh, $con, lexpand($widgetSpec));
+
+  my $chdir_guard = $dh->chdir_guard;
+
   $self->invoke_dirhandler
   (
     $dh,
@@ -678,6 +692,10 @@ sub render_into {
    , $widgetSpec
    , $args, @opts
   );
+
+  $self->after_dirhandler($dh, $con, lexpand($widgetSpec));
+
+  YATT::Lite::Util::try_invoke($con, 'flush_headers');
 }
 
 sub make_connection_for {
@@ -1177,6 +1195,7 @@ sub _cf_delegates {
      prefer_call_for_entity
      no_conditional_call
      allow_bare_entity_in_decl
+     no_chdir
   );
 }
 

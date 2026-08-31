@@ -70,6 +70,12 @@ sub YATT {
   $prop->{yatt};
 }
 
+# $SYS is derivable from $CON: $SYS == $CON->system ($YATT == $CON->YATT).
+sub system {
+  my PROP $prop = prop(my $glob = shift);
+  $prop->{system};
+}
+
 # # XXX: Experimental. This can slowdown 20%! the code like: print $CON (text);
 # use overload qw/%{}  as_hash
 # 		bool as_bool/;
