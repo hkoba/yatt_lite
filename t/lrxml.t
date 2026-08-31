@@ -1289,6 +1289,21 @@ END
   like $@, qr/^yatt:widget got wrong token for route spec: ENTITY/, "Unclosed <!yatt:widget\\n &yatt:foo;";
 }
 
+{
+  my $tmpl = $CLASS->Template->new;
+  local $@ = "";
+  eval {
+    $CLASS->load_string_into($tmpl, my $cp = <<END, all => 1, allow_bare_entity_in_decl => 1);
+<!yatt:widget foo x=?&yatt:bar();>
+
+<!yatt:entity bar>
+END
+  };
+
+  # When allow_bare_entity_in_decl is set, quotation around entities are not mandatory.
+  is $@, '', "allow_bare_entity_in_decl";
+}
+
 TODO: {
   local $TODO = "Perl >= 5.30 only" unless $] >= 5.030;
   my $tmpl = $CLASS->Template->new;

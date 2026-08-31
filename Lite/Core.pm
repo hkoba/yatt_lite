@@ -17,6 +17,7 @@ use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
               match_argsroute_first
               body_argument
               body_argument_type
+              allow_bare_entity_in_decl
 
               stash_unknown_params_to
 	      prefer_call_for_entity
@@ -622,6 +623,7 @@ sub import_find_source_part {
              match_argsroute_first
              body_argument
              body_argument_type
+             allow_bare_entity_in_decl
           )
 	  , [debug_parser => 'debug']
 	  , [tmpl_encoding => 'encoding']

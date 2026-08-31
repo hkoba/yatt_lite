@@ -123,6 +123,7 @@ use YATT::Lite::MFields
        _my_psgi_app
 
        match_argsroute_first
+       allow_bare_entity_in_decl
        /
  , [stash_unknown_params_to => 
     (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
@@ -1175,6 +1176,7 @@ sub _cf_delegates {
      body_argument_type
      prefer_call_for_entity
      no_conditional_call
+     allow_bare_entity_in_decl
   );
 }
 
