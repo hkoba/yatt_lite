@@ -37,6 +37,7 @@ use fields qw/_re_decl
               match_argsroute_first
 
 	      _original_entpath
+              allow_bare_entity_in_decl
 	    /;
 
 use YATT::Lite::Core qw(Part Widget Page Action Data Entity Template ArgMacro Import);
@@ -92,6 +93,9 @@ sub after_new {
 	if $self->{special_entities};
     sprintf q{&(?:%s)}, join "|", @entPat;
   };
+
+  my $entCloseInAtt = $self->{allow_bare_entity_in_decl} ? "" : ";";
+
   $self->{_re_att}
     ||= qr{(?<ws>\s++)
 	 | (?<comment>--+.*?--+)
@@ -101,7 +105,7 @@ sub after_new {
 	   |"(?<dq>[^\"]*+)"
 	   |(?<nest>\[) | (?<nestclo>\])
 	   |$entOpen
-	   |(?<bare>[^\s\'\"<>\[\]/=;]++)
+	   |(?<bare>[^\s\'\"<>\[\]/=$entCloseInAtt]++)
 	   )
            (?<equal>\s*=\s*+)?+
 	}xs;
