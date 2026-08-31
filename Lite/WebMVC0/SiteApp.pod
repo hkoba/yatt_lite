@@ -39,6 +39,10 @@ YATT::Lite::WebMVC0::SiteApp - PSGI Handler for yatt
 
 =head1 DESCRIPTION
 
+C<SiteApp> is C<Site + PSGI adapter>: it inherits the public facade
+API of L<YATT::Lite::Site> (C<load>, C<request>, C<render_file>...)
+and adds C<to_app>/C<call> for the web.
+
 C<SiteApp> is a L<Factory|YATT::Lite::Factory>
 of L<DirApp|YATT::Lite::WebMVC0::DirApp>, which is a web specific
 subclass of L<YATT::Lite>.
