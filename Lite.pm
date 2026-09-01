@@ -53,6 +53,7 @@ use YATT::Lite::MFields qw/_YATT
 	      prefer_call_for_entity
 	      no_conditional_call
               allow_bare_entity_in_decl
+              no_chdir
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -94,6 +95,40 @@ sub with_system {
   (my MY $self, local $SYS, my $method) = splice @_, 0, 3;
   local $YATT = $self;
   $self->$method(@_);
+}
+
+#
+# "The cwd of a template is its directory" - scoped chdir with restore.
+# Returns a guard object which restores the previous cwd when it goes
+# out of scope (also when the scope dies). Returns undef (no-op) when
+# this handler has no physical directory or no_chdir is configured.
+# Note: chdir happens only for the entry dirhandler; templates in other
+# directories called via base/import do not re-chdir. GH-267
+#
+sub chdir_guard {
+  (my MY $self) = @_;
+  return undef if $self->{no_chdir};
+  defined(my $dir = $self->{dir}) or return undef;
+  YATT::Lite::ChdirGuard->new($dir);
+}
+
+{
+  package YATT::Lite::ChdirGuard;
+  use strict;
+  use Carp ();
+  require Cwd;
+  sub new {
+    my ($pack, $dir) = @_;
+    my $prev = Cwd::getcwd();
+    chdir($dir)
+      or Carp::croak("Can't chdir '$dir': $!");
+    bless \$prev, $pack;
+  }
+  sub DESTROY {
+    my ($self) = @_;
+    # Best effort restore. Never die in DESTROY.
+    chdir($$self) if defined $$self;
+  }
 }
 
 sub after_new {

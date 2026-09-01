@@ -40,8 +40,7 @@ sub after_new {
 
 sub handle {
   (my MY $self, my ($type, $con, $file)) = @_;
-  chdir($self->{dir})
-    or die "Can't chdir '$self->{dir}': $!";
+  my $chdir_guard = $self->chdir_guard; # cwd is restored at scope exit. GH-267
   local $SIG{__WARN__} = sub {
     my ($msg) = @_;
     if ($self->{_ignore_warn}) {

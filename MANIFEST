@@ -28,6 +28,10 @@ Lite/CGen.pm
 Lite/CGen/ArgMacro.pm
 Lite/CGen/Perl.pm
 Lite/CGen/README.md
+Lite/CLI.pm
+Lite/CLI/GenPerl.pm
+Lite/CLI/Lint.pm
+Lite/CLI/Render.pm
 Lite/Connection.pm
 Lite/Constants.pm
 Lite/Core.pm
@@ -83,6 +87,10 @@ Lite/Partial/Gettext.pm
 Lite/Partial/MarkAfterNew.pm
 Lite/PSGIEnv.pm
 Lite/RegexpNames.pm
+Lite/Response.pm
+Lite/Site.pm
+Lite/Site.pod
+Lite/Site/Registry.pm
 Lite/Test/TestFCGI.pm
 Lite/Test/TestFiles.pm
 Lite/Test/TestUtil.pm
@@ -671,6 +679,9 @@ scripts/yattup
 t/base_inherit_refresh.t
 t/base_widget_cycle.t
 t/cgi.t
+t/cli_genperl.t
+t/cli_lint.t
+t/cli_render.t
 t/cmdline.d/t_cmd1.pl
 t/cmdline.t
 t/connection.d/index.yatt
@@ -737,6 +748,7 @@ t/psgi_sess2/app.t
 t/psgi_site_config.t
 t/psgi_ydo_error.t
 t/reload.t
+t/render_context.t
 t/runtests.zsh
 t/scripts/app.psgi
 t/scripts/genperl.t
@@ -760,6 +772,7 @@ t/scripts/render.ytmpl/3/index.yatt
 t/scripts/render.ytmpl/4/index.html
 t/scripts/render.ytmpl/4/index.yatt
 t/scripts/render.ytmpl/4/index.yatt.in
+t/site_facade.t
 t/subroutes.t
 t/t_lib.pl
 t/t_preload.pm

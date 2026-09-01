@@ -17,70 +17,9 @@ use FindBin; BEGIN {
     print STDERR "# No special libdir\n" if DEBUG_LIB;
   }
 }
-sub MY () {__PACKAGE__}
 #----------------------------------------
 
-use YATT::Lite::Entities qw/*SYS/;
-use YATT::Lite::Factory;
 use YATT::Lite::Breakpoint;
-use YATT::Lite::Util qw(rootname);
-use YATT::Lite::Util::CmdLine;
+use YATT::Lite::CLI::GenPerl;
 
-use YATT::Lite::CGen::Perl; # Just for debugging aid.
-# XXX: 各ディレクトリに .htyattcf.xhf が有ったら？ rc が有ったら?
-# XXX: それらが無い状態で、 Web::* 環境での動作検証をしたいときは？
-
-use YATT::Lite::Types
-  ([Opts => -fields => [qw/all/]]);
-
-my Opts $opts = Opts->new(MY->parse_opts(\@ARGV));
-
-my %sites;
-
-my $nerror = 0;
-foreach my $fn (@ARGV) {
-  my $tmplDir = File::Basename::dirname(File::Spec->rel2abs($fn));
-  my $siteDir = do {
-    if (my $psgi = YATT::Lite::Factory->find_factory_script($fn)) {
-      File::Basename::dirname($psgi);
-    } else {
-      $tmplDir;
-    }
-  };
-  local $SYS = my $dispatcher = $sites{$siteDir} //= do {
-    YATT::Lite::Factory->load_factory_offline(dir => $siteDir) || do {
-      require YATT::Lite::WebMVC0::SiteApp;
-      YATT::Lite::WebMVC0::SiteApp->new
-        (app_ns => 'MyYATT' . (keys %sites || ''),
-         , namespace => ['yatt', 'perl', 'js']
-         , header_charset => 'utf-8'
-         , debug_cgen => $ENV{DEBUG}
-         , debug_cgi  => $ENV{DEBUG_CGI}
-         # , is_gateway => $ENV{GATEWAY_INTERFACE} # Too early for FastCGI.
-         # , tmpl_encoding => 'utf-8'
-       );
-    };
-  };
-
-  my $dirhandler = $dispatcher->get_dirhandler($tmplDir);
-  $dirhandler->fconfigure_encoding(\*STDOUT, \*STDERR);
-  my $trans = $dirhandler->open_trans;
-  my $tmpl = $trans->find_file(File::Basename::basename($fn)) or do {
-    warn "No such file: $fn\n";
-    $nerror++;
-    next;
-  };
-  # XXX: encoding
-  $trans->find_product(
-    perl => $tmpl, sink => sub {
-      my ($info, @script) = @_;
-      print @script if $opts->{all} || $info->{'depth'} == 1;
-      eval {
-        # @script を eval しないと、 entity 定義が実体化しない
-        YATT::Lite::Util::ckeval(@script);
-        # けど生成コードにエラーが有るかもなので catch
-      };
-    });
-}
-
-exit 1 if $nerror;
+exit(YATT::Lite::CLI::GenPerl->run(\@ARGV));

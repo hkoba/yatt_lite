@@ -90,9 +90,12 @@ sub after_configure_default {
   $self->SUPER::after_configure_default;
 
   $self->{_SITE} = do {
+    # Site->load caches per factory script, so multiple Inspectors can
+    # coexist in one process. Bare template dirs (no app.psgi) get a
+    # default site instead of dying. GH-269
     my $class = Plack::Util::load_class($self->{site_class});
-    $class->load_factory_offline(dir => $self->{dir})
-      or die "Can't find YATT app script!\n";
+    $class->load_or_default(dir => $self->{dir}
+			    , class => $self->{site_class});
   };
 
   $self->{_app_root} = $self->{_SITE}->cget('app_root');
@@ -472,10 +475,13 @@ sub strerror2lintresult {
   $result->{file} = $tmpl->{path};
   $result->{diagnostics} = my Diagnostic $diag = {};
   $diag->{severity} = DiagnosticSeverity__Error;
-  $errStr =~ s/\n.*\z//s;
+  # Keep the whole message (perl may report several errors at once);
+  # the range comes from the first reported line. GH-269
+  $errStr =~ s/\n+\z//;
   $diag->{message} = $errStr;
   if ($errStr =~ / line (\d+)[,\.]/) {
-    $diag->{range} = $self->make_line_range($1+0);
+    # make_line_range takes a 0-based line (cf. yatterror2lintresult).
+    $diag->{range} = $self->make_line_range($1 - 1);
   }
   $result;
 }
