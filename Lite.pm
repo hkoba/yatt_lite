@@ -4,7 +4,7 @@ use warnings qw(FATAL all NONFATAL misc);
 use 5.010; no if $] >= 5.017011, warnings => "experimental";
 
 use Carp qw(carp croak confess);
-our $VERSION = '0.199_002';
+our $VERSION = '0.199_003';
 use mro 'c3';
 
 use Scalar::Util qw/weaken/;

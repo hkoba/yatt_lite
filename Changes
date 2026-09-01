@@ -1,5 +1,13 @@
 Revision history for YATT::Lite
 
+0.199_003 2026-09-01
+    * GH-272 - Document the public facade - new `YATT::Lite::Site` pod (execution contracts), Factory.pod DESCRIPTION, readme CLI section
+    * GH-270 - Modularize yatt.genperl as `YATT::Lite::CLI::GenPerl`
+    * GH-269 - Unify yatt.lint onto Inspector::lint - default output is now `FILE:LINE: MESSAGE` (old shape via `--format=old`); fix dropped multi-error lines and line off-by-one
+    * GH-268 - Add `YATT::Lite::CLI` base class for yatt.* tools; rewrite yatt.render on the Site facade
+    * GH-267 - chdir becomes a restoring guard and now applies to the render path too (Compatibility option: `no_chdir`); add `$CON->system`
+    * GH-266 - Add `YATT::Lite::Site` - public facade API (`load` / `request` / `render_file`) with `YATT::Lite::Response`
+
 0.199_002 2026-08-31
     * GH-264 - New parser option `allow_bare_entity_in_decl` - quotes around entities in declarations are now omissible
     * GH-262 - Fix EntNS confliction regression - base <-> widget-use circular references work again (drop eager base compile in declare_base)

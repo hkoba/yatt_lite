@@ -55,6 +55,7 @@ requires:
   Devel::StackTrace: '0'
   File::AddInc: '0'
   File::Path: '0'
+  File::Slurp: '0'
   HTML::Entities: '0'
   Hash::MultiValue: '0'
   JSON::MaybeXS: '0'
@@ -66,6 +67,7 @@ requires:
   Sub::Identify: '0'
   Text::Glob: '0'
   Tie::IxHash: '0'
+  Try::Tiny: '0'
   URI::Escape: '0'
   autodie: '0'
   parent: '0'
@@ -74,5 +76,5 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/hkoba/yatt_lite
-version: 0.199_002
+version: 0.199_003
 x_serialization_backend: 'CPAN::Meta::YAML version 0.020'
