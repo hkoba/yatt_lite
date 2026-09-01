@@ -4,20 +4,23 @@ use warnings qw(FATAL all NONFATAL misc);
 use mro 'c3';
 
 use parent qw(YATT::Lite::CLI);
-use YATT::Lite::MFields qw/tap all _inspectors/;
+use YATT::Lite::MFields qw/tap all format _inspectors/;
 
 require File::Spec;
 require File::Basename;
 
 #========================================
-# yatt.lint [--tap] [--all] FILE...
+# yatt.lint [--tap] [--all] [--format=gnu|old] FILE...
 #
 # The lint logic itself lives in YATT::Lite::Inspector::lint
 # (LintResult, non-destructive cf_let) - the same engine the language
-# server uses. This class only formats the results:
+# server uses. This class only formats the results (to stderr; exit 1):
 #
-#   FILE:LINE: MESSAGE        (to stderr; exit 1)
+#   --format=gnu (default)   FILE:LINE: MESSAGE
+#   --format=old             TYPE [[file] FILE [line] LINE]
+#                             MESSAGE
 #
+# The old format is what elisp/yatt-lint-any-mode.el parses.
 # --all checks every file instead of stopping at the first failure.
 # --tap emits TAP (implies --all).
 #========================================
@@ -53,8 +56,15 @@ sub main {
   $nerror ? 1 : 0;
 }
 
-# LintResult => "FILE:LINE: MESSAGE"
 sub format_result {
+  my ($self, $fn, $result) = @_;
+  my $format = $self->{format} // 'gnu';
+  my $sub = $self->can("format_result_$format")
+    or die "Unknown lint output format: $format (gnu or old)\n";
+  $sub->($self, $self->_result_fields($fn, $result));
+}
+
+sub _result_fields {
   my ($self, $fn, $result) = @_;
   my $diag = $result->{diagnostics};
   my $file = $result->{file} // $fn;
@@ -63,7 +73,20 @@ sub format_result {
     ? $diag->{range}{start}{line} + 1 : '-';
   my $msg = ($diag ? $diag->{message} : undef)
     // $result->{message} // 'unknown lint failure';
-  sprintf "%s:%s: %s", $file, $line, "$msg";
+  ($file, $line, "$msg", $result->{type} // 'error');
+}
+
+# "FILE:LINE: MESSAGE"
+sub format_result_gnu {
+  my ($self, $file, $line, $msg) = @_;
+  sprintf "%s:%s: %s", $file, $line, $msg;
+}
+
+# "TYPE [[file] FILE [line] LINE]\n MESSAGE" - the historical
+# format_error() shape which elisp/yatt-lint-any-mode.el parses.
+sub format_result_old {
+  my ($self, $file, $line, $msg, $type) = @_;
+  sprintf "%s [[file] %s [line] %s]\n %s", $type, $file, $line, $msg;
 }
 
 # One Inspector per app root (files under the same app.psgi share one).

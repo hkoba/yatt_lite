@@ -73,7 +73,7 @@ END
 <!yatt:args>
 <yatt:no_such_widget/>
 END
-     } (1..3, '_tap', '_script')),
+     } (1..3, '_tap', '_script', '_old')),
     );
 }
 
@@ -181,6 +181,23 @@ sub capture_err (&) {
   like $out, qr/^not ok 2 - /m, "tap not ok line";
   like $out, qr/^# .*No such widget/m, "tap diagnostics as comments";
   is $exit, 1, "tap mode exit 1 on failure";
+}
+
+#========================================
+# --format=old : the historical shape yatt-lint-any-mode.el parses
+#========================================
+{
+  my ($exit, $errout);
+  capture {
+    $errout = capture_err {
+      $exit = YATT::Lite::CLI::Lint->run
+	(["--format=old", "$app/public/bad_old.yatt"]);
+    };
+  };
+  is $exit, 1, "--format=old: exit 1";
+  like $errout
+    , qr/^error \[\[file\] [^\]]*bad_old\.yatt \[line\] 2\]\n No such widget/
+    , "--format=old: 'TYPE [[file] F [line] L]' header + indented message";
 }
 
 #========================================
