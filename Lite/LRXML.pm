@@ -390,6 +390,10 @@ sub parse_decl {
     }
   } continue {
     $self->{_startpos} = $self->{_curpos};
+    # Keep _startln in sync as well. add_text does this when body text
+    # follows, but for back-to-back declarations nothing else would, and
+    # every following part got the same startln. GH-275
+    $self->{_startln} = $self->{_endln};
   }
 
   # Even if no declarations are found, there should be at least one default part.
