@@ -86,4 +86,22 @@ describe "part_body_source", sub {
   };
 };
 
+describe "back-to-back declarations (GH-275)", sub {
+  my $yatt2 = YATT::Lite->new(
+    app_ns => "TestBoundaryList2",
+    vfs => [data => {index => "<!yatt:args>\n<!yatt:widget a>\n<!yatt:widget b>\nbody b\n"}],
+  );
+  my ($tmpl2) = $yatt2->get_vfs->find_file('index');
+  $yatt2->find_product(perl => $tmpl2);
+
+  it "should record a distinct lineno for each decl", sub {
+    expect([map {$_->{lineno}} @{$tmpl2->{_boundarylist}}])->to_be([1, 2, 3]);
+  };
+
+  it "should give each part its own startln", sub {
+    expect([map {[$_->{name}, $_->{startln}]} $tmpl2->list_parts])
+      ->to_be([['', 1], ['a', 2], ['b', 3]]);
+  };
+};
+
 done_testing();
