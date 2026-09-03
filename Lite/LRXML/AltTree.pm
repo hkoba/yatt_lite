@@ -41,6 +41,7 @@ use YATT::Lite::Constants
 our @TYPES;
 
 use YATT::Lite::LRXML::FormatEntpath qw/format_entpath/;
+use MOP4Import::Util qw/lexpand/;
 
 use YATT::Lite::XHF::Dumper qw/dump_xhf/;
 sub cli_write_fh_as_xhf {
@@ -88,12 +89,17 @@ sub convert_tree {
         } elsif ($item->[NODE_TYPE] == TYPE_ENTITY) {
           $altnode->{value} = [@{$item}[NODE_BODY .. $#$item]];
         } else {
-          if ($item->[NODE_TYPE] == TYPE_ATT_TEXT) {
-            $altnode->{symbol_range}
-              = $self->make_range($item->[NODE_BEGIN]
-                                  , ($item->[NODE_BEGIN] + length($item->[NODE_PATH]))
-                                  , $item->[NODE_LNO])
-              if defined $item->[NODE_BEGIN] and defined $item->[NODE_PATH];
+          if ($item->[NODE_TYPE] == TYPE_ATT_TEXT
+              and defined $item->[NODE_BEGIN] and defined $item->[NODE_PATH]) {
+            # NODE_PATH may be an array ('name:type' => [name, type]).
+            # The bracket lvalue form ([a b]="v") holds nodes: no symbol then.
+            my @path = lexpand($item->[NODE_PATH]);
+            if (@path and not grep {ref $_} @path) {
+              $altnode->{symbol_range}
+                = $self->make_range($item->[NODE_BEGIN]
+                                    , ($item->[NODE_BEGIN] + length(join ":", @path))
+                                    , $item->[NODE_LNO]);
+            }
           }
           if (defined $item->[NODE_BODY] and ref $item->[NODE_BODY] eq 'ARRAY') {
             $altnode->{subtree} = [$self->convert_tree(
@@ -286,11 +292,9 @@ sub column_of_source_pos {
   if ($_[3] and substr($_[1], $pos, 1) eq "\n") {
     $pos--;
   }
-  if ((my $found = rindex($_[1], "\n", $pos)) >= 0) {
-    $pos - $found;
-  } else {
-    $pos;
-  }
+  # 1-based column. rindex gives -1 on the first line, which yields the
+  # same 1-based column as on the other lines. GH-275
+  $pos - rindex($_[1], "\n", $pos);
 }
 
 sub node_body_slot {

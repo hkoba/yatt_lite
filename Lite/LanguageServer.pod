@@ -6,28 +6,71 @@ YATT::Lite::LanguageServer - Language Server for YATT::Lite
 
 =head1 SYNOPSIS
 
-  % ./lib/YATT/Lite/LanguageServer.pm server
-  # server started
-  # start aio read header.
-  {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
-  # end aio read header. is_utf8=no cnt=80
-  
-  sepPos=18
-  # got header: {"Content-Length":"58"}
-  # enter read body.
-  # finished read body. len=58.
-  # processing request: {"id":1,"jsonrpc":"2.0","method":"initialize","params":{}}
-  # call_method: lspcall__initialize '{}'
-  # sending response: {"id":1,"jsonrpc":"2.0","result":{"capabilities":{"definitionProvider":true,"documentSymbolProvider":true,"hoverProvider":true,"implementationProvider":true,"textDocumentSync":{"change":2,"openClose":true,"save":true}}}}
-  # start aio read header.
-  # sent response
-  
-  {"id":1,"jsonrpc":"2.0","result":{"capabilities":{"definitionProvider":true,"documentSymbolProvider":true,"hoverProvider":true,"implementationProvider":true,"textDocumentSync":{"change":2,"openClose":true,"save":true}}}
+  # As started by editors (poly-yatt, lsp-yatt.el).
+  # Options must come BEFORE the subcommand.
+  % perl lib/YATT/Lite/LanguageServer.pm --quiet server
 
+  # With a protocol trace (also works together with --quiet):
+  % perl lib/YATT/Lite/LanguageServer.pm --quiet --logfile=/tmp/yatt-ls.log server
+  % YATT_LANGSERVER_LOG=/tmp/yatt-ls.log emacs ...
 
 =head1 DESCRIPTION
 
-YATT::Lite::LanguageServer is a Modulino to provide a Language Server for YATT::Lite.
+YATT::Lite::LanguageServer is a Modulino to provide a Language Server for
+YATT::Lite. It speaks JSON-RPC (Content-Length framing) over stdin/stdout
+and delegates the actual work to L<YATT::Lite::Inspector>.
+
+=head2 Supported methods
+
+  initialize, initialized, shutdown, exit, $/cancelRequest
+  textDocument/didOpen, didChange (incremental), didSave, didClose
+  textDocument/publishDiagnostics (server -> client)
+  textDocument/definition, textDocument/implementation
+  textDocument/hover
+  textDocument/documentSymbol
+  textDocument/completion
+
+=head2 Options
+
+Options must precede the C<server> subcommand.
+
+=over 4
+
+=item --quiet
+
+Suppress the trace on STDERR. Editors should pass this.
+
+=item --logfile=FILE (or $YATT_LANGSERVER_LOG)
+
+Append a timestamped protocol trace to FILE, regardless of C<--quiet>.
+
+=item --dump_request
+
+Hexdump the input buffer on every read (needs Data::HexDump::XXD).
+
+=back
+
+=head2 Debugging the Inspector
+
+Create an empty file named C<DEBUG_YATT_LANGSERVER> in the workspace root
+(the directory given as C<rootUri>) to get L<YATT::Lite::Inspector> debug
+messages on STDERR. If a directory C<var/debug_yatt_ls/> also exists there,
+the document state after every C<textDocument/didChange> is written into it.
+
+=head2 Paths and URIs
+
+File URIs are percent-decoded to octet paths and used as they are: the
+server keys templates by the path form the client sends and never resolves
+symlinks itself. Keep the client's policy uniform for all buffers of a
+session (for Eglot: C<file-truename> handling).
+
+=head2 Position encoding
+
+Positions are exchanged as perl character offsets, which are UTF-32 code
+units. When the client offers C<utf-32> in C<general.positionEncodings>
+(Eglot does), the server answers with C<positionEncoding: "utf-32">.
+Clients limited to UTF-16 get the same offsets, so for them columns after a
+non-BMP character (emoji, some rare kanji) on the same line are off.
 
 =head2 Editor Integration
 

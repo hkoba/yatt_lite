@@ -12,6 +12,7 @@ use constant DEBUG_LOOKUP => $ENV{DEBUG_YATT_VFS_LOOKUP};
 
 require File::Spec;
 require File::Basename;
+require File::Glob;
 
 #========================================
 # VFS 層. vfs_file (Template) のダミー実装を含む。
@@ -200,6 +201,10 @@ require File::Basename;
   }
   sub resolve_path_from {
     (my VFS $vfs, my Folder $from, my $fn) = @_;
+    # $fn usually comes from a decoded template string while paths are
+    # octets in YATT. Joining a utf8-flagged string with an octet dirname
+    # makes perl hand the utf8-encoded form to the filesystem. GH-275
+    utf8::encode($fn) if utf8::is_utf8($fn);
     my Folder $folder = $from->dirobj;
     my $dirname = $folder->dirname
       or return undef;
@@ -438,7 +443,8 @@ require File::Basename;
       my $name = substr($_, length($in->{path})+1);
       $name =~ s/\.\w+$//;
       $dup2{$name}++ ? () : $name;
-    } glob("$in->{path}/[a-z]*.{".join(",", @exts)."}");
+    # Not CORE::glob: it splits the pattern on whitespace in the path. GH-275
+    } File::Glob::bsd_glob("$in->{path}/[a-z]*.{".join(",", @exts)."}");
   }
   #----------------------------------------
   sub YATT::Lite::VFS::Dir::load {
@@ -457,6 +463,8 @@ require File::Basename;
     }
 
     $realFile ||= $partName;
+    # Template-derived names are decoded strings; paths are octets. GH-275
+    utf8::encode($realFile) if utf8::is_utf8($realFile);
 
     my $vfsname = "$in->{path}/$realFile";
     my @opt = (name => $partName, parent => $in);
