@@ -8,6 +8,7 @@ use Cwd;
 my $libDir = File::AddInc->libdir;
 
 use JSON::MaybeXS;
+use Try::Tiny;
 
 use YATT::Lite::LanguageServer::Generic -as_base
   , [fields => qw/_initialized
@@ -35,7 +36,16 @@ sub lspcall__initialize {
   (my MY $self, my InitializeParams $params) = @_;
   $self->{_client_cap} = $params->{capabilities};
 
-  if (my $path = $self->uri2localpath($params->{rootUri})) {
+  # Protocol.pm predates LSP 3.17: workspaceFolders, rootPath and
+  # positionEncoding(s) are accessed untyped.
+  my $untyped = $params;
+  my $rootUri = $params->{rootUri};
+  if (not defined $rootUri
+      and ref $untyped->{workspaceFolders} eq 'ARRAY'
+      and @{$untyped->{workspaceFolders}}) {
+    $rootUri = $untyped->{workspaceFolders}[0]{uri};
+  }
+  if (my $path = $self->uri2localpath($rootUri) // $untyped->{rootPath}) {
     $self->load_inspector($self->{current_workspace} = $path);
   }
 
@@ -52,7 +62,29 @@ sub lspcall__initialize {
   $sopts->{openClose} = JSON()->true;
   $sopts->{save} = JSON()->true;
   $sopts->{change} = TextDocumentSyncKind__Incremental;
+
+  # Positions are exchanged as perl character offsets, which equal UTF-32
+  # code units. Advertise that when the client can handle it (eglot does).
+  # Clients limited to utf-16 get the same offsets, so their columns drift
+  # after a non-BMP character on the same line. GH-275
+  my $encodings = $untyped->{capabilities}{general}{positionEncodings};
+  if ($encodings and grep {$_ eq 'utf-32'} lexpand($encodings)) {
+    $res->{capabilities}{positionEncoding} = 'utf-32';
+  }
   $res;
+}
+
+sub lspcall__initialized {
+  (my MY $self, my $params) = @_;
+  $self->{_initialized} = 1;
+  undef;
+}
+
+# '$/cancelRequest'. Requests are processed to completion anyway;
+# accepted so that the client does not see "Not implemented".
+sub lspcall____ext__cancelRequest {
+  (my MY $self, my $params) = @_;
+  undef;
 }
 
 sub lspcall__textDocument__didOpen {
@@ -63,6 +95,8 @@ sub lspcall__textDocument__didOpen {
 
   my LintResult $error
     = $self->inspector->load_string_into_file($fn, $docItem->{text});
+
+  $self->{_last_error}{$docItem->{uri}} = $error;
 
   my PublishDiagnosticsParams $notif = {};
   $notif->{uri} = $docItem->{uri};
@@ -86,8 +120,8 @@ sub lspcall__textDocument__didChange {
 
   $self->{_last_error}{$docId->{uri}} = $error;
 
-  print STDERR "# updated ", ($error ? "with error " : ""),"as: ", terse_dump($updated), "\n"
-    unless $self->{quiet};
+  $self->logmsg("updated ", ($error ? "with error " : ""), "as: "
+                , sub {$self->truncate_for_log(terse_dump($updated), 300)});
 
   my PublishDiagnosticsParams $notif = {};
   $notif->{uri} = $docId->{uri};
@@ -104,8 +138,9 @@ sub lspcall__textDocument__didSave {
 
   my LintResult $res = $self->inspector->lint($fn); # XXX: process isolation
 
-  print STDERR "# lint result: ", terse_dump($res), "\n"
-    unless $self->{quiet};
+  $self->{_last_error}{$docId->{uri}} = $res->{is_success} ? undef : $res;
+
+  $self->logmsg("lint result: ", sub {terse_dump($res)});
 
   my PublishDiagnosticsParams $notif = {};
   $notif->{uri} = $docId->{uri};
@@ -123,6 +158,25 @@ sub lspcall__textDocument__didSave {
   }
 }
 
+sub lspcall__textDocument__didClose {
+  (my MY $self, my $params) = @_;
+
+  my TextDocumentIdentifier $docId = $params->{textDocument};
+  delete $self->{_last_error}{$docId->{uri}};
+
+  my $fn = $self->uri2localpath($docId->{uri})
+    or return undef;
+
+  # The buffer is gone: drop its (possibly unsaved) text from the template
+  # cache so that lookups from other files see what is on disk.
+  try {
+    $self->inspector->reload_file_from_disk($fn) if -r $fn;
+  } catch {
+    $self->logmsg("didClose: reload of $fn failed: $_");
+  };
+  undef;
+}
+
 #
 # WIP
 #
@@ -136,21 +190,28 @@ sub lspcall__textDocument__hover {
   # Skip if the document has error
   return undef if $self->last_error($docId);
 
-  my $fn = $self->uri2localpath($docId->{uri});
+  my $fn = $self->uri2localpath($docId->{uri})
+    or return undef;
   my Position $pos = $params->{position};
 
-  my ($symbol, $cursor) = $self->locate_symbol_at_file_position(
+  my $found;
+  try {
+    my ($symbol, $cursor) = $self->locate_symbol_at_file_position(
       $fn, $pos->{line}, $pos->{character}
     ) or return;
 
-  if (my $contents = $self->inspector->describe_symbol($symbol, $cursor)) {
-    $result->{contents} = $contents;
-  } else {
-    $result->{contents} = "XXX: $symbol->{kind} line=$pos->{line} col=$pos->{character} node="
-      . terse_dump($cursor->{array}[$cursor->{index}]);
-  }
+    if (my $contents = $self->inspector->describe_symbol($symbol, $cursor)) {
+      $result->{contents} = $contents;
+    } else {
+      $result->{contents} = "XXX: $symbol->{kind} line=$pos->{line} col=$pos->{character} node="
+        . terse_dump($cursor->{array}[$cursor->{index}]);
+    }
+    $found = $result;
+  } catch {
+    $self->logmsg("hover failed at $fn:$pos->{line}:$pos->{character}: $_");
+  };
 
-  $result;
+  $found;
 }
 
 
@@ -159,19 +220,28 @@ sub lspcall__textDocument__definition {
 }
 
 #
+# No last_error guard here on purpose: parts before a syntax error still
+# resolve. Any failure degrades to null (no definition) instead of a
+# JSON-RPC error, which eglot would show as an error. GH-275
+#
 sub lspcall__textDocument__implementation {
   (my MY $self, my TextDocumentPositionParams $params) = @_;
 
   my TextDocumentIdentifier $docId = $params->{textDocument};
-  my $fn = $self->uri2localpath($docId->{uri});
+  my $fn = $self->uri2localpath($docId->{uri})
+    or return undef;
   my Position $pos = $params->{position};
 
-  my ($symbol, $cursor) = $self->locate_symbol_at_file_position(
+  my $found;
+  try {
+    my ($symbol, $cursor) = $self->locate_symbol_at_file_position(
       $fn, $pos->{line}, $pos->{character}
     ) or return;
 
-  my Location $found = $self->inspector->lookup_symbol_definition($symbol, $cursor)
-    or return;
+    $found = $self->inspector->lookup_symbol_definition($symbol, $cursor);
+  } catch {
+    $self->logmsg("definition failed at $fn:$pos->{line}:$pos->{character}: $_");
+  };
 
   $found;
 }
