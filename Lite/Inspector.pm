@@ -603,6 +603,163 @@ sub lookup_symbol_definition_of__call {
   }
 }
 
+#========================================
+# Attributes at a widget call site. GH-277
+# (see CGen::Perl::gen_putargs and passThruVar)
+#
+#   <yatt:foo x/>          passes the variable x in scope to formal arg x
+#                          (a flag when there is no such variable)
+#   <yatt:foo a=y/>        passes the variable y in scope to formal arg a
+#   <yatt:foo b="..."/>    b is a formal arg; entities in the value are
+#                          resolved through the entpath subtree as before
+#   <:yatt:d>...</:yatt:d> d is a formal arg
+#
+
+sub lookup_symbol_definition_of__ATTRIBUTE {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->variable_location($sym, $cursor, $name)
+    // $self->formal_arg_location($sym, $cursor, $name);
+}
+
+sub lookup_symbol_definition_of__ATT_BARENAME {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  if ($node->{value_range}
+      and $self->is_in_range($node->{value_range}, $sym->{refpos})) {
+    return $self->variable_location($sym, $cursor, $node->{value});
+  }
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->formal_arg_location($sym, $cursor, $name);
+}
+
+sub lookup_symbol_definition_of__ATT_TEXT {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->formal_arg_location($sym, $cursor, $name);
+}
+
+sub lookup_symbol_definition_of__ATT_NESTED {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  # Only attribute elements (<:yatt:d>) have a symbol_range.
+  return unless $node->{symbol_range};
+  my @path = lexpand($node->{path});
+  return unless @path and not grep {ref $_} @path;
+  $self->formal_arg_location($sym, $cursor, $path[-1]);
+}
+
+# The ELEMENT node which owns the attribute at $cursor, if any.
+sub parent_element_of_cursor {
+  (my MY $self, my Zipper $cursor) = @_;
+  my Zipper $parent = $cursor->{path} or return;
+  my AltNode $elem = $parent->{array}[$parent->{index}] or return;
+  return unless defined $elem->{kind} and $elem->{kind} eq 'ELEMENT';
+  $elem;
+}
+
+# ($widget, $var, $range) of the formal argument $argName of the widget
+# called by the element which owns the attribute at $cursor, or ().
+sub locate_formal_arg {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $argName) = @_;
+  my AltNode $elem = $self->parent_element_of_cursor($cursor) or return;
+  my Position $pos = $sym->{refpos};
+  my Part $widget = $self->lookup_widget_from(
+    $elem->{path}, $sym->{filename}, $pos->{line}
+  ) or return;
+  return unless UNIVERSAL::isa($widget, 'YATT::Lite::Core::Widget');
+  my $arg = $widget->{_arg_dict}{$argName} or return;
+  my $range = $self->arg_range_map_of_part($widget)->{$argName}
+    // $self->make_line_range(($arg->lineno // 1) - 1);
+  ($widget, $arg, $range);
+}
+
+sub formal_arg_location {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $argName) = @_;
+  my ($widget, $arg, $range) = $self->locate_formal_arg($sym, $cursor, $argName)
+    or return;
+  my Location $loc = +{};
+  $loc->{uri} = $self->filename2uri($self->part_filename($widget));
+  $loc->{range} = $range;
+  $loc;
+}
+
+# Location of the variable $name visible at $cursor (args, <yatt:my>).
+sub variable_location {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $name) = @_;
+  my SymbolInfo $varSym = +{%$sym};
+  $varSym->{name} = $name;
+  my VarInfo $var = $self->locate_entity_var($varSym, $cursor) or return;
+  my Location $loc = +{};
+  $loc->{uri} = $self->filename2uri($var->{filename} // $sym->{filename});
+  $loc->{range} = $var->{range};
+  $loc;
+}
+
+sub describe_symbol_of_ATTRIBUTE {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->describe_variable($sym, $cursor, $name)
+    // $self->describe_formal_arg($sym, $cursor, $name);
+}
+
+sub describe_symbol_of_ATT_BARENAME {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  if ($node->{value_range}
+      and $self->is_in_range($node->{value_range}, $sym->{refpos})) {
+    return $self->describe_variable($sym, $cursor, $node->{value});
+  }
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->describe_formal_arg($sym, $cursor, $name);
+}
+
+sub describe_symbol_of_ATT_TEXT {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->describe_formal_arg($sym, $cursor, $name);
+}
+
+sub describe_symbol_of_ATT_NESTED {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  return unless $node->{symbol_range};
+  my @path = lexpand($node->{path});
+  return unless @path and not grep {ref $_} @path;
+  $self->describe_formal_arg($sym, $cursor, $path[-1]);
+}
+
+sub describe_variable {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $name) = @_;
+  my SymbolInfo $varSym = +{%$sym};
+  $varSym->{name} = $name;
+  my VarInfo $var = $self->locate_entity_var($varSym, $cursor) or return;
+  $self->describe_entity_var($varSym, $var);
+}
+
+sub describe_formal_arg {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $argName) = @_;
+  my ($widget, $arg) = $self->locate_formal_arg($sym, $cursor, $argName)
+    or return;
+  my MarkupContent $md = +{};
+  $md->{kind} = 'markdown';
+  $md->{value} = $self->md_quote_code_as(
+    yatt => "argument $argName of <" . $widget->callsite_name . ">: "
+    . $arg->spec_string
+  );
+  $md;
+}
+
 sub filename2uri {
   (my MY $self, my $fn) = @_;
   URI::file->new_abs($fn)->as_string;
@@ -1638,6 +1795,10 @@ sub locate_node {
     if ($node->{subtree}
         and $self->is_in_range($node->{tree_range}, $pos)) {
       return $self->locate_node($node->{subtree}, $pos, $current);
+    } elsif ($node->{tree_range}
+             and $self->is_in_range($node->{tree_range}, $pos)) {
+      # Inside a leaf node, e.g. the bare value of a=y. GH-277
+      return $current;
     } else {
       # No yatt elements are under the position.
       splice @$tree, $ix, 0, undef;

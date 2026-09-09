@@ -200,13 +200,12 @@ sub lspcall__textDocument__hover {
       $fn, $pos->{line}, $pos->{character}
     ) or return;
 
+    # Nothing to say (e.g. an attribute of a macro element): null, not a
+    # debug dump. GH-277
     if (my $contents = $self->inspector->describe_symbol($symbol, $cursor)) {
       $result->{contents} = $contents;
-    } else {
-      $result->{contents} = "XXX: $symbol->{kind} line=$pos->{line} col=$pos->{character} node="
-        . terse_dump($cursor->{array}[$cursor->{index}]);
+      $found = $result;
     }
-    $found = $result;
   } catch {
     $self->logmsg("hover failed at $fn:$pos->{line}:$pos->{character}: $_");
   };
