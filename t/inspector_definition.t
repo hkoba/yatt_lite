@@ -232,4 +232,84 @@ is_location(definition_of($index, $index_text, '&yatt:ent();', 6)
   }
 }
 
+#========================================
+# GH-277: attributes at widget call sites
+#   <yatt:foo x/>      name-only: variable x in scope (else formal arg x)
+#   <yatt:foo a=y/>    name a: formal arg, value y: variable in scope
+#   <yatt:foo b="..."> name b: formal arg (entities in the value as before)
+#   <:yatt:d>          formal arg d
+#========================================
+my $call_text = <<'END';
+<!yatt:args x y z d>
+
+<yatt:foo x/>
+<yatt:foo a=y/>
+<yatt:foo b="&yatt:z;"/>
+<yatt:foo verbose/>
+<yatt:foo><:yatt:d>D</:yatt:d>BODY</yatt:foo>
+<yatt:my v="hello"/>
+<yatt:foo a=v/>
+
+<!yatt:widget foo x a b d verbose=bool body=[code]>
+<h2>&yatt:x;</h2>
+END
+
+my $call = "$site/call.yatt";
+MY->mkfile_may_wait($call, $call_text);
+
+is_location(definition_of($call, $call_text, '<yatt:foo x/>', 10)
+            , uri_of($call), pos_of($call_text, '<!yatt:args x', 12)
+            , "GH-277: name-only attribute x -> variable x in scope");
+
+is_location(definition_of($call, $call_text, '<yatt:foo a=y/>', 10)
+            , uri_of($call), pos_of($call_text, '<!yatt:widget foo x a', 20)
+            , "GH-277: attribute name a -> formal arg a of foo");
+
+is_location(definition_of($call, $call_text, '<yatt:foo a=y/>', 12)
+            , uri_of($call), pos_of($call_text, '<!yatt:args x y', 14)
+            , "GH-277: bare value y -> variable y in scope");
+
+is_location(definition_of($call, $call_text, '<yatt:foo b="&yatt:z;"/>', 10)
+            , uri_of($call), pos_of($call_text, '<!yatt:widget foo x a b', 22)
+            , "GH-277: attribute name b -> formal arg b of foo");
+
+is_location(definition_of($call, $call_text, '<yatt:foo b="&yatt:z;"/>', 19)
+            , uri_of($call), pos_of($call_text, '<!yatt:args x y z', 16)
+            , "entity in attribute value -> variable z (unchanged)");
+
+is_location(definition_of($call, $call_text, '<yatt:foo verbose/>', 10)
+            , uri_of($call), pos_of($call_text, 'verbose=bool')
+            , "GH-277: name-only flag (no such variable) -> formal arg verbose");
+
+is_location(definition_of($call, $call_text, '<:yatt:d>', 7)
+            , uri_of($call), pos_of($call_text, '<!yatt:widget foo x a b d', 24)
+            , "GH-277: attribute element <:yatt:d> -> formal arg d");
+
+is_location(definition_of($call, $call_text, '<yatt:foo a=v/>', 12)
+            , uri_of($call), pos_of($call_text, '<yatt:my v=', 9)
+            , "GH-277: bare value v -> <yatt:my v=...>");
+
+is definition_of($call, $call_text, '<yatt:my v=', 9), undef
+  , "GH-277: attribute of a macro element (<yatt:my v=...>) has no definition";
+
+# hover
+{
+  my $hover_of = sub {
+    my ($needle, $inner) = @_;
+    my ($sym, $cursor) = $ins->locate_symbol_at_file_position
+      ($call, pos_of($call_text, $needle, $inner)) or return undef;
+    my $md = $ins->describe_symbol($sym, $cursor) or return undef;
+    $md->{value};
+  };
+  like $hover_of->('<yatt:foo x/>', 10), qr/\(argument\) x: text/
+    , "GH-277: hover on name-only x describes the variable";
+  like $hover_of->('<yatt:foo verbose/>', 10), qr/argument verbose of <yatt:foo>: bool/
+    , "GH-277: hover on a flag attribute describes the formal arg";
+  like $hover_of->('<yatt:foo a=y/>', 10), qr/argument a of <yatt:foo>: text/
+    , "GH-277: hover on attribute name describes the formal arg";
+  like $hover_of->('<yatt:foo a=y/>', 12), qr/\(argument\) y: text/
+    , "GH-277: hover on bare value describes the variable";
+}
+
+
 done_testing();
