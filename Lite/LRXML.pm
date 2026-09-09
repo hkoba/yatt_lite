@@ -571,6 +571,9 @@ sub parse_attlist_with_lvalue {
             if (@lvalue) {
               $node->[NODE_TYPE] = TYPE_ATT_BARENAME;
               @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = splice(@lvalue);
+              # NODE_END from the lvalue stops right after '='. Cover the
+              # value too, like the other attribute types do. GH-277
+              $node->[NODE_END] = $self->{_curpos};
               $node->[NODE_BODY] = $m->{bare};
             } else {
               $node->[NODE_TYPE] = TYPE_ATT_NAMEONLY;
