@@ -9,7 +9,7 @@ jobs:
     container:
       image: perl:stable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
            path: 'lib/YATT'
       - name: Install cpm

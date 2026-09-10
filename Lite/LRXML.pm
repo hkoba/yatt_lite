@@ -390,6 +390,10 @@ sub parse_decl {
     }
   } continue {
     $self->{_startpos} = $self->{_curpos};
+    # Keep _startln in sync as well. add_text does this when body text
+    # follows, but for back-to-back declarations nothing else would, and
+    # every following part got the same startln. GH-275
+    $self->{_startln} = $self->{_endln};
   }
 
   # Even if no declarations are found, there should be at least one default part.
@@ -567,6 +571,9 @@ sub parse_attlist_with_lvalue {
             if (@lvalue) {
               $node->[NODE_TYPE] = TYPE_ATT_BARENAME;
               @{$node}[NODE_BEGIN, NODE_END, NODE_LNO, NODE_PATH] = splice(@lvalue);
+              # NODE_END from the lvalue stops right after '='. Cover the
+              # value too, like the other attribute types do. GH-277
+              $node->[NODE_END] = $self->{_curpos};
               $node->[NODE_BODY] = $m->{bare};
             } else {
               $node->[NODE_TYPE] = TYPE_ATT_NAMEONLY;

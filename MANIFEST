@@ -91,6 +91,7 @@ Lite/Response.pm
 Lite/Site.pm
 Lite/Site.pod
 Lite/Site/Registry.pm
+Lite/Test/LangServerClient.pm
 Lite/Test/TestFCGI.pm
 Lite/Test/TestFiles.pm
 Lite/Test/TestUtil.pm
@@ -701,7 +702,9 @@ t/gh241_mkhidden_nested_query/app/public/param_test.yatt
 t/gh241_mkhidden_nested_query/psgi.t
 t/gh259_mkquery_post.t
 t/inspector.t
+t/inspector_definition.t
 t/instpkg.t
+t/langserver_transport.t
 t/lib/.symlinks
 t/lineno.t
 t/lite.t

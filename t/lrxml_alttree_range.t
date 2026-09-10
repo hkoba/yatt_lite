@@ -88,6 +88,16 @@ subtree[
 kind: ATTRIBUTE
 path: x
 source: x
+symbol_range{
+end{
+character: 11
+line: 2
+}
+start{
+character: 10
+line: 2
+}
+}
 tree_range{
 end{
 character: 11
@@ -104,6 +114,16 @@ value= #null
 kind: ATTRIBUTE
 path: y
 source: y
+symbol_range{
+end{
+character: 13
+line: 2
+}
+start{
+character: 12
+line: 2
+}
+}
 tree_range{
 end{
 character: 13
@@ -515,5 +535,47 @@ END
         , end => {line => 3, character => 36}}
     , "entities in argument text - y";
 }
+
+{
+  # GH-277: attributes at a widget call site.
+  #   name-only x  => symbol_range (== tree_range)
+  #   a=y          => symbol_range on the name, value_range on the bare
+  #                   value, tree_range covering both (was: "a=" only)
+  my $parser = $CLASS->new(all => 1);
+  my $tmpl = $CLASS->Template->new;
+  $parser->load_string_into($tmpl, my $cp = <<END);
+<!yatt:args x y>
+<yatt:foo x a=y/>
+
+<!yatt:widget foo x a>
+END
+
+  ;
+  my $w = $tmpl->{_Item}{''};
+  my $alttree = alt_tree_for($tmpl->{string}, $w->{_tree});
+  my ($elem_foo) = grep {ref $_} @$alttree;
+  my ($att_x, $att_a) = @{$elem_foo->{subtree}};
+
+  is $att_x->{kind}, 'ATTRIBUTE', "name-only attribute kind";
+  is_deeply $att_x->{symbol_range}
+    , +{start => {line => 1, character => 10}
+        , end => {line => 1, character => 11}}
+    , "name-only attribute has symbol_range";
+
+  is $att_a->{kind}, 'ATT_BARENAME', "bare attribute kind";
+  is_deeply $att_a->{symbol_range}
+    , +{start => {line => 1, character => 12}
+        , end => {line => 1, character => 13}}
+    , "a=y: symbol_range covers the name";
+  is_deeply $att_a->{tree_range}
+    , +{start => {line => 1, character => 12}
+        , end => {line => 1, character => 15}}
+    , "a=y: tree_range covers the value too";
+  is_deeply $att_a->{value_range}
+    , +{start => {line => 1, character => 14}
+        , end => {line => 1, character => 15}}
+    , "a=y: value_range covers the bare value";
+}
+
 
 done_testing();

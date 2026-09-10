@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      # One image's environment problem must not hide the other results.
+      fail-fast: false
       matrix:
         perl-version:
           - '5.30'
@@ -30,7 +32,7 @@ jobs:
       image: perl:${{ matrix.perl-version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: 'lib/YATT'
       - name: perl -V
@@ -38,7 +40,8 @@ jobs:
       - name: Install Dependencies
         working-directory: 'lib/YATT'
         run: |
-          apt-get update -y
+          # Older images (perl:5.30 = bullseye) carry expired Release files.
+          apt-get -o Acquire::Check-Valid-Until=false update -y
           apt-get install -y zsh
           curl -fsSL --compressed https://raw.githubusercontent.com/skaji/cpm/main/cpm > cpm
           perl ./cpm install -g Test::Requires B::Debug Devel::Cover Devel::Cover::Report::Coveralls 

@@ -312,6 +312,11 @@ sub apply_all_change_to_lines {
 sub apply_change_to_lines {
   (my MY $self, my $lines, my TextDocumentContentChangeEvent $change) = @_;
   my Range $from = $change->{range};
+  unless ($from) {
+    # Full document sync: the whole text replaces the document. GH-275
+    my $text = $change->{text} // '';
+    return [$text ne '' ? split(/\n/, $text, -1) : ('')];
+  }
   my Position $start = $from->{start};
   my Position $end = $from->{end};
   my @pre = @{$lines}[0 .. $start->{line}-1];
@@ -500,6 +505,8 @@ sub backtrace2list {
   \@list;
 }
 
+# $lineno is 0-based (LSP). Callers holding 1-based lines (Part startln,
+# Sub::Identify) must subtract 1.
 sub make_line_range {
   (my MY $self, my $lineno) = @_;
   my Range $range = {};
@@ -563,14 +570,16 @@ sub lookup_symbol_definition_of__var {
 
   my Location $loc = +{};
   if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
-    $loc->{uri} = $self->filename2uri($var->{filename});
+    # args and <yatt:my> vars are always defined in the file of the cursor.
+    $loc->{uri} = $self->filename2uri($var->{filename} // $sym->{filename});
     $loc->{range} = $var->{range};
     return $loc;
   }
 
   if (my EntityInfo $entFunc = $self->locate_entity_function($sym, $cursor)) {
     $loc->{uri} = $self->filename2uri($entFunc->{file});
-    $loc->{range} = $self->make_line_range($entFunc->{line});
+    # {line} is 1-based (Part startln / Sub::Identify). GH-275
+    $loc->{range} = $self->make_line_range($entFunc->{line} - 1);
     return $loc;
   }
 }
@@ -580,16 +589,175 @@ sub lookup_symbol_definition_of__call {
 
   my Location $loc = +{};
   if (my VarInfo $var = $self->locate_entity_var($sym, $cursor)) {
-    $loc->{uri} = $self->filename2uri($var->{filename});
+    # args and <yatt:my> vars are always defined in the file of the cursor.
+    $loc->{uri} = $self->filename2uri($var->{filename} // $sym->{filename});
     $loc->{range} = $var->{range};
     return $loc;
   }
 
   if (my EntityInfo $entFunc = $self->locate_entity_function($sym, $cursor)) {
     $loc->{uri} = $self->filename2uri($entFunc->{file});
-    $loc->{range} = $self->make_line_range($entFunc->{line});
+    # {line} is 1-based (Part startln / Sub::Identify). GH-275
+    $loc->{range} = $self->make_line_range($entFunc->{line} - 1);
     return $loc;
   }
+}
+
+#========================================
+# Attributes at a widget call site. GH-277
+# (see CGen::Perl::gen_putargs and passThruVar)
+#
+#   <yatt:foo x/>          passes the variable x in scope to formal arg x
+#                          (a flag when there is no such variable)
+#   <yatt:foo a=y/>        passes the variable y in scope to formal arg a
+#   <yatt:foo b="..."/>    b is a formal arg; entities in the value are
+#                          resolved through the entpath subtree as before
+#   <:yatt:d>...</:yatt:d> d is a formal arg
+#
+
+sub lookup_symbol_definition_of__ATTRIBUTE {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->variable_location($sym, $cursor, $name)
+    // $self->formal_arg_location($sym, $cursor, $name);
+}
+
+sub lookup_symbol_definition_of__ATT_BARENAME {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  if ($node->{value_range}
+      and $self->is_in_range($node->{value_range}, $sym->{refpos})) {
+    return $self->variable_location($sym, $cursor, $node->{value});
+  }
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->formal_arg_location($sym, $cursor, $name);
+}
+
+sub lookup_symbol_definition_of__ATT_TEXT {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->formal_arg_location($sym, $cursor, $name);
+}
+
+sub lookup_symbol_definition_of__ATT_NESTED {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  # Only attribute elements (<:yatt:d>) have a symbol_range.
+  return unless $node->{symbol_range};
+  my @path = lexpand($node->{path});
+  return unless @path and not grep {ref $_} @path;
+  $self->formal_arg_location($sym, $cursor, $path[-1]);
+}
+
+# The ELEMENT node which owns the attribute at $cursor, if any.
+sub parent_element_of_cursor {
+  (my MY $self, my Zipper $cursor) = @_;
+  my Zipper $parent = $cursor->{path} or return;
+  my AltNode $elem = $parent->{array}[$parent->{index}] or return;
+  return unless defined $elem->{kind} and $elem->{kind} eq 'ELEMENT';
+  $elem;
+}
+
+# ($widget, $var, $range) of the formal argument $argName of the widget
+# called by the element which owns the attribute at $cursor, or ().
+sub locate_formal_arg {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $argName) = @_;
+  my AltNode $elem = $self->parent_element_of_cursor($cursor) or return;
+  my Position $pos = $sym->{refpos};
+  my Part $widget = $self->lookup_widget_from(
+    $elem->{path}, $sym->{filename}, $pos->{line}
+  ) or return;
+  return unless UNIVERSAL::isa($widget, 'YATT::Lite::Core::Widget');
+  my $arg = $widget->{_arg_dict}{$argName} or return;
+  my $range = $self->arg_range_map_of_part($widget)->{$argName}
+    // $self->make_line_range(($arg->lineno // 1) - 1);
+  ($widget, $arg, $range);
+}
+
+sub formal_arg_location {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $argName) = @_;
+  my ($widget, $arg, $range) = $self->locate_formal_arg($sym, $cursor, $argName)
+    or return;
+  my Location $loc = +{};
+  $loc->{uri} = $self->filename2uri($self->part_filename($widget));
+  $loc->{range} = $range;
+  $loc;
+}
+
+# Location of the variable $name visible at $cursor (args, <yatt:my>).
+sub variable_location {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $name) = @_;
+  my SymbolInfo $varSym = +{%$sym};
+  $varSym->{name} = $name;
+  my VarInfo $var = $self->locate_entity_var($varSym, $cursor) or return;
+  my Location $loc = +{};
+  $loc->{uri} = $self->filename2uri($var->{filename} // $sym->{filename});
+  $loc->{range} = $var->{range};
+  $loc;
+}
+
+sub describe_symbol_of_ATTRIBUTE {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->describe_variable($sym, $cursor, $name)
+    // $self->describe_formal_arg($sym, $cursor, $name);
+}
+
+sub describe_symbol_of_ATT_BARENAME {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  if ($node->{value_range}
+      and $self->is_in_range($node->{value_range}, $sym->{refpos})) {
+    return $self->describe_variable($sym, $cursor, $node->{value});
+  }
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->describe_formal_arg($sym, $cursor, $name);
+}
+
+sub describe_symbol_of_ATT_TEXT {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  my ($name) = lexpand($node->{path});
+  return unless defined $name and not ref $name;
+  $self->describe_formal_arg($sym, $cursor, $name);
+}
+
+sub describe_symbol_of_ATT_NESTED {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
+  my AltNode $node = $cursor->{array}[$cursor->{index}];
+  return unless $node->{symbol_range};
+  my @path = lexpand($node->{path});
+  return unless @path and not grep {ref $_} @path;
+  $self->describe_formal_arg($sym, $cursor, $path[-1]);
+}
+
+sub describe_variable {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $name) = @_;
+  my SymbolInfo $varSym = +{%$sym};
+  $varSym->{name} = $name;
+  my VarInfo $var = $self->locate_entity_var($varSym, $cursor) or return;
+  $self->describe_entity_var($varSym, $var);
+}
+
+sub describe_formal_arg {
+  (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $argName) = @_;
+  my ($widget, $arg) = $self->locate_formal_arg($sym, $cursor, $argName)
+    or return;
+  my MarkupContent $md = +{};
+  $md->{kind} = 'markdown';
+  $md->{value} = $self->md_quote_code_as(
+    yatt => "argument $argName of <" . $widget->callsite_name . ">: "
+    . $arg->spec_string
+  );
+  $md;
 }
 
 sub filename2uri {
@@ -748,9 +916,8 @@ sub list_parts_in {
 sub lookup_widget_from {
   (my MY $self, my ($wpath, $fileName, $line)) = @_;
 
-  (my Part $part, my Template $tmpl, my $core)
-    = $self->find_part_of_file_line($fileName, $line)
-    or return;
+  my ($part, $tmpl, $core) = $self->find_part_of_file_line($fileName, $line);
+  return unless $part; # GH-275
 
   $core->build_cgen_of('perl')
     ->with_template($tmpl, lookup_widget => lexpand($wpath));
@@ -1469,7 +1636,10 @@ sub locate_node_at_file_position {
 
   (my ($kind, $path, $range, $tree), my Part $part) = @$treeSpec;
   unless ($self->is_in_range($range, $pos)) {
-    Carp::croak "BUG: Not in range! range=".terse_dump($range)." line=$line col=$column";
+    # e.g. cursor past the last part. Not a symbol, not an error. GH-275
+    $self->debug_log("position is out of part range: range="
+                     .terse_dump($range)." line=$line col=$column");
+    return;
   }
 
   # <!yatt:action>, <!yatt:entity>...
@@ -1484,15 +1654,39 @@ sub augment_defs {
   (my MY $self, my Zipper $cursor, my Part $part) = @_;
   my $zipperList = $self->flatten_zipper_top2bottom($cursor);
   my Zipper $outermost = $zipperList->[0];
+  my $rangeMap = $self->arg_range_map_of_part($part);
+  my $fileName = $self->part_filename($part);
   $outermost->{defs}{$_}
-    //= $self->make_document_symbol_from_argument($part->{_arg_dict}{$_})
+    //= $self->make_document_symbol_from_argument($part->{_arg_dict}{$_}
+                                                  , $rangeMap, $fileName)
     for keys %{$part->{_arg_dict}};
-  $self->augment_defs_1($zipperList, 0);
+  $self->augment_defs_1($zipperList, 0, $fileName);
   $cursor;
 }
 
+# name => Range of each argument token written in the <!yatt:...>
+# declaration. Args injected by argmacros and the implicit body argument
+# have no token here. GH-275
+sub arg_range_map_of_part {
+  (my MY $self, my Part $part) = @_;
+  my $decllist = $part->{_decllist} or return {};
+  my Template $tmpl = $part->{folder};
+  my %map;
+  # Reversed: the first ATTRIBUTE node of widget/page/entity/action
+  # declarations is the part name itself. An argument with the same name
+  # (a later node) must win.
+  foreach my AltNode $node (reverse @{$self->alttree($tmpl, $decllist)}) {
+    next unless defined $node->{kind}
+      and $node->{kind} =~ /^(?:ATTRIBUTE|ATT_TEXT|ATT_BARENAME|ATT_NESTED)\z/;
+    my ($name) = lexpand($node->{path});
+    next if not defined $name or ref $name;
+    $map{$name} = $node->{symbol_range} // $node->{tree_range};
+  }
+  \%map;
+}
+
 sub make_document_symbol_from_argument {
-  (my MY $self, my $arg) = @_;
+  (my MY $self, my ($arg, $rangeMap, $fileName)) = @_;
   my VarInfo $var = {};
   $var->{name} = $arg->varname;
   $var->{kind} = '(argument)';
@@ -1500,7 +1694,10 @@ sub make_document_symbol_from_argument {
   if (my $spec = $arg->spec_string) {
     $var->{detail} = qq{"$spec"};
   }
-  $var->{range} = $self->make_line_position($arg->lineno);
+  $var->{filename} = $fileName;
+  # A real Range (start/end), not a Position. VarTypes lineno is 1-based.
+  $var->{range} = ($rangeMap && $rangeMap->{$var->{name}})
+    // $self->make_line_range(($arg->lineno // 1) - 1);
   $var;
 }
 
@@ -1516,25 +1713,30 @@ sub flatten_zipper_top2bottom {
 }
 
 sub augment_defs_1 {
-  (my MY $self, my $zipperList, my $depth) = @_;
+  (my MY $self, my ($zipperList, $depth, $fileName)) = @_;
 
   my Zipper $zipper = $zipperList->[$depth];
 
   my @nodes = @{$zipper->{array}}[0..$zipper->{index}];
+  # $nodes[-1] may be the undef placeholder which locate_node inserts
+  # when the cursor is between nodes. GH-275
+  my $current = $nodes[-1];
   foreach my AltNode $node (@nodes) {
-    unless (defined $node->{kind}) {
+    unless (defined $node and defined $node->{kind}) {
       next;
     }
     my $method = join("_", augment_defs_1_ =>
                       , $node->{kind}, lexpand($node->{path}));
     my $sub = $self->can($method)
       or next;
-    $sub->($self, $zipper, $node, $node == $nodes[-1]);
+    $sub->($self, $zipper, $node, (defined $current && $node == $current)
+           , $fileName);
   }
 }
 
 sub augment_defs_1__ELEMENT_yatt_my {
-  (my MY $self, my Zipper $cursor, my AltNode $node, my $isCurrent) = @_;
+  (my MY $self, my Zipper $cursor, my AltNode $node
+   , my ($isCurrent, $fileName)) = @_;
   foreach my AltNode $subNode (@{$node->{subtree}}) {
     next unless defined $subNode->{kind};
     next unless $subNode->{kind} eq "ATT_TEXT";
@@ -1543,7 +1745,8 @@ sub augment_defs_1__ELEMENT_yatt_my {
     $var->{kind} = 'my';
     $var->{name} = $name;
     $var->{type} = @type ? join(":", @type) : 'text';
-    $var->{range} = $subNode->{symbol_range};
+    $var->{range} = $subNode->{symbol_range} // $subNode->{tree_range};
+    $var->{filename} = $fileName;
   }
 }
 
@@ -1592,6 +1795,10 @@ sub locate_node {
     if ($node->{subtree}
         and $self->is_in_range($node->{tree_range}, $pos)) {
       return $self->locate_node($node->{subtree}, $pos, $current);
+    } elsif ($node->{tree_range}
+             and $self->is_in_range($node->{tree_range}, $pos)) {
+      # Inside a leaf node, e.g. the bare value of a=y. GH-277
+      return $current;
     } else {
       # No yatt elements are under the position.
       splice @$tree, $ix, 0, undef;
@@ -1640,9 +1847,8 @@ sub dump_part_decllist {
   (my MY $self, my ($fileName, $line)) = @_;
   $line //= 0;
 
-  (my Part $part, my Template $tmpl, my $core)
-    = $self->find_part_of_file_line($fileName, $line)
-    or return;
+  my ($part, $tmpl, $core) = $self->find_part_of_file_line($fileName, $line);
+  return unless $part; # GH-275
 
   $part->{_decllist}
 }
@@ -1651,9 +1857,8 @@ sub dump_part_tree {
   (my MY $self, my ($fileName, $line)) = @_;
   $line //= 0;
 
-  (my Part $part, my Template $tmpl, my $core)
-    = $self->find_part_of_file_line($fileName, $line)
-    or return;
+  my ($part, $tmpl, $core) = $self->find_part_of_file_line($fileName, $line);
+  return unless $part; # GH-275
 
   unless (UNIVERSAL::isa($part, 'YATT::Lite::Core::Widget')) {
     Carp::croak "part $part->{kind} $part->{name} is not a widget";
@@ -1668,9 +1873,8 @@ sub dump_tokens_at_file_position {
   (my MY $self, my ($fileName, $line, $column)) = @_;
   $line //= 0;
 
-  (my Part $part, my Template $tmpl, my $core)
-    = $self->find_part_of_file_line($fileName, $line)
-    or return;
+  my ($part, $tmpl, $core) = $self->find_part_of_file_line($fileName, $line);
+  return unless $part; # GH-275
 
   return unless defined $tmpl->{nlines};
 
@@ -1767,6 +1971,17 @@ sub find_template {
   };
 
   wantarray ? ($tmpl, $core) : $tmpl;
+}
+
+# Forget the in-memory text (didOpen/didChange) and re-read the file from
+# disk. apply_changes stamps mtime with the wall clock; clearing it makes
+# refresh reload unconditionally. GH-275
+sub reload_file_from_disk {
+  (my MY $self, my $fileName) = @_;
+  my ($tmpl, $core) = $self->find_template($fileName);
+  undef $tmpl->{mtime};
+  $tmpl->refresh($core);
+  $tmpl;
 }
 
 sub find_yatt_for_template {

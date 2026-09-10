@@ -108,12 +108,32 @@ subtree[
 kind: ATTRIBUTE
 path: x
 source: x
+symbol_range{
+end{
+character: 11
+line: 2
+}
+start{
+character: 10
+line: 2
+}
+}
 value= #null
 }
 {
 kind: ATTRIBUTE
 path: y
 source: y
+symbol_range{
+end{
+character: 13
+line: 2
+}
+start{
+character: 12
+line: 2
+}
+}
 value= #null
 }
 -
@@ -310,12 +330,32 @@ subtree[
 kind: ATTRIBUTE
 path: x
 source: x
+symbol_range{
+end{
+character: 11
+line: 4
+}
+start{
+character: 10
+line: 4
+}
+}
 value= #null
 }
 {
 kind: ATTRIBUTE
 path: y
 source: y
+symbol_range{
+end{
+character: 13
+line: 4
+}
+start{
+character: 12
+line: 4
+}
+}
 value= #null
 }
 -
@@ -345,12 +385,32 @@ subtree[
 kind: ATTRIBUTE
 path: x
 source: x
+symbol_range{
+end{
+character: 13
+line: 6
+}
+start{
+character: 12
+line: 6
+}
+}
 value= #null
 }
 {
 kind: ATTRIBUTE
 path: y
 source: y
+symbol_range{
+end{
+character: 15
+line: 6
+}
+start{
+character: 14
+line: 6
+}
+}
 value= #null
 }
 ]
@@ -479,12 +539,32 @@ subtree[
 kind: ATTRIBUTE
 path: x
 source: x
+symbol_range{
+end{
+character: 11
+line: 18
+}
+start{
+character: 10
+line: 18
+}
+}
 value= #null
 }
 {
 kind: ATTRIBUTE
 path: y
 source: y
+symbol_range{
+end{
+character: 13
+line: 18
+}
+start{
+character: 12
+line: 18
+}
+}
 value= #null
 }
 -
@@ -514,12 +594,32 @@ subtree[
 kind: ATTRIBUTE
 path: x
 source: x
+symbol_range{
+end{
+character: 13
+line: 20
+}
+start{
+character: 12
+line: 20
+}
+}
 value= #null
 }
 {
 kind: ATTRIBUTE
 path: y
 source: y
+symbol_range{
+end{
+character: 15
+line: 20
+}
+start{
+character: 14
+line: 20
+}
+}
 value= #null
 }
 ]
@@ -957,6 +1057,16 @@ path[
 code: code
 ]
 source: code:code
+symbol_range{
+end{
+character: 19
+line: 0
+}
+start{
+character: 10
+line: 0
+}
+}
 value= #null
 }
 {
@@ -965,6 +1075,16 @@ path[
 src: source
 ]
 source: src:source
+symbol_range{
+end{
+character: 30
+line: 0
+}
+start{
+character: 20
+line: 0
+}
+}
 value= #null
 }
 ]
