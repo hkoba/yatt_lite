@@ -37,8 +37,6 @@ BEGIN {
   }
 }
 
-use_ok('YATT::Lite::Test::LangServerClient');
-
 my $TIMEOUT = $ENV{YATT_LANGSERVER_TEST_TIMEOUT} // 20;
 
 use File::Basename qw(dirname);
@@ -48,6 +46,9 @@ my $distDir = dirname($FindBin::Bin);
 unless ([File::Spec->splitdir($distDir)]->[-1] eq "YATT") {
   plan skip_all => "This test only works when \$distDir ends with 'YATT'";
 }
+
+use_ok('YATT::Lite::Test::LangServerClient');
+
 my $server = untaint_any("$distDir/Lite/LanguageServer.pm");
 
 my $TMP = tempdir(CLEANUP => $ENV{NO_CLEANUP} ? 0 : 1);

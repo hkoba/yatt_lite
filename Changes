@@ -1,5 +1,10 @@
 Revision history for YATT::Lite
 
+0.199_004 2026-09-10
+    * GH-277 - LSP: go-to-definition/hover for attributes at widget call sites - name-only `<yatt:foo x/>` jumps to the variable in scope (or the formal arg for a flag), `a=y` to the formal arg / the variable, `<:yatt:d>` to the formal arg
+    * GH-275 - LSP: fix go-to-definition stalling when frames arrive back to back (eglot sends didChange + definition in one write); argument / `<yatt:my>` definitions now return a real Range with the file uri; 0-based entity lines; percent-decoded uris and non-ascii / space directories; advertise `positionEncoding: utf-32`; handle `didClose` / `initialized` / `$/cancelRequest`; never answer a JSON-RPC error for definition/hover; survive bad header / broken JSON; `--logfile` (`$YATT_LANGSERVER_LOG`); fix `startln` of back-to-back declarations and first-line columns; new tests `t/langserver_transport.t` (via `YATT::Lite::Test::LangServerClient`) and `t/inspector_definition.t`
+    * CI - tolerate expired Debian Release files in old perl images (fail-fast off); actions/checkout v7
+
 0.199_003 2026-09-01
     * GH-272 - Document the public facade - new `YATT::Lite::Site` pod (execution contracts), Factory.pod DESCRIPTION, readme CLI section
     * GH-270 - Modularize yatt.genperl as `YATT::Lite::CLI::GenPerl`
