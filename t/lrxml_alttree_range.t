@@ -578,4 +578,41 @@ END
 }
 
 
+{
+  # GH-278: a <!--#yatt --> comment token includes its trailing newline
+  # (NODE_END is just after the newline). Its tree_range must still end
+  # on the last line of the comment; otherwise the first characters of
+  # the next line are taken as part of the comment and no symbol is
+  # found there.
+  foreach my $case ([LF => "\n"], [CRLF => "\r\n"]) {
+    my ($title, $nl) = @$case;
+    my $parser = $CLASS->new(all => 1);
+    my $tmpl = $CLASS->Template->new;
+    $parser->load_string_into($tmpl, my $cp = join($nl, split /\n/, <<END) . $nl);
+<!yatt:args>
+<!--#yatt xxx
+   yyy  #-->
+<yatt:if "&yatt:foobar();">
+foobar
+</yatt:if>
+END
+
+    my $w = $tmpl->{_Item}{''};
+    my $alttree = alt_tree_for($tmpl->{string}, $w->{_tree});
+    my ($comment, $elem_if) = grep {ref $_} @$alttree;
+
+    is $comment->{kind}, 'COMMENT', "$title: comment kind";
+    is_deeply $comment->{tree_range}
+      , +{start => {line => 1, character => 0}
+          , end => {line => 2, character => 12}}
+      , "$title: comment tree_range ends on the last line of the comment";
+
+    is $elem_if->{kind}, 'ELEMENT', "$title: element kind";
+    is_deeply $elem_if->{tree_range}{start}
+      , +{line => 3, character => 0}
+      , "$title: the element starts on the next line";
+  }
+}
+
+
 done_testing();

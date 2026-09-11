@@ -312,4 +312,61 @@ is definition_of($call, $call_text, '<yatt:my v=', 9), undef
 }
 
 
+#========================================
+# GH-278: a multi-line <!--#yatt --> comment right before an element.
+# The comment token includes its trailing newline, and its tree_range
+# used to spill into the next line: the entity call on that line was
+# taken as part of the comment (kind COMMENT), so no definition / hover.
+#========================================
+my $comment_text = <<'END';
+<!yatt:args>
+<html>
+<body>
+<!--#yatt xxx
+                   yyy        #-->
+<yatt:if "&yatt:foobar();">
+  foobar=&yatt:foobar();
+</yatt:if>
+<yatt:body/>
+</body>
+</html>
+
+<!yatt:entity foobar>
+1;
+END
+
+my $comment = "$site/comment.yatt";
+MY->mkfile_may_wait($comment, $comment_text);
+
+{
+  my ($sym) = $ins->locate_symbol_at_file_position
+    ($comment, pos_of($comment_text, '<yatt:if "&yatt:foobar();">', 17));
+  is $sym && $sym->{kind}, 'call'
+    , "GH-278: symbol right after a multi-line comment is the entity call, not the comment";
+}
+
+is_location(definition_of($comment, $comment_text, '<yatt:if "&yatt:foobar();">', 17)
+            , uri_of($comment), line_of($comment_text, '<!yatt:entity foobar>'), 0
+            , "GH-278: entity call right after a multi-line comment -> <!yatt:entity foobar>");
+
+is_location(definition_of($comment, $comment_text, '  foobar=&yatt:foobar();', 16)
+            , uri_of($comment), line_of($comment_text, '<!yatt:entity foobar>'), 0
+            , "entity call in the element body -> <!yatt:entity foobar> (unchanged)");
+
+{
+  my ($sym) = $ins->locate_symbol_at_file_position
+    ($comment, pos_of($comment_text, 'yyy        #-->', 1));
+  is $sym && $sym->{kind}, 'COMMENT'
+    , "GH-278: inside the comment is still the comment";
+  is definition_of($comment, $comment_text, 'yyy        #-->', 1), undef
+    , "GH-278: no definition inside the comment";
+
+  my ($sym2, $cursor2) = $ins->locate_symbol_at_file_position
+    ($comment, pos_of($comment_text, '<yatt:if "&yatt:foobar();">', 17));
+  my $md = $sym2 && $ins->describe_symbol($sym2, $cursor2);
+  like $md && $md->{value}, qr/foobar/
+    , "GH-278: hover right after a multi-line comment describes the entity";
+}
+
+
 done_testing();
