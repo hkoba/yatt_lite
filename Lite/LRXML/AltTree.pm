@@ -148,9 +148,16 @@ sub fill_source_range_of {
       $altnode->{source} = $source;
     }
     if ($self->{with_range}) {
+      # A <!--#yatt --> comment token includes its trailing newline
+      # (NODE_END is just after it). The range must end on the last
+      # line of the token, not at column 0..N of the next line. GH-278
+      my $end = $orig->[NODE_END];
+      if ($source =~ s/(\r?\n)\z//) {
+        $end -= length $1;
+      }
       $altnode->{tree_range} = $self->make_range(
         $orig->[NODE_BEGIN],
-        $orig->[NODE_END],
+        $end,
         $orig->[NODE_LNO],
         ($source =~ tr|\n||)
       );
