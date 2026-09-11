@@ -545,13 +545,21 @@ sub lookup_symbol_definition_of__ELEMENT {
 
   my Position $pos = $sym->{refpos};
 
-  my AltNode $node = $cursor->{array}[$cursor->{index}];
-  # assert($node);
+  return unless $cursor;
+  my AltNode $node = $cursor->{array}[$cursor->{index}]
+    or return;
 
-  my $wname = join(":", lexpand($node->{path}));
+  # A callable variable in scope (<yatt:body/>, <yatt:cb/> for cb=[code],
+  # <yatt:my f:code=...>) shadows a widget of the same name, as in
+  # CGen::Perl::gen_call. GH-280
+  if (my VarInfo $var = $self->locate_callable_var_of_element($node, $cursor)) {
+    my Location $loc = +{};
+    $loc->{uri} = $self->filename2uri($var->{filename} // $sym->{filename});
+    $loc->{range} = $var->{range};
+    return $loc;
+  }
 
-  # XXX: yatt:if, yatt:foreach, ... macro
-  # XXX: calllable_vars like <yatt:body/>
+  # Macro elements (yatt:if, yatt:foreach, ...) have no definition.
 
   my Part $widget = $self->lookup_widget_from(
     $node->{path}, $sym->{filename}, $pos->{line}
@@ -787,15 +795,26 @@ sub describe_symbol {
 sub describe_symbol_of_ELEMENT {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
-  my AltNode $node = $cursor->{array}[$cursor->{index}];
-  # assert($node);
+  return unless $cursor;
+  my AltNode $node = $cursor->{array}[$cursor->{index}]
+    or return;
 
   my Position $pos = $self->range_start($sym->{range});
 
   my $wname = join(":", lexpand($node->{path}));
 
-  # XXX: builtin macros like yatt:if, yatt:foreach, ...
-  # XXX: calllable_vars like <yatt:body/>
+  # Callable variable first, as in gen_call. GH-280
+  if (my VarInfo $var = $self->locate_callable_var_of_element($node, $cursor)) {
+    return $self->describe_entity_var($sym, $var);
+  }
+
+  # Builtin macros like yatt:if, yatt:foreach, ... GH-280
+  if ($self->macro_method_of_element($node, $sym->{filename}, $pos->{line})) {
+    my MarkupContent $md = +{};
+    $md->{kind} = 'markdown';
+    $md->{value} = $self->md_quote_code_as(yatt => "(macro) <$wname>");
+    return $md;
+  }
 
   my Part $widget = $self->lookup_widget_from(
     $node->{path}, $sym->{filename}, $pos->{line}
@@ -829,6 +848,34 @@ sub describe_symbol_of_var {
   if (my $entFunc = $self->locate_entity_function($sym, $cursor)) {
     return $self->describe_entity_function($sym, $entFunc);
   }
+}
+
+# <yatt:NAME .../> calls the callable variable NAME (code/delegate) when
+# one is in scope; CGen::Perl::gen_call looks it up before widgets, and
+# only as_varcall_code / as_varcall_delegate exist. GH-280
+sub locate_callable_var_of_element {
+  (my MY $self, my AltNode $node, my Zipper $cursor) = @_;
+  my @path = lexpand($node->{path});
+  return unless @path == 2 and defined $path[1] and not ref $path[1];
+  my SymbolInfo $varSym = +{};
+  $varSym->{name} = $path[1];
+  my VarInfo $var = $self->locate_entity_var($varSym, $cursor)
+    or return;
+  my ($type) = split /:/, ($var->{type} // '');
+  return unless defined $type and $type =~ /^(?:code|delegate)\z/;
+  $var;
+}
+
+# The macro_* method CGen::Perl::from_element would dispatch this
+# element to, or undef. GH-280
+sub macro_method_of_element {
+  (my MY $self, my AltNode $node, my ($fileName, $line)) = @_;
+  my @path = lexpand($node->{path});
+  return unless @path == 2 and not grep {ref $_} @path;
+  my ($part, $tmpl, $core) = $self->find_part_of_file_line($fileName, $line);
+  return unless $core;
+  my $cgen = $core->build_cgen_of('perl');
+  $cgen->can("macro_" . join("_", @path)) || $cgen->can("macro_$path[-1]");
 }
 
 sub describe_entity_var {
@@ -934,6 +981,9 @@ sub locate_symbol_at_file_position {
 
   my AltNode $node = $cursor->{array}[$cursor->{index}]
     or return;
+  # The placeholder locate_node inserts (undef, or {} if something
+  # autovivified it) is not a symbol. GH-280
+  return unless defined $node->{kind};
 
   my SymbolInfo $info = {};
   $info->{kind} = $node->{kind};
@@ -1665,13 +1715,14 @@ sub augment_defs {
 }
 
 # name => Range of each argument token written in the <!yatt:...>
-# declaration. Args injected by argmacros and the implicit body argument
-# have no token here. GH-275
+# declaration. Args injected by argmacros have no token here. GH-275
+# The implicit body argument maps to the declaration line. GH-280
 sub arg_range_map_of_part {
   (my MY $self, my Part $part) = @_;
   my $decllist = $part->{_decllist} or return {};
   my Template $tmpl = $part->{folder};
   my %map;
+  my @lines;
   # Reversed: the first ATTRIBUTE node of widget/page/entity/action
   # declarations is the part name itself. An argument with the same name
   # (a later node) must win.
@@ -1680,9 +1731,37 @@ sub arg_range_map_of_part {
       and $node->{kind} =~ /^(?:ATTRIBUTE|ATT_TEXT|ATT_BARENAME|ATT_NESTED)\z/;
     my ($name) = lexpand($node->{path});
     next if not defined $name or ref $name;
-    $map{$name} = $node->{symbol_range} // $node->{tree_range};
+    my Range $range = $node->{symbol_range};
+    if (not $range and $node->{kind} eq 'ATT_NESTED'
+        and (my Range $tree = $node->{tree_range})) {
+      # cb=[code a b]: the node starts at "[", so look back on the
+      # same line for the "cb=" before it. GH-280
+      @lines = split /\n/, ($tmpl->{string} // '') unless @lines;
+      my $lineText = $lines[$tree->{start}{line}] // '';
+      if (substr($lineText, 0, $tree->{start}{character})
+          =~ /(\Q$name\E)\s*=\s*\z/) {
+        $range = $self->make_range_on_line($tree->{start}{line}, $-[1], $+[1]);
+      }
+    }
+    $map{$name} = $range // $node->{tree_range};
+  }
+  if (my $dict = $part->{_arg_dict}) {
+    foreach my $name (keys %$dict) {
+      next if $map{$name};
+      my $arg = $dict->{$name};
+      next unless $arg->is_body_argument;
+      $map{$name} = $self->part_decl_range($part);
+    }
   }
   \%map;
+}
+
+sub make_range_on_line {
+  (my MY $self, my ($line, $startChar, $endChar)) = @_;
+  my Range $range = +{};
+  $range->{start} = +{line => $line, character => $startChar};
+  $range->{end} = +{line => $line, character => $endChar};
+  $range;
 }
 
 sub make_document_symbol_from_argument {
@@ -1738,7 +1817,9 @@ sub augment_defs_1__ELEMENT_yatt_my {
   (my MY $self, my Zipper $cursor, my AltNode $node
    , my ($isCurrent, $fileName)) = @_;
   foreach my AltNode $subNode (@{$node->{subtree}}) {
-    next unless defined $subNode->{kind};
+    # $subNode aliases the array element: testing $subNode->{kind} on
+    # the undef placeholder of locate_node would autovivify it. GH-280
+    next unless defined $subNode and defined $subNode->{kind};
     next unless $subNode->{kind} eq "ATT_TEXT";
     my ($name, @type) = lexpand($subNode->{path});
     $cursor->{defs}{$name} = my VarInfo $var = +{};
