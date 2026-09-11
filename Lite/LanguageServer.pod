@@ -30,6 +30,22 @@ and delegates the actual work to L<YATT::Lite::Inspector>.
   textDocument/documentSymbol
   textDocument/completion
 
+=head2 Definition and hover targets
+
+  &yatt:x;  &yatt:x:foo();      argument / <yatt:my> variable / entity function
+  <yatt:foo ...>                widget declaration (same file, other file,
+                                <!yatt:base>, <!yatt:import>)
+  <yatt:foo x/> <yatt:foo a=y/> the variable in scope (x, y) or the formal
+                                argument of foo (GH-277)
+  <yatt:body/> <yatt:cb/>       the callable variable in scope: an explicit
+                                body=[code] / cb=[code] argument token,
+                                a <yatt:my f:code=...> variable, or the
+                                declaration line of the enclosing widget for
+                                the implicit body argument (GH-280). As in
+                                the compiler, such a variable shadows a
+                                widget of the same name.
+  <yatt:if> <yatt:foreach> ...  macro elements: hover only (no definition)
+
 =head2 Options
 
 Options must precede the C<server> subcommand.
