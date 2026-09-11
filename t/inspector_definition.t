@@ -369,4 +369,101 @@ is_location(definition_of($comment, $comment_text, '  foobar=&yatt:foobar();', 1
 }
 
 
+#========================================
+# GH-280: callable-variable elements and macro elements.
+#   <yatt:body/>   implicit body arg -> the declaration line of the
+#                  enclosing widget; explicit body=[code] -> its name token
+#   <yatt:cb/>     cb=[code] arg -> its name token (even when a widget of
+#                  the same name exists: gen_call looks up variables first)
+#   <yatt:f/>      <yatt:my f:code=...> -> the variable
+#   <yatt:if ...>  macro: hover only, no definition
+#========================================
+my $body_text = <<'END';
+<!yatt:args x cb=[code] foo=[code]>
+<yatt:wrap><yatt:body/>X</yatt:wrap>
+<yatt:cb/>
+<yatt:foo/>
+<yatt:my f:code="&yatt:x;"/>
+<yatt:f/>
+<yatt:if "&yatt:x;">Y</yatt:if>
+
+<!yatt:widget wrap>
+<div><yatt:body/></div>
+
+<!yatt:widget wrap2 body=[code]>
+<yatt:body/>
+
+<!yatt:widget foo>
+FOO
+END
+
+my $body = "$site/callable.yatt";
+MY->mkfile_may_wait($body, $body_text);
+
+sub hover_of {
+  my ($file, $text, $needle, $inner) = @_;
+  my ($sym, $cursor) = $ins->locate_symbol_at_file_position
+    ($file, pos_of($text, $needle, $inner)) or return undef;
+  my $md = $ins->describe_symbol($sym, $cursor) or return undef;
+  $md->{value};
+}
+
+is_location(definition_of($body, $body_text, '<div><yatt:body/>', 6)
+            , uri_of($body), line_of($body_text, '<!yatt:widget wrap>'), 0
+            , "GH-280: implicit body -> declaration line of the enclosing widget");
+
+is_location(definition_of($body, $body_text, '<div><yatt:body/>', 14)
+            , uri_of($body), line_of($body_text, '<!yatt:widget wrap>'), 0
+            , "GH-280: implicit body, cursor on the last char of the name");
+
+is_location(definition_of($body, $body_text, '<yatt:wrap><yatt:body/>', 12)
+            , uri_of($body), 0, 0
+            , "GH-280: implicit body of the page (nested in a call) -> <!yatt:args> line");
+
+is_location(definition_of($body, $body_text, "body=[code]>\n<yatt:body/>", 14)
+            , uri_of($body), pos_of($body_text, 'body=[code]')
+            , "GH-280: explicit body=[code] -> the name token of the declaration");
+
+is_location(definition_of($body, $body_text, '<yatt:cb/>', 6)
+            , uri_of($body), pos_of($body_text, 'cb=[code]')
+            , "GH-280: <yatt:cb/> -> cb=[code] arg");
+
+is_location(definition_of($body, $body_text, '<yatt:foo/>', 6)
+            , uri_of($body), pos_of($body_text, 'foo=[code]')
+            , "GH-280: <yatt:foo/> -> foo=[code] arg, not the widget foo");
+
+is_location(definition_of($body, $body_text, '<yatt:f/>', 6)
+            , uri_of($body), pos_of($body_text, '<yatt:my f:code', 9)
+            , "GH-280: <yatt:f/> -> <yatt:my f:code=...>");
+
+is definition_of($body, $body_text, '<yatt:if "', 6), undef
+  , "GH-280: macro element has no definition";
+
+is_location(definition_of($body, $body_text, '<yatt:wrap><yatt:body/>', 6)
+            , uri_of($body), line_of($body_text, '<!yatt:widget wrap>'), 0
+            , "widget call -> widget declaration (unchanged)");
+
+like hover_of($body, $body_text, '<div><yatt:body/>', 6), qr/\(argument\) body: code/
+  , "GH-280: hover on <yatt:body/> describes the body argument";
+like hover_of($body, $body_text, '<yatt:cb/>', 6), qr/\(argument\) cb: code/
+  , "GH-280: hover on <yatt:cb/> describes the code argument";
+like hover_of($body, $body_text, '<yatt:f/>', 6), qr/my f: code/
+  , "GH-280: hover on <yatt:f/> describes the my variable";
+like hover_of($body, $body_text, '<yatt:if "', 6), qr/\(macro\) <yatt:if>/
+  , "GH-280: hover on a macro element";
+like hover_of($body, $body_text, '<yatt:wrap><yatt:body/>', 6), qr/\(widget\) <yatt:wrap/
+  , "hover on a widget call (unchanged)";
+
+{
+  # The undef placeholder locate_node inserts must not be autovivified
+  # into a kind-less node by augment_defs (foreach aliasing). GH-280
+  my ($sym, $cursor) = eval {
+    $ins->locate_symbol_at_file_position
+      ($body, pos_of($body_text, '<yatt:my f:code', 8));
+  };
+  is $@, '', "GH-280: whitespace inside <yatt:my .../> does not die";
+  is $sym, undef, "GH-280: whitespace inside <yatt:my .../> is not a symbol";
+}
+
+
 done_testing();
