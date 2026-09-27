@@ -21,7 +21,7 @@ use YATT::Lite::Constants;
   package YATT::Lite::CGen::Perl; sub MY () {__PACKAGE__}
   use base qw(YATT::Lite::CGen);
   use YATT::Lite::MFields;
-  use YATT::Lite::Util qw(lexpand numLines globref terse_dump catch);
+  use YATT::Lite::Util qw(lexpand numLines globref terse_dump catch ckrequire);
   use Carp;
   #========================================
   sub list_inheritance {
@@ -74,6 +74,34 @@ use YATT::Lite::Constants;
     sprintf q{use mro '%s'; our @ISA = qw(%s); }, $mro, join " ", @isa;
   }
   #========================================
+  sub generate_page_scope {
+    (my MY $self, my Template $tmpl) = @_;
+    my $scope = {};
+    if ($self->{pagevars}) {
+      # XXX: mtime check → auto termination
+      ckrequire($self->{pagevars});
+      my $vars = $self->{pagevars}->find_vars($tmpl->{name});
+      foreach my $name (keys %$vars) {
+        my $value = $vars->{$name};
+        my $type = do {
+          if (not ref $value) {
+            'text';
+          } elsif (ref $value eq 'ARRAY') {
+            'list'
+          } elsif (ref $value eq 'CODE') {
+            'code'
+          } elsif (UNIVERSAL::can($value, 'varname')
+                   and UNIVERSAL::can($value, 'value')) {
+            'html';
+          } else {
+            'scalar';
+          }
+        };
+        $scope->{$name} = $self->mkvar_at(undef, $type => $name);
+      }
+    }
+    $scope;
+  }
   sub generate_preamble {
     (my MY $self, my Template $tmpl) = @_;
     $tmpl ||= $self->{_curtmpl};
@@ -88,6 +116,9 @@ use YATT::Lite::Constants;
     }
     push @stats, sprintf q{package %s; use strict; use warnings; use 5.010; }
       , $$tmpl{entns};
+    if ($self->{pagevars}) {
+      push @stats, "use $self->{pagevars} (qw($tmpl->{name}), 1);";
+    }
     push @stats, $self->generate_inheritance($tmpl);
     push @stats, "use utf8; " if $$tmpl{utf8};
     push @stats, q|no warnings qw(redefine); | if $$tmpl{age}++;
@@ -112,6 +143,7 @@ use YATT::Lite::Constants;
        , {this => $self->mkvar_at(undef, text => 'this')
 	  , 'CON' => $self->mkvar_at(undef, text => 'CON')
 	  , '_' => $self->mkvar_at(undef, text => '_')}
+       , $self->{_scope} # page global scope
       );
     local $self->{_curtoks} = [@{$widget->{_tree}}];
     ($self->sync_curline($widget->{startln})
