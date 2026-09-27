@@ -34,6 +34,9 @@ my $testno = 0;
       foo => "FOO",
       bar => "BARRR",
     };
+    $PAGES{uselayout} = +{
+      qux => "QUX",
+    };
     $PAGES{'sub/another'} = +{
       baz => "BAZZZ",
       # baz => YATT::Util::VarExporter::as_html("foo<b>bar</b>baz")
@@ -51,6 +54,12 @@ END
 &yatt:baz;
 END
 
+      MY->mkfile_may_wait("$dir/public/uselayout.yatt", <<'END');
+&yatt:qux;<yatt:layout/>
+END
+
+      # Templates in ytmpl/ are not pages (page_name is undef),
+      # so pagevars must not be applied to them.
       MY->mkfile_may_wait("$dir/ytmpl/layout.ytmpl", <<'END');
 (dummy)
 END
@@ -70,6 +79,9 @@ END
   is($site->render("index"), "FOO BARRR\n");
 
   is($site->render("sub/another"), "BAZZZ\n");
+
+  is(eval {$site->render("uselayout")} // "ERROR: $@", "QUX(dummy)\n\n"
+     , "page using a widget from ytmpl (non-page template)");
 }
 
 done_testing;
