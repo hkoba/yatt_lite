@@ -76,9 +76,9 @@ END
   );
 
 
-  is($site->render("index"), "FOO BARRR\n");
+  is($site->render("index"), "FOO BARRR\n", q{pagevar index});
 
-  is($site->render("sub/another"), "BAZZZ\n");
+  is($site->render("sub/another"), "BAZZZ\n", q{pagevar sub/another});
 
   is(eval {$site->render("uselayout")} // "ERROR: $@", "QUX(dummy)\n\n"
      , "page using a widget from ytmpl (non-page template)");

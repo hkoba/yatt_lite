@@ -77,10 +77,10 @@ use YATT::Lite::Constants;
   sub generate_page_scope {
     (my MY $self, my Template $tmpl) = @_;
     my $scope = {};
-    if ($self->{pagevars}) {
+    if ($self->{pagevars} and defined (my $page_name = $tmpl->page_name)) {
       # XXX: mtime check → auto termination
       ckrequire($self->{pagevars});
-      my $vars = $self->{pagevars}->find_vars($tmpl->page_name);
+      my $vars = $self->{pagevars}->find_vars($page_name);
       foreach my $name (keys %$vars) {
         my $value = $vars->{$name};
         my $type = do {
@@ -116,8 +116,7 @@ use YATT::Lite::Constants;
     }
     push @stats, sprintf q{package %s; use strict; use warnings; use 5.010; }
       , $$tmpl{entns};
-    if ($self->{pagevars}) {
-      my $page_name = $tmpl->page_name;
+    if ($self->{pagevars} and defined (my $page_name = $tmpl->page_name)) {
       push @stats, "use $self->{pagevars} (qw($page_name), missing_ok => 1);";
     }
     push @stats, $self->generate_inheritance($tmpl);
