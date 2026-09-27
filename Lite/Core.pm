@@ -22,6 +22,7 @@ use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
               stash_unknown_params_to
 	      prefer_call_for_entity
 	      no_conditional_call
+              pagevars
 
 	      _n_compiles
 	    /;
@@ -851,7 +852,9 @@ sub import_find_source_part {
        , $self->cf_delegate(qw(no_lineinfo check_lineno only_parse
                                prefer_call_for_entity
                                no_conditional_call
-                               lcmsg_sink))
+                               lcmsg_sink
+                               pagevars
+                             ))
        , parser => $self->get_parser
        , sink => $opts->{sink} || sub {
          my ($info, @script) = @_;

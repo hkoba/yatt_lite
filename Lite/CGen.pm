@@ -17,6 +17,7 @@ use YATT::Lite::MFields qw/_curtmpl _curwidget _curtoks
 	      lcmsg_sink
 	      prefer_call_for_entity
 	      no_conditional_call
+	      pagevars
 			  /
   ;
 

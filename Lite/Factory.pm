@@ -125,6 +125,7 @@ use YATT::Lite::MFields
        match_argsroute_first
        allow_bare_entity_in_decl
        no_chdir
+       pagevars
        /
  , [stash_unknown_params_to => 
     (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
@@ -1198,6 +1199,7 @@ sub _cf_delegates {
      no_conditional_call
      allow_bare_entity_in_decl
      no_chdir
+     pagevars
   );
 }
 
