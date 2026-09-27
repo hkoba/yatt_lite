@@ -86,4 +86,16 @@ sub find_vars {
   }
 }
 
+sub as_html {
+  my ($text) = @_;
+  bless \ $text, 'YATT::Lite::PageConsts::html';
+}
+
+package
+  YATT::Lite::PageConsts::html;
+use overload '""' => 'value';
+sub varname {shift; 'html_'. shift}
+sub value {${shift()}}
+
+
 1;

@@ -27,7 +27,7 @@ my $testno = 0;
 
     MY->mkfile_may_wait("$dir/lib/pagevars.pm", <<'END');
     package pagevars;
-    use YATT::Lite::PageConsts;
+    use YATT::Lite::PageConsts qw(as_html);
 
     my %PAGES;
     $PAGES{index} = +{
@@ -39,7 +39,7 @@ my $testno = 0;
     };
     $PAGES{'sub/another'} = +{
       baz => "BAZZZ",
-      # baz => YATT::Util::VarExporter::as_html("foo<b>bar</b>baz")
+      qux => as_html("foo<b>bar</b>baz"),
     };
 
     YATT::Lite::PageConsts->define_pages(%PAGES);
@@ -51,7 +51,7 @@ END
 END
 
       MY->mkfile_may_wait("$dir/public/sub/another.yatt", <<'END');
-&yatt:baz;
+&yatt:baz; &yatt:qux;
 END
 
       MY->mkfile_may_wait("$dir/public/uselayout.yatt", <<'END');
@@ -78,7 +78,7 @@ END
 
   is($site->render("index"), "FOO BARRR\n", q{pagevar index});
 
-  is($site->render("sub/another"), "BAZZZ\n", q{pagevar sub/another});
+  is($site->render("sub/another"), "BAZZZ foo<b>bar</b>baz\n", q{pagevar sub/another});
 
   is(eval {$site->render("uselayout")} // "ERROR: $@", "QUX(dummy)\n\n"
      , "page using a widget from ytmpl (non-page template)");
