@@ -33,7 +33,7 @@ require File::Glob;
 				   _dependents
 				)]
 	    , -alias => 'vfs_file']
-	 , [Dir  => -fields => [qw(encoding)]
+	 , [Dir  => -fields => [qw(encoding page_prefix)]
 	    , -alias => 'vfs_dir']]]);
 
   sub YATT::Lite::VFS::Item::after_create {}
@@ -65,6 +65,12 @@ require File::Glob;
     (my Folder $folder) = @_;
     return unless $folder->{_Item};
     values %{$folder->{_Item}};
+  }
+  sub YATT::Lite::VFS::File::page_name {
+    (my File $file) = @_;
+    my Dir $parent = $file->{parent};
+    return undef unless defined $parent->{page_prefix};
+    $parent->{page_prefix} . $file->{name};
   }
 
   package YATT::Lite::VFS; BEGIN {$INC{"YATT/Lite/VFS.pm"} = 1}

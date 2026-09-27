@@ -47,12 +47,21 @@ END
 &yatt:foo; &yatt:bar;
 END
 
+      MY->mkfile_may_wait("$dir/public/sub/another.yatt", <<'END');
+&yatt:baz;
+END
+
+      MY->mkfile_may_wait("$dir/ytmpl/layout.ytmpl", <<'END');
+(dummy)
+END
+
   }
 
   my $site = YATT::Lite::WebMVC0::SiteApp->new(
     app_ns => "Test$testno",
     app_root => $dir,
     doc_root => "$dir/public",
+    app_base => '@ytmpl',
     pagevars => 'pagevars',
     debug_cgen => $ENV{DEBUG_CGEN},
   );
@@ -60,6 +69,7 @@ END
 
   is($site->render("index"), "FOO BARRR\n");
 
+  is($site->render("sub/another"), "BAZZZ\n");
 }
 
 done_testing;

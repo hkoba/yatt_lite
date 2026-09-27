@@ -80,7 +80,7 @@ use YATT::Lite::Constants;
     if ($self->{pagevars}) {
       # XXX: mtime check → auto termination
       ckrequire($self->{pagevars});
-      my $vars = $self->{pagevars}->find_vars($tmpl->{name});
+      my $vars = $self->{pagevars}->find_vars($tmpl->page_name);
       foreach my $name (keys %$vars) {
         my $value = $vars->{$name};
         my $type = do {
@@ -117,7 +117,8 @@ use YATT::Lite::Constants;
     push @stats, sprintf q{package %s; use strict; use warnings; use 5.010; }
       , $$tmpl{entns};
     if ($self->{pagevars}) {
-      push @stats, "use $self->{pagevars} (qw($tmpl->{name}), 1);";
+      my $page_name = $tmpl->page_name;
+      push @stats, "use $self->{pagevars} (qw($page_name), missing_ok => 1);";
     }
     push @stats, $self->generate_inheritance($tmpl);
     push @stats, "use utf8; " if $$tmpl{utf8};

@@ -994,7 +994,7 @@ sub build_yatt {
   $self->_list_base_spec_in($path, delete $opts{base}, $visits
 			    , \@basepkg, \@basevfs);
 
-  my $app_ns = $self->buildns(my @log = (INST => \@basepkg, $path));
+  my $app_ns = $self->buildns(my @log = (INST => \@basepkg, $path, $basedir));
 
   print STDERR "# Factory::buildns("
     , terse_dump(@log), ") => $app_ns\n" if DEBUG_FACTORY;
@@ -1007,9 +1007,21 @@ sub build_yatt {
     print STDERR "# Loaded: $rc\n" if DEBUG_FACTORY;
   }
 
+  my @vfs_opts;
+  if (defined $basedir) {
+    push @vfs_opts, page_prefix => do {
+      if (length $path > length $basedir) {
+        substr($path, 1+length($basedir))."/"
+      } else {
+        ''
+      }
+    };
+  }
+
   my @args = (vfs => [dir => $path
 		      , entns => $self->{_path2entns}{$path}
 		      , encoding => $self->{tmpl_encoding}
+                      , @vfs_opts
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
