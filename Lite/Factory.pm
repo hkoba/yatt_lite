@@ -875,7 +875,9 @@ sub run_dirhandler {
     handle => $dh->cut_ext($file), $con, $file
   );
   $self->after_dirhandler($dh, $con, $file);
-  if (defined $result and ref $result eq 'ARRAY' and @$result == 3) {
+  if (defined $result
+      and (ref $result eq 'CODE'
+           or ref $result eq 'ARRAY' and @$result == 3)) {
     $self->raise_response($result)
   }
 }

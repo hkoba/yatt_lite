@@ -151,6 +151,39 @@ under F<doc_root> and F<app_base>, in this order.
 
 =back
 
+=head3 Return value of actions
+
+If an action (F<*.ydo>, C<< <!yatt:action> >> or C<mount_action>)
+returns a PSGI response, it is used as the response instead of
+the connection buffer. Both forms of PSGI response are accepted:
+
+=over 4
+
+=item ARRAY - C<[$status, \@headers, \@body]>
+
+=item CODE - delayed response / streaming
+
+  return sub {
+    my ($responder) = @_;
+    my $writer = $responder->([200, ['Content-Type', "text/html"]]);
+    $writer->write('....');
+    $writer->close;
+  };
+
+=back
+
+These are equivalent to C<< $CON->raise_response($response) >>.
+
+B<Note for CODE responses:> the callback is invoked by the PSGI server
+B<after> C<call($env)> has returned. At that time, dynamically scoped
+variables such as C<$SYS> and C<$YATT> are no longer set up.
+(C<$CON> is fine, because actions receive it as an argument
+and capture it lexically.) If you need them in the callback,
+copy them into lexical variables before returning the callback:
+
+  my ($sys, $yatt) = ($SYS, $YATT);
+  return sub { ... uses $sys, $yatt ... };
+
 =head2 prepare_app
 
 PSGI startup hook.
