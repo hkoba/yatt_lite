@@ -7,7 +7,7 @@ use MOP4Import::Base::CLI_JSON -as_base
 
 use YATT::Lite::Util qw(globref);
 
-sub define_pages {
+sub define_pages :MetaOnly {
   my ($pack, @pairs) = @_;
   my $callpack = caller;
   $pack->new(pages => \@pairs)->register_into($callpack);
@@ -22,7 +22,7 @@ sub onconfigure_pages {
   $self;
 }
 
-sub register_into {
+sub register_into :MetaOnly {
   (my MY $self, my $pkg) = @_;
   YATT::Lite::MFields->add_isa_to($pkg, MY);
   *{globref($pkg, 'instance')} = sub { $self };
