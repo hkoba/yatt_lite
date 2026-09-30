@@ -80,6 +80,8 @@ Lite/MFields.pm
 Lite/NSBuilder.pm
 Lite/Object.pm
 Lite/Object.pod
+Lite/PageConsts.pm
+Lite/PageConsts.pod
 Lite/Partial.pm
 Lite/Partial/AppPath.pm
 Lite/Partial/ErrorReporter.pm
@@ -714,6 +716,7 @@ t/lrxml.t
 t/lrxml_alttree_range.t
 t/lrxml_boundarylist.t
 t/object.t
+t/pagevars.t
 t/partial.t
 t/psgi.cgi-bin/test1.cgi
 t/psgi.d.fallback/beta/fbck.html
