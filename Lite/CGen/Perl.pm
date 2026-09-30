@@ -82,21 +82,7 @@ use YATT::Lite::Constants;
       ckrequire($self->{pagevars});
       my $vars = $self->{pagevars}->find_consts($page_name);
       foreach my $name (keys %$vars) {
-        my $value = $vars->{$name};
-        my $type = do {
-          if (not ref $value) {
-            'text';
-          } elsif (ref $value eq 'ARRAY') {
-            'list'
-          } elsif (ref $value eq 'CODE') {
-            'code'
-          } elsif (UNIVERSAL::can($value, 'varname')
-                   and UNIVERSAL::can($value, 'value')) {
-            'html';
-          } else {
-            'scalar';
-          }
-        };
+        my $type = $self->{pagevars}->const_type($vars->{$name});
         $scope->{$name} = $self->mkvar_at(undef, $type => $name);
       }
     }

@@ -3,14 +3,22 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 
 use MOP4Import::Base::CLI_JSON -as_base
-  , [fields => qw(_pages)];
+  , [fields => qw(_pages _file _line)];
+
+use File::Spec;
+use List::Util qw(first);
 
 use YATT::Lite::Util qw(globref);
 
 sub define_pages :MetaOnly {
   my ($pack, @pairs) = @_;
-  my $callpack = caller;
-  $pack->new(pages => \@pairs)->register_into($callpack);
+  my ($callpack, $file, $line) = caller;
+  my MY $self = $pack->new(pages => \@pairs);
+  # Remember where the pages are defined, for locate_const.
+  $self->{_file} = File::Spec->rel2abs($file);
+  $self->{_line} = $line;
+  $self->register_into($callpack);
+  $self;
 }
 
 sub onconfigure_pages {
@@ -87,6 +95,59 @@ sub find_consts :Doc(Find constant(s) for specified PAGE/NAME) {
   } else {
     $page_vars->{$varname};
   }
+}
+
+sub const_type :Doc(Type of yatt variable for the constant VALUE) {
+  my ($self_or_class, $value) = @_;
+  if (not ref $value) {
+    'text';
+  } elsif (ref $value eq 'ARRAY') {
+    'list'
+  } elsif (ref $value eq 'CODE') {
+    'code'
+  } elsif (UNIVERSAL::can($value, 'varname')
+           and UNIVERSAL::can($value, 'value')) {
+    'html';
+  } else {
+    'scalar';
+  }
+}
+
+# Best effort. Looks for "NAME =>" in the block of PAGE first,
+# then anywhere in the file (for common values), then falls back to
+# the line of define_pages.
+sub locate_const :Doc(Locate the definition of constant NAME for PAGE as file and line) {
+  my MY $self = ref $_[0] ? shift : shift->instance();
+  my ($page, $name) = @_;
+  my $page_vars = $self->{_pages}{$page}
+    or return;
+  exists $page_vars->{$name}
+    or return;
+  my $file = $self->{_file}
+    or return;
+  open my $fh, '<', $file
+    or return ($file, $self->{_line});
+  my @lines = <$fh>;
+
+  my $key_re = sub {
+    my ($key, $follow) = @_;
+    qr/(?:^|[\s,{(])(['"]?)\Q$key\E\1\s*$follow/;
+  };
+  my $page_re = $key_re->($page, qr/(?:=>|\}\s*=)/);
+  my @other_page_re = map {$key_re->($_, qr/(?:=>|\}\s*=)/)}
+    grep {$_ ne $page} keys %{$self->{_pages}};
+  my $const_re = $key_re->($name, qr/=>/);
+
+  if (defined(my $start = first {$lines[$_] =~ $page_re} 0 .. $#lines)) {
+    foreach my $i ($start .. $#lines) {
+      last if $i > $start and grep {$lines[$i] =~ $_} @other_page_re;
+      return ($file, $i+1) if $lines[$i] =~ $const_re;
+    }
+  }
+  if (defined(my $i = first {$lines[$_] =~ $const_re} 0 .. $#lines)) {
+    return ($file, $i+1);
+  }
+  ($file, $self->{_line});
 }
 
 sub as_html {
