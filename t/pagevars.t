@@ -146,6 +146,31 @@ END
 
     is([pagevars->locate_const(index => 'nosuch')], []
        , "locate_const: no such constant");
+
+    #========================================
+    # The pagevars module used standalone, in a separate process
+    # (without YATT::Lite modules preloaded by the test).
+
+    my @perl = ($^X, map {"-I$_"} grep {not ref $_} @INC);
+    my $run = sub {
+      open my $fh, '-|', @perl, @_ or die "Can't run perl: $!";
+      chomp(my @lines = <$fh>);
+      \@lines;
+    };
+
+    is($run->('-e', 'use pagevars "index"; print "$foo $bar\n"')
+       , ["FOO BARRR"]
+       , "use pagevars 'index' from ordinary perl code");
+
+    require JSON::PP;
+    my $out = $run->($pm, find_consts => 'index');
+    is(@$out ? JSON::PP::decode_json($out->[0]) : undef
+       , {foo => "FOO", bar => "BARRR", cmn => "CMN"}
+       , "cli: find_consts");
+
+    is($run->($pm, locate_const => index => 'bar')
+       , [$pm, $line_of->(qr/^\s*bar =>/)]
+       , "cli: locate_const");
   }
 }
 
