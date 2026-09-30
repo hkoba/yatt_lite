@@ -9,6 +9,18 @@ use File::Spec;
 use List::Util qw(first);
 
 use YATT::Lite::Util qw(globref);
+require YATT::Lite::MFields;
+
+# The instance registered by define_pages. The receiver can be a class name,
+# or an object created elsewhere (eg. by cli_run) which has no pages.
+sub _registered {
+  my ($self_or_class) = @_;
+  if (ref $self_or_class and $self_or_class->{_pages}) {
+    $self_or_class;
+  } else {
+    $self_or_class->instance;
+  }
+}
 
 sub define_pages :MetaOnly {
   my ($pack, @pairs) = @_;
@@ -86,7 +98,7 @@ sub inject_into {
 *find_vars = *find_consts;
 *find_vars = *find_consts;
 sub find_consts :Doc(Find constant(s) for specified PAGE/NAME) {
-  my MY $self = ref $_[0] ? shift : shift->instance();
+  my MY $self = shift->_registered;
   my ($page, $varname) = @_;
   my $page_vars = $self->{_pages}{$page}
     or return;
@@ -117,7 +129,7 @@ sub const_type :Doc(Type of yatt variable for the constant VALUE) {
 # then anywhere in the file (for common values), then falls back to
 # the line of define_pages.
 sub locate_const :Doc(Locate the definition of constant NAME for PAGE as file and line) {
-  my MY $self = ref $_[0] ? shift : shift->instance();
+  my MY $self = shift->_registered;
   my ($page, $name) = @_;
   my $page_vars = $self->{_pages}{$page}
     or return;
