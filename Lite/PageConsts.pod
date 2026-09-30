@@ -1,0 +1,214 @@
+=encoding utf-8
+
+=head1 NAME
+
+YATT::Lite::PageConsts - per-page compile-time constants for templates (pagevars)
+
+=head1 SYNOPSIS
+
+In F<lib/MyApp/PageVars.pm> (the I<pagevars module>):
+
+  package MyApp::PageVars;
+  use strict;
+  use YATT::Lite::PageConsts -as_base, qw(as_html);
+
+  my %PAGES;
+  my @common = (site_title => "Survey 2026");
+
+  $PAGES{index} = {
+    title => "Welcome", @common,
+  };
+  $PAGES{q01} = {
+    title   => "Question 1",
+    choices => my $q01_choices = [qw(yes no)],
+    note    => as_html("Choose <b>one</b>."),
+    @common,
+  };
+  # Constants can refer to each other across pages.
+  $PAGES{'q01/confirm'} = {
+    title   => "Confirm Q1",
+    choices => $q01_choices,
+    @common,
+  };
+
+  MY->define_pages(%PAGES);
+  MY->cli_run(\@ARGV) unless caller; # optional, see L</COMMAND LINE>
+  1;
+
+In F<app.psgi>:
+
+  use FindBin;
+  use lib "$FindBin::Bin/lib";
+  use YATT::Lite::WebMVC0::SiteApp -as_base;
+
+  my $site = MY->load_factory_for_psgi(
+    $0,
+    doc_root => "$FindBin::Bin/public",
+    pagevars => 'MyApp::PageVars',
+  );
+
+In F<public/q01.yatt>:
+
+  <h2>&yatt:title;</h2>
+  <p>&yatt:note;</p>
+  <yatt:foreach my=c list=choices>&yatt:c; </yatt:foreach>
+
+From ordinary Perl code:
+
+  use MyApp::PageVars 'q01';  # imports $title, $choices, $note ...
+
+=head1 DESCRIPTION
+
+B<pagevars> is a mechanism to inject B<per-page constants> into yatt
+templates from outside. The constants of each page are fixed at
+B<compile time> of the template, and they appear as top-level variables
+(C<&yatt:title;>), so they are checked statically like widget arguments:
+a misspelled name is a compile error.
+
+Global constants (shared by all pages) are out of scope of this module;
+use ordinary Entities for them.
+
+The constants are defined by a Perl module (not by JSON or similar),
+so that constants can share values and refer to each other across pages,
+as C<$q01_choices> in the L</SYNOPSIS>.
+
+=head2 Page names
+
+A page name is the path of the template relative to C<doc_root>,
+without its extension: F<public/index.yatt> is C<index>,
+F<public/q01/confirm.yatt> is C<q01/confirm>.
+
+Templates outside of C<doc_root> (e.g. F<ytmpl/*.ytmpl> used through
+C<app_base>) are not pages, so pagevars are not applied to them.
+Pages which have no entry in the pagevars module simply get no constants.
+
+When C<per_role_docroot> is used, templates under role directories are
+currently not treated as pages.
+
+=head2 Types
+
+The type of each template variable is decided by the value:
+
+  plain string or number        text   (escaped on output)
+  ARRAY ref                     list   (usable in <yatt:foreach list=...>)
+  as_html("...")                html   (output without escaping)
+  CODE ref                      code   (see below)
+  other refs (HASH ref, object) scalar (e.g. &yatt:opt{key};)
+
+A CODE value is currently called with the yatt calling convention of
+C<code> type variables (C<&yatt:fn(...);>), i.e. its return value is
+B<not> printed. This will be revisited once yatt gets separate types for
+functions which print and functions which compute a value.
+
+=head2 Scoping
+
+Page constants form the outermost scope of every widget in the page.
+Arguments, C<< <yatt:my> >> variables and loop variables with the same
+name shadow them silently.
+
+=head2 Values are shared
+
+ARRAY/HASH values are exported by reference, not copied. Shared values
+(like C<@common> above) are shared by all pages and all requests,
+so do not modify them at runtime.
+
+=head2 Reloading
+
+The pagevars module is loaded only once per process. After editing it,
+restart the application server.
+
+=head1 CONFIGS
+
+=head2 pagevars
+
+Package name of the pagevars module. It is loaded with C<require>
+when a template is compiled, so it must be found in C<@INC>
+(use an absolute path, as C<"$FindBin::Bin/lib">, since rendering may
+change the current directory).
+Can be given to C<load_factory_for_psgi>/C<new> of
+L<YATT::Lite::WebMVC0::SiteApp>, or written in F<app.yml>/F<app.xhf>.
+
+=head1 CLASS METHODS
+
+These are called on the pagevars module (C<MY> in the L</SYNOPSIS>,
+which is a subclass of YATT::Lite::PageConsts via C<-as_base>),
+or on YATT::Lite::PageConsts itself.
+
+=head2 define_pages(PAGE_NAME => {NAME => VALUE, ...}, ...)
+
+Registers the constants of pages into the calling package (the pagevars
+module). After this, the package has C<instance>, C<import>, and
+all methods below. It also remembers the file and line of this call
+for C<locate_const>.
+
+=head2 as_html($text)
+
+Marks C<$text> as HTML, which is printed without escaping.
+Exportable: C<< use YATT::Lite::PageConsts qw(as_html) >>.
+
+=head2 const_type($value)
+
+Returns the yatt variable type for C<$value>: C<text>, C<list>,
+C<html>, C<code> or C<scalar>. See L</Types>.
+
+=head1 METHODS
+
+These can be called both as class methods of the pagevars module
+(which delegate to its instance) and as instance methods.
+
+=head2 find_consts($page, [$name])
+
+Returns the HASH of constants of C<$page>, or the value of constant
+C<$name> of it. Returns nothing for unknown pages.
+
+=head2 locate_const($page, $name)
+
+Returns C<($file, $line)> (1-based line) where the constant
+is defined in the pagevars module, or an empty list for unknown pages
+and names. This is best effort: it looks for C<< NAME => >> in the block
+of the page first, then anywhere in the file (for common values),
+then falls back to the line of C<define_pages>.
+Used by L<YATT::Lite::LanguageServer> for definition/hover.
+
+=head2 inject_into($destpkg, $page, %opts)
+
+Installs the constants of C<$page> into package C<$destpkg> as
+package variables (C<$name>; CODE values also as C<&name>).
+Dies for unknown pages unless C<< missing_ok => 1 >> is given.
+Generated code of templates calls this through C<import>
+with C<< missing_ok => 1 >>.
+
+=head2 import($page) (of the pagevars module)
+
+  use MyApp::PageVars 'q01';
+
+Calls C<inject_into> for the caller package.
+
+=head1 HOOKS
+
+=head2 page_name
+
+When C<$page> is omitted (C<use MyApp::PageVars;>), C<inject_into>
+calls C<page_name> method of the pagevars module if it exists,
+and dies otherwise. Define it in the pagevars module to choose
+the default page (this requires C<define_pages> to be called on the
+pagevars module, as C<< MY->define_pages(...) >>).
+
+=head1 COMMAND LINE
+
+The pagevars module is a L<MOP4Import::Base::CLI_JSON> class.
+With C<< MY->cli_run(\@ARGV) unless caller; >> at its end, it can be
+run as a command to inspect the constants:
+
+  % perl -Ilib lib/MyApp/PageVars.pm find_consts q01
+  % perl -Ilib lib/MyApp/PageVars.pm locate_const q01 title
+
+=head1 SEE ALSO
+
+L<YATT::Lite::WebMVC0::SiteApp>, L<YATT::Lite::LanguageServer>
+
+=head1 AUTHOR
+
+KOBAYASI, Hiroaki E<lt>hkoba@cpan.orgE<gt>
+
+=cut

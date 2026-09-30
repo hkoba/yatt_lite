@@ -17,6 +17,7 @@ use YATT::Lite::MFields qw/_curtmpl _curwidget _curtoks
 	      lcmsg_sink
 	      prefer_call_for_entity
 	      no_conditional_call
+	      pagevars
 			  /
   ;
 
@@ -89,6 +90,7 @@ sub generate {
   # XXX: Rewrite this with with_template
   local $self->{_curtmpl} = $tmpl;
   local $self->{_curline} = 1;
+  local $self->{_scope} = $self->generate_page_scope($tmpl);
   ($self->generate_preamble($self->{_curtmpl})
    , map {
     my Part $part = $_;
@@ -102,6 +104,10 @@ sub generate {
       ();
     }
   } @{$tmpl->{_partlist}});
+}
+
+sub generate_page_scope {
+  +{}
 }
 
 sub setup_inheritance_for {

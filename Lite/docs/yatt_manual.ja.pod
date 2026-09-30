@@ -267,6 +267,41 @@ Perl では引数の渡し忘れは実行時にしか発覚しないため、
 widget と action では YATT 自身がコード生成を代行できるため引数渡しを採用しましたが、
 Entity 関数ではグローバル参照の方式を選びました。
 
+=head3 ページ定数(pagevars)
+X<pagevars>
+
+設定 C<pagevars> に Perl モジュール(pagevars モジュール)のパッケージ名を指定すると、
+そのモジュールで定義した B<ページ単位の定数> がテンプレートに注入されます。
+定数はテンプレートのコンパイル時に確定し、C<&yatt:title;> のような
+トップレベルの変数として参照できます(引数と同様に、名前の誤りはコンパイルエラーになります)。
+
+  package MyApp::PageVars;
+  use YATT::Lite::PageConsts -as_base, qw(as_html);
+
+  my %PAGES;
+  $PAGES{q01} = {title => "設問1", choices => [qw(はい いいえ)]};
+  MY->define_pages(%PAGES);
+  1;
+
+=over
+
+=item *
+
+ページ名は C<doc_root> からの相対パスから拡張子を除いたものです(例: F<q01/confirm.yatt> は C<q01/confirm>)。
+C<doc_root> 外のテンプレート(F<ytmpl/> など)には適用されません。
+
+=item *
+
+同名の引数や C<< <yatt:my> >> 変数があると、そちらが優先されます。
+
+=item *
+
+全ページ共通の定数には、通常の Entity を使ってください。
+
+=back
+
+詳しくは L<YATT::Lite::PageConsts> を参照してください。
+
 =head3 body argument
 X<body>
 

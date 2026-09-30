@@ -115,6 +115,11 @@ access logs, they now reproduce only C<QUERY_STRING>-derived
 parameters when the request has a body. Set this option to 1 to
 restore the old merged behavior.
 
+=head2 pagevars
+
+Package name of the I<pagevars module>, which defines per-page
+compile-time constants for templates. See L<YATT::Lite::PageConsts>.
+
 =head2 psgi_static
 
 Requests other than F<*.yatt>, F<*.ytmpl>, F<*.ydo> are passed to this PSGI app.

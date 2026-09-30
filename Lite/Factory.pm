@@ -126,6 +126,8 @@ use YATT::Lite::MFields
        allow_bare_entity_in_decl
        no_chdir
        /
+ , [pagevars =>
+    (doc => "Package name of per-page compile-time constants (see YATT::Lite::PageConsts)")]
  , [stash_unknown_params_to => 
     (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
  , [body_argument =>
@@ -1006,9 +1008,15 @@ sub build_yatt {
     print STDERR "# Loaded: $rc\n" if DEBUG_FACTORY;
   }
 
+  my @vfs_opts;
+  if (defined(my $prefix = $self->page_prefix_for($path))) {
+    push @vfs_opts, page_prefix => $prefix;
+  }
+
   my @args = (vfs => [dir => $path
 		      , entns => $self->{_path2entns}{$path}
 		      , encoding => $self->{tmpl_encoding}
+                      , @vfs_opts
 		      , @basevfs ? (base => \@basevfs) : ()]
 	      , dir => $path
 	      , app_ns => $app_ns
@@ -1198,6 +1206,7 @@ sub _cf_delegates {
      no_conditional_call
      allow_bare_entity_in_decl
      no_chdir
+     pagevars
   );
 }
 
@@ -1245,6 +1254,21 @@ sub app_name_for {
     }
     return '';
   }
+}
+
+# Prefix of page names in the directory $path: '' for a template dir
+# itself, 'sub/' for its subdirectory, undef when $path is not under
+# any template dir (ie. not a page directory, eg. ytmpl).
+sub page_prefix_for {
+  (my MY $self, my $path) = @_;
+  ensure_slash($path);
+  foreach my $tmpldir (lexpand($self->{_tmpldirs})) {
+    ensure_slash(my $cp = $tmpldir);
+    if (defined(my $rel = $self->_extract_app_name($path, $cp))) {
+      return $rel eq '' ? '' : "$rel/";
+    }
+  }
+  return undef;
 }
 
 sub _extract_app_name {
