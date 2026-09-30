@@ -46,7 +46,7 @@ sub inject_into {
   unless (defined $page and $page ne '') {
     Carp::croak("page name is not specified");
   }
-  my $vars = $self->find_vars($page)
+  my $vars = $self->find_consts($page)
     or $failok or Carp::croak("No such page: $page");
 
   # print STDERR "# injecting vars (@{[keys %$vars]})in $page\n"
@@ -74,7 +74,10 @@ sub inject_into {
   }
 }
 
-sub find_vars {
+
+*find_vars = *find_consts;
+*find_vars = *find_consts;
+sub find_consts :Doc(Find constant(s) for specified PAGE/NAME) {
   my MY $self = ref $_[0] ? shift : shift->instance();
   my ($page, $varname) = @_;
   my $page_vars = $self->{_pages}{$page}
