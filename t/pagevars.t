@@ -84,6 +84,24 @@ END
 
   is(eval {$site->render("uselayout")} // "ERROR: $@", "QUX(dummy)\n\n"
      , "page using a widget from ytmpl (non-page template)");
+
+  {
+    my $site2 = YATT::Lite::WebMVC0::SiteApp->new(
+      app_ns => "Test${testno}b",
+      app_root => $dir,
+      doc_root => "$dir/public",
+      app_base => '@ytmpl',
+      pagevars => 'pagevars',
+    );
+
+    # Inspector and Walker load directories without $basedir.
+    # page_prefix must not depend on which path loaded the directory first.
+    $site2->load_yatt("$dir/public/sub");
+
+    is(eval {$site2->render("sub/another")} // "ERROR: $@"
+       , "BAZZZ foo<b>bar</b>baz\n"
+       , "pagevar sub/another, directory loaded without basedir");
+  }
 }
 
 done_testing;
