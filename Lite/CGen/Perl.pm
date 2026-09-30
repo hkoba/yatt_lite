@@ -80,7 +80,7 @@ use YATT::Lite::Constants;
     if ($self->{pagevars} and defined (my $page_name = $tmpl->page_name)) {
       # XXX: mtime check → auto termination
       ckrequire($self->{pagevars});
-      my $vars = $self->{pagevars}->find_vars($page_name);
+      my $vars = $self->{pagevars}->find_consts($page_name);
       foreach my $name (keys %$vars) {
         my $value = $vars->{$name};
         my $type = do {

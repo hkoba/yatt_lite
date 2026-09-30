@@ -994,7 +994,7 @@ sub build_yatt {
   $self->_list_base_spec_in($path, delete $opts{base}, $visits
 			    , \@basepkg, \@basevfs);
 
-  my $app_ns = $self->buildns(my @log = (INST => \@basepkg, $path, $basedir));
+  my $app_ns = $self->buildns(my @log = (INST => \@basepkg, $path));
 
   print STDERR "# Factory::buildns("
     , terse_dump(@log), ") => $app_ns\n" if DEBUG_FACTORY;
@@ -1008,14 +1008,8 @@ sub build_yatt {
   }
 
   my @vfs_opts;
-  if (defined $basedir) {
-    push @vfs_opts, page_prefix => do {
-      if (length $path > length $basedir) {
-        substr($path, 1+length($basedir))."/"
-      } else {
-        ''
-      }
-    };
+  if (defined(my $prefix = $self->page_prefix_for($path))) {
+    push @vfs_opts, page_prefix => $prefix;
   }
 
   my @args = (vfs => [dir => $path
@@ -1259,6 +1253,21 @@ sub app_name_for {
     }
     return '';
   }
+}
+
+# Prefix of page names in the directory $path: '' for a template dir
+# itself, 'sub/' for its subdirectory, undef when $path is not under
+# any template dir (ie. not a page directory, eg. ytmpl).
+sub page_prefix_for {
+  (my MY $self, my $path) = @_;
+  ensure_slash($path);
+  foreach my $tmpldir (lexpand($self->{_tmpldirs})) {
+    ensure_slash(my $cp = $tmpldir);
+    if (defined(my $rel = $self->_extract_app_name($path, $cp))) {
+      return $rel eq '' ? '' : "$rel/";
+    }
+  }
+  return undef;
 }
 
 sub _extract_app_name {
