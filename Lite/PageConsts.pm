@@ -28,12 +28,12 @@ sub register_into :MetaOnly {
   *{globref($pkg, 'instance')} = sub { $self };
   *{globref($pkg, 'import')} = sub {
     my $callpack = caller;
-    $self->inject_into($callpack, @_);
+    $self->inject_into($callpack, @_[1..$#_]);
   };
 }
 
 sub inject_into {
-  (my MY $self, my ($destpkg, $frompkg, $page, %opts)) = @_;
+  (my MY $self, my ($destpkg, $page, %opts)) = @_;
   my $failok = delete $opts{missing_ok};
   if (keys %opts) {
     Carp::croak "Unknown options: ".join(", ", sort keys %opts);
