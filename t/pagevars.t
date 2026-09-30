@@ -26,8 +26,9 @@ my $testno = 0;
     lib->import("$dir/lib");
 
     MY->mkfile_may_wait("$dir/lib/pagevars.pm", <<'END');
+    #!/usr/bin/env perl
     package pagevars;
-    use YATT::Lite::PageConsts qw(as_html);
+    use YATT::Lite::PageConsts -as_base, qw(as_html);
 
     my %PAGES;
     $PAGES{index} = +{
@@ -42,7 +43,8 @@ my $testno = 0;
       qux => as_html("foo<b>bar</b>baz"),
     };
 
-    YATT::Lite::PageConsts->define_pages(%PAGES);
+    MY->define_pages(%PAGES);
+    MY->cli_run(\@ARGV) unless caller;
     1;
 END
 
