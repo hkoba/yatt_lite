@@ -33,6 +33,10 @@ and delegates the actual work to L<YATT::Lite::Inspector>.
 =head2 Definition and hover targets
 
   &yatt:x;  &yatt:x:foo();      argument / <yatt:my> variable / entity function
+                                / page constant (pagevars): the line in the
+                                pagevars module, hover shows its value
+                                (GH-286, see YATT::Lite::PageConsts).
+                                Page constants are also completed.
   <yatt:foo ...>                widget declaration (same file, other file,
                                 <!yatt:base>, <!yatt:import>)
   <yatt:foo x/> <yatt:foo a=y/> the variable in scope (x, y) or the formal
