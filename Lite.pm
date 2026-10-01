@@ -55,6 +55,7 @@ use YATT::Lite::MFields qw/_YATT
               allow_bare_entity_in_decl
               no_chdir
               pagevars
+              argmacro
 	    /;
 
 use constant DEBUG => $ENV{DEBUG_YATT_LITE};
@@ -440,6 +441,7 @@ sub _cf_delegates {
      no_conditional_call
      allow_bare_entity_in_decl
      pagevars
+     argmacro
     )
 }
 
