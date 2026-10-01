@@ -3,7 +3,7 @@ use strict;
 use warnings qw(FATAL all NONFATAL misc);
 
 use MOP4Import::Base::CLI_JSON -as_base
-  , [fields => qw(_pages _file _line)];
+  , [fields => qw(_pages _page_loc _file _line)];
 
 use File::Spec;
 use List::Util qw(first);
@@ -11,7 +11,7 @@ use List::Util qw(first);
 use YATT::Lite::Util qw(globref);
 require YATT::Lite::MFields;
 
-# The instance registered by define_pages. The receiver can be a class name,
+# The instance registered by define_page(s). The receiver can be a class name,
 # or an object created elsewhere (eg. by cli_run) which has no pages.
 sub _registered {
   my ($self_or_class) = @_;
@@ -22,23 +22,56 @@ sub _registered {
   }
 }
 
-sub define_pages :MetaOnly {
-  my ($pack, @pairs) = @_;
-  my ($callpack, $file, $line) = caller;
-  my MY $self = $pack->new(pages => \@pairs);
-  # Remember where the pages are defined, for locate_const.
+# The instance registered into $callpack itself (not inherited one),
+# created and registered on the first call.
+sub _instance_for {
+  my ($pack, $callpack, $file, $line) = @_;
+  if (my $sub = *{globref($callpack, 'instance')}{CODE}) {
+    return $sub->();
+  }
+  my MY $self = $pack->new;
   $self->{_file} = File::Spec->rel2abs($file);
   $self->{_line} = $line;
   $self->register_into($callpack);
   $self;
 }
 
-sub onconfigure_pages {
-  (my MY $self, my $pairs) = @_;
-  my @pairs = @$pairs;
-  while (my ($page, $vars) = splice @pairs, 0, 2) {
-    $self->{_pages}{$page} = $vars;
+sub define_page :MetaOnly {
+  my ($pack, $page, $consts) = @_;
+  my ($callpack, $file, $line) = caller;
+  my MY $self = $pack->_instance_for($callpack, $file, $line);
+  # Remember where each page is defined, for locate_page/locate_const.
+  $self->add_page($page, $consts, File::Spec->rel2abs($file), $line);
+}
+
+sub define_pages_from_hash :MetaOnly {
+  my ($pack, $pages) = @_;
+  my ($callpack, $file, $line) = caller;
+  ref $pages eq 'HASH'
+    or Carp::croak("define_pages_from_hash takes a HASH ref of pages");
+  my MY $self = $pack->_instance_for($callpack, $file, $line);
+  # Locations of these pages are unknown; locate_page guesses them.
+  $self->add_page($_, $pages->{$_}) for sort keys %$pages;
+  $self;
+}
+
+sub add_page {
+  (my MY $self, my ($page, $consts, $file, $line)) = @_;
+  ref $consts eq 'HASH'
+    or Carp::croak("Constants of page '$page' must be a HASH ref");
+  if ($self->{_pages}{$page}) {
+    my $where = do {
+      if (my $loc = $self->{_page_loc}{$page}) {
+        " at $loc->[0] line $loc->[1]";
+      } else {
+        "";
+      }
+    };
+    my $redef = defined $file ? ", redefined at $file line $line" : "";
+    die "Page '$page' is already defined$where$redef\n";
   }
+  $self->{_pages}{$page} = $consts;
+  $self->{_page_loc}{$page} = [$file, $line] if defined $file;
   $self;
 }
 
@@ -125,9 +158,95 @@ sub const_type :Doc(Type of yatt variable for the constant VALUE) {
   }
 }
 
-# Best effort. Looks for "NAME =>" in the block of PAGE first,
-# then anywhere in the file (for common values), then falls back to
-# the line of define_pages.
+#========================================
+# Locations in the source of the pagevars module (for LanguageServer).
+# const_key_regexp and page_key_regexp can be overridden in the
+# pagevars module to support local notations.
+
+sub source_lines {
+  (my MY $self, my $file) = @_;
+  open my $fh, '<', $file
+    or return;
+  <$fh>;
+}
+
+# "NAME =>" of a constant.
+sub const_key_regexp {
+  (my MY $self, my $name) = @_;
+  qr/(?:^|[\s,{(])(['"]?)\Q$name\E\1\s*=>/;
+}
+
+# Key of PAGE in a hash of pages ("$PAGES{PAGE} =" or "PAGE =>").
+# Only used for pages registered by define_pages_from_hash.
+sub page_key_regexp {
+  (my MY $self, my $page) = @_;
+  qr/(?:^|[\s,{(])(['"]?)\Q$page\E\1\s*(?:=>|\}\s*=)/;
+}
+
+# The line which starts a define_page call.
+sub page_call_regexp {
+  (my MY $self) = @_;
+  qr/\bdefine_page\b/;
+}
+
+# Block of PAGE in @$lines as 0-based ($start, $end), or empty list.
+sub page_block_range {
+  (my MY $self, my ($page, $lines)) = @_;
+  if (my $loc = $self->{_page_loc}{$page}) {
+    # From define_page of PAGE to just before the next define_page.
+    my ($file, $line) = @$loc;
+    my @recorded = sort {$a <=> $b}
+      map {$_->[1]} grep {$_->[0] eq $file} values %{$self->{_page_loc}};
+    my ($prev) = reverse grep {$_ < $line} @recorded;
+    my ($next) = grep {$_ > $line} @recorded;
+    my $start = $self->_page_call_start($lines, $line - 1, $prev // 0);
+    my $end = defined $next
+      ? $self->_page_call_start($lines, $next - 1, $line) - 1
+      : $#$lines;
+    return ($start, $end);
+  }
+  my $page_re = $self->page_key_regexp($page);
+  my $start = first {$lines->[$_] =~ $page_re} 0 .. $#$lines;
+  return unless defined $start;
+  my @other_re = map {$self->page_key_regexp($_)}
+    grep {$_ ne $page} keys %{$self->{_pages}};
+  my $end = first {
+    my $text = $lines->[$_];
+    grep {$text =~ $_} @other_re;
+  } $start+1 .. $#$lines;
+  ($start, defined $end ? $end - 1 : $#$lines);
+}
+
+# caller reports the line of the statement executed last before the call,
+# which can be inside a block (map, grep, do) in the arguments.
+# So look back (down to index $lower) for the line which starts the call.
+sub _page_call_start {
+  (my MY $self, my ($lines, $i, $lower)) = @_;
+  my $call_re = $self->page_call_regexp;
+  for (my $j = $i; $j >= $lower; $j--) {
+    return $j if defined $lines->[$j] and $lines->[$j] =~ $call_re;
+  }
+  $i;
+}
+
+sub locate_page :Doc(Locate the definition of PAGE as file and line) {
+  my MY $self = shift->_registered;
+  my ($page) = @_;
+  $self->{_pages}{$page}
+    or return;
+  if (my $loc = $self->{_page_loc}{$page}) {
+    my ($start) = $self->page_block_range($page
+                                          , [$self->source_lines($loc->[0])]);
+    return ($loc->[0], $start + 1);
+  }
+  my $file = $self->{_file}
+    or return;
+  my ($start) = $self->page_block_range($page, [$self->source_lines($file)]);
+  ($file, defined $start ? $start + 1 : $self->{_line});
+}
+
+# Looks for the key of NAME in the block of PAGE first, then anywhere
+# in the file (for common values), then falls back to the page itself.
 sub locate_const :Doc(Locate the definition of constant NAME for PAGE as file and line) {
   my MY $self = shift->_registered;
   my ($page, $name) = @_;
@@ -135,31 +254,25 @@ sub locate_const :Doc(Locate the definition of constant NAME for PAGE as file an
     or return;
   exists $page_vars->{$name}
     or return;
-  my $file = $self->{_file}
-    or return;
-  open my $fh, '<', $file
-    or return ($file, $self->{_line});
-  my @lines = <$fh>;
+  my $file = do {
+    if (my $loc = $self->{_page_loc}{$page}) {
+      $loc->[0];
+    } else {
+      $self->{_file};
+    }
+  } or return;
+  my @lines = $self->source_lines($file);
+  my $const_re = $self->const_key_regexp($name);
 
-  my $key_re = sub {
-    my ($key, $follow) = @_;
-    qr/(?:^|[\s,{(])(['"]?)\Q$key\E\1\s*$follow/;
-  };
-  my $page_re = $key_re->($page, qr/(?:=>|\}\s*=)/);
-  my @other_page_re = map {$key_re->($_, qr/(?:=>|\}\s*=)/)}
-    grep {$_ ne $page} keys %{$self->{_pages}};
-  my $const_re = $key_re->($name, qr/=>/);
-
-  if (defined(my $start = first {$lines[$_] =~ $page_re} 0 .. $#lines)) {
-    foreach my $i ($start .. $#lines) {
-      last if $i > $start and grep {$lines[$i] =~ $_} @other_page_re;
+  if (my ($start, $end) = $self->page_block_range($page, \@lines)) {
+    foreach my $i ($start .. $end) {
       return ($file, $i+1) if $lines[$i] =~ $const_re;
     }
   }
   if (defined(my $i = first {$lines[$_] =~ $const_re} 0 .. $#lines)) {
     return ($file, $i+1);
   }
-  ($file, $self->{_line});
+  $self->locate_page($page);
 }
 
 sub as_html {
