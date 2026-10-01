@@ -52,19 +52,18 @@ use YATT::Lite::PageConsts -as_base, qw(as_html);
 
 my @common = (site => "SITE");
 
-my %PAGES;
-$PAGES{index} = +{
+MY->define_page(index => +{
   title => "Top page",
   items => [qw(a b)],
   @common,
-};
-$PAGES{'sub/q1'} = +{
+});
+
+MY->define_page('sub/q1' => +{
   title => "Q1",
   shadowed => "PV",
   note => as_html("<b>n</b>"),
-};
+});
 
-MY->define_pages(%PAGES);
 1;
 END
 
