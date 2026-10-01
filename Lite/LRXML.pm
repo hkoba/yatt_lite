@@ -1317,6 +1317,12 @@ sub find_argmacro {
     }
   }
 
+  # Site 設定 argmacro => {name => 'Module'} (YATT::Lite::ArgMacro)
+  if ($self->{vfs}
+      and $argmacro = $self->{vfs}->find_argmacro_module($self, $macroName)) {
+    return $argmacro;
+  }
+
   die $self->synerror_at($node->[NODE_LNO]
                          , "Unknown argmacro '%s'"
                          , $macroName)

@@ -23,6 +23,8 @@ use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
 	      prefer_call_for_entity
 	      no_conditional_call
               pagevars
+              argmacro
+              _argmacro_module_cache
 
 	      _n_compiles
 	    /;
@@ -554,7 +556,33 @@ sub _find_kind_part__argmacro {
     return $baseTmpl->{_argmacro_dict}{$name}
       if $baseTmpl->{_argmacro_dict} && $baseTmpl->{_argmacro_dict}{$name};
   }
-  undef;
+  # find_argmacro と同じく、最後に Site 設定 (argmacro => {name => Module})
+  $vfs->find_argmacro_module(undef, $name);
+}
+
+#
+# Site 設定 argmacro => {name => 'Module'} で登録された ArgMacro を返す。
+# Module は YATT::Lite::ArgMacro を use して定義する(1 pm = 1 macro)。
+# Core::ArgMacro は VFS 単位で一度だけ作り、ここで strong に保持する。
+#
+sub find_argmacro_module {
+  (my MY $vfs, my ParsingState $state, my $name) = @_;
+  my $pkg = $vfs->{argmacro} && $vfs->{argmacro}{$name}
+    or return undef;
+
+  $vfs->{_argmacro_module_cache}{$name} //= do {
+    my $die = sub {
+      my ($fmt, @args) = @_;
+      $state ? $vfs->synerror($state, $fmt, @args)
+        : die $vfs->error({depth => 2}, $fmt, @args);
+    };
+    YATT::Lite::Util::ckrequire($pkg);
+    unless (UNIVERSAL::isa($pkg, 'YATT::Lite::ArgMacro')) {
+      $die->(q{argmacro module '%s' for '%s' is not a YATT::Lite::ArgMacro}
+             , $pkg, $name);
+    }
+    $pkg->as_argmacro_part($vfs->get_parser, $name);
+  };
 }
 
 sub import_find_source_part {

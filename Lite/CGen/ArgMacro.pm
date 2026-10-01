@@ -60,6 +60,15 @@ sub generate_on_declare {
   my $code = YATT::Lite::Util::ckeval($script);
   $argmacro->{_on_expand} = $code;
 
+  $self->make_on_declare($argmacro);
+}
+
+# Builds the closure which is called for each %macro; in widget declarations.
+# This is shared by template-defined and module-defined (YATT::Lite::ArgMacro)
+# argmacros.
+sub make_on_declare {
+  (my $self_or_class, my ArgMacro $argmacro) = @_;
+
   return sub {
     (my MY $self, my $parser, my Part $part, my $node) = @_;
 
@@ -145,23 +154,14 @@ sub generate_on_expand {
     $_->[NODE_PATH];
   } @{$argmacro->{output_args}};
 
+  require YATT::Lite::ArgMacro;
+  YATT::Lite::ArgMacro->define_record_class($resultType, @output_names);
+  YATT::Lite::ArgMacro->define_record_class(
+    $_, @{$argmacro->{_arg_order} // []}
+  ) for $argsType, $varsType;
+
   my @script;
   push @script, q(use YATT::Lite::Constants; );
-  push @script, sprintf(
-    qq{{package %s; use fields qw(%s)}},
-    $resultType,
-    join(" ", @output_names),
-  );
-  push @script, sprintf(
-    qq{{package %s; use fields qw(%s)}},
-    $argsType,
-    join(" ", @{$argmacro->{_arg_order} // []}),
-  );
-  push @script, sprintf(
-    qq{{package %s; use fields qw(%s)}},
-    $varsType,
-    join(" ", @{$argmacro->{_arg_order} // []}),
-  );
   push @script, sprintf(
     q{(my %s $cgen, my %s $args, my %s $vars, my %s $argmacro) = @_; my %s $result = +{};},
     $cgenType, $argsType, $varsType, $macroType, $resultType
