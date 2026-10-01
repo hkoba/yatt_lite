@@ -278,9 +278,9 @@ X<pagevars>
   package MyApp::PageVars;
   use YATT::Lite::PageConsts -as_base, qw(as_html);
 
-  my %PAGES;
-  $PAGES{q01} = {title => "設問1", choices => [qw(はい いいえ)]};
-  MY->define_pages(%PAGES);
+  MY->define_page(q01 => {
+    title => "設問1", choices => [qw(はい いいえ)],
+  });
   1;
 
 =over
