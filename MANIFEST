@@ -711,6 +711,7 @@ t/langserver_transport.t
 t/lib/.symlinks
 t/lineno.t
 t/lite.t
+t/lite_argmacro_module.t
 t/lite_import.t
 t/lite_xhf.t
 t/lrxml.t
