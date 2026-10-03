@@ -1,0 +1,194 @@
+=encoding utf-8
+
+=head1 NAME
+
+YATT::Lite::ArgMacro - define an argmacro as a Perl module
+
+=head1 SYNOPSIS
+
+In F<lib/MyApp/ArgMacro/Enum.pm> (one module defines one argmacro):
+
+  package MyApp::ArgMacro::Enum;
+  use strict;
+  use warnings;
+  use YATT::Lite::ArgMacro
+    out => [qw(list=list)],
+    in  => ['first=value/0', 'last=value!'];
+
+  sub on_expand {
+    (my MY $class, my CGen $cgen, my Args $args, my Vars $vars) = @_;
+    my Result $result = {};
+    my $firstExpr = $args->{first} ? $cgen->node_value($args->{first})
+                                   : $vars->{first}->default;
+    $result->{list} = sprintf(q{%s .. %s}, $firstExpr
+                              , $cgen->node_value($args->{last}));
+    $result;
+  }
+  1;
+
+In F<app.psgi>:
+
+  my $site = MY->load_factory_for_psgi(
+    $0,
+    doc_root => "$FindBin::Bin/public",
+    argmacro => {enum => 'MyApp::ArgMacro::Enum'},
+  );
+
+In templates:
+
+  <!yatt:widget bar
+    %enum(header=last);
+    %enum(label=last);
+  >
+  <yatt:foreach my=row list=label_list>...</yatt:foreach>
+
+This is equivalent to the following template declaration:
+
+  <!yatt:argmacro enum=[list=list] first="value/0" last="value!">
+  my $firstExpr = $args->{first} ? $cgen->node_value($args->{first})
+                                 : $vars->{first}->default;
+  $result->{list} = sprintf(q{%s .. %s}, $firstExpr
+                            , $cgen->node_value($args->{last}));
+
+=head1 DESCRIPTION
+
+An I<argmacro> is a compile-time macro for widget arguments.
+When a widget declares C<%name;>, the I<output args> of the macro are
+added to the widget, and calls of the widget which pass the I<input args>
+are rewritten by C<on_expand> into the output args.
+
+Usually argmacros are declared in templates with C<< <!yatt:argmacro> >>.
+This module lets you define one in a Perl module instead, so that the
+code can be edited, checked (C<perl -c>) and tested as ordinary Perl code.
+
+=head2 Field name checking
+
+C<use YATT::Lite::ArgMacro> creates the following record classes and
+type name constants in the module:
+
+=over 4
+
+=item C<Args>  (C<< <Module>::Args >>) - fields are the input args
+
+=item C<Vars>  (C<< <Module>::Vars >>) - fields are the input args
+
+=item C<Result> (C<< <Module>::Result >>) - fields are the output args
+
+=item C<MY> (the module itself) and C<CGen> (L<YATT::Lite::CGen::Perl>)
+
+=back
+
+So, if you declare lexicals with these types like C<my Result $result>,
+typos of field names like C<< $result->{lsit} >> are detected
+when the module is compiled:
+
+  No such class field "lsit" in variable $result of type MyApp::ArgMacro::Enum::Result
+
+C<< Result->new >> creates a restricted hash, which also detects typos
+of dynamic keys at runtime.
+
+Constants which are already defined in the module are kept as is.
+
+=head1 IMPORT OPTIONS
+
+=head2 out => [SPEC...]
+
+Output args (required). Same as C<[...]> part of
+C<< <!yatt:argmacro name=[...]> >>.
+
+=head2 in => [SPEC...]
+
+Input args. Same as the rest args of C<< <!yatt:argmacro> >>.
+
+Each SPEC is C<"name"> or C<"name=typespec"> where I<typespec> is the
+same as the argument spec of widgets, like C<value/0>, C<value!>, C<list>.
+C<code> and C<delegate> types are not supported.
+
+=head1 METHODS
+
+=head2 on_expand($cgen, $args, $vars, $argmacro)
+
+Must be implemented by the module. Called as a class method
+at compile time of each widget call which passes any of input args.
+
+=over 4
+
+=item C<$cgen>
+
+The code generator (L<YATT::Lite::CGen::Perl>).
+Use C<< $cgen->node_value($node) >> to get Perl expression of an arg.
+
+=item C<$args>
+
+Hash of input arg nodes actually passed to the widget,
+keyed by formal (not renamed) names.
+
+=item C<$vars>
+
+Hash of variable declarations of input args (for type and default).
+
+=item C<$argmacro>
+
+The L<YATT::Lite::Core> argmacro instance (with rename info).
+
+=back
+
+Returns a hash of Perl expressions keyed by formal output arg names.
+
+=head1 REGISTRATION
+
+Argmacro modules are registered by C<argmacro> option of
+L<YATT::Lite::WebMVC0::SiteApp> (or L<YATT::Lite::Factory>).
+It is either a hash of argmacro name to module name,
+or a list of such hashes, each optionally paired with a namespace:
+
+  namespace => [qw(myteam myorg yatt perl)],
+  argmacro => [
+    [myorg => {enum => 'MyApp::ArgMacro::Enum'}], # namespace myorg
+    {pair => 'MyApp::ArgMacro::Pair'},            # without namespace
+  ],
+
+Registration without namespace is the same as registration in the
+primary namespace (the first element of C<namespace>, C<myteam> above).
+Modules are loaded on first use.
+
+Following are registration errors (raised when the site is set up):
+the same name registered twice in the same namespace
+(including C<< {foo => ...} >> and C<< [myteam => {foo => ...}] >> above),
+a namespace which is not in C<namespace>, and malformed specs.
+
+=head2 Namespace of references
+
+=over 4
+
+=item C<%name;>
+
+Looked up in the following order:
+the template itself (including imported ones), its base templates,
+then the C<argmacro> option in the primary namespace.
+So templates can override the registered argmacros.
+
+=item C<%ns:name;>
+
+Looked up only in the C<argmacro> option registered in C<ns>.
+Argmacros declared in templates (C<< <!yatt:argmacro> >>) can not be
+referenced this way. C<ns> must be one of C<namespace>.
+
+=back
+
+With the example above:
+
+  %enum;          # error, unless the template declares enum
+  %myorg:enum;    # MyApp::ArgMacro::Enum
+  %pair;          # MyApp::ArgMacro::Pair (unless the template declares pair)
+  %myteam:pair;   # MyApp::ArgMacro::Pair
+  %yatt:pair;     # error
+
+Modified modules are not reloaded. Restart the process
+(like L<YATT::Lite::PageConsts>).
+
+=head1 SEE ALSO
+
+L<YATT::Lite::CGen::ArgMacro>, L<YATT::Lite::WebMVC0::SiteApp>
+
+=cut

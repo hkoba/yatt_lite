@@ -128,6 +128,8 @@ use YATT::Lite::MFields
        /
  , [pagevars =>
     (doc => "Package name of per-page compile-time constants (see YATT::Lite::PageConsts)")]
+ , [argmacro =>
+    (doc => "Map of argmacro name to Perl module which defines it, or list of such maps optionally paired with namespace like [[ns => {name => Module}], {...}] (see YATT::Lite::ArgMacro)")]
  , [stash_unknown_params_to => 
     (doc => "Stash unknown foreign parameters into this name. Set to 'yatt.unknown_params' when PLACK_ENV is *not* development.")]
  , [body_argument =>
@@ -1207,6 +1209,7 @@ sub _cf_delegates {
      allow_bare_entity_in_decl
      no_chdir
      pagevars
+     argmacro
   );
 }
 
