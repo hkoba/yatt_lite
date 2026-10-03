@@ -1300,9 +1300,53 @@ sub find_argmacro {
   (my MY $self, my $node) = @_;
 
   my $ns = $node->[NODE_PATH];
-  my ($call, $macroName, $renameSpec) = @{$node->[NODE_BODY]};
+  my ($head, @rest) = @{$node}[NODE_BODY .. $#$node];
+  my ($call, $macroName, $renameSpec) = @$head;
+  if (@rest) {
+    die $self->synerror_at($node->[NODE_LNO]
+                           , "Invalid argmacro reference '%%%s;'"
+                           , join(":", grep {defined} $ns, $macroName
+                                  , map {$_->[1]} @rest));
+  }
 
-  # XXX: %yatt:foo; namespace の扱い
+  # %ns:foo; は Site 設定 argmacro の ns に登録されたものだけを探す。
+  # (ページ内定義は %foo; でしか参照できない)
+  if (defined $ns) {
+    unless (grep {$_ eq $ns} $self->namespace) {
+      die $self->synerror_at($node->[NODE_LNO]
+                             , "Unknown namespace '%s' in argmacro reference"
+                             , $ns);
+    }
+    my $argmacro = $self->{vfs}
+      && $self->{vfs}->find_argmacro_module($self, $ns, $macroName);
+    return $argmacro if $argmacro;
+
+    die $self->synerror_at($node->[NODE_LNO]
+                           , "Unknown argmacro '%s:%s'%s"
+                           , $ns, $macroName
+                           , ($self->find_local_argmacro($macroName)
+                              ? " (page-local argmacro '$macroName'"
+                              ." can only be referenced as %$macroName;)"
+                              : ""));
+  }
+
+  my $argmacro = $self->find_local_argmacro($macroName);
+  return $argmacro if $argmacro;
+
+  # Site 設定 argmacro の primary ns (名前空間無しの登録を含む)
+  if ($self->{vfs}
+      and $argmacro = $self->{vfs}->find_argmacro_module($self, undef, $macroName)) {
+    return $argmacro;
+  }
+
+  die $self->synerror_at($node->[NODE_LNO]
+                         , "Unknown argmacro '%s'"
+                         , $macroName)
+}
+
+# ページ内(import 分を含む)と base 1 段の argmacro
+sub find_local_argmacro {
+  (my MY $self, my $macroName) = @_;
 
   my Template $tmpl = $self->{_template};
   my ArgMacro $argmacro = $tmpl->{_argmacro_dict}{$macroName};
@@ -1316,16 +1360,7 @@ sub find_argmacro {
       return $argmacro
     }
   }
-
-  # Site 設定 argmacro => {name => 'Module'} (YATT::Lite::ArgMacro)
-  if ($self->{vfs}
-      and $argmacro = $self->{vfs}->find_argmacro_module($self, $macroName)) {
-    return $argmacro;
-  }
-
-  die $self->synerror_at($node->[NODE_LNO]
-                         , "Unknown argmacro '%s'"
-                         , $macroName)
+  return;
 }
 
 sub add_url_params {
