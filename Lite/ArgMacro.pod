@@ -138,13 +138,51 @@ Returns a hash of Perl expressions keyed by formal output arg names.
 =head1 REGISTRATION
 
 Argmacro modules are registered by C<argmacro> option of
-L<YATT::Lite::WebMVC0::SiteApp> (or L<YATT::Lite::Factory>):
-a hash of argmacro name to module name.
+L<YATT::Lite::WebMVC0::SiteApp> (or L<YATT::Lite::Factory>).
+It is either a hash of argmacro name to module name,
+or a list of such hashes, each optionally paired with a namespace:
+
+  namespace => [qw(myteam myorg yatt perl)],
+  argmacro => [
+    [myorg => {enum => 'MyApp::ArgMacro::Enum'}], # namespace myorg
+    {pair => 'MyApp::ArgMacro::Pair'},            # without namespace
+  ],
+
+Registration without namespace is the same as registration in the
+primary namespace (the first element of C<namespace>, C<myteam> above).
 Modules are loaded on first use.
 
-C<%name;> is looked up in the following order:
-the template itself, its base templates, then the C<argmacro> option.
+Following are registration errors (raised when the site is set up):
+the same name registered twice in the same namespace
+(including C<< {foo => ...} >> and C<< [myteam => {foo => ...}] >> above),
+a namespace which is not in C<namespace>, and malformed specs.
+
+=head2 Namespace of references
+
+=over 4
+
+=item C<%name;>
+
+Looked up in the following order:
+the template itself (including imported ones), its base templates,
+then the C<argmacro> option in the primary namespace.
 So templates can override the registered argmacros.
+
+=item C<%ns:name;>
+
+Looked up only in the C<argmacro> option registered in C<ns>.
+Argmacros declared in templates (C<< <!yatt:argmacro> >>) can not be
+referenced this way. C<ns> must be one of C<namespace>.
+
+=back
+
+With the example above:
+
+  %enum;          # error, unless the template declares enum
+  %myorg:enum;    # MyApp::ArgMacro::Enum
+  %pair;          # MyApp::ArgMacro::Pair (unless the template declares pair)
+  %myteam:pair;   # MyApp::ArgMacro::Pair
+  %yatt:pair;     # error
 
 Modified modules are not reloaded. Restart the process
 (like L<YATT::Lite::PageConsts>).
