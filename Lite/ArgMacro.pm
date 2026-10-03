@@ -110,10 +110,10 @@ sub define_record_class {
 # Bridge to YATT::Lite::Core::ArgMacro
 
 sub as_argmacro_part {
-  my ($class, $parser, $name) = @_;
+  my ($class, $parser, $name, $ns) = @_;
 
   my $spec = $class->macro_spec;
-  my ($ns) = $parser->namespace;
+  $ns //= $parser->primary_ns;
 
   # Default values (eg. value/0) are parsed as text with entities,
   # which needs position info of the parser.

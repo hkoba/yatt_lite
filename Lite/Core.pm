@@ -24,6 +24,7 @@ use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
 	      no_conditional_call
               pagevars
               argmacro
+              _argmacro_registry
               _argmacro_module_cache
 
 	      _n_compiles
@@ -556,21 +557,84 @@ sub _find_kind_part__argmacro {
     return $baseTmpl->{_argmacro_dict}{$name}
       if $baseTmpl->{_argmacro_dict} && $baseTmpl->{_argmacro_dict}{$name};
   }
-  # find_argmacro と同じく、最後に Site 設定 (argmacro => {name => Module})
-  $vfs->find_argmacro_module(undef, $name);
+  # find_argmacro と同じく、最後に Site 設定 (argmacro => ...) の primary ns
+  $vfs->find_argmacro_module(undef, undef, $name);
 }
 
 #
-# Site 設定 argmacro => {name => 'Module'} で登録された ArgMacro を返す。
+# argmacro の登録エラーは parse 時を待たず、構築時に報告する
+#
+sub after_new {
+  (my MY $vfs) = @_;
+  $vfs->SUPER::after_new;
+  $vfs->argmacro_registry if $vfs->{argmacro};
+}
+
+# LRXML の既定 namespace と同じ
+sub argmacro_namespace_list {
+  (my MY $vfs) = @_;
+  my @nslist = lexpand($vfs->{namespace});
+  @nslist ? @nslist : qw(yatt perl);
+}
+
+#
+# Site 設定 argmacro を {$ns}{$name} => 'Module' に正規化して返す。
+#
+#   argmacro => {name => 'Module', ...}
+#   argmacro => [[ns => {name => 'Module', ...}], {name => 'Module'}, ...]
+#
+# 名前空間無しの登録は primary ns (namespace の先頭) での登録と同義。
+# (ns, name) の重複、namespace に無い ns、形式不正は登録エラー。
+#
+sub argmacro_registry {
+  (my MY $vfs) = @_;
+  $vfs->{_argmacro_registry} //= do {
+    my @nslist = $vfs->argmacro_namespace_list;
+    my %known; $known{$_} = 1 for @nslist;
+    my $die = sub {
+      my ($fmt, @args) = @_;
+      die $vfs->error({depth => 3}, $fmt, @args);
+    };
+    my %registry;
+    my $spec = $vfs->{argmacro};
+    foreach my $item (ref $spec eq 'ARRAY' ? @$spec : ($spec // ())) {
+      my ($ns, $dict) = ref $item eq 'ARRAY' ? @$item
+        : (undef, $item);
+      if (ref $item eq 'ARRAY' and @$item != 2
+          or ref $dict ne 'HASH') {
+        $die->(q{Invalid argmacro registration: %s}
+               , terse_dump($item));
+      }
+      if (defined $ns and not $known{$ns}) {
+        $die->(q{Unknown namespace '%s' in argmacro registration}, $ns);
+      }
+      $ns //= $nslist[0];
+      foreach my $name (sort keys %$dict) {
+        $name =~ /^\w+\z/
+          or $die->(q{Invalid argmacro name '%s'}, $name);
+        $registry{$ns}{$name}
+          and $die->(q{Duplicate argmacro registration '%s:%s'}, $ns, $name);
+        $registry{$ns}{$name} = $dict->{$name};
+      }
+    }
+    \%registry;
+  };
+}
+
+#
+# Site 設定 argmacro で ($ns, $name) に登録された ArgMacro を返す。
+# $ns が undef なら primary ns。
 # Module は YATT::Lite::ArgMacro を use して定義する(1 pm = 1 macro)。
 # Core::ArgMacro は VFS 単位で一度だけ作り、ここで strong に保持する。
 #
 sub find_argmacro_module {
-  (my MY $vfs, my ParsingState $state, my $name) = @_;
-  my $pkg = $vfs->{argmacro} && $vfs->{argmacro}{$name}
+  (my MY $vfs, my ParsingState $state, my ($ns, $name)) = @_;
+  return undef unless $vfs->{argmacro};
+  $ns //= ($vfs->argmacro_namespace_list)[0];
+  my $pkg = $vfs->argmacro_registry->{$ns}{$name}
     or return undef;
 
-  $vfs->{_argmacro_module_cache}{$name} //= do {
+  $vfs->{_argmacro_module_cache}{"$ns:$name"} //= do {
     my $die = sub {
       my ($fmt, @args) = @_;
       $state ? $vfs->synerror($state, $fmt, @args)
@@ -581,7 +645,7 @@ sub find_argmacro_module {
       $die->(q{argmacro module '%s' for '%s' is not a YATT::Lite::ArgMacro}
              , $pkg, $name);
     }
-    $pkg->as_argmacro_part($vfs->get_parser, $name);
+    $pkg->as_argmacro_part($vfs->get_parser, $name, $ns);
   };
 }
 
