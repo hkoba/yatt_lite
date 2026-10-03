@@ -6,6 +6,8 @@
 #  - 1 pm = 1 macro。use YATT::Lite::ArgMacro out => [...], in => [...]
 #  - Site 設定 argmacro => {name => 'Module'} で登録し、%name; で使う
 #  - Args/Vars/Result の field 名 typo は pm のコンパイル時に検出される
+#  - argmacro => [[ns => {name => 'Module'}], {...}] で名前空間付き登録。
+#    %ns:name; は登録表のみ、%name; はページ内 → base → primary ns の登録
 #
 #----------------------------------------
 use strict;
@@ -85,6 +87,27 @@ sub on_expand {
 1;
 END
 
+  (map {
+    my ($pkg, $out, $in, $value) = @$_;
+    ("$libdir/TestArgMacro/$pkg.pm" => <<END);
+package TestArgMacro::$pkg;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw($out)],
+  in  => [qw($in)];
+
+sub on_expand {
+  (my MY \$class, my CGen \$cgen, my Args \$args, my Vars \$vars) = \@_;
+  my Result \$result = {};
+  \$result->{$out} = q{$value};
+  \$result;
+}
+1;
+END
+  } ([SrcA => src => tag => 'modA'], [SrcB => src => tag => 'modB'],
+     [OtherC => other => otag => 'modC'])),
+
   "$libdir/TestArgMacro/NotAMacro.pm" => <<'END',
 package TestArgMacro::NotAMacro;
 sub on_expand {}
@@ -93,7 +116,9 @@ END
 );
 
 my $make_app = sub {
-  my ($argmacro, %files) = @_;
+  my ($argmacro, @rest) = @_;
+  my @opts = ref $rest[0] eq 'ARRAY' ? @{shift @rest} : ();
+  my %files = @rest;
   my $app_root = "$tempdir/t" . ++$testno;
   my $docroot = "$app_root/docs";
   YATT::Lite::Util::File->mkfile_may_wait(
@@ -104,6 +129,7 @@ my $make_app = sub {
     app_root => $app_root,
     doc_root => $docroot,
     argmacro => $argmacro,
+    @opts,
   );
 };
 
@@ -203,5 +229,190 @@ describe "declaration errors", sub {
       ->to_match(qr/not supported/);
   };
 };
+
+{
+  my @ns = (namespace => [qw(myteam myorg yatt perl)]);
+
+  # XXX: SiteApp->render は一度成功した後のエラーを \"DONE" で返すため、
+  # エラーになるページを先に render する。
+  my $render_err = sub {
+    my ($site, $page) = @_;
+    local $@;
+    my $out = eval {$site->render($page)};
+    $@ || $out;
+  };
+
+  my $use = sub {
+    my ($ref) = @_;
+    (my $fn = "$ref.yatt") =~ s/:/_/g;
+    ($fn => <<END);
+<yatt:w tag=1/>
+
+<!yatt:widget w %$ref;>
+src=&yatt:src;
+END
+  };
+
+  my $local_foo = <<'END';
+<!yatt:argmacro foo=[src] tag>
+$result->{src} = q{local};
+END
+
+  describe "namespace: argmacro registered with namespace", sub {
+    my $site = $make_app->(
+      [[myorg => {foo => 'TestArgMacro::SrcA'}]], [@ns],
+      $use->('myorg:foo'),
+      $use->('foo'),
+      'override.yatt' => <<END,
+<yatt:w tag=1/><yatt:w2 tag=1/>
+$local_foo
+<!yatt:widget w %foo;>
+w=&yatt:src;
+<!yatt:widget w2 %myorg:foo;>
+w2=&yatt:src;
+END
+    );
+
+    it "should not be referenced without namespace", sub {
+      expect($render_err->($site, "foo"))
+        ->to_match(qr/Unknown argmacro 'foo'/);
+    };
+
+    it "should be referenced with the namespace", sub {
+      expect($render_err->($site, "myorg_foo"))->to_match(qr/src=modA/);
+    };
+
+    it "should prefer page-local argmacro only for %foo;", sub {
+      expect($render_err->($site, "override"))
+        ->to_match(qr/w=local\s*w2=modA/);
+    };
+  };
+
+  describe "namespace: argmacro registered without namespace", sub {
+    my $site = $make_app->(
+      {foo => 'TestArgMacro::SrcA'}, [@ns],
+      $use->('foo'),
+      $use->('myteam:foo'),
+      $use->('myorg:foo'),
+      $use->('yatt:foo'),
+    );
+
+    it "should not be referenced with other namespace (myorg)", sub {
+      expect($render_err->($site, "myorg_foo"))
+        ->to_match(qr/Unknown argmacro 'myorg:foo'/);
+    };
+
+    it "should not be referenced with other namespace (yatt)", sub {
+      expect($render_err->($site, "yatt_foo"))
+        ->to_match(qr/Unknown argmacro 'yatt:foo'/);
+    };
+
+    it "should be referenced without namespace", sub {
+      expect($render_err->($site, "foo"))->to_match(qr/src=modA/);
+    };
+
+    it "should be referenced with primary namespace", sub {
+      expect($render_err->($site, "myteam_foo"))->to_match(qr/src=modA/);
+    };
+  };
+
+  describe "namespace: argmacro registered with primary namespace", sub {
+    my $site = $make_app->(
+      [[myteam => {foo => 'TestArgMacro::SrcA'}]], [@ns],
+      $use->('foo'),
+    );
+
+    it "should be referenced without namespace too", sub {
+      expect($render_err->($site, "foo"))->to_match(qr/src=modA/);
+    };
+  };
+
+  describe "namespace: same name in different namespaces", sub {
+    my $site = $make_app->(
+      [[myorg => {foo => 'TestArgMacro::SrcA'}],
+       {foo => 'TestArgMacro::OtherC'}], [@ns],
+      'both.yatt' => <<'END',
+<yatt:w tag=1 otag=1/>
+
+<!yatt:widget w %myorg:foo; %foo;>
+src=&yatt:src; other=&yatt:other;
+END
+    );
+
+    it "should be usable together in one widget", sub {
+      expect($render_err->($site, "both"))
+        ->to_match(qr/src=modA other=modC/);
+    };
+  };
+
+  describe "namespace: registration errors", sub {
+    my $reg_err = sub {
+      my ($argmacro) = @_;
+      local $@;
+      eval {
+        my $site = $make_app->($argmacro, [@ns], $use->('foo'));
+        $site->render("foo");
+      };
+      $@;
+    };
+
+    it "should reject duplicate registration in primary namespace", sub {
+      expect($reg_err->([{foo => 'TestArgMacro::SrcA'},
+                         [myteam => {foo => 'TestArgMacro::SrcB'}]]))
+        ->to_match(qr/Duplicate argmacro registration 'myteam:foo'/);
+    };
+
+    it "should reject duplicate registration in the same namespace", sub {
+      expect($reg_err->([[myorg => {foo => 'TestArgMacro::SrcA'}],
+                         [myorg => {foo => 'TestArgMacro::SrcB'}]]))
+        ->to_match(qr/Duplicate argmacro registration 'myorg:foo'/);
+    };
+
+    it "should reject unknown namespace", sub {
+      expect($reg_err->([[nosuch => {foo => 'TestArgMacro::SrcA'}]]))
+        ->to_match(qr/Unknown namespace 'nosuch' in argmacro registration/);
+    };
+
+    it "should reject malformed spec", sub {
+      expect($reg_err->([[myorg => 'TestArgMacro::SrcA']]))
+        ->to_match(qr/Invalid argmacro registration/);
+    };
+
+    it "should reject invalid macro name", sub {
+      expect($reg_err->({'foo-bar' => 'TestArgMacro::SrcA'}))
+        ->to_match(qr/Invalid argmacro name 'foo-bar'/);
+    };
+  };
+
+  describe "namespace: reference errors", sub {
+    my $site = $make_app->(
+      {}, [@ns],
+      $use->('bogus:foo'),
+      'multi.yatt' => <<'END',
+<!yatt:widget w %myorg:foo:bar;>
+END
+      'localonly.yatt' => <<END,
+<yatt:w tag=1/>
+$local_foo
+<!yatt:widget w %myorg:foo;>
+END
+    );
+
+    it "should reject unknown namespace", sub {
+      expect($render_err->($site, "bogus_foo"))
+        ->to_match(qr/Unknown namespace 'bogus' in argmacro reference/);
+    };
+
+    it "should reject extra path", sub {
+      expect($render_err->($site, "multi"))
+        ->to_match(qr/Invalid argmacro reference/);
+    };
+
+    it "should hint page-local argmacro", sub {
+      expect($render_err->($site, "localonly"))
+        ->to_match(qr/Unknown argmacro 'myorg:foo' \(page-local argmacro 'foo' can only be referenced as %foo;\)/);
+    };
+  };
+}
 
 done_testing();
