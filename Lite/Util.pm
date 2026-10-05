@@ -58,6 +58,9 @@ require File::Spec;
     my ($thing, @name) = @_;
     my $class = ref $thing || $thing;
     no strict 'refs';
+    # perl -c で定義側モジュールが main になると、ここで作った glob が
+    # "used only once" (FATAL) になるため
+    no warnings 'once';
     \*{join("::", $class, grep {defined} @name)};
   }
   sub globref_default {

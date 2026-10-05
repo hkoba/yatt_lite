@@ -20,7 +20,7 @@ use YATT::Lite::Constants;
 #    同じ instance の in も有ればエラー
 #
 sub expand_all_argmacro {
-  (my $class, my $cgen, my Part $widget, my $primary) = @_;
+  (my $class, my $cgen, my Part $widget, my $primary, my $node) = @_;
   my $triggers = $widget->{_argmacro_trigger_dict};
   my $outputs = $widget->{_argmacro_output_dict} // {};
   my (%found, %firstInput, %bypass, %byName, @rest);
@@ -55,7 +55,7 @@ sub expand_all_argmacro {
     if (my $args = $found{$_}) {
 
       $class->apply_argmacro($cgen, $widget->{_argmacro_instance_dict}{$_}
-                             , $args, $widget, \%byName);
+                             , $args, $widget, \%byName, $node);
 
     } else {
       ()
@@ -65,7 +65,7 @@ sub expand_all_argmacro {
 
 sub apply_argmacro {
   (my $class, my $cgen, my ArgMacro $argmacro, my $args
-   , my Part $widget, my $byName) = @_;
+   , my Part $widget, my $byName, my $node) = @_;
 
   my $vars = $argmacro->{_arg_dict};
   if (my $refer = $argmacro->{refer_names}) {
@@ -76,7 +76,7 @@ sub apply_argmacro {
     }
   }
 
-  my $result = $argmacro->{_on_expand}->($cgen, $args, $vars, $argmacro);
+  my $result = $argmacro->{_on_expand}->($cgen, $args, $vars, $argmacro, $node);
   return if not keys %$result;
 
   map {
@@ -204,7 +204,7 @@ sub generate_on_expand {
   my @script;
   push @script, q(use YATT::Lite::Constants; );
   push @script, sprintf(
-    q{(my %s $cgen, my %s $args, my %s $vars, my %s $argmacro) = @_; my %s $result = +{};},
+    q{(my %s $cgen, my %s $args, my %s $vars, my %s $argmacro, my $node) = @_; my %s $result = +{};},
     $cgenType, $argsType, $varsType, $macroType, $resultType
   );
 

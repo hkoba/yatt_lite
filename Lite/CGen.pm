@@ -166,6 +166,13 @@ sub generror {
   my %opts = ($self->_tmpl_file_line($self->{_curline}), callerinfo());
   $self->_error(\%opts, @_);
 }
+# generror の行番号指定版 (LRXML の synerror_at に相当)。
+# 例: die $cgen->generror_at($node->[NODE_LNO], ...)
+sub generror_at {
+  (my MY $self, my $ln) = splice @_, 0, 2;
+  my %opts = ($self->_tmpl_file_line($ln // $self->{_curline}), callerinfo());
+  $self->_error(\%opts, @_);
+}
 sub _error {
   my MY $self = shift;
   $self->{vfs}->error(@_);

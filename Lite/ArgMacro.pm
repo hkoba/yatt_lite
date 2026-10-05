@@ -63,6 +63,11 @@ sub declare_into {
   require YATT::Lite::MFields;
   YATT::Lite::MFields->add_isa_to($destpkg, MY);
 
+  # my CGen $cgen 等の型付き lexical のため、型のクラスを先に読み込んでおく
+  # (perl -c で単独コンパイルできるように)
+  require YATT::Lite::CGen::Perl;
+  require YATT::Lite::Core;
+
   my @in_names = ((map {$_->[0]} @{$spec->{in}}), @{$spec->{refer}});
   my @out_names = map {$_->[0]} @{$spec->{out}};
 
@@ -72,6 +77,7 @@ sub declare_into {
     Vars   => $pack->define_record_class("${destpkg}::Vars", @in_names),
     Result => $pack->define_record_class("${destpkg}::Result", @out_names),
     CGen   => 'YATT::Lite::CGen::Perl',
+    ArgMacro => 'YATT::Lite::Core::ArgMacro',
   );
   foreach my $name (sort keys %types) {
     my $glob = globref($destpkg, $name);
@@ -141,8 +147,8 @@ sub as_argmacro_part {
   $parser->add_args($argmacro, map {$class->_mk_arg_node(@$_)} @{$spec->{in}});
 
   $argmacro->{_on_expand} = sub {
-    my ($cgen, $args, $vars, $macro) = @_;
-    my $result = $class->on_expand($cgen, $args, $vars, $macro);
+    my ($cgen, $args, $vars, $macro, $node) = @_;
+    my $result = $class->on_expand($cgen, $args, $vars, $macro, $node);
     unless (ref $result eq 'HASH' or UNIVERSAL::isa($result, 'HASH')) {
       croak "$class->on_expand must return a hash";
     }

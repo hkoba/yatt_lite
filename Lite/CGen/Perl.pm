@@ -464,7 +464,7 @@ use YATT::Lite::Constants;
 
     if ($widget->{_argmacro_instance_list}) {
       $primary = YATT::Lite::CGen::ArgMacro->expand_all_argmacro(
-        $self, $widget, $primary,
+        $self, $widget, $primary, $node,
       );
     }
 
@@ -543,6 +543,56 @@ use YATT::Lite::Constants;
       , join("", @argExpr), join(", ", map {defined $_ ? $_ : 0}
 				 @argOrder[0 .. $#{$widget->{_arg_order}}]);
   }
+  #========================================
+  # argmacro の on_expand で、in 引数の node から式を組み立てるためのメソッド。
+  # 代入先 (formal) の変数宣言が無い所で使う。
+  # (旧 YATT の try_pass_through, faked_gentype, faked_genexpr に相当)
+  #
+  #   my $expr = $cgen->try_pass_through($args->{file})
+  #     // $cgen->as_cast_node_to(text => $args->{file});
+  #
+
+  # $arg が変数の pass through (file=var の bare、または値無しの file) なら、
+  # 呼び出し側 scope のその変数の式を返す。値無しで変数が無ければ
+  # $default (Perl 式) を返す。それ以外の node なら undef。
+  sub try_pass_through {
+    (my MY $self, my ($arg, $default)) = @_;
+    my $varName = passThruVar($arg)
+      or return undef;
+    # ns 付きの名前 (値無しの yatt:foo 等) は変数ではない
+    return undef if ref $varName;
+    if (my $var = $self->find_var($varName)) {
+      $self->as_lvalue($var);
+    } elsif ($arg->[NODE_TYPE] == TYPE_ATT_NAMEONLY and defined $default) {
+      $default;
+    } else {
+      die $self->generror_at($arg->[NODE_LNO]
+                             , q{No such variable '%s'}, $varName);
+    }
+  }
+
+  # $arg の値を、型 $type (text, html, value, list ...) の値の式にする。
+  # (code, delegate は宣言 var が必要なので不可)
+  sub as_cast_node_to {
+    (my MY $self, my ($type, $arg)) = @_;
+    my $realType = $self->{_type_alias}{$type} // $type;
+    my $sub = $realType !~ /^(?:code|delegate)\z/
+      && $self->can("as_cast_to_$realType")
+      or die $self->generror_at($arg->[NODE_LNO]
+                                , q{No such argtype: %s}, $type);
+    $sub->($self, undef, argValue($arg) // '');
+  }
+
+  # $arg の値を、そのまま Perl 式にする (entity は escape しない)。
+  # 値が無いか空なら $default。
+  sub as_expr_node {
+    (my MY $self, my ($arg, $default)) = @_;
+    my @value = lexpand(argValue($arg));
+    return $default if not @value or @value == 1 and not ref $value[0]
+      and $value[0] eq '';
+    join '', $self->as_list(@value);
+  }
+
   sub as_lvalue {
     (my MY $self, my $var) = @_;
     my $type = $var->type;
