@@ -464,11 +464,7 @@ use YATT::Lite::Constants;
 
     if ($widget->{_argmacro_instance_list}) {
       $primary = YATT::Lite::CGen::ArgMacro->expand_all_argmacro(
-        $self,
-        $primary,
-        $widget->{_argmacro_trigger_dict},
-        $widget->{_argmacro_instance_list},
-        $widget->{_argmacro_instance_dict},
+        $self, $widget, $primary,
       );
     }
 

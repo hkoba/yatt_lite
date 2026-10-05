@@ -11,35 +11,72 @@ use YATT::Lite::MFields;
 use YATT::Lite::Core qw(ArgMacro Part Template);
 use YATT::Lite::Constants;
 
+#
+# widget 呼び出しの引数リスト $primary に含まれる argmacro を展開する。
+#
+#  - in はトリガー。instance 毎に集めて取り除き、on_expand に渡す
+#  - refer は取り除かず、$args/$vars で参照させるだけ
+#  - out (rename 後の実名) が明示された instance は bypass (展開しない)。
+#    同じ instance の in も有ればエラー
+#
 sub expand_all_argmacro {
-  my ($class, $cgen, $primary, $triggers, $macroList, $macroDict) = @_;
-  my (%found, @rest);
+  (my $class, my $cgen, my Part $widget, my $primary) = @_;
+  my $triggers = $widget->{_argmacro_trigger_dict};
+  my $outputs = $widget->{_argmacro_output_dict} // {};
+  my (%found, %firstInput, %bypass, %byName, @rest);
   foreach my $arg (@$primary) {
     my $argName = YATT::Lite::CGen::Perl::argName($arg);
-    if (my $spec = $triggers->{$argName}) {
+    if (defined $argName and my $spec = $triggers->{$argName}) {
       my ($instName, $formalArgName) = @$spec;
       $found{$instName}{$formalArgName} = $arg;
-    } else {
-      push @rest, $arg;
+      $firstInput{$instName} //= $argName;
+      next;
     }
+    if (defined $argName) {
+      $byName{$argName} //= $arg;
+      if (my $spec = $outputs->{$argName}) {
+        $bypass{$spec->[0]} //= $argName;
+      }
+    }
+    push @rest, $arg;
   }
   return $primary if not %found;
+
+  foreach my $instName (@{$widget->{_argmacro_instance_list}}) {
+    next unless $found{$instName} and $bypass{$instName};
+    die $cgen->generror(
+      q{argmacro %s is bypassed by explicit output '%s'; input '%s' can't be given}
+      , $widget->{_argmacro_instance_dict}{$instName}->call_spec
+      , $bypass{$instName}, $firstInput{$instName}
+    );
+  }
 
   [(map {
     if (my $args = $found{$_}) {
 
-      $class->apply_argmacro($cgen, $macroDict->{$_}, $args);
+      $class->apply_argmacro($cgen, $widget->{_argmacro_instance_dict}{$_}
+                             , $args, $widget, \%byName);
 
     } else {
       ()
     }
-  } @$macroList), @rest];
+  } @{$widget->{_argmacro_instance_list}}), @rest];
 }
 
 sub apply_argmacro {
-  (my $class, my $cgen, my ArgMacro $argmacro, my $args) = @_;
+  (my $class, my $cgen, my ArgMacro $argmacro, my $args
+   , my Part $widget, my $byName) = @_;
 
-  my $result = $argmacro->{_on_expand}->($cgen, $args, $argmacro->{_arg_dict}, $argmacro);
+  my $vars = $argmacro->{_arg_dict};
+  if (my $refer = $argmacro->{refer_names}) {
+    $vars = +{%{$vars // {}}};
+    foreach my $name (@$refer) {
+      $args->{$name} = $byName->{$name} if $byName->{$name};
+      $vars->{$name} = $widget->{_arg_dict}{$name};
+    }
+  }
+
+  my $result = $argmacro->{_on_expand}->($cgen, $args, $vars, $argmacro);
   return if not keys %$result;
 
   map {
@@ -108,6 +145,10 @@ sub make_on_declare {
                          "Duplicate use of argmacro '%s'", $instName);
     }
     $part->{_argmacro_instance_dict}{$instName} = $instance;
+    foreach my $formalName (keys %{$instance->{rename_map}}) {
+      $part->{_argmacro_output_dict}{$instance->{rename_map}{$formalName}}
+        = [$instName, $formalName];
+    }
     push @{$part->{_argmacro_instance_list}}, $instName;
 
     foreach my $argName (@{$argmacro->{_arg_order}}) {

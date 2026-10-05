@@ -36,25 +36,34 @@ sub declare_into {
   my $out = delete $opts{out}
     or croak "ArgMacro requires 'out' (list of output args)";
   my $in = delete $opts{in} // [];
+  my $refer = delete $opts{refer} // [];
   if (keys %opts) {
     croak "Unknown options for ArgMacro: ".join(", ", sort keys %opts);
+  }
+
+  # refer は widget 側で宣言する引数を参照するだけなので、名前のみ
+  foreach my $name (@$refer) {
+    croak "ArgMacro refer accepts only arg names: $name"
+      unless $name =~ /^\w+\z/;
   }
 
   my $spec = +{
     out => [map {$pack->parse_arg_spec($_)} @$out],
     in  => [map {$pack->parse_arg_spec($_)} @$in],
+    refer => [@$refer],
   };
   croak "ArgMacro requires at least one output arg" unless @{$spec->{out}};
 
   my %seen;
-  foreach my $item (@{$spec->{out}}, @{$spec->{in}}) {
-    croak "Duplicate arg name in ArgMacro: $item->[0]" if $seen{$item->[0]}++;
+  foreach my $name ((map {$_->[0]} @{$spec->{out}}, @{$spec->{in}})
+                    , @{$spec->{refer}}) {
+    croak "Duplicate arg name in ArgMacro: $name" if $seen{$name}++;
   }
 
   require YATT::Lite::MFields;
   YATT::Lite::MFields->add_isa_to($destpkg, MY);
 
-  my @in_names = map {$_->[0]} @{$spec->{in}};
+  my @in_names = ((map {$_->[0]} @{$spec->{in}}), @{$spec->{refer}});
   my @out_names = map {$_->[0]} @{$spec->{out}};
 
   my %types = (
@@ -126,6 +135,7 @@ sub as_argmacro_part {
     name => $name, kind => 'argmacro', decl => 'argmacro',
     namespace => $ns,
     output_args => [map {$class->_mk_arg_node(@$_)} @{$spec->{out}}],
+    refer_names => [@{$spec->{refer}}],
   );
 
   $parser->add_args($argmacro, map {$class->_mk_arg_node(@$_)} @{$spec->{in}});

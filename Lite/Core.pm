@@ -47,6 +47,7 @@ use YATT::Lite::Breakpoint ();
                        _argmacro_instance_dict
                        _argmacro_instance_list
                        _argmacro_trigger_dict
+                       _argmacro_output_dict
                        _decllist
 		       namespace kind folder data
                        decl
@@ -74,6 +75,7 @@ use YATT::Lite::Breakpoint ();
            from_name
            rename_map
            resolve_map
+           refer_names
          )]
        ]
       # <!yatt:import> が作る alias Part。実体は持たず、lookup 時に
@@ -239,6 +241,16 @@ use YATT::Lite::Breakpoint ();
     (my Part $part, my Folder $folder) = @_;
     Scalar::Util::weaken($part->{folder} = $folder);
     # die "Can't weaken!" unless Scalar::Util::isweak($part->{folder});
+  }
+
+  # "%name;" or "%name(to=from);" (for error messages)
+  sub YATT::Lite::Core::ArgMacro::call_spec {
+    (my ArgMacro $argmacro) = @_;
+    '%' . $argmacro->{name}
+      . ($argmacro->{to_name}
+         ? "($argmacro->{to_name}=" . ($argmacro->{from_name} // '') . ")"
+         : '')
+      . ';';
   }
 
   sub YATT::Lite::Core::ArgMacro::clone_with_renamespec {
