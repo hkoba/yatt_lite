@@ -6,6 +6,8 @@
 #  - 1 pm = 1 macro。use YATT::Lite::ArgMacro out => [...], in => [...]
 #  - Site 設定 argmacro => {name => 'Module'} で登録し、%name; で使う
 #  - Args/Vars/Result の field 名 typo は pm のコンパイル時に検出される
+#  - refer => [...] はマクロが参照するだけの widget 引数(トリガーにならない)
+#  - out を明示するとマクロは bypass される(同じ instance の in はエラー)
 #  - argmacro => [[ns => {name => 'Module'}], {...}] で名前空間付き登録。
 #    %ns:name; は登録表のみ、%name; はページ内 → base → primary ns の登録
 #
@@ -108,6 +110,45 @@ END
   } ([SrcA => src => tag => 'modA'], [SrcB => src => tag => 'modB'],
      [OtherC => other => otag => 'modC'])),
 
+  "$libdir/TestArgMacro/Greet.pm" => <<'END',
+package TestArgMacro::Greet;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw(greeting)],
+  in  => [qw(who)],
+  refer => [qw(lang)];
+
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars) = @_;
+  my Result $result = {};
+  my $lang = $args->{lang} ? $cgen->node_value($args->{lang})
+    : $vars->{lang} ? 'declared' : 'undeclared';
+  $result->{greeting} = "$lang/".$cgen->node_value($args->{who});
+  $result;
+}
+1;
+END
+
+  "$libdir/TestArgMacro/Strict.pm" => <<'END',
+package TestArgMacro::Strict;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw(greeting)],
+  in  => [qw(who)],
+  refer => [qw(lang)];
+
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars) = @_;
+  die "widget must declare lang\n" unless $vars->{lang};
+  my Result $result = {};
+  $result->{greeting} = $cgen->node_value($args->{who});
+  $result;
+}
+1;
+END
+
   "$libdir/TestArgMacro/NotAMacro.pm" => <<'END',
 package TestArgMacro::NotAMacro;
 sub on_expand {}
@@ -206,6 +247,155 @@ END
   };
 };
 
+describe "refer", sub {
+  my $site = $make_app->(
+    {greet => 'TestArgMacro::Greet', strict => 'TestArgMacro::Strict'},
+    'strict.yatt' => <<'END',
+<yatt:w who="bob"/>
+
+<!yatt:widget w %strict;>
+g=&yatt:greeting;
+END
+    'given.yatt' => <<'END',
+<yatt:w who="bob" lang="ja"/>
+
+<!yatt:widget w lang %greet;>
+g=&yatt:greeting; lang=&yatt:lang;
+END
+    'omitted.yatt' => <<'END',
+<yatt:w who="bob"/>
+
+<!yatt:widget w lang="?en" %greet;>
+g=&yatt:greeting; lang=&yatt:lang;
+END
+    'undeclared.yatt' => <<'END',
+<yatt:w who="bob"/>
+
+<!yatt:widget w %greet;>
+g=&yatt:greeting;
+END
+    'referonly.yatt' => <<'END',
+<yatt:w lang="ja"/>
+
+<!yatt:widget w lang %greet;>
+g=&yatt:greeting; lang=&yatt:lang;
+END
+  );
+
+  # XXX: SiteApp->render は一度成功した後のエラーを \"DONE" で返すため (GH-290)、
+  # エラーになるページを先に render する。
+  it "should let on_expand reject undeclared refer arg", sub {
+    expect(do {local $@; eval {$site->render("strict")}; $@})
+      ->to_match(qr/widget must declare lang/);
+  };
+
+  it "should pass refer arg to both macro and widget", sub {
+    expect($site->render("given"))->to_match(qr{g=ja/bob lang=ja});
+  };
+
+  it "should give widget var of refer arg when omitted", sub {
+    expect($site->render("omitted"))->to_match(qr{g=declared/bob lang=en});
+  };
+
+  it "should not require widget to declare refer arg", sub {
+    expect($site->render("undeclared"))->to_match(qr{g=undeclared/bob});
+  };
+
+  it "should not trigger macro by refer arg", sub {
+    expect($site->render("referonly"))->to_match(qr{g= lang=ja});
+  };
+};
+
+describe "bypass by explicit output", sub {
+  my $site = $make_app->(
+    {greet => 'TestArgMacro::Greet', pair => 'TestArgMacro::Pair'},
+    'in_out.yatt' => <<'END',
+<yatt:w greeting="hi" who="bob"/>
+
+<!yatt:widget w %greet;>
+g=&yatt:greeting;
+END
+    'out_in.yatt' => <<'END',
+<yatt:w who="bob" greeting="hi"/>
+
+<!yatt:widget w %greet;>
+g=&yatt:greeting;
+END
+    'renamed_err.yatt' => <<'END',
+<yatt:w p="1, 2" p_x=5/>
+
+<!yatt:widget w %pair(p=pair);>
+x=&yatt:p_x; y=&yatt:p_y;
+END
+    'tmpl_err.yatt' => <<'END',
+<yatt:w pair="1, 2" x=5/>
+
+<!yatt:argmacro pair2=[x y] pair>
+my ($x, $y) = split /\s*,\s*/, $cgen->node_value($args->{pair});
+$result->{x} = $x;
+$result->{y} = $y;
+
+<!yatt:widget w %pair2;>
+x=&yatt:x; y=&yatt:y;
+END
+    'out.yatt' => <<'END',
+<yatt:w greeting="hi" lang="ja"/>
+
+<!yatt:widget w lang %greet;>
+g=&yatt:greeting; lang=&yatt:lang;
+END
+    'renamed.yatt' => <<'END',
+<yatt:w p_x=5 p_y=6/>
+
+<!yatt:widget w %pair(p=pair);>
+x=&yatt:p_x; y=&yatt:p_y;
+END
+  );
+
+  # code 生成時のエラーは SiteApp->render だと \"DONE" になるため (GH-290)、
+  # 直接 find_product でコンパイルする。
+  my $err = sub {
+    my ($page) = @_;
+    my $yatt = $site->get_yatt('/');
+    local $YATT::Lite::YATT = $yatt;
+    local $yatt->{error_handler} = sub {die $_[1]->message};
+    local $@;
+    eval {
+      my $trans = $yatt->open_trans;
+      $trans->find_product(perl => $trans->find_file($page));
+    };
+    $@;
+  };
+
+  it "should reject input with explicit output", sub {
+    expect($err->("in_out"))
+      ->to_match(qr/argmacro %greet; is bypassed by explicit output 'greeting'; input 'who' can't be given/);
+  };
+
+  it "should reject input with explicit output regardless of order", sub {
+    expect($err->("out_in"))
+      ->to_match(qr/argmacro %greet; is bypassed by explicit output 'greeting'; input 'who' can't be given/);
+  };
+
+  it "should reject input with explicit renamed output", sub {
+    expect($err->("renamed_err"))
+      ->to_match(qr/argmacro %pair\(p=pair\); is bypassed by explicit output 'p_x'; input 'p' can't be given/);
+  };
+
+  it "should reject input with explicit output (template argmacro)", sub {
+    expect($err->("tmpl_err"))
+      ->to_match(qr/argmacro %pair2; is bypassed by explicit output 'x'; input 'pair' can't be given/);
+  };
+
+  it "should pass explicit output", sub {
+    expect($site->render("out"))->to_match(qr/g=hi lang=ja/);
+  };
+
+  it "should pass explicit renamed output", sub {
+    expect($site->render("renamed"))->to_match(qr/x=5 y=6/);
+  };
+};
+
 describe "declaration errors", sub {
   my $declare = sub {
     my @spec = @_;
@@ -222,6 +412,16 @@ describe "declaration errors", sub {
   it "should reject duplicate names", sub {
     expect($declare->(out => [qw(a)], in => [qw(a)]))
       ->to_match(qr/Duplicate arg name in ArgMacro: a/);
+  };
+
+  it "should reject duplicate names between in and refer", sub {
+    expect($declare->(out => [qw(a)], in => [qw(b)], refer => [qw(b)]))
+      ->to_match(qr/Duplicate arg name in ArgMacro: b/);
+  };
+
+  it "should reject type spec in refer", sub {
+    expect($declare->(out => [qw(a)], refer => [qw(b=value)]))
+      ->to_match(qr/refer accepts only arg names: b=value/);
   };
 
   it "should reject unsupported types", sub {
