@@ -74,7 +74,8 @@ type name constants in the module:
 
 =item C<Result> (C<< <Module>::Result >>) - fields are the output args
 
-=item C<MY> (the module itself) and C<CGen> (L<YATT::Lite::CGen::Perl>)
+=item C<MY> (the module itself), C<CGen> (L<YATT::Lite::CGen::Perl>) and
+C<ArgMacro> (L<YATT::Lite::Core> argmacro instance)
 
 =back
 
@@ -139,7 +140,7 @@ This corresponds to C<edit> of old YATT, which was only used this way.
 
 =head1 METHODS
 
-=head2 on_expand($cgen, $args, $vars, $argmacro)
+=head2 on_expand($cgen, $args, $vars, $argmacro, $node)
 
 Must be implemented by the module. Called as a class method
 at compile time of each widget call which passes any of input args.
@@ -166,9 +167,93 @@ and of refer args declared by the widget.
 
 The L<YATT::Lite::Core> argmacro instance (with rename info).
 
+=item C<$node>
+
+The node (a plain array) of the widget call being expanded.
+Use L<YATT::Lite::Constants> to access it, like C<< $node->[NODE_LNO] >>.
+
 =back
 
 Returns a hash of Perl expressions keyed by formal output arg names.
+
+Note that each value is cast to the type of the output arg.
+So for C<value>, C<list> etc., the value works as a Perl expression,
+while for C<text> or C<html>, it is a literal text.
+
+=head2 Helpers of $cgen
+
+Typical argmacros build an expression (like calls of entity functions)
+from input args, and put it to an output arg. Since there is no variable
+declaration (formal) for each step, use the following methods of C<$cgen>
+to turn an input arg node into an expression. The scope of the widget call
+is held by C<$cgen>. They are also available in the body of
+C<< <!yatt:argmacro> >> declared in templates (as C<$cgen> and C<$node>).
+
+  use YATT::Lite::Constants; # NODE_LNO
+
+  sub on_expand {
+    (my MY $class, my CGen $cgen, my Args $args, my Vars $vars
+     , my ArgMacro $argmacro, my $node) = @_;
+    my Result $result = {};
+    my $fileExpr = $cgen->try_pass_through($args->{file})
+      // $cgen->as_cast_node_to(text => $args->{file});
+    $result->{list} = sprintf q{$this->entity_filereader(%s)}, $fileExpr;
+    $result;
+  }
+
+=over 4
+
+=item C<< $cgen->try_pass_through($argNode, $default) >>
+
+If the arg passes a variable, returns the expression of the variable in
+the scope of the widget call (without escaping). Otherwise returns undef.
+
+=over 4
+
+=item * C<file=foo> (bare identifier): variable C<foo>.
+An unknown variable is an error (with the line of the arg).
+
+=item * C<file> (no value): variable C<file>. If no such variable,
+returns C<$default> (a Perl expression) if given, otherwise an error.
+
+=item * Others (quoted, with entities etc.): undef.
+
+=back
+
+=item C<< $cgen->as_cast_node_to($type, $argNode) >>
+
+Returns the value of the arg as an expression of C<$type>
+(C<text>, C<html>, C<value>, C<list>, C<bool> ...), in the same way as
+passing it to a widget arg of that type. C<code> and C<delegate> are not
+supported.
+
+=item C<< $cgen->as_expr_node($argNode, $default) >>
+
+Returns the value of the arg as a raw Perl expression
+(entities are not escaped). Returns C<$default> if the value is empty.
+
+=item C<< $cgen->generror_at($lineno, $fmt, @args) >>
+
+Returns an error with the template file and the given line,
+like C<< die $cgen->generror_at($node->[NODE_LNO], ...) >>.
+(Plain C<die> in C<on_expand> has no template position.)
+
+=item C<< $cgen->find_var($name) >>
+
+Looks up a variable in the scope of the widget call. Returns undef if not found.
+
+=back
+
+These correspond to methods of old YATT (C<$trans>) as follows.
+C<$scope> and C<$node> are not needed, since C<$cgen> holds the scope.
+
+  try_pass_through($scope, $node, $arg, $default)  => try_pass_through($arg, $default)
+  faked_gentype($type => $scope, $node, $arg)      => as_cast_node_to($type => $arg)
+  faked_genexpr($scope, $node, $arg, $default)     => as_expr_node($arg, $default)
+
+Differences: C<html> type of C<as_cast_node_to> follows widget args of
+YATT::Lite (text parts are not escaped), and errors of C<try_pass_through>
+have the line of the arg (not of the call).
 
 =head1 BYPASS BY EXPLICIT OUTPUT
 
