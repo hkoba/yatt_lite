@@ -68,9 +68,9 @@ type name constants in the module:
 
 =over 4
 
-=item C<Args>  (C<< <Module>::Args >>) - fields are the input args
+=item C<Args>  (C<< <Module>::Args >>) - fields are the input and refer args
 
-=item C<Vars>  (C<< <Module>::Vars >>) - fields are the input args
+=item C<Vars>  (C<< <Module>::Vars >>) - fields are the input and refer args
 
 =item C<Result> (C<< <Module>::Result >>) - fields are the output args
 
@@ -104,6 +104,39 @@ Each SPEC is C<"name"> or C<"name=typespec"> where I<typespec> is the
 same as the argument spec of widgets, like C<value/0>, C<value!>, C<list>.
 C<code> and C<delegate> types are not supported.
 
+=head2 refer => [NAME...]
+
+Args which the macro only refers to. They are B<not> consumed by the macro:
+
+=over 4
+
+=item * They must be declared by the widget itself (not by the macro),
+and are passed to the widget as usual.
+
+=item * They do not trigger the macro. Only input args do.
+
+=item * They are not renamed by C<%name(to=from);>.
+
+=item * Only names can be given (no typespec). The type follows the
+widget's declaration.
+
+=back
+
+When the macro is triggered, C<on_expand> gets the passed node as
+C<< $args->{NAME} >> (undef if not passed), and the widget's declaration
+as C<< $vars->{NAME} >> (undef if the widget does not declare it).
+The widget is not required to declare them; C<on_expand> can C<die>
+if it needs one, which is reported as a compile error.
+
+  use YATT::Lite::ArgMacro
+    out => [qw(greeting)],
+    in  => [qw(who)],
+    refer => [qw(lang)];
+
+  <!yatt:widget hello lang="?en" %greet;>
+
+This corresponds to C<edit> of old YATT, which was only used this way.
+
 =head1 METHODS
 
 =head2 on_expand($cgen, $args, $vars, $argmacro)
@@ -121,11 +154,13 @@ Use C<< $cgen->node_value($node) >> to get Perl expression of an arg.
 =item C<$args>
 
 Hash of input arg nodes actually passed to the widget,
-keyed by formal (not renamed) names.
+keyed by formal (not renamed) names. Refer args are also included
+if they are passed.
 
 =item C<$vars>
 
-Hash of variable declarations of input args (for type and default).
+Hash of variable declarations of input args (for type and default),
+and of refer args declared by the widget.
 
 =item C<$argmacro>
 
@@ -134,6 +169,22 @@ The L<YATT::Lite::Core> argmacro instance (with rename info).
 =back
 
 Returns a hash of Perl expressions keyed by formal output arg names.
+
+=head1 BYPASS BY EXPLICIT OUTPUT
+
+If a widget call passes any output arg of an argmacro instance
+(by its renamed name, like C<header_list> of C<%enum(header=last);>),
+the macro is bypassed: C<on_expand> is not called, and the given
+output args are passed to the widget as is.
+
+In that case, input args of the same instance can not be given.
+Regardless of the order of attributes, it is a compile error:
+
+  argmacro %enum(header=last); is bypassed by explicit output 'header_list'; input 'header' can't be given
+
+This applies to argmacros declared in templates too.
+(Old YATT called this I<disabled> mode, whose result depended on the
+order of attributes.)
 
 =head1 REGISTRATION
 
