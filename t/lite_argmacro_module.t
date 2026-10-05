@@ -8,6 +8,10 @@
 #  - Args/Vars/Result の field 名 typo は pm のコンパイル時に検出される
 #  - refer => [...] はマクロが参照するだけの widget 引数(トリガーにならない)
 #  - out を明示するとマクロは bypass される(同じ instance の in はエラー)
+#  - on_expand の第 6 引数は呼び出しの $node。in 引数から式を作るには
+#    $cgen->try_pass_through / as_cast_node_to / as_expr_node
+#    (旧 YATT の try_pass_through / faked_gentype / faked_genexpr)、
+#    行番号付きエラーは $cgen->generror_at
 #  - argmacro => [[ns => {name => 'Module'}], {...}] で名前空間付き登録。
 #    %ns:name; は登録表のみ、%name; はページ内 → base → primary ns の登録
 #
@@ -149,6 +153,55 @@ sub on_expand {
 1;
 END
 
+  "$libdir/TestArgMacro/Join.pm" => <<'END',
+package TestArgMacro::Join;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw(val=value)],
+  in  => [qw(a b n)];
+
+# 旧 YATT 風に、in 引数から式を組み立てる
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars
+   , my ArgMacro $argmacro, my $node) = @_;
+  my Result $result = {};
+  my @expr;
+  push @expr, $cgen->try_pass_through($args->{a})
+    // $cgen->as_cast_node_to(text => $args->{a})
+    if $args->{a};
+  push @expr, $cgen->try_pass_through($args->{b}, q{'dflt'})
+    // $cgen->as_cast_node_to(text => $args->{b})
+    if $args->{b};
+  push @expr, $cgen->as_expr_node($args->{n}, 0)
+    if $args->{n};
+  $result->{val} = sprintf q{join("-", %s)}, join(", ", @expr);
+  $result;
+}
+1;
+END
+
+  "$libdir/TestArgMacro/NeedVar.pm" => <<'END',
+package TestArgMacro::NeedVar;
+use strict;
+use warnings;
+use YATT::Lite::Constants; # NODE_LNO
+use YATT::Lite::ArgMacro
+  out => [qw(val=value)],
+  in  => [qw(src)];
+
+# src は変数でなければならない
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars
+   , my ArgMacro $argmacro, my $node) = @_;
+  my Result $result = {};
+  $result->{val} = $cgen->try_pass_through($args->{src})
+    // die $cgen->generror_at($node->[NODE_LNO], q{src must be a variable});
+  $result;
+}
+1;
+END
+
   "$libdir/TestArgMacro/NotAMacro.pm" => <<'END',
 package TestArgMacro::NotAMacro;
 sub on_expand {}
@@ -172,6 +225,21 @@ my $make_app = sub {
     argmacro => $argmacro,
     @opts,
   );
+};
+
+# code 生成時のエラーは SiteApp->render だと \"DONE" になるため (GH-290)、
+# 直接 find_product でコンパイルしてエラーを返す。
+my $compile_err = sub {
+  my ($site, $page) = @_;
+  my $yatt = $site->get_yatt('/');
+  local $YATT::Lite::YATT = $yatt;
+  local $yatt->{error_handler} = sub {die $_[1]->message};
+  local $@;
+  eval {
+    my $trans = $yatt->open_trans;
+    $trans->find_product(perl => $trans->find_file($page));
+  };
+  $@;
 };
 
 describe "argmacro defined in perl module", sub {
@@ -239,6 +307,12 @@ END
   it "should reject module which is not a YATT::Lite::ArgMacro", sub {
     expect(do {local $@; eval {$site->render("notamacro")}; $@})
       ->to_match(qr/is not a YATT::Lite::ArgMacro/);
+  };
+
+  it "should compile the module alone with perl -c", sub {
+    my @inc = map {"-I$_"} grep {not ref $_} @INC;
+    my $out = qx{$^X @inc -c $libdir/TestArgMacro/Join.pm 2>&1};
+    expect($out)->to_match(qr/syntax OK/);
   };
 
   it "should detect typo of field name at compile time of the module", sub {
@@ -352,20 +426,7 @@ x=&yatt:p_x; y=&yatt:p_y;
 END
   );
 
-  # code 生成時のエラーは SiteApp->render だと \"DONE" になるため (GH-290)、
-  # 直接 find_product でコンパイルする。
-  my $err = sub {
-    my ($page) = @_;
-    my $yatt = $site->get_yatt('/');
-    local $YATT::Lite::YATT = $yatt;
-    local $yatt->{error_handler} = sub {die $_[1]->message};
-    local $@;
-    eval {
-      my $trans = $yatt->open_trans;
-      $trans->find_product(perl => $trans->find_file($page));
-    };
-    $@;
-  };
+  my $err = sub {$compile_err->($site, @_)};
 
   it "should reject input with explicit output", sub {
     expect($err->("in_out"))
@@ -393,6 +454,135 @@ END
 
   it "should pass explicit renamed output", sub {
     expect($site->render("renamed"))->to_match(qr/x=5 y=6/);
+  };
+};
+
+describe "building expressions from input args", sub {
+  my $site = $make_app->(
+    {join => 'TestArgMacro::Join', needvar => 'TestArgMacro::NeedVar'},
+    'pass.yatt' => <<'END',
+<yatt:foreach my=x list="1..2"><yatt:w a=x b="lit"/></yatt:foreach>
+
+<!yatt:widget w %join;>
+[&yatt:val;]
+END
+    'entity.yatt' => <<'END',
+<yatt:foreach my=x list="1..1"><yatt:w a="v&yatt:x;"/></yatt:foreach>
+
+<!yatt:widget w %join;>
+[&yatt:val;]
+END
+    'dflt.yatt' => <<'END',
+<yatt:w a="p" b/>
+
+<!yatt:widget w %join;>
+[&yatt:val;]
+END
+    'namevar.yatt' => <<'END',
+<yatt:foreach my=b list="'bb'"><yatt:w a="p" b/></yatt:foreach>
+
+<!yatt:widget w %join;>
+[&yatt:val;]
+END
+    'expr.yatt' => <<'END',
+<yatt:foreach my=x list="1..1"><yatt:w a="p" n="&yatt:x; * 10"/></yatt:foreach>
+
+<!yatt:widget w %join;>
+[&yatt:val;]
+END
+    'tmpl.yatt' => <<'END',
+<yatt:foreach my=x list="1..2"><yatt:w a=x/></yatt:foreach>
+
+<!yatt:argmacro tjoin=[val=value] a>
+$result->{val} = $cgen->try_pass_through($args->{a})
+  // $cgen->as_cast_node_to(text => $args->{a});
+
+<!yatt:widget w %tjoin;>
+[&yatt:val;]
+END
+    'nosuch.yatt' => <<'END',
+<!yatt:args>
+
+
+<yatt:w
+  a=nosuch/>
+
+<!yatt:widget w %join;>
+END
+    'badtype.yatt' => <<'END',
+<!yatt:args>
+<yatt:w a="x"/>
+
+<!yatt:argmacro tbad=[val=value] a>
+$result->{val} = $cgen->as_cast_node_to(code => $args->{a});
+
+<!yatt:widget w %tbad;>
+END
+    'needvar.yatt' => <<'END',
+<!yatt:args>
+
+<yatt:w
+  src="1"/>
+
+<!yatt:widget w %needvar;>
+END
+    'tmpl_needvar.yatt' => <<'END',
+<!yatt:args>
+
+<yatt:w src="1"/>
+
+<!yatt:argmacro tneed=[val=value] src>
+$result->{val} = $cgen->try_pass_through($args->{src})
+  // die $cgen->generror_at($node->[NODE_LNO], q{src must be a variable});
+
+<!yatt:widget w %tneed;>
+END
+  );
+
+  my $err = sub {$compile_err->($site, @_)};
+
+  it "should report unknown variable with the line of the arg", sub {
+    expect($err->("nosuch"))
+      ->to_match(qr{No such variable 'nosuch' at file \S+/nosuch.yatt line 5\b});
+  };
+
+  it "should reject unsupported type", sub {
+    expect($err->("badtype"))
+      ->to_match(qr{No such argtype: code at file \S+/badtype.yatt line 2\b});
+  };
+
+  it "should report error raised by on_expand with the line of the call", sub {
+    expect($err->("needvar"))
+      ->to_match(qr{src must be a variable at file \S+/needvar.yatt line 3\b});
+  };
+
+  it "should give \$node to argmacro declared in template", sub {
+    expect($err->("tmpl_needvar"))
+      ->to_match(qr{src must be a variable at file \S+/tmpl_needvar.yatt line 3\b});
+  };
+
+  it "should pass through bare variable and cast quoted text", sub {
+    expect($site->render("pass"))->to_match(qr/\[1-lit\]\s*\[2-lit\]/);
+  };
+
+  it "should cast text with entity (not pass through)", sub {
+    expect($site->render("entity"))->to_match(qr/\[v1\]/);
+  };
+
+  it "should use default for name only arg without variable", sub {
+    expect($site->render("dflt"))->to_match(qr/\[p-dflt\]/);
+  };
+
+  it "should pass through name only arg with variable", sub {
+    expect($site->render("namevar"))->to_match(qr/\[p-bb\]/);
+  };
+
+  it "should generate raw expression", sub {
+    expect($site->render("expr"))->to_match(qr/\[p-10\]/);
+  };
+
+  it "should be usable in argmacro declared in template", sub {
+    expect($site->render("tmpl"))->to_match(qr/\[1\]\s*\[2\]/);
   };
 };
 
