@@ -46,7 +46,7 @@ my $testno = 0;
       qux => as_html("foo<b>bar</b>baz"),
     };
 
-    MY->define_pages(%PAGES);
+    MY->define_pages_from_hash(\%PAGES);
     MY->cli_run(\@ARGV) unless caller;
     1;
 END
@@ -172,6 +172,146 @@ END
        , [$pm, $line_of->(qr/^\s*bar =>/)]
        , "cli: locate_const");
   }
+
+  like(do {
+    local $@;
+    eval q{
+      package pagevars_nohash;
+      use YATT::Lite::PageConsts -as_base;
+      MY->define_pages_from_hash(index => +{x => 1});
+      1;
+    };
+    $@;
+  }, qr/HASH ref/, "define_pages_from_hash: takes a HASH ref");
+}
+
+# (file, re) -> 1-based line of the first line matching re
+sub line_of_file {
+  my ($file, $re) = @_;
+  my @lines = do {open my $fh, '<', $file or die "$file: $!"; <$fh>};
+  my ($i) = grep {$lines[$_] =~ $re} 0 .. $#lines;
+  defined $i ? $i+1 : undef;
+}
+
+#========================================
+# define_page: each page records where it is defined
+#========================================
+{
+  my $dir = "$tempdir/t" . ++$testno;
+  lib->import("$dir/lib");
+
+  MY->mkfile_may_wait("$dir/lib/pagevars2.pm", <<'END');
+package pagevars2;
+use YATT::Lite::PageConsts -as_base;
+
+my @common = (cmn => "CMN");
+
+MY->define_page(index => +{
+  title => "Top",
+  @common,
+});
+
+MY->define_page(q01 => +{
+  title => "Q1",
+});
+
+# Keys are computed, so they can not be found in the source.
+MY->define_page('q01/confirm' => +{
+  map {("c$_" => $_)} 1 .. 2
+});
+
+1;
+END
+
+  MY->mkfile_may_wait("$dir/public/index.yatt", <<'END');
+&yatt:title; &yatt:cmn;
+END
+
+  MY->mkfile_may_wait("$dir/public/q01/confirm.yatt", <<'END');
+&yatt:c1;&yatt:c2;
+END
+
+  my $site = YATT::Lite::WebMVC0::SiteApp->new(
+    app_ns => "Test$testno",
+    app_root => $dir,
+    doc_root => "$dir/public",
+    pagevars => 'pagevars2',
+  );
+
+  is($site->render("index"), "Top CMN\n", "define_page: render");
+  is($site->render("q01/confirm"), "12\n", "define_page: render, subdirectory");
+
+  my $pm = "$dir/lib/pagevars2.pm";
+  my $line = sub {line_of_file($pm, shift)};
+
+  is([pagevars2->locate_page('index')]
+     , [$pm, $line->(qr/define_page\(index/)]
+     , "locate_page: line of define_page");
+
+  is([pagevars2->locate_page('q01/confirm')]
+     , [$pm, $line->(qr/define_page\('q01\/confirm'/)]
+     , "locate_page: line of define_page, page in subdirectory");
+
+  is([pagevars2->locate_const(index => 'title')]
+     , [$pm, $line->(qr/title => "Top"/)]
+     , "locate_const: key in the block of define_page");
+
+  is([pagevars2->locate_const(q01 => 'title')]
+     , [$pm, $line->(qr/title => "Q1"/)]
+     , "locate_const: same name in another page is not confused");
+
+  is([pagevars2->locate_const(index => 'cmn')]
+     , [$pm, $line->(qr/my \@common/)]
+     , "locate_const: common value");
+
+  is([pagevars2->locate_const('q01/confirm' => 'c1')]
+     , [$pm, $line->(qr/define_page\('q01\/confirm'/)]
+     , "locate_const: key not found in the source -> line of define_page");
+
+  #----------------------------------------
+  # Redefinition of a page is an error.
+
+  my $err = do {
+    local $@;
+    eval q{
+#line 1 "dup.pm"
+      package pagevars_dup;
+      use YATT::Lite::PageConsts -as_base;
+      MY->define_page(a => +{x => 1});
+      MY->define_page(a => +{x => 2});
+      1;
+    };
+    $@;
+  };
+  like($err
+       , qr/Page .a. is already defined at \S*dup\.pm line 3, redefined at \S*dup\.pm line 4/
+       , "define_page: redefinition croaks with both locations");
+
+  #----------------------------------------
+  # const_key_regexp can be overridden for local notations.
+
+  MY->mkfile_may_wait("$dir/lib/pagevars3.pm", <<'END');
+package pagevars3;
+use YATT::Lite::PageConsts -as_base;
+
+# This site writes constants as comma separated pairs.
+sub const_key_regexp {
+  my ($self, $name) = @_;
+  qr/(['"])\Q$name\E\1\s*,/;
+}
+
+MY->define_page(index => +{
+  'title', "Comma",
+});
+
+1;
+END
+  require pagevars3;
+
+  is([pagevars3->locate_const(index => 'title')]
+     , ["$dir/lib/pagevars3.pm"
+        , line_of_file("$dir/lib/pagevars3.pm", qr/'title', "Comma"/)]
+     , "const_key_regexp: overridden in the pagevars module");
 }
 
 done_testing;

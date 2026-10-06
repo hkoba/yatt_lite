@@ -705,6 +705,7 @@ t/gh241_mkhidden_nested_query/psgi.t
 t/gh259_mkquery_post.t
 t/inspector.t
 t/inspector_definition.t
+t/inspector_pagevars.t
 t/instpkg.t
 t/langserver_transport.t
 t/lib/.symlinks

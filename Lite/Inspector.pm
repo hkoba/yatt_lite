@@ -1555,6 +1555,22 @@ sub complete_entity_variables {
     
     push @items, $item;
   }
+
+  # Page constants, unless shadowed by an argument. GH-286
+  my $pagevars = $self->pagevar_defs_of_template($tmpl);
+  foreach my $name (sort keys %$pagevars) {
+    next unless $name =~ /^\Q$prefix/;
+    next if $part->{_arg_dict}{$name};
+    my VarInfo $var = $pagevars->{$name};
+    my CompletionItem $item = {};
+    $item->{label} = $name;
+    $item->{kind} = SymbolKind__Variable;
+    $item->{detail} = "pagevar $name: $var->{type}";
+    $item->{documentation} = $var->{detail} if defined $var->{detail};
+    $item->{insertText} = $name . ';';
+    $item->{insertTextFormat} = InsertTextFormat__PlainText;
+    push @items, $item;
+  }
   
   @items;
 }
@@ -1710,6 +1726,9 @@ sub augment_defs {
     //= $self->make_document_symbol_from_argument($part->{_arg_dict}{$_}
                                                   , $rangeMap, $fileName)
     for keys %{$part->{_arg_dict}};
+  # Page constants form the outermost scope; arguments win. GH-286
+  my $pagevars = $self->pagevar_defs_of_template($part->{folder});
+  $outermost->{defs}{$_} //= $pagevars->{$_} for keys %$pagevars;
   $self->augment_defs_1($zipperList, 0, $fileName);
   $cursor;
 }
@@ -1778,6 +1797,56 @@ sub make_document_symbol_from_argument {
   $var->{range} = ($rangeMap && $rangeMap->{$var->{name}})
     // $self->make_line_range(($arg->lineno // 1) - 1);
   $var;
+}
+
+# Page constants (pagevars, GH-282) of the page $tmpl as name => VarInfo,
+# located in the pagevars module. Empty for non-page templates
+# (page_name is undef) and when the module can't be loaded. GH-286
+sub pagevar_defs_of_template {
+  (my MY $self, my Template $tmpl) = @_;
+  return {} unless $tmpl and defined(my $page = $tmpl->page_name);
+  my $yatt = $self->find_yatt_for_template($tmpl->{path})
+    or return {};
+  my $pagevars = $yatt->cget('pagevars')
+    or return {};
+  my $consts = eval {
+    YATT::Lite::Util::ckrequire($pagevars);
+    $pagevars->find_consts($page);
+  };
+  if ($@) {
+    $self->debug_log("Can't load pagevars $pagevars: $@");
+    return {};
+  }
+  return {} unless $consts;
+  my %defs;
+  foreach my $name (keys %$consts) {
+    my VarInfo $var = {};
+    $var->{kind} = 'pagevar';
+    $var->{name} = $name;
+    $var->{type} = $pagevars->const_type($consts->{$name});
+    $var->{detail} = $self->pagevar_value_preview($consts->{$name}
+                                                  , $var->{type});
+    my ($file, $line) = $pagevars->locate_const($page, $name);
+    $var->{filename} = $file;
+    # locate_const returns 1-based line.
+    $var->{range} = $self->make_line_range(($line // 1) - 1);
+    $defs{$name} = $var;
+  }
+  \%defs;
+}
+
+sub pagevar_value_preview {
+  (my MY $self, my ($value, $type)) = @_;
+  if ($type eq 'text' or $type eq 'html') {
+    my $str = "$value";
+    $str = substr($str, 0, 40) . "..." if length $str > 43;
+    $str =~ s/\n/\\n/g;
+    qq{"$str"};
+  } elsif ($type eq 'list') {
+    sprintf "[%d items]", scalar @$value;
+  } else {
+    undef;
+  }
 }
 
 sub flatten_zipper_top2bottom {
