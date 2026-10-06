@@ -14,6 +14,8 @@
 #    行番号付きエラーは $cgen->generror_at
 #  - Module->expand_element($cgen, $node) で、通常のマクロ (foreach 等) の
 #    要素の属性に展開できる (旧 YATT の create_from)
+#  - on_expand の結果に引数 node を返すと、出力名に付け替えて渡す
+#    (pass through の検査は受け手が行う)
 #  - argmacro => [[ns => {name => 'Module'}], {...}] で名前空間付き登録。
 #    %ns:name; は登録表のみ、%name; はページ内 → base → primary ns の登録
 #
@@ -222,6 +224,41 @@ sub on_expand {
       : 0
   } qw(from to);
   $result->{list} = "$from .. $to";
+  $result;
+}
+1;
+END
+
+  "$libdir/TestArgMacro/SrcList.pm" => <<'END',
+package TestArgMacro::SrcList;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw(list=list)],
+  in  => [qw(src)];
+
+# src の node をそのまま list に (受け手の pass through 規則に任せる)
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars) = @_;
+  my Result $result = {};
+  $result->{list} = $args->{src};
+  $result;
+}
+1;
+END
+
+  "$libdir/TestArgMacro/SrcVal.pm" => <<'END',
+package TestArgMacro::SrcVal;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw(val=value)],
+  in  => [qw(src)];
+
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars) = @_;
+  my Result $result = {};
+  $result->{val} = $args->{src};
   $result;
 }
 1;
@@ -672,6 +709,70 @@ END
 
   it "should return the result with renaming in list context", sub {
     expect($site->render("renamed"))->to_match(qr/2,3,4/);
+  };
+};
+
+describe "on_expand returning arg node", sub {
+  my $site = $make_app->(
+    {srcval => 'TestArgMacro::SrcVal'},
+    '.htyattrc.pl' => <<'END',
+use YATT::Lite::Macro;
+require TestArgMacro::SrcList;
+
+Macro foreach => sub {
+  my ($self, $node, @rest) = @_;
+  $node = TestArgMacro::SrcList->expand_element($self, $node);
+  $self->YATT::Lite::CGen::Perl::macro_foreach($node, @rest);
+};
+END
+    'notlist.yatt' => <<'END',
+<!yatt:args>
+<yatt:foreach my=x list="1..1">
+<yatt:foreach my=i src=x>[&yatt:i;]</yatt:foreach>
+</yatt:foreach>
+END
+    'list.yatt' => <<'END',
+<yatt:w items="7,8"/>
+
+<!yatt:widget w items=list>
+<yatt:foreach my=i src=items>[&yatt:i;]</yatt:foreach>
+END
+    'text.yatt' => <<'END',
+<yatt:foreach my=i src="3..4">[&yatt:i;]</yatt:foreach>
+END
+    'widget.yatt' => <<'END',
+<yatt:foreach my=x list="1..2"><yatt:w src=x/></yatt:foreach>
+
+<!yatt:widget w %srcval;>
+[&yatt:val;]
+END
+    'nameonly.yatt' => <<'END',
+<yatt:foreach my=src list="5..5"><yatt:w src/></yatt:foreach>
+
+<!yatt:widget w %srcval;>
+[&yatt:val;]
+END
+  );
+
+  it "should let the receiver check the passed variable", sub {
+    expect($compile_err->($site, "notlist"))
+      ->to_match(qr{x should be list type});
+  };
+
+  it "should pass through list variable to foreach", sub {
+    expect($site->render("list"))->to_match(qr/\[7\]\[8\]/);
+  };
+
+  it "should pass text node to foreach as expression", sub {
+    expect($site->render("text"))->to_match(qr/\[3\]\[4\]/);
+  };
+
+  it "should pass through variable to widget arg", sub {
+    expect($site->render("widget"))->to_match(qr/\[1\]\s*\[2\]/);
+  };
+
+  it "should pass through name only arg as renamed", sub {
+    expect($site->render("nameonly"))->to_match(qr/\[5\]/);
   };
 };
 
