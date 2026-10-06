@@ -106,9 +106,12 @@ sub apply_argmacro {
 
   ($result, map {
     my $attName = $_->[NODE_PATH];
-    create_attribute(
-      $attName, $result->{$argmacro->{resolve_map}{$attName}}
-    );
+    my $value = $result->{$argmacro->{resolve_map}{$attName}};
+    # 引数 node が返されたら、出力名に付け替えて渡す
+    # (pass through の扱いは受け手に任せる)
+    ref $value eq 'ARRAY'
+      ? copy_attribute_renamed_as($value, $attName)
+      : create_attribute($attName, $value);
   } @{$argmacro->{output_args}});
 }
 
