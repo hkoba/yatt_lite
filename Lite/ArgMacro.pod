@@ -180,6 +180,14 @@ Note that each value is cast to the type of the output arg.
 So for C<value>, C<list> etc., the value works as a Perl expression,
 while for C<text> or C<html>, it is a literal text.
 
+A value can also be an arg node, like C<< $result->{list} = $args->{src} >>.
+Then the node is passed as the output arg (renamed), and the receiver
+handles it as if the caller wrote it directly. So passing through
+a variable (C<src=items>) follows the rules of the receiver: escaping for
+widget args, type check of C<list=> for C<< <yatt:foreach> >> etc.
+An arg without value (C<src>) is passed as C<list=src>.
+(This corresponds to C<copy_node_renamed_as> of old YATT.)
+
 =head2 Helpers of $cgen
 
 Typical argmacros build an expression (like calls of entity functions)
