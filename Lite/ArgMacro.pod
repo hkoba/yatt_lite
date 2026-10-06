@@ -271,6 +271,50 @@ This applies to argmacros declared in templates too.
 (Old YATT called this I<disabled> mode, whose result depended on the
 order of attributes.)
 
+=head1 EXPANDING IN ELEMENT MACROS
+
+An argmacro module can also be expanded on attributes of an element
+handled by an ordinary (element) macro like C<< <yatt:foreach> >>.
+This is useful to add options to builtin macros.
+For example, in F<.htyattrc.pl>:
+
+  use YATT::Lite::Macro;
+  use MyApp::ArgMacro::FileReader; # in: file, out: list=list
+
+  Macro foreach => sub {
+    my ($self, $node, @rest) = @_;
+    $node = MyApp::ArgMacro::FileReader->expand_element($self, $node);
+    $self->YATT::Lite::CGen::Perl::macro_foreach($node, @rest);
+  };
+
+Then C<< <yatt:foreach my=row file="data.csv"> >> is processed as
+C<< <yatt:foreach my=row list="..."> >>.
+
+=head2 Module->expand_element($cgen, $node, rename => 'to=from')
+
+If the element C<$node> has any input args of the macro, returns a new node
+whose input args are replaced with the output args (put after the other
+args). Otherwise returns C<$node> itself. In list context, returns
+C<($node, $result)> where C<$result> is the hash returned by C<on_expand>
+(undef if not expanded).
+
+=over 4
+
+=item * C<on_expand> gets the element as C<$node>, and C<$cgen> has the
+scope of the element (so L</"Helpers of $cgen"> work as usual).
+
+=item * The same L</"BYPASS BY EXPLICIT OUTPUT"> rule applies.
+
+=item * C<rename> is same as C<%name(to=from);>.
+
+=item * Refer args are given as C<$args>, but C<$vars> for them are undef
+(there is no widget).
+
+=back
+
+This corresponds to C<< YATT::ArgMacro->create_from($trans, $scope, $args, $rename) >>
+of old YATT, which returned C<($macro, $copy)>.
+
 =head1 REGISTRATION
 
 Argmacro modules are registered by C<argmacro> option of
