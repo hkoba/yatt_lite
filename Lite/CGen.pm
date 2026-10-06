@@ -5,6 +5,8 @@ use Carp;
 
 use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
 
+use YATT::Lite::Util::AsBase qw/-as_base import/;
+
 use base qw(YATT::Lite::VarMaker);
 use YATT::Lite::MFields qw/_curtmpl _curwidget _curtoks
 	      _altgen _needs_escaping _depth
