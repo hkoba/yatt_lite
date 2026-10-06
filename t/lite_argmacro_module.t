@@ -12,6 +12,8 @@
 #    $cgen->try_pass_through / as_cast_node_to / as_expr_node
 #    (旧 YATT の try_pass_through / faked_gentype / faked_genexpr)、
 #    行番号付きエラーは $cgen->generror_at
+#  - Module->expand_element($cgen, $node) で、通常のマクロ (foreach 等) の
+#    要素の属性に展開できる (旧 YATT の create_from)
 #  - argmacro => [[ns => {name => 'Module'}], {...}] で名前空間付き登録。
 #    %ns:name; は登録表のみ、%name; はページ内 → base → primary ns の登録
 #
@@ -197,6 +199,29 @@ sub on_expand {
   my Result $result = {};
   $result->{val} = $cgen->try_pass_through($args->{src})
     // die $cgen->generror_at($node->[NODE_LNO], q{src must be a variable});
+  $result;
+}
+1;
+END
+
+  "$libdir/TestArgMacro/Range.pm" => <<'END',
+package TestArgMacro::Range;
+use strict;
+use warnings;
+use YATT::Lite::ArgMacro
+  out => [qw(list=list)],
+  in  => [qw(from to)];
+
+sub on_expand {
+  (my MY $class, my CGen $cgen, my Args $args, my Vars $vars
+   , my ArgMacro $argmacro, my $node) = @_;
+  my Result $result = {};
+  my ($from, $to) = map {
+    $args->{$_} ? ($cgen->try_pass_through($args->{$_})
+                   // $cgen->as_expr_node($args->{$_}, 0))
+      : 0
+  } qw(from to);
+  $result->{list} = "$from .. $to";
   $result;
 }
 1;
@@ -583,6 +608,70 @@ END
 
   it "should be usable in argmacro declared in template", sub {
     expect($site->render("tmpl"))->to_match(qr/\[1\]\s*\[2\]/);
+  };
+};
+
+describe "expand_element in element macros", sub {
+  my $site = $make_app->(
+    {},
+    '.htyattrc.pl' => <<'END',
+use YATT::Lite::Macro;
+require TestArgMacro::Range;
+
+# 組み込みの foreach に、from= to= を足す
+Macro foreach => sub {
+  my ($self, $node, @rest) = @_;
+  $node = TestArgMacro::Range->expand_element($self, $node);
+  $self->YATT::Lite::CGen::Perl::macro_foreach($node, @rest);
+};
+
+# rename した出力を、展開結果から直接使う
+Macro show => sub {
+  my ($self, $node) = @_;
+  my (undef, $result)
+    = TestArgMacro::Range->expand_element($self, $node, rename => 'n=from');
+  \ sprintf(q{print $CON join(",", %s);}, $result->{list});
+};
+END
+    'range.yatt' => <<'END',
+<yatt:foreach my=i from=1 to=3>[&yatt:i;]</yatt:foreach>
+END
+    'passthru.yatt' => <<'END',
+<yatt:foreach my=x list="2..2"><yatt:foreach my=i from=x to=3>[&yatt:i;]</yatt:foreach></yatt:foreach>
+END
+    'plain.yatt' => <<'END',
+<yatt:foreach my=i list="5..6">[&yatt:i;]</yatt:foreach>
+END
+    'renamed.yatt' => <<'END',
+<yatt:show n=2 n_to=4/>
+END
+    'bypass.yatt' => <<'END',
+<!yatt:args>
+
+<yatt:foreach my=i
+  list="1..2" from=1 to=2>[&yatt:i;]</yatt:foreach>
+END
+  );
+
+  it "should report bypass error with the line of the element", sub {
+    expect($compile_err->($site, "bypass"))
+      ->to_match(qr{argmacro %TestArgMacro::Range; is bypassed by explicit output 'list'; input 'from' can't be given at file \S+/bypass.yatt line 3\b});
+  };
+
+  it "should expand argmacro in element macro", sub {
+    expect($site->render("range"))->to_match(qr/\[1\]\[2\]\[3\]/);
+  };
+
+  it "should pass through variables in the scope of the element", sub {
+    expect($site->render("passthru"))->to_match(qr/\[2\]\[3\]/);
+  };
+
+  it "should keep the element as is without triggers", sub {
+    expect($site->render("plain"))->to_match(qr/\[5\]\[6\]/);
+  };
+
+  it "should return the result with renaming in list context", sub {
+    expect($site->render("renamed"))->to_match(qr/2,3,4/);
   };
 };
 
