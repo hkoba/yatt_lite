@@ -180,4 +180,63 @@ sub on_expand {
   croak "$class must implement on_expand";
 }
 
+#
+# 通常のマクロ (macro_foreach 等) の中で、要素 $node の属性にこの argmacro を
+# 展開する (旧 YATT の YATT::ArgMacro->create_from に相当)。
+#
+#   $node = MyApp::ArgMacro::Foo->expand_element($cgen, $node, rename => 'x=foo');
+#
+# トリガー (in) が有れば、それを出力属性に置き換えた新しい node を返す。
+# 無ければ元の $node を返す。リストコンテキストでは ($node, $result)。
+#
+sub expand_element {
+  my ($class, $cgen, $node, %opts) = @_;
+  my ($toName, $fromName) = do {
+    if (defined(my $rename = delete $opts{rename})) {
+      my @match = $rename =~ m{^(\w+)=(\w+)\z}
+        or croak "Invalid rename spec '$rename'";
+      @match;
+    } else {
+      ();
+    }
+  };
+  if (keys %opts) {
+    croak "Unknown options for expand_element: ".join(", ", sort keys %opts);
+  }
+
+  require YATT::Lite::CGen::ArgMacro;
+  my ($instName, $instance, $triggers, $outputs)
+    = YATT::Lite::CGen::ArgMacro->instantiate(
+      $class->argmacro_part_for($cgen), $toName, $fromName
+    );
+
+  my ($newPrimary, $results) = YATT::Lite::CGen::ArgMacro->expand_args(
+    $cgen, $cgen->node_unwrap_attlist($node->[NODE_ATTLIST]), $node, undef,
+    [$instName], {$instName => $instance},
+    {map {$_ => [$instName, $triggers->{$_}]} keys %$triggers},
+    {map {$_ => [$instName, $outputs->{$_}]} keys %$outputs},
+  );
+
+  my $result = $results && $results->{$instName};
+  my $newNode = do {
+    if ($result) {
+      my $copy = [@$node];
+      $copy->[NODE_ATTLIST] = $newPrimary;
+      $copy;
+    } else {
+      $node;
+    }
+  };
+
+  wantarray ? ($newNode, $result) : $newNode;
+}
+
+# この module の Core::ArgMacro (VFS 毎に一度だけ作る)
+sub argmacro_part_for {
+  my ($class, $cgen) = @_;
+  my $vfs = $cgen->{vfs};
+  $vfs->{_argmacro_module_cache}{"class:$class"}
+    //= $class->as_argmacro_part($vfs->get_parser, $class);
+}
+
 1;
