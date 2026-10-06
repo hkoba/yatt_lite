@@ -492,7 +492,7 @@ sub import_resolve_source {
         or $vfs->synerror($state, q{No such import path: %s}, $fn);
     } else {
       defined(my $realfn = $vfs->resolve_path_from($tmpl, $fn))
-        or $vfs->synerror($state, q{Can't find object path for import: %s}, $fn);
+        or $vfs->synerror($state, qq{Can\'t find object path for import: %s}, $fn);
 
       -e $realfn
         or $vfs->synerror($state, q{No such import path: %s}, $realfn);

@@ -45,7 +45,7 @@ sub expand_all_argmacro {
   foreach my $instName (@{$widget->{_argmacro_instance_list}}) {
     next unless $found{$instName} and $bypass{$instName};
     die $cgen->generror(
-      q{argmacro %s is bypassed by explicit output '%s'; input '%s' can't be given}
+      qq{argmacro %s is bypassed by explicit output '%s'; input '%s' can\'t be given}
       , $widget->{_argmacro_instance_dict}{$instName}->call_spec
       , $bypass{$instName}, $firstInput{$instName}
     );
