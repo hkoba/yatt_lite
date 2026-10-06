@@ -149,6 +149,16 @@ sub lxnest {
 }
 
 #========================================
+sub create_attribute {
+  my ($attName, $text) = @_;
+  my $node = [];
+  $node->[NODE_TYPE] = TYPE_ATT_TEXT;
+  $node->[NODE_PATH] = $attName;
+  $node->[NODE_BODY] = $text;
+  $node;
+}
+
+#========================================
 my $symtab = YATT::Lite::Util::symtab(__PACKAGE__);
 our @EXPORT = grep {*{$symtab->{$_}}{CODE}} keys %$symtab;
 our @EXPORT_OK = @EXPORT;

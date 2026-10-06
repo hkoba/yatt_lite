@@ -81,11 +81,9 @@ sub apply_argmacro {
 
   map {
     my $attName = $_->[NODE_PATH];
-    my $node = [];
-    $node->[NODE_TYPE] = TYPE_ATT_TEXT;
-    $node->[NODE_PATH] = $attName;
-    $node->[NODE_BODY] = $result->{$argmacro->{resolve_map}{$attName}};
-    $node;
+    create_attribute(
+      $attName, $result->{$argmacro->{resolve_map}{$attName}}
+    );
   } @{$argmacro->{output_args}}
 
 }
