@@ -23,6 +23,9 @@ use YATT::Lite::MFields qw/namespace debug_cgen no_lineinfo check_lineno
 	      prefer_call_for_entity
 	      no_conditional_call
               pagevars
+              argmacro
+              _argmacro_registry
+              _argmacro_module_cache
 
 	      _n_compiles
 	    /;
@@ -44,6 +47,7 @@ use YATT::Lite::Breakpoint ();
                        _argmacro_instance_dict
                        _argmacro_instance_list
                        _argmacro_trigger_dict
+                       _argmacro_output_dict
                        _decllist
 		       namespace kind folder data
                        decl
@@ -71,6 +75,7 @@ use YATT::Lite::Breakpoint ();
            from_name
            rename_map
            resolve_map
+           refer_names
          )]
        ]
       # <!yatt:import> が作る alias Part。実体は持たず、lookup 時に
@@ -236,6 +241,16 @@ use YATT::Lite::Breakpoint ();
     (my Part $part, my Folder $folder) = @_;
     Scalar::Util::weaken($part->{folder} = $folder);
     # die "Can't weaken!" unless Scalar::Util::isweak($part->{folder});
+  }
+
+  # "%name;" or "%name(to=from);" (for error messages)
+  sub YATT::Lite::Core::ArgMacro::call_spec {
+    (my ArgMacro $argmacro) = @_;
+    '%' . $argmacro->{name}
+      . ($argmacro->{to_name}
+         ? "($argmacro->{to_name}=" . ($argmacro->{from_name} // '') . ")"
+         : '')
+      . ';';
   }
 
   sub YATT::Lite::Core::ArgMacro::clone_with_renamespec {
@@ -477,7 +492,7 @@ sub import_resolve_source {
         or $vfs->synerror($state, q{No such import path: %s}, $fn);
     } else {
       defined(my $realfn = $vfs->resolve_path_from($tmpl, $fn))
-        or $vfs->synerror($state, q{Can't find object path for import: %s}, $fn);
+        or $vfs->synerror($state, qq{Can\'t find object path for import: %s}, $fn);
 
       -e $realfn
         or $vfs->synerror($state, q{No such import path: %s}, $realfn);
@@ -554,7 +569,96 @@ sub _find_kind_part__argmacro {
     return $baseTmpl->{_argmacro_dict}{$name}
       if $baseTmpl->{_argmacro_dict} && $baseTmpl->{_argmacro_dict}{$name};
   }
-  undef;
+  # find_argmacro と同じく、最後に Site 設定 (argmacro => ...) の primary ns
+  $vfs->find_argmacro_module(undef, undef, $name);
+}
+
+#
+# argmacro の登録エラーは parse 時を待たず、構築時に報告する
+#
+sub after_new {
+  (my MY $vfs) = @_;
+  $vfs->SUPER::after_new;
+  $vfs->argmacro_registry if $vfs->{argmacro};
+}
+
+# LRXML の既定 namespace と同じ
+sub argmacro_namespace_list {
+  (my MY $vfs) = @_;
+  my @nslist = lexpand($vfs->{namespace});
+  @nslist ? @nslist : qw(yatt perl);
+}
+
+#
+# Site 設定 argmacro を {$ns}{$name} => 'Module' に正規化して返す。
+#
+#   argmacro => {name => 'Module', ...}
+#   argmacro => [[ns => {name => 'Module', ...}], {name => 'Module'}, ...]
+#
+# 名前空間無しの登録は primary ns (namespace の先頭) での登録と同義。
+# (ns, name) の重複、namespace に無い ns、形式不正は登録エラー。
+#
+sub argmacro_registry {
+  (my MY $vfs) = @_;
+  $vfs->{_argmacro_registry} //= do {
+    my @nslist = $vfs->argmacro_namespace_list;
+    my %known; $known{$_} = 1 for @nslist;
+    my $die = sub {
+      my ($fmt, @args) = @_;
+      die $vfs->error({depth => 3}, $fmt, @args);
+    };
+    my %registry;
+    my $spec = $vfs->{argmacro};
+    foreach my $item (ref $spec eq 'ARRAY' ? @$spec : ($spec // ())) {
+      my ($ns, $dict) = ref $item eq 'ARRAY' ? @$item
+        : (undef, $item);
+      if (ref $item eq 'ARRAY' and @$item != 2
+          or ref $dict ne 'HASH') {
+        $die->(q{Invalid argmacro registration: %s}
+               , terse_dump($item));
+      }
+      if (defined $ns and not $known{$ns}) {
+        $die->(q{Unknown namespace '%s' in argmacro registration}, $ns);
+      }
+      $ns //= $nslist[0];
+      foreach my $name (sort keys %$dict) {
+        $name =~ /^\w+\z/
+          or $die->(q{Invalid argmacro name '%s'}, $name);
+        $registry{$ns}{$name}
+          and $die->(q{Duplicate argmacro registration '%s:%s'}, $ns, $name);
+        $registry{$ns}{$name} = $dict->{$name};
+      }
+    }
+    \%registry;
+  };
+}
+
+#
+# Site 設定 argmacro で ($ns, $name) に登録された ArgMacro を返す。
+# $ns が undef なら primary ns。
+# Module は YATT::Lite::ArgMacro を use して定義する(1 pm = 1 macro)。
+# Core::ArgMacro は VFS 単位で一度だけ作り、ここで strong に保持する。
+#
+sub find_argmacro_module {
+  (my MY $vfs, my ParsingState $state, my ($ns, $name)) = @_;
+  return undef unless $vfs->{argmacro};
+  $ns //= ($vfs->argmacro_namespace_list)[0];
+  my $pkg = $vfs->argmacro_registry->{$ns}{$name}
+    or return undef;
+
+  $vfs->{_argmacro_module_cache}{"$ns:$name"} //= do {
+    my $die = sub {
+      my ($fmt, @args) = @_;
+      $state ? $vfs->synerror($state, $fmt, @args)
+        : die $vfs->error({depth => 2}, $fmt, @args);
+    };
+    YATT::Lite::Util::ckrequire($pkg);
+    unless (UNIVERSAL::isa($pkg, 'YATT::Lite::ArgMacro')) {
+      $die->(q{argmacro module '%s' for '%s' is not a YATT::Lite::ArgMacro}
+             , $pkg, $name);
+    }
+    $pkg->as_argmacro_part($vfs->get_parser, $name, $ns);
+  };
 }
 
 sub import_find_source_part {

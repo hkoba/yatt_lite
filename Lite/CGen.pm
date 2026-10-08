@@ -5,6 +5,8 @@ use Carp;
 
 use constant DEBUG_REBUILD => $ENV{DEBUG_YATT_REBUILD};
 
+use YATT::Lite::Util::AsBase qw/-as_base import/;
+
 use base qw(YATT::Lite::VarMaker);
 use YATT::Lite::MFields qw/_curtmpl _curwidget _curtoks
 	      _altgen _needs_escaping _depth
@@ -164,6 +166,13 @@ sub generror {
   my Template $tmpl = $self->{_curtmpl};
   my ($pkg, $file, $line) = caller;
   my %opts = ($self->_tmpl_file_line($self->{_curline}), callerinfo());
+  $self->_error(\%opts, @_);
+}
+# generror の行番号指定版 (LRXML の synerror_at に相当)。
+# 例: die $cgen->generror_at($node->[NODE_LNO], ...)
+sub generror_at {
+  (my MY $self, my $ln) = splice @_, 0, 2;
+  my %opts = ($self->_tmpl_file_line($ln // $self->{_curline}), callerinfo());
   $self->_error(\%opts, @_);
 }
 sub _error {

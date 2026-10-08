@@ -120,6 +120,18 @@ restore the old merged behavior.
 Package name of the I<pagevars module>, which defines per-page
 compile-time constants for templates. See L<YATT::Lite::PageConsts>.
 
+=head2 argmacro
+
+Hash of argmacro name to the Perl module which defines it,
+like C<< {enum => 'MyApp::ArgMacro::Enum'} >>.
+Templates can use them as C<%enum;> without C<< <!yatt:argmacro> >>.
+
+To register them in a namespace, give a list of hashes, each optionally
+paired with a namespace, like
+C<< [[myorg => {enum => 'MyApp::ArgMacro::Enum'}], {...}] >>.
+Then templates use it as C<%myorg:enum;>.
+See L<YATT::Lite::ArgMacro/REGISTRATION>.
+
 =head2 psgi_static
 
 Requests other than F<*.yatt>, F<*.ytmpl>, F<*.ydo> are passed to this PSGI app.

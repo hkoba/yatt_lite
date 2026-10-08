@@ -23,6 +23,8 @@ Lite/agent_docs/reports/import-naive-item-copy/02_stale_meta_after_source_edit.p
 Lite/agent_docs/reports/import-naive-item-copy/03_ghost_part_after_delete.pl
 Lite/agent_docs/reports/import-naive-item-copy/04_circular_reference.pl
 Lite/agent_docs/reports/import-naive-item-copy/05_partlist_recompile_context_shift.pl
+Lite/ArgMacro.pm
+Lite/ArgMacro.pod
 Lite/Breakpoint.pm
 Lite/CGen.pm
 Lite/CGen/ArgMacro.pm
@@ -711,6 +713,7 @@ t/langserver_transport.t
 t/lib/.symlinks
 t/lineno.t
 t/lite.t
+t/lite_argmacro_module.t
 t/lite_import.t
 t/lite_xhf.t
 t/lrxml.t
