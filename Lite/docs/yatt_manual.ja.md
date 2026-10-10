@@ -264,6 +264,15 @@ body は (明示的に宣言しない限り) `code` 型とされます。
 </div>
 ```
 
+body の出力は、`<yatt:my>` の閉じタグ形式で
+変数に取り込むことも出来ます。
+
+```html
+<!yatt:widget foo>
+<yatt:my content>&yatt:body();</yatt:my>
+...&yatt:content;...
+```
+
 ## attribute element
 
 閉じタグを使う `<yatt:...> ... </yatt:...>`形式で
@@ -325,6 +334,18 @@ yatt のタグは widget の呼び出しだけではなく、
   <h2>foobar</h2>
 </yatt:my>
 ```
+
+本体の中で widget や [body](#body-argument) などの ["code"](#code) 型の引数を呼び出すと、
+その出力はその場には出力されず、変数の値に取り込まれます。
+
+```html
+<yatt:my foo>
+  <yatt:bar/> &yatt:body();
+</yatt:my>
+```
+
+(属性値の中で呼び出した場合も取り込まれますが、型が ["text"](#text) なので、
+取り込んだ html は出力時に escape されます。)
 
 ## `yatt:if`, `:yatt:else`
  
@@ -1089,6 +1110,20 @@ widget の場合、更に引数の型指定が可能です。
 </yatt:foreach>
 ```
 
+`code` 型の値は、widget と同じく出力を書き込む関数 (renderer) です。
+Perl 側では、第一引数に出力先の `$CON` を受け取り、
+その後に宣言した引数が続く closure になっています。
+Perl のコードから呼び出すときは、`$CON` を渡してください。
+
+```perl
+$body->($CON);
+$author->($CON, $name, $url);
+```
+
+**(Compatibility)** 以前は `$CON` を受け取らず、
+呼び出し元の `$CON` に書き込んでいました (`$body->()`)。
+そのため `<yatt:my>` で出力を取り込むことが出来ませんでした (GH-293)。
+
 ## `expr`
 
 
@@ -1132,6 +1167,7 @@ widget の場合、更に引数の型指定が可能です。
 `x=y` のように受け渡すこと。
 
 Perl 側では、引数を受け取って値を返す普通の関数 (CODE ref) です。
+`code` 型と違い、`$CON` は受け取りません。
 [YATT::Lite::PageConsts](https://metacpan.org/pod/YATT%3A%3ALite%3A%3APageConsts) の CODE 定数は、この型になります。
 
 **(Compatibility)** 以前は `expr` は `code` の別名でした。
