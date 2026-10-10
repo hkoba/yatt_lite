@@ -337,10 +337,13 @@ use YATT::Lite::Constants;
       };
       my $expr = $sub->($self, $node);
       next unless defined $expr;
-      if (ref $expr) {
-	die $self->generror("Syntax error, not allowed here: %s", $$expr);
-      }
-      push @result, $expr;
+      push @result, do {
+        if (ref $expr) {
+          sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$expr;
+        } else {
+          $expr;
+        }
+      };
     }
     wantarray ? @result : join("", @result);
   }
