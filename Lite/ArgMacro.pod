@@ -375,6 +375,33 @@ With the example above:
 Modified modules are not reloaded. Restart the process
 (like L<YATT::Lite::PageConsts>).
 
+=head1 PART OPTIONS
+
+In the namespace C<yatt> (literally), the argmacro syntax also sets
+options of the part being declared:
+
+  <!yatt:widget foo %yatt:no_last_newline;>
+  <!yatt:args %yatt:no_last_newline(0);>
+
+C<%yatt:NAME(VALUE);> calls C<< $part->configure(yatt_NAME => VALUE) >>,
+and C<%yatt:NAME;> is the same as C<%yatt:NAME(1);>.
+Only fields of the part whose name starts with C<yatt_> can be set this way.
+VALUE must be a single literal; more values or variables are errors.
+
+If the part has no field C<yatt_NAME>, C<%yatt:NAME;> is looked up as an
+argmacro as described above. So part options take precedence over
+argmacros of the same name registered in the namespace C<yatt>.
+
+Currently following options are available:
+
+=over 4
+
+=item no_last_newline
+
+Do not output the last newline of the part body.
+
+=back
+
 =head1 SEE ALSO
 
 L<YATT::Lite::CGen::ArgMacro>, L<YATT::Lite::WebMVC0::SiteApp>
