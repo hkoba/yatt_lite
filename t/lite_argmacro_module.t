@@ -18,6 +18,8 @@
 #    (pass through の検査は受け手が行う)
 #  - argmacro => [[ns => {name => 'Module'}], {...}] で名前空間付き登録。
 #    %ns:name; は登録表のみ、%name; はページ内 → base → primary ns の登録
+#  - %yatt:NAME; / %yatt:NAME(VALUE); は part の option yatt_NAME を設定する
+#    (yatt_NAME が Part の field に無ければ argmacro の探索に落ちる)
 #
 #----------------------------------------
 use strict;
@@ -807,6 +809,73 @@ describe "declaration errors", sub {
   it "should reject unsupported types", sub {
     expect($declare->(out => [qw(a)], in => [qw(b=code)]))
       ->to_match(qr/not supported/);
+  };
+};
+
+describe "part option by %yatt:NAME;", sub {
+  my $widget = sub {
+    my ($decl) = @_;
+    <<END;
+[<yatt:w/>]
+<!yatt:widget w $decl>
+abc
+END
+  };
+  my $site = $make_app->(
+    # 名前空間無しの登録は primary ns (yatt) に入る
+    {pair => 'TestArgMacro::Pair', no_last_newline => 'TestArgMacro::SrcA'},
+    'plain.yatt' => $widget->(''),
+    'flag.yatt' => $widget->('%yatt:no_last_newline;'),
+    'on.yatt' => $widget->('%yatt:no_last_newline(1);'),
+    'off.yatt' => $widget->('%yatt:no_last_newline(0);'),
+    'page.yatt' => <<'END',
+<!yatt:args %yatt:no_last_newline;>
+abc
+END
+    'multi.yatt' => $widget->('%yatt:no_last_newline(1,2);'),
+    'var.yatt' => $widget->('%yatt:no_last_newline(:x);'),
+    'pair.yatt' => <<'END',
+<yatt:w pair="3, 8"/>
+<!yatt:widget w %yatt:pair;>
+x=&yatt:x; y=&yatt:y;
+END
+    'nosuch.yatt' => $widget->('%yatt:nosuch;'),
+  );
+
+  it "should keep last newline without option", sub {
+    expect($site->render("plain"))->to_be("[abc\n]\n");
+  };
+
+  it "should drop last newline of widget", sub {
+    expect($site->render("flag"))->to_be("[abc]\n");
+  };
+
+  it "should accept explicit value", sub {
+    expect($site->render("on"))->to_be("[abc]\n");
+    expect($site->render("off"))->to_be("[abc\n]\n");
+  };
+
+  it "should drop last newline of page", sub {
+    expect($site->render("page"))->to_be("abc");
+  };
+
+  it "should reject multiple values", sub {
+    expect($compile_err->($site, "multi"))
+      ->to_match(qr/Too many values for part option 'no_last_newline'.* line 2/);
+  };
+
+  it "should reject non-text value", sub {
+    expect($compile_err->($site, "var"))
+      ->to_match(qr/Invalid value for part option 'no_last_newline'.* line 2/);
+  };
+
+  it "should fall back to argmacro in primary ns", sub {
+    expect($site->render("pair"))->to_match(qr/x=3 y=8/);
+  };
+
+  it "should report unknown argmacro as before", sub {
+    expect($compile_err->($site, "nosuch"))
+      ->to_match(qr/Unknown argmacro 'yatt:nosuch'/);
   };
 };
 

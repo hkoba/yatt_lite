@@ -13,7 +13,7 @@ use YATT::Lite::MFields qw/_curtmpl _curwidget _curtoks
 	      cgen_loader
 	      only_parse
 	      no_lineinfo check_lineno
-	      _no_last_newline
+	      yatt_no_last_newline
 	      vfs parser sink
 	      _scope
 	      lcmsg_sink
@@ -98,14 +98,20 @@ sub generate {
     my Part $part = $_;
     if (not $kind or not $self->{only_parse}
 	or $kind eq $part->{kind}) {
-      my $sub = $self->can("generate_$part->{kind}")
-	or die $self->generror("Can't generate part type: '%s'"
-			       , $part->{kind});
-      $sub->($self, $part, $part->{name}, $tmpl->{path});
+      $self->generate_part($tmpl, $part);
     } else {
       ();
     }
   } @{$tmpl->{_partlist}});
+}
+
+sub generate_part {
+  (my MY $self, my Template $tmpl, my Part $part) = @_;
+  my $sub = $self->can("generate_$part->{kind}")
+    or die $self->generror("Can't generate part type: '%s'"
+                           , $part->{kind});
+  local $self->{yatt_no_last_newline} = $part->{yatt_no_last_newline};
+  $sub->($self, $part, $part->{name}, $tmpl->{path});
 }
 
 sub generate_page_scope {

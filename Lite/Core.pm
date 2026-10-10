@@ -55,6 +55,7 @@ use YATT::Lite::Breakpoint ();
 		       startln bodyln endln
 		       startpos bodypos bodylen
 		       subpattern
+                       yatt_no_last_newline
 		     )]
       , -constants => [[public => 0]]
       , [Widget => -fields => [qw(_tree _var_dict _has_required_arg)]

@@ -1282,6 +1282,8 @@ sub add_argmacro {
   (my MY $self, my Part $part, my $node) = @_;
   # widget 宣言の中で argmacro を呼び出す
 
+  return if $self->add_part_option($part, $node);
+
   my ArgMacro $argmacro = $self->find_argmacro($node);
 
   require YATT::Lite::CGen::ArgMacro;
@@ -1294,6 +1296,46 @@ sub add_argmacro {
   );
 
   return;
+}
+
+# %yatt:NAME; / %yatt:NAME(VALUE); → $part->configure(yatt_NAME => VALUE // 1)
+# Part に yatt_NAME field が無ければ偽を返し、argmacro の探索に任せる。
+sub add_part_option {
+  (my MY $self, my Part $part, my $node) = @_;
+
+  my $ns = $node->[NODE_PATH];
+  return unless defined $ns and $ns eq 'yatt';
+
+  my ($head, @rest) = @{$node}[NODE_BODY .. $#$node];
+  return if @rest; # %yatt:a:b; は find_argmacro でエラーにする
+
+  my ($call, $name, @args) = @$head;
+  return unless $call eq 'prop' or $call eq 'invoke';
+
+  my $optName = "yatt_$name";
+  return unless exists YATT::Lite::Util::fields_hash($part)->{$optName};
+
+  if (@args >= 2) {
+    die $self->synerror_at($node->[NODE_LNO]
+                           , "Too many values for part option '%s'"
+                           , $name);
+  }
+
+  my $value = do {
+    if (not @args) {
+      1;
+    } elsif ($args[0][0] eq 'text') {
+      $args[0][1];
+    } else {
+      die $self->synerror_at($node->[NODE_LNO]
+                             , "Invalid value for part option '%s'"
+                             , $name);
+    }
+  };
+
+  $part->configure($optName => $value);
+
+  1;
 }
 
 sub find_argmacro {
