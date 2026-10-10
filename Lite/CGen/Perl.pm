@@ -286,7 +286,7 @@ use YATT::Lite::Constants;
 	$self->{_curline} += numLines($node);
 	$self->{_curline}++ if $has_nl;
 	push @queue, q{"\n"} if $has_nl
-	  and @{$self->{_curtoks}} || not $self->{_no_last_newline};
+	  and @{$self->{_curtoks}} || not $self->{yatt_no_last_newline};
 	$flush->($has_nl) if $has_nl || $node =~ /\n/;
 	next;
       }
@@ -679,7 +679,7 @@ use YATT::Lite::Constants;
     my Widget $virtual = $var->widget;
     local $self->{_scope} = $self->mkscope
       ({}, $virtual->{_arg_dict} ||= {}, $self->{_scope});
-    local $self->{_no_last_newline} = 1;
+    local $self->{yatt_no_last_newline} = 1;
     q|sub {|. join('', $self->gen_getargs($virtual)
 		   , $self->as_print("}"));
   }
@@ -1318,7 +1318,7 @@ sub take_spread_name {
 
     #    ...\n         ← not to remove this newline.
     # </yatt:foreach>
-    local $self->{_no_last_newline} = 0;
+    local $self->{yatt_no_last_newline} = 0;
 
     local $self->{_scope} = $self->mkscope(\%local, $self->{_scope});
     $statements .= $self->as_print('}');
