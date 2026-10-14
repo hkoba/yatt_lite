@@ -13,8 +13,7 @@ sub default_arg_type {'text'}
 sub default_type_alias {
   qw(value scalar
      flag    bool
-     boolean bool
-     expr code);
+     boolean bool);
 }
 
 sub after_new {

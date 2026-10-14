@@ -45,6 +45,10 @@ my $testno = 0;
       baz => "BAZZZ",
       qux => as_html("foo<b>bar</b>baz"),
     };
+    $PAGES{fncall} = +{
+      fn => sub {join "+", @_},
+      cond => sub {$_[0] > 1},
+    };
 
     MY->define_pages_from_hash(\%PAGES);
     MY->cli_run(\@ARGV) unless caller;
@@ -57,6 +61,12 @@ END
 
       MY->mkfile_may_wait("$dir/public/sub/another.yatt", <<'END');
 &yatt:baz; &yatt:qux;
+END
+
+      # CODE constants are expr: their return value is printed with escape,
+      # and usable as values in expressions (GH-294).
+      MY->mkfile_may_wait("$dir/public/fncall.yatt", <<'END');
+[&yatt:fn(1,<b>);]<yatt:if "&yatt:cond(2);">yes</yatt:if>
 END
 
       MY->mkfile_may_wait("$dir/public/uselayout.yatt", <<'END');
@@ -85,6 +95,9 @@ END
 
   is($site->render("sub/another"), "BAZZZ foo<b>bar</b>baz\n", q{pagevar sub/another});
 
+  is(eval {$site->render("fncall")} // "ERROR: $@", "[1+&lt;b&gt;]yes\n"
+     , "CODE pagevar is expr: called with args, value printed with escape");
+
   is(eval {$site->render("uselayout")} // "ERROR: $@", "QUX(dummy)\n\n"
      , "page using a widget from ytmpl (non-page template)");
 
@@ -111,7 +124,7 @@ END
 
   is([map {pagevars->const_type($_)}
       "str", 3, [1], {a => 1}, sub {}, pagevars::as_html("<b>")]
-     , [qw(text text list scalar code html)]
+     , [qw(text text list scalar expr html)]
      , "const_type");
 
   #========================================

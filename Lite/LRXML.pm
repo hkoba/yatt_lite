@@ -1431,6 +1431,11 @@ sub add_arg_of_type_code {
   $part->{_arg_dict}{$argName} = $var;
 }
 
+# expr 型の引数宣言 ([expr x y]) も、code と同じく仮想的な Widget に持たせる (GH-294)
+sub add_arg_of_type_expr {
+  shift->add_arg_of_type_code(@_);
+}
+
 sub add_arg_of_type_delegate {
   (my MY $self, my Widget $widget, my ($var, $attlist)) = @_;
   # XXX: 引数でない変数も足さないと...

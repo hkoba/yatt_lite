@@ -1065,9 +1065,10 @@ X<list>
 =head2 C<code>
 X<code>
 
-条件式や widget を渡したいときに使います。遅延評価されます。
+widget のように出力を書く処理を渡したいときに使います。遅延評価されます。
 widget の場合、更に引数の型指定が可能です。
 (L<暗黙の body 引数|/body argument>はこの型になります。)
+条件式など、値を計算する式を渡したいときは L</expr> 型を使います。
 
 
   <!yatt:widget myquote  author=[code name=text url=text]>
@@ -1077,6 +1078,53 @@ widget の場合、更に引数の型指定が可能です。
     <yatt:author name="&yatt:rec{name};" url="&yatt:rec{url};" />
    ...
   </yatt:foreach>
+
+=head2 C<expr>
+X<expr>
+
+条件式など、値を計算する式を渡したいときに使います。
+L</value> 型と違って遅延評価され、C<&yatt:x();> と呼び出すたびに計算されます。
+呼び出した結果は値なので、出力位置では escape して出力され、
+C<if> の条件や C<list> などの式の中ではそのまま値として使えます。
+
+  <yatt:foo cond="&yatt:x; > 2"/>
+
+  <!yatt:widget foo cond=expr>
+  <yatt:if "&yatt:cond();">
+    ...
+  </yatt:if>
+
+L</code> 型と同じく、引数の型指定が可能です。
+
+  <yatt:mylist dbl="&yatt:n; * 2"/>
+
+  <!yatt:widget mylist dbl=[expr n]>
+  <yatt:foreach my=i list="1..3">[&yatt:dbl(:i);]</yatt:foreach>
+
+この結果は以下のように表示されます。
+
+  [2][4][6]
+
+C<< <yatt:my f:expr="3 * 3"/> >> のように、変数を作ることも出来ます。
+
+C<expr> は widget ではないので、以下はエラーになります。
+
+=over 4
+
+=item * C<< <yatt:cond/> >> のように要素として呼び出すこと。
+
+=item * C<< <:yatt:cond>...</:yatt:cond> >> のように要素で渡すこと、
+C<< <yatt:my f:expr>...</yatt:my> >> のように本体を持たせること。
+
+=item * C<code> 型の変数と C<expr> 型の変数の間で、
+C<x=y> のように受け渡すこと。
+
+=back
+
+Perl 側では、引数を受け取って値を返す普通の関数 (CODE ref) です。
+L<YATT::Lite::PageConsts> の CODE 定数は、この型になります。
+
+B<(Compatibility)> 以前は C<expr> は C<code> の別名でした。
 
 =head2 XXX: C<attr>
 X<attr>

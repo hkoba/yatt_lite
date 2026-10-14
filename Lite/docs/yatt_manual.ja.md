@@ -1074,9 +1074,10 @@ ginger= "?"
 ## `code`
 
 
-条件式や widget を渡したいときに使います。遅延評価されます。
+widget のように出力を書く処理を渡したいときに使います。遅延評価されます。
 widget の場合、更に引数の型指定が可能です。
 ([暗黙の body 引数](#body-argument)はこの型になります。)
+条件式など、値を計算する式を渡したいときは [expr](#expr) 型を使います。
 
 ```html
 <!yatt:widget myquote  author=[code name=text url=text]>
@@ -1087,6 +1088,53 @@ widget の場合、更に引数の型指定が可能です。
  ...
 </yatt:foreach>
 ```
+
+## `expr`
+
+
+条件式など、値を計算する式を渡したいときに使います。
+[value](#value) 型と違って遅延評価され、`&yatt:x();` と呼び出すたびに計算されます。
+呼び出した結果は値なので、出力位置では escape して出力され、
+`if` の条件や `list` などの式の中ではそのまま値として使えます。
+
+```html
+<yatt:foo cond="&yatt:x; > 2"/>
+
+<!yatt:widget foo cond=expr>
+<yatt:if "&yatt:cond();">
+  ...
+</yatt:if>
+```
+
+[code](#code) 型と同じく、引数の型指定が可能です。
+
+```html
+<yatt:mylist dbl="&yatt:n; * 2"/>
+
+<!yatt:widget mylist dbl=[expr n]>
+<yatt:foreach my=i list="1..3">[&yatt:dbl(:i);]</yatt:foreach>
+```
+
+この結果は以下のように表示されます。
+
+```
+[2][4][6]
+```
+
+`<yatt:my f:expr="3 * 3"/>` のように、変数を作ることも出来ます。
+
+`expr` は widget ではないので、以下はエラーになります。
+
+- `<yatt:cond/>` のように要素として呼び出すこと。
+- `<:yatt:cond>...</:yatt:cond>` のように要素で渡すこと、
+`<yatt:my f:expr>...</yatt:my>` のように本体を持たせること。
+- `code` 型の変数と `expr` 型の変数の間で、
+`x=y` のように受け渡すこと。
+
+Perl 側では、引数を受け取って値を返す普通の関数 (CODE ref) です。
+[YATT::Lite::PageConsts](https://metacpan.org/pod/YATT%3A%3ALite%3A%3APageConsts) の CODE 定数は、この型になります。
+
+**(Compatibility)** 以前は `expr` は `code` の別名でした。
 
 ## XXX: `attr`
 

@@ -506,6 +506,7 @@ use YATT::Lite::Constants;
 	unless (my $passThruVar = passThruVar($_)) {
 	  $self->as_cast_to($formal, argValue($_));
 	} elsif (my $actual = $self->find_var($passThruVar)) {
+	  $self->ensure_callable_type_match($formal, $passThruVar, $actual);
 	  if ($formal->already_escaped and not $actual->already_escaped) {
 	    # 受け手が escape 済みを期待しているのに、送り手がまだ escape されてないケース
 	    $self->as_escaped($actual);
@@ -525,6 +526,10 @@ use YATT::Lite::Constants;
     foreach my $arg (lexpand($head), $body ? $body : (), lexpand($foot)) {
       my ($name, $expr) = @$arg[NODE_PATH, NODE_VALUE];
       my $formal = $add_arg->(ref $name ? $name->[-1] : $name);
+      if ($formal->is_type('expr')) {
+        die $self->generror(q{expr argument '%s' can't be given as an element}
+                             , $formal->varname);
+      }
       push @argExpr, ", ", $self->as_cast_to($formal, $expr);
     }
 
@@ -544,6 +549,15 @@ use YATT::Lite::Constants;
     sprintf q{(undef%s)[%s]}
       , join("", @argExpr), join(", ", map {defined $_ ? $_ : 0}
 				 @argOrder[0 .. $#{$widget->{_arg_order}}]);
+  }
+  # code (出力する renderer) と expr (値を返す関数) は、受け渡しで取り違えない (GH-294)
+  sub ensure_callable_type_match {
+    (my MY $self, my ($formal, $actualName, $actual)) = @_;
+    my ($want, $got) = map {$_->type->[0]} $formal, $actual;
+    return if $want eq $got;
+    return unless $want =~ /^(?:code|expr)\z/ and $got =~ /^(?:code|expr)\z/;
+    die $self->generror(q{Type mismatch for argument '%s': expected %s, but '%s' is %s}
+                        , $formal->varname, $want, $actualName, $got);
   }
   #========================================
   # argmacro の on_expand で、in 引数の node から式を組み立てるためのメソッド。
@@ -616,6 +630,13 @@ use YATT::Lite::Constants;
       , $self->gen_putargs($codeVar->widget, $node);
     # XXX: デフォルト body のように、引数宣言が無いケースも考慮せよ。
   }
+  # expr は値を返す関数で、widget ではない (GH-294)
+  sub as_varcall_expr {
+    (my MY $self, my ($var, $node)) = @_;
+    my ($path) = nx($node);
+    die $self->generror(q{expr variable '%s' can't be called as an element. Use &%s();}
+                        , $var->varname, join(":", @$path));
+  }
   sub as_varcall_delegate {
     (my MY $self, my ($var, $node)) = @_;
     my Widget $delegate = $var->widget;
@@ -684,6 +705,20 @@ use YATT::Lite::Constants;
     local $self->{yatt_no_last_newline} = 1;
     q|sub {|. join('', $self->gen_getargs($virtual)
 		   , $self->as_print("}"));
+  }
+  # expr 型は、値を返す closure。属性値は print せず、式として評価する (GH-294)
+  sub as_cast_to_expr {
+    (my MY $self, my ($var, $value)) = @_;
+    my Widget $virtual = $var->widget;
+    my $dict = $virtual ? ($virtual->{_arg_dict} ||= {}) : {};
+    local $self->{_scope} = $self->mkscope({}, $dict, $self->{_scope});
+    my @getargs = do {
+      # gen_getargs の cut_next_nl が、呼び出し側の改行を消さないように
+      local $self->{_curtoks} = [];
+      $virtual ? $self->gen_getargs($virtual) : ();
+    };
+    q|sub {|. join('', @getargs, ' ', ref $value ? $self->as_list(@$value) : $value)
+      . '}';
   }
   #----------------------------------------
   sub argName  {
@@ -943,6 +978,12 @@ use YATT::Lite::Constants;
       , $attname // $name
 	, join ", ", "\$".$name, $self->gen_entlist(undef, @args);
   }
+  # expr の呼び出しは値の式。出力位置では escape して print される (GH-294)
+  sub as_expr_call_var_expr {
+    (my MY $self, my ($var, $name, @args)) = @_;
+    sprintf q{($%1$s && $%1$s->(%2$s))}, $name
+      , scalar $self->gen_entlist(undef, @args);
+  }
   sub as_expr_invoke {
     (my MY $self, my ($esc_later, $name)) = splice @_, 0, 3;
     sprintf '%s(%s)', $name
@@ -1182,6 +1223,17 @@ sub take_spread_name {
     my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, code => $name);
     local $self->{_curtoks} = [lexpand(argValue($valNode))];
     'my '.$self->as_lvalue($var).' = '.q|sub {| . $self->as_print('}');
+  }
+  sub _macro_my_expr {
+    (my MY $self, my ($node, $name, $valNode)) = @_;
+    my (undef, $body) = nx($node);
+    if ($body and $valNode == $body) {
+      die $self->generror(q{expr variable '%s' can't have a body}, $name);
+    }
+    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, expr => $name);
+    my $value = argValue($valNode);
+    'my '.$self->as_lvalue($var)
+      .(defined $value ? ' = '.$self->as_cast_to_expr($var, $value) : ';');
   }
   sub _macro_my_source {
     (my MY $self, my ($node, $name, $valNode)) = @_;

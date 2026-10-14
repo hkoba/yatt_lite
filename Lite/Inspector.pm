@@ -829,7 +829,7 @@ sub describe_symbol_of_ELEMENT {
 sub describe_symbol_of_call {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor) = @_;
 
-  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor, 'code')) {
+  if (my VarInfo $var = $self->locate_entity_var($sym, $cursor, [qw(code expr)])) {
     return $self->describe_entity_var($sym, $var);
   }
 
@@ -903,10 +903,12 @@ sub describe_entity_function {
 
 sub locate_entity_var {
   (my MY $self, my SymbolInfo $sym, my Zipper $cursor, my $ofType) = @_;
+  # $ofType: type name, or an ARRAY of type names.
   for (my Zipper $c = $cursor; $c; $c = $c->{path}) {
     if (my $defs = $c->{defs}) {
       if (my VarInfo $var = $defs->{$sym->{name}}) {
-        next if defined $ofType and $var->{type} ne $ofType;
+        next if defined $ofType
+          and not grep {$var->{type} eq $_} lexpand($ofType);
         return $var;
       }
     }
