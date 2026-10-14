@@ -92,13 +92,24 @@ The type of each template variable is decided by the value:
   plain string or number        text   (escaped on output)
   ARRAY ref                     list   (usable in <yatt:foreach list=...>)
   as_html("...")                html   (output without escaping)
-  CODE ref                      code   (see below)
+  CODE ref                      expr   (see below)
   other refs (HASH ref, object) scalar (e.g. &yatt:opt{key};)
 
-A CODE value is currently called with the yatt calling convention of
-C<code> type variables (C<&yatt:fn(...);>), i.e. its return value is
-B<not> printed. This will be revisited once yatt gets separate types for
-functions which print and functions which compute a value.
+A CODE value is an C<expr> type variable, i.e. a function which computes
+a value. C<&yatt:fn(...);> calls it with the given arguments (without
+C<$CON>). Its return value is printed with escaping, and can be used as a
+value in expressions like C<< <yatt:if "&yatt:fn(...);"> >>.
+
+  # pagevars module
+  $PAGES{index} = +{
+    fmt => sub { my ($x) = @_; sprintf "%.2f", $x },
+  };
+
+  <!-- index.yatt -->
+  <p>&yatt:fmt(3.14159);</p>     <!-- <p>3.14</p> -->
+
+B<(Compatibility)> Before GH-294, a CODE value was a C<code> type variable
+and its return value was B<not> printed.
 
 =head2 Scoping
 
