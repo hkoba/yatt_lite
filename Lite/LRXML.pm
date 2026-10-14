@@ -1221,7 +1221,8 @@ sub add_args {
 
     my ($type, $argName, $nextArgNo, $lno, $node_type, $dflag, $default)
       = my @argSpec = $self->parse_arg_spec_for_part($part, $argSpec);
-    unless (defined $argName) {
+    # x:value のように : で区切った名前は、引数名としては不正 (GH-296)
+    unless (defined $argName and not ref $argName) {
       # argmacro と勘違いして &yatt:argmacro; と書いた時に気づきやすいように
       if ($argSpec->[NODE_TYPE] == TYPE_ATT_TEXT
           and @{$argSpec->[NODE_BODY]} == 1
@@ -1263,7 +1264,9 @@ sub add_args {
         my $sub = $self->can("add_arg_of_type_$type") or do {
           die $self->synerror_at($self->{_startln}, "Unknown arg type in arg '%s': %s", $argName, $type)
         };
-        $sub->($self, $part, $var, $argSpec->[NODE_BODY]);
+        # 先頭は型名 (code, delegate:foo など) なので、引数としては渡さない (GH-296)
+        my (undef, @attlist) = @{$argSpec->[NODE_BODY]};
+        $sub->($self, $part, $var, \@attlist);
       } else {
         if (my $sub = $self->can("add_arg_of_type_$type")) {
           $sub->($self, $part, $var, []);
