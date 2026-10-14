@@ -488,7 +488,7 @@ use YATT::Lite::Constants;
 	my $name = argName($_);
 	unless (defined $name) {
 	  defined($name = $widget->{_arg_order}[$posArgs //= 0])
-	    or die $self->generror("Too many arguments for widget <%s>"); # This may not be called.
+	    or die $self->generror("Too many arguments for widget <%s>", $wname); # [code x] など、body の無い widget で起きる (GH-296)
 
           # Positional arguments should not be treated as body argument.
           if ($widget->{_arg_dict}{$name}->is_body_argument) {
@@ -539,6 +539,8 @@ use YATT::Lite::Constants;
 	die $self->generror("Argument '%s' is missing", $argName);
       }
     }
+    # 引数の無い [code] (GH-296)。実引数があれば、上で既にエラーになっている。
+    return '' unless @{$widget->{_arg_order} // []};
     sprintf q{(undef%s)[%s]}
       , join("", @argExpr), join(", ", map {defined $_ ? $_ : 0}
 				 @argOrder[0 .. $#{$widget->{_arg_order}}]);
