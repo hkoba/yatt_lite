@@ -62,6 +62,7 @@ MY->define_page('sub/q1' => +{
   title => "Q1",
   shadowed => "PV",
   note => as_html("<b>n</b>"),
+  fmt => sub {"<$_[0]>"},
 });
 
 1;
@@ -77,6 +78,7 @@ END
 my $q1_text = <<'END';
 <!yatt:args shadowed>
 &yatt:title; &yatt:shadowed; &yatt:note;
+&yatt:fmt(1);
 END
 
 my $layout_text = <<'END';
@@ -200,6 +202,10 @@ like(hover_of($index, $index_text, '&yatt:title;', 6) // ''
 like(hover_of($q1, $q1_text, '&yatt:note;', 6) // ''
      , qr/pagevar note: html/
      , "hover: html pagevar");
+
+like(hover_of($q1, $q1_text, '&yatt:fmt(1);', 6) // ''
+     , qr/pagevar fmt: expr/
+     , "hover: CODE pagevar is expr (GH-294)");
 
 like(hover_of($q1, $q1_text, '&yatt:shadowed;', 6) // ''
      , qr/\(argument\) shadowed/

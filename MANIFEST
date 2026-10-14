@@ -714,6 +714,7 @@ t/lib/.symlinks
 t/lineno.t
 t/lite.t
 t/lite_argmacro_module.t
+t/lite_expr_param.t
 t/lite_import.t
 t/lite_xhf.t
 t/lrxml.t
@@ -824,6 +825,7 @@ t/xhf/lite/13-call-if.xhf
 t/xhf/lite/14-call-if-disabled.xhf
 t/xhf/lite/15-decl-boundary.xhf
 t/xhf/lite/16-import.xhf
+t/xhf/lite/17-expr.xhf
 t/xhf/lite/2-if.xhf
 t/xhf/lite/3-my.xhf
 t/xhf/lite/4-ent.xhf
