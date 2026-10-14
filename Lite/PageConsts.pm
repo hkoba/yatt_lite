@@ -149,7 +149,7 @@ sub const_type :Doc(Type of yatt variable for the constant VALUE) {
   } elsif (ref $value eq 'ARRAY') {
     'list'
   } elsif (ref $value eq 'CODE') {
-    'code'
+    'expr'
   } elsif (UNIVERSAL::can($value, 'varname')
            and UNIVERSAL::can($value, 'value')) {
     'html';
