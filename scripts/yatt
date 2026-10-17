@@ -77,7 +77,7 @@ sub subcmd_list {
   my %hidden; $hidden{$_} = 1
     for qw(backend call command dispatcher
            lintany lintpm lintrc
-           xgettext xhftest);
+           xgettext);
   grep {
     not $hidden{$_}
   }
