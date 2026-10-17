@@ -222,7 +222,7 @@ sub configure_dbtype {
 }
 
 #
-# This must fill cf_DBH.
+# This must fill DBH.
 #
 sub make_connection {
   (my MY $schema) = shift;

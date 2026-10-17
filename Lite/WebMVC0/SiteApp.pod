@@ -137,7 +137,7 @@ See L<YATT::Lite::ArgMacro/REGISTRATION>.
 Requests other than F<*.yatt>, F<*.ytmpl>, F<*.ydo> are passed to this PSGI app.
 Default is:
 
-  Plack::App::File->new(root => $self->{cf_doc_root})->to_app
+  Plack::App::File->new(root => $self->{doc_root})->to_app
 
 
 =head2 backend
