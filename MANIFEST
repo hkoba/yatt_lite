@@ -687,6 +687,7 @@ t/cgi.t
 t/cli_genperl.t
 t/cli_lint.t
 t/cli_render.t
+t/cli_script_options.t
 t/cmdline.d/t_cmd1.pl
 t/cmdline.t
 t/connection.d/index.yatt
