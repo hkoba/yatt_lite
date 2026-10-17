@@ -428,16 +428,62 @@ sub n_destroyed {$_n_destroyed}
 
 sub load_factory_script {
   my ($pack, $fn) = @_;
-  local $want_object = 1;
-  local $0 = $fn;
-  local ($FindBin::Bin, $FindBin::Script
-	 , $FindBin::RealBin, $FindBin::RealScript);
-  FindBin->again if FindBin->can("again");
-  if ($fn =~ /\.psgi$/) {
-    $pack->load_psgi_script($fn);
-  } else {
-    $pack->sandbox_dofile($fn);
+  my %was_loaded = map {$_ => 1} keys %INC;
+  my $result = eval {
+    local $want_object = 1;
+    local $0 = $fn;
+    local ($FindBin::Bin, $FindBin::Script
+	   , $FindBin::RealBin, $FindBin::RealScript);
+    FindBin->again if FindBin->can("again");
+    if ($fn =~ /\.psgi$/) {
+      $pack->load_psgi_script($fn);
+    } else {
+      $pack->sandbox_dofile($fn);
+    }
+  };
+  my $err = $@;
+  # アプリが lib/ に同梱した YATT::Lite が、読み込み中の YATT::Lite と
+  # 混ざると、原因の分からないエラーになるので、先に報告する (GH-301)
+  if (my @mixed = $pack->list_mixed_yatt_lib(\%was_loaded)) {
+    die join("", "Mixed YATT::Lite library roots while loading $fn.\n"
+	     , "Running YATT::Lite is from ", $pack->yatt_lib_root, ", but:\n"
+	     , map({"  $_->[0] from $_->[1]\n"} @mixed)
+	     , "The app may bundle another YATT::Lite in its library path.\n"
+	     , $err ? "Original error: $err" : ());
   }
+  die $err if $err;
+  $result;
+}
+
+# YATT/Lite/Factory.pm (この file) を読み込んだ library root
+sub yatt_lib_root {
+  _inc_root('YATT/Lite/Factory.pm');
+}
+
+# $was_loaded に無い (=新たに読み込まれた) YATT::Lite の module のうち、
+# yatt_lib_root と違う root から読まれ、しかも yatt_lib_root にも同じ
+# module が有るもの (=別版で上書きされたもの) を [$key, $root] で返す。
+# アプリ独自の YATT::Lite::* module は対象外。
+sub list_mixed_yatt_lib {
+  my ($pack, $was_loaded) = @_;
+  my $root = $pack->yatt_lib_root // return;
+  map {
+    my $r = _inc_root($_);
+    (defined $r and $r ne $root and -e "$root/$_") ? [$_, $r] : ();
+  } grep {
+    m{^YATT/Lite[/.]} and not ($was_loaded and $was_loaded->{$_})
+  } sort keys %INC;
+}
+
+# %INC の値から $key を取り除いた root。$INC{$key} = 1 のような
+# 手で登録されたものは undef
+sub _inc_root {
+  my ($key) = @_;
+  my $path = $INC{$key};
+  return undef unless defined $path and not ref $path
+    and $path =~ s{/\Q$key\E\z}{};
+  require Cwd;
+  Cwd::realpath($path) // $path;
 }
 
 sub find_factory_script {
