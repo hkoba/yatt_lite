@@ -35,6 +35,7 @@ Lite/CLI/GenPerl.pm
 Lite/CLI/Lint.pm
 Lite/CLI/Render.pm
 Lite/Connection.pm
+Lite/ConnectionProxy.pm
 Lite/Constants.pm
 Lite/Core.pm
 Lite/docs/index.lst

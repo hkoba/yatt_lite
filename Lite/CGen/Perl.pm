@@ -22,6 +22,7 @@ use YATT::Lite::Constants;
   use base qw(YATT::Lite::CGen);
   use YATT::Lite::MFields;
   use YATT::Lite::Util qw(lexpand numLines globref terse_dump catch ckrequire);
+  use YATT::Lite::ConnectionProxy;
   use Carp;
   #========================================
   sub list_inheritance {
@@ -339,7 +340,7 @@ use YATT::Lite::Constants;
       next unless defined $expr;
       push @result, do {
         if (ref $expr) {
-          sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$expr;
+          $self->gen_captured($$expr);
         } else {
           $expr;
         }
@@ -389,12 +390,19 @@ use YATT::Lite::Constants;
   sub text_from_element {
     (my MY $self, my $node) = @_;
     my $call_ref = $self->from_element($node);
-    sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$call_ref;
+    $self->gen_captured($$call_ref);
   }
+  # 文 (<?perl ?>) は出力を捕捉し、式 (<?perl= ?>) はそのまま値にする
   sub text_from_pi {
     (my MY $self, my $node) = @_;
-    my $statements = $self->from_pi($node);
-    sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $statements;
+    my $script = $self->from_pi($node);
+    ref $script ? $self->gen_captured($$script) : $script;
+  }
+  # 捕捉中の $CON は、元の CON に delegate する proxy (GH-295)
+  sub gen_captured {
+    (my MY $self, my $statements) = @_;
+    sprintf q{(YATT::Lite::ConnectionProxy->capture($CON, sub {my ($CON) = @_; %s}))}
+      , $statements;
   }
 
   sub gen_call {
