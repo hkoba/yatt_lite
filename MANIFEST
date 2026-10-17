@@ -36,6 +36,7 @@ Lite/CLI/Lint.pm
 Lite/CLI/Render.pm
 Lite/Connection.pm
 Lite/ConnectionProxy.pm
+Lite/ConnectionProxy.pod
 Lite/Constants.pm
 Lite/Core.pm
 Lite/docs/index.lst

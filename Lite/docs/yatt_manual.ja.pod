@@ -341,6 +341,9 @@ body の出力は、C<< <yatt:my> >> の閉じタグ形式で
    <yatt:my content>&yatt:body();</yatt:my>
    ...&yatt:content;...
 
+取り込んでいる間も、C<&yatt:CON:param(x);> のような C<$CON> のメソッドは
+そのまま使えます (L<YATT::Lite::ConnectionProxy>)。
+
 
 =head2 attribute element
 
