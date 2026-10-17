@@ -741,6 +741,16 @@ OUT:
  
 
 
+TITLE: delegate var can't be called in entity form (GH-304)
+IN:
+ <yatt:bar x=3/>
+ <!yatt:widget foo x>
+ <h2>foo &yatt:x;</h2>
+ <!yatt:widget bar foo=[delegate]>
+ &yatt:foo();
+ERROR: delegate variable 'foo' can't be called as an entity. Use <yatt:foo/>
+
+
 TITLE: code arg with args, called by positional args in element form (GH-296)
 IN:
  <yatt:foo><:yatt:row>[&yatt:x;|&yatt:y;]</:yatt:row></yatt:foo>
