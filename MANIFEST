@@ -700,6 +700,7 @@ t/factory.t
 t/factory_approot_normalize.t
 t/factory_crossbase.t
 t/factory_invoke_sub.t
+t/factory_mixed_lib.t
 t/gh241_mkhidden_nested_query/app/app.psgi
 t/gh241_mkhidden_nested_query/app/public/mkhidden_test.yatt
 t/gh241_mkhidden_nested_query/app/public/param_test.yatt
