@@ -691,6 +691,7 @@ t/cmdline.d/t_cmd1.pl
 t/cmdline.t
 t/connection.d/index.yatt
 t/connection.t
+t/connection_proxy.t
 t/cover
 t/dbschema.t
 t/dbschema_dbic.t
