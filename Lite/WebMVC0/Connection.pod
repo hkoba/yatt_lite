@@ -469,6 +469,7 @@ C<error_with_status($code, $fmt, @args)>, C<logbacktrace>, C<logdump>.
 =head1 SEE ALSO
 
 L<YATT::Lite::WebMVC0::SiteApp> (entity functions),
+L<YATT::Lite::ConnectionProxy> (C<$CON> while capturing output),
 L<YATT::Lite>
 
 =cut
