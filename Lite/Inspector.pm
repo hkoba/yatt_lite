@@ -2416,6 +2416,85 @@ sub list_part_args_internal {
 }
 
 #========================================
+# list_code_args [--with_body] [--type=TYPE] [--from=DIR]
+#
+# yatt 宣言 (<!yatt:args>, <!yatt:widget> ...) で宣言された code 型の引数を、
+# 1 引数 1 レコードで列挙する。expr 型に移すべき引数を探すため (GH-300)。
+# body は出力用であることが明らかなので、既定では出さない。
+# --output=tsv では path, line, kind, name, arg, spec の順の一行になる。
+
+sub cmd_list_code_args {
+  (my MY $self, my @args) = @_;
+  my $opts = $self->parse_opts(\@args, {});
+  # コマンド固有でないもの (--output など) は全体の設定へ
+  $self->configure(map {
+    $_ => delete $opts->{$_}
+  } grep {not /^(?:from|with_body|type)\z/} keys %$opts);
+  my @fields = qw(path line kind name arg spec);
+  my $as_tsv = ($self->{output} // '') eq 'tsv';
+  foreach my $rec ($self->list_code_args(%$opts)) {
+    $self->cli_output([$as_tsv ? [@{$rec}{@fields}] : do {
+      tie my %result, 'Tie::IxHash', map {$_ => $rec->{$_}} @fields;
+      \%result;
+    }]);
+  }
+}
+
+sub list_code_args {
+  (my MY $self, my %opts) = @_;
+  my $searchFrom = delete $opts{from};
+  my $withBody = delete $opts{with_body};
+  my $type = delete $opts{type} // 'code';
+  if (%opts) {
+    Carp::croak "Unknown options: ". join(", ", sort keys %opts);
+  }
+  my $bodyName = $self->{_SITE}->cget('body_argument') // 'body';
+
+  my @result;
+  walk(
+    factory => $self->{_SITE},
+    from => $self->list_target_dirs($searchFrom),
+    ignore_symlink => $self->{ignore_symlink},
+    widget => sub {
+      my ($found) = @_;
+      my Part $part = $found->{part};
+      my Template $tmpl = $part->{folder};
+      foreach my $argName ($part->{_arg_order} ? @{$part->{_arg_order}} : ()) {
+        my $var = $part->{_arg_dict}{$argName};
+        next unless $var->type->[0] eq $type;
+        # 暗黙の body には印が付き、明示した body=[code ...] には付かない
+        next if not $withBody
+          and ($var->is_body_argument or $argName eq $bodyName);
+        push @result, +{
+          path => $self->clean_path($tmpl->{path}),
+          line => $var->lineno // $part->{startln},
+          kind => $found->{kind},
+          name => $found->{name},
+          arg => $argName,
+          spec => $self->arg_spec_with_nested_args($var),
+        };
+      }
+    },
+    item => sub {},
+  );
+  @result;
+}
+
+# spec_string と違い、[code x y] のような内側の引数も含める
+sub arg_spec_with_nested_args {
+  (my MY $self, my $var) = @_;
+  my $type = join(":", @{$var->type});
+  my $widget = $var->can('widget') && $var->widget;
+  my @nested = map {
+    my $sub = $widget->{_arg_dict}{$_};
+    ($sub->type->[0] eq 'text' and not defined $sub->dflag)
+      ? $_ : "$_=".$self->arg_spec_with_nested_args($sub);
+  } $widget && $widget->{_arg_order} ? @{$widget->{_arg_order}} : ();
+  (@nested ? "[$type @nested]" : $type)
+    . (defined $var->dflag ? $var->dflag . ($var->default_expr // '') : '');
+}
+
+#========================================
 
 sub is_in_template_dir {
   (my MY $self, my $path) = @_;
