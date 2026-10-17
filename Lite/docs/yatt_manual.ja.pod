@@ -1134,6 +1134,9 @@ X<delegate>
 
 XXX: C<[delegate -exclude_var]>
 
+C<delegate> 型の変数は、C<< <yatt:d/> >> のように要素形式でのみ呼び出せます。
+C<&yatt:d();> のような entity 形式の呼び出しは、エラーになります。
+
 =head1 DEFAULT FLAG
 
 =head2 C<|> - C<undef>, C<"">, C<0>
