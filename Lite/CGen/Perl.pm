@@ -95,7 +95,7 @@ use YATT::Lite::Constants;
     unless ($self->{no_lineinfo}) {
       my $line = qq{#line }. $self->{_curline};
       if (defined(my $fn = $tmpl->fake_filename)) {
-	# cf_name is dummy filename.
+	# name is dummy filename (if path is undef).
 	$line .= qq{ "$fn"};
       }
       push @stats, $line .= "\n";

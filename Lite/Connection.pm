@@ -196,8 +196,8 @@ sub cf_pairs {
   my PROP $prop = prop(my $glob = shift);
   my $fields = fields_hash($glob);
   map {
-    [substr($_, 3) => $prop->{$_}]
-  } grep {/^cf_/ && $_ ne 'cf_buffer'} keys %$fields;
+    [$_ => $prop->{$_}]
+  } grep {!/^_/ && $_ ne 'buffer'} keys %$fields;
 }
 
 #========================================

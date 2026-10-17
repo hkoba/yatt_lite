@@ -103,7 +103,7 @@ sub raise {
   if (ref $self and my $sub = deref($self->{error_handler})) {
     # $con を引数で引きずり回すのは大変なので、むしろ外から closure を渡そう、と。
     # $SIG{__DIE__} を使わないのはなぜかって? それはユーザに開放しておきたいのよん。
-    print STDERR "# raise by cf_error_handler\n" if DEBUG_ERROR;
+    print STDERR "# raise by error_handler\n" if DEBUG_ERROR;
     unless (ref $sub eq 'CODE') {
       die "error_handler is not a CODE ref: $sub";
     }

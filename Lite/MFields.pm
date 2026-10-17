@@ -244,9 +244,9 @@ YATT::Lite::MFields -- fields for multiple inheritance.
   #
   # Getter generation.
   #
-  use YATT::Lite::MFields qw/^name cf_^age/;
+  use YATT::Lite::MFields qw/^name ^age/;
   #
-  # In above, ->name and ->value is defined.
+  # In above, ->name and ->age are defined.
 
   # Or more descriptive (but most attributes are only for documentation)
   use YATT::Lite::MFields

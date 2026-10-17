@@ -103,7 +103,7 @@ sub param {
 	$ixh->{$key} = shift;
       }
     } else {
-      # If cf_parameters is enabled, value is returned AS-IS.
+      # If parameters is enabled, value is returned AS-IS.
       $ixh->{$key};
     }
   } elsif (my $hmv = $prop->{hmv}) {
@@ -128,7 +128,7 @@ sub multi_param {
     return keys %$ixh unless @_;
     defined (my $key = shift)
       or croak "undefined key!";
-    # If cf_parameters is enabled, value is returned AS-IS.
+    # If parameters is enabled, value is returned AS-IS.
     $ixh->{$key};
 
   } elsif (my $hmv = ($prop->{hmv} // do {
@@ -331,7 +331,7 @@ sub after_create {
   my PROP $prop = (my $glob = shift)->prop;
   $glob->SUPER::after_create();
 
-  # If cf_cgi is empty and cf_parameters is given,
+  # If cgi is empty and parameters is given,
   # request sigils are collected via parse_request_sigil_hmv.
   #
   if (not $prop->{cgi} and $prop->{parameters}) {

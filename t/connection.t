@@ -661,4 +661,15 @@ SKIP:
     , "[$THEME] current_path(CON) with SiteApp-level flag";
 }
 
+{
+  # GH-233: cf_pairs lists config items (fields without cf_ prefix).
+  my $con = YATT::Lite::Connection->create(undef, noheader => 1
+                                           , encoding => "utf-8");
+  my %pairs = map {@$_} $con->cf_pairs;
+  is $pairs{encoding}, "utf-8", "cf_pairs contains config items";
+  ok exists $pairs{noheader}, "cf_pairs contains noheader";
+  ok !exists $pairs{buffer}, "cf_pairs doesn't contain buffer";
+  is_deeply [grep {/^_/} keys %pairs], [], "cf_pairs doesn't contain private fields";
+}
+
 done_testing();

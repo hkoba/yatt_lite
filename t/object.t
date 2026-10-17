@@ -55,7 +55,7 @@ use YATT::Lite::Util::FindMethods;
 	  T1::_after_after_new/]
     , "initialization hook";
 
-  ::is $obj1->{name}, 'FOO', "cf_name";
+  ::is $obj1->{name}, 'FOO', "name";
 
   ::is $obj1->cget('name'), 'FOO', "cget(name)";
 
