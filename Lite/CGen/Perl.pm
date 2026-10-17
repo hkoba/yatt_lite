@@ -984,6 +984,12 @@ use YATT::Lite::Constants;
     sprintf q{($%1$s && $%1$s->(%2$s))}, $name
       , scalar $self->gen_entlist(undef, @args);
   }
+  # delegate は要素形式のみ。entity 形式では引数の補間も検査もできない (GH-304)
+  sub as_expr_call_var_delegate {
+    (my MY $self, my ($var, $name, @args)) = @_;
+    die $self->generror(q{delegate variable '%s' can't be called as an entity. Use <yatt:%s/>}
+                        , $name, $name);
+  }
   sub as_expr_invoke {
     (my MY $self, my ($esc_later, $name)) = splice @_, 0, 3;
     sprintf '%s(%s)', $name
