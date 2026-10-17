@@ -337,10 +337,13 @@ use YATT::Lite::Constants;
       };
       my $expr = $sub->($self, $node);
       next unless defined $expr;
-      if (ref $expr) {
-	die $self->generror("Syntax error, not allowed here: %s", $$expr);
-      }
-      push @result, $expr;
+      push @result, do {
+        if (ref $expr) {
+          sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$expr;
+        } else {
+          $expr;
+        }
+      };
     }
     wantarray ? @result : join("", @result);
   }
@@ -624,10 +627,11 @@ use YATT::Lite::Constants;
     (my MY $self, my $var) = @_;
     '$html_'.$var->varname;
   }
+  # code 型は renderer。widget と同じく $CON を第一引数で受け取る (GH-293)
   sub as_varcall_code {
     (my MY $self, my ($codeVar, $node)) = @_;
     return \ sprintf q{$%1$s && $%1$s->(%2$s)}, $codeVar->varname
-      , $self->gen_putargs($codeVar->widget, $node);
+      , join(", ", '$CON', $self->gen_putargs($codeVar->widget, $node) || ());
     # XXX: デフォルト body のように、引数宣言が無いケースも考慮せよ。
   }
   # expr は値を返す関数で、widget ではない (GH-294)
@@ -703,7 +707,7 @@ use YATT::Lite::Constants;
     local $self->{_scope} = $self->mkscope
       ({}, $virtual->{_arg_dict} ||= {}, $self->{_scope});
     local $self->{yatt_no_last_newline} = 1;
-    q|sub {|. join('', $self->gen_getargs($virtual)
+    q|sub { my $CON = shift;|. join('', $self->gen_getargs($virtual)
 		   , $self->as_print("}"));
   }
   # expr 型は、値を返す closure。属性値は print せず、式として評価する (GH-294)
@@ -971,6 +975,11 @@ use YATT::Lite::Constants;
 	, scalar $self->gen_entlist(undef, @args);
     }
   }
+  sub as_expr_call_var_code {
+    (my MY $self, my ($var, $name, @args)) = @_;
+    \ sprintf q{$%1$s && $%1$s->(%2$s)}, $name
+      , join(", ", '$CON', $self->gen_entlist(undef, @args));
+  }
   sub as_expr_call_var_attr {
     (my MY $self, my ($var, $name, @args)) = @_;
     (undef, my $attname) = @{$var->type};
@@ -1222,7 +1231,7 @@ sub take_spread_name {
     (my MY $self, my ($node, $name, $valNode)) = @_;
     my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, code => $name);
     local $self->{_curtoks} = [lexpand(argValue($valNode))];
-    'my '.$self->as_lvalue($var).' = '.q|sub {| . $self->as_print('}');
+    'my '.$self->as_lvalue($var).' = '.q|sub { my $CON = shift;| . $self->as_print('}');
   }
   sub _macro_my_expr {
     (my MY $self, my ($node, $name, $valNode)) = @_;

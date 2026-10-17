@@ -334,6 +334,13 @@ body は (明示的に宣言しない限り) C<code> 型とされます。
      <yatt:body/>
    </div>
 
+body の出力は、C<< <yatt:my> >> の閉じタグ形式で
+変数に取り込むことも出来ます。
+
+   <!yatt:widget foo>
+   <yatt:my content>&yatt:body();</yatt:my>
+   ...&yatt:content;...
+
 
 =head2 attribute element
 
@@ -391,6 +398,16 @@ X<my>
   <yatt:my foo>
     <h2>foobar</h2>
   </yatt:my>
+
+本体の中で widget や L<body|/body argument> などの L</code> 型の引数を呼び出すと、
+その出力はその場には出力されず、変数の値に取り込まれます。
+
+  <yatt:my foo>
+    <yatt:bar/> &yatt:body();
+  </yatt:my>
+
+(属性値の中で呼び出した場合も取り込まれますが、型が L</text> なので、
+取り込んだ html は出力時に escape されます。)
 
 
 =head2 C<yatt:if>, C<:yatt:else>
@@ -1079,6 +1096,18 @@ widget の場合、更に引数の型指定が可能です。
    ...
   </yatt:foreach>
 
+C<code> 型の値は、widget と同じく出力を書き込む関数 (renderer) です。
+Perl 側では、第一引数に出力先の C<$CON> を受け取り、
+その後に宣言した引数が続く closure になっています。
+Perl のコードから呼び出すときは、C<$CON> を渡してください。
+
+  $body->($CON);
+  $author->($CON, $name, $url);
+
+B<(Compatibility)> 以前は C<$CON> を受け取らず、
+呼び出し元の C<$CON> に書き込んでいました (C<< $body->() >>)。
+そのため C<< <yatt:my> >> で出力を取り込むことが出来ませんでした (GH-293)。
+
 =head2 C<expr>
 X<expr>
 
@@ -1122,6 +1151,7 @@ C<x=y> のように受け渡すこと。
 =back
 
 Perl 側では、引数を受け取って値を返す普通の関数 (CODE ref) です。
+C<code> 型と違い、C<$CON> は受け取りません。
 L<YATT::Lite::PageConsts> の CODE 定数は、この型になります。
 
 B<(Compatibility)> 以前は C<expr> は C<code> の別名でした。

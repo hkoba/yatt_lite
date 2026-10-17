@@ -716,6 +716,7 @@ t/lib/.symlinks
 t/lineno.t
 t/lite.t
 t/lite_argmacro_module.t
+t/lite_capture_con.t
 t/lite_expr_param.t
 t/lite_import.t
 t/lite_xhf.t
