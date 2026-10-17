@@ -679,7 +679,6 @@ scripts/yatt.lintpm
 scripts/yatt.lintrc
 scripts/yatt.render
 scripts/yatt.xgettext
-scripts/yatt.xhftest
 scripts/yattup
 t/base_inherit_refresh.t
 t/base_widget_cycle.t

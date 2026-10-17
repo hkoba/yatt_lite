@@ -764,10 +764,6 @@ sub url_encode_kv {
 
 sub encode_query {
   my ($self, $param, $sep) = @_;
-#  require URI;
-#  my $url = URI->new('http:');
-#  $url->query_form($item->{cf_PARAM});
-#  $url->query;
   return $param unless ref $param;
   join $sep // ';', do {
     if (ref $param eq 'HASH') {
