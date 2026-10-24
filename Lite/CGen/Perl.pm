@@ -350,8 +350,8 @@ use YATT::Lite::Constants;
   our @AS_TEXT;
   $AS_TEXT[TYPE_LCMSG]    = \&from_lcmsg;
   $AS_TEXT[TYPE_ENTITY]   = \&from_entity;
-  $AS_TEXT[TYPE_PI]       = \&text_from_pi;
-  $AS_TEXT[TYPE_ELEMENT]  = \&text_from_element; # XXX: ?? Used??
+  $AS_TEXT[TYPE_PI]       = \&from_pi;
+  $AS_TEXT[TYPE_ELEMENT]  = \&from_element; # XXX: ?? Used??
   $AS_TEXT[TYPE_ATT_NESTED]  = sub {undef}; # gen_as が scalar 受けゆえ
   # as_text は、escape 不要。なぜなら、 print 時に escape されるから。
   # でも、 escape 有無を flag で渡せた方が、 html 型にも使えて便利では?
@@ -386,17 +386,6 @@ use YATT::Lite::Constants;
       # stack trace に現れるように, 敢えて展開。
       $self->gen_call($node, @{$node->[NODE_PATH]});
     }
-  }
-  sub text_from_element {
-    (my MY $self, my $node) = @_;
-    my $call_ref = $self->from_element($node);
-    # $self->gen_captured($$call_ref);
-  }
-  # 文 (<?perl ?>) は出力を捕捉し、式 (<?perl= ?>) はそのまま値にする
-  sub text_from_pi {
-    (my MY $self, my $node) = @_;
-    my $script = $self->from_pi($node);
-    # ref $script ? $self->gen_captured($$script) : $script;
   }
   # 捕捉中の $CON は、元の CON に delegate する proxy (GH-295)
   sub gen_captured {
