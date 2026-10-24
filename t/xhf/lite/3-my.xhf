@@ -321,3 +321,14 @@ TITLE: my html var scope
 IN: <yatt:my a>&yatt:a;</yatt:my>
 ERROR: No such variable 'a'
 
+
+TITLE: my code var scope
+IN: <yatt:my c:code>&yatt:c();</yatt:my>
+ERROR: No such entity in namespace
+
+TITLE: my code body var scope
+IN:
+ <yatt:my c:code><yatt:my inner>x</yatt:my>[&yatt:inner;]</yatt:my>
+ &yatt:inner;
+ERROR: No such variable 'inner'
+
