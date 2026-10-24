@@ -1251,11 +1251,18 @@ sub take_spread_name {
     }
     \ join "; ", @assign;
   }
+  # 変数の登録は、初期値を生成した後に行う (自分の初期値の中からは見えない)。
+  # 本体は Perl の sub になるので、YATT のスコープも作る (as_cast_to_code と同じ)。
   sub _macro_my_code {
     (my MY $self, my ($node, $name, $valNode)) = @_;
-    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, code => $name);
-    local $self->{_curtoks} = [lexpand(argValue($valNode))];
-    'my '.$self->as_lvalue($var).' = '.q|sub { my $CON = shift;| . $self->as_print('}');
+    my $var = $self->mkvar_at(undef, code => $name);
+    my $expr = do {
+      local $self->{_curtoks} = [lexpand(argValue($valNode))];
+      local $self->{_scope} = $self->mkscope({}, $self->{_scope});
+      'my '.$self->as_lvalue($var).' = '.q|sub { my $CON = shift;| . $self->as_print('}');
+    };
+    $self->{_scope}[0]{$name} = $var;
+    $expr;
   }
   sub _macro_my_expr {
     (my MY $self, my ($node, $name, $valNode)) = @_;
@@ -1263,17 +1270,21 @@ sub take_spread_name {
     if ($body and $valNode == $body) {
       die $self->generror(q{expr variable '%s' can't have a body}, $name);
     }
-    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, expr => $name);
+    my $var = $self->mkvar_at(undef, expr => $name);
     my $value = argValue($valNode);
-    'my '.$self->as_lvalue($var)
+    my $expr = 'my '.$self->as_lvalue($var)
       .(defined $value ? ' = '.$self->as_cast_to_expr($var, $value) : ';');
+    $self->{_scope}[0]{$name} = $var;
+    $expr;
   }
   sub _macro_my_source {
     (my MY $self, my ($node, $name, $valNode)) = @_;
-    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, text => $name);
-    'my '.$self->as_lvalue($var).' = '
+    my $var = $self->mkvar_at(undef, text => $name);
+    my $expr = 'my '.$self->as_lvalue($var).' = '
       .join(q|."\n".|, map {qtext($_)}
 	    split /\n/, $self->{_curtmpl}->node_body_source($node));
+    $self->{_scope}[0]{$name} = $var;
+    $expr;
   }
 
   sub macro_block {
