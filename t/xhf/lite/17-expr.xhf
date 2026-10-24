@@ -118,3 +118,8 @@ IN:
  <!yatt:widget foo body=[code]>
  <yatt:body/>
 ERROR: Type mismatch for argument 'body': expected code, but 'v' is expr
+
+TITLE: my expr var scope
+IN: <yatt:my f:expr="&yatt:f;"/>
+ERROR: No such variable 'f'
+

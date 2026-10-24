@@ -22,6 +22,7 @@ use YATT::Lite::Constants;
   use base qw(YATT::Lite::CGen);
   use YATT::Lite::MFields;
   use YATT::Lite::Util qw(lexpand numLines globref terse_dump catch ckrequire);
+  use YATT::Lite::ConnectionProxy;
   use Carp;
   #========================================
   sub list_inheritance {
@@ -337,13 +338,10 @@ use YATT::Lite::Constants;
       };
       my $expr = $sub->($self, $node);
       next unless defined $expr;
-      push @result, do {
-        if (ref $expr) {
-          sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$expr;
-        } else {
-          $expr;
-        }
-      };
+      if (ref $expr and not wantarray) {
+        die $self->generror("Syntax error, not allowed here: %s", $$expr);
+      }
+      push @result, $expr;
     }
     wantarray ? @result : join("", @result);
   }
@@ -352,14 +350,17 @@ use YATT::Lite::Constants;
   our @AS_TEXT;
   $AS_TEXT[TYPE_LCMSG]    = \&from_lcmsg;
   $AS_TEXT[TYPE_ENTITY]   = \&from_entity;
-  $AS_TEXT[TYPE_PI]       = \&text_from_pi;
-  $AS_TEXT[TYPE_ELEMENT]  = \&text_from_element; # XXX: ?? Used??
+  $AS_TEXT[TYPE_PI]       = \&from_pi;
+  $AS_TEXT[TYPE_ELEMENT]  = \&from_element; # XXX: ?? Used??
   $AS_TEXT[TYPE_ATT_NESTED]  = sub {undef}; # gen_as が scalar 受けゆえ
   # as_text は、escape 不要。なぜなら、 print 時に escape されるから。
   # でも、 escape 有無を flag で渡せた方が、 html 型にも使えて便利では?
   # というか、 html 型には capture が必要か。 capture は buffering したいよね？
   sub as_text {
-    join '.', shift->gen_as(text => \@AS_TEXT, 0, 1, @_);
+    my ($self, @rest) = @_;
+    local $self->{_scope} = $self->mkscope({}, $self->{_scope});
+    my @expr = $self->gen_as(text => \@AS_TEXT, 0, 1, @rest);
+    $self->gen_maybe_captured(@expr);
   }
 
   our @AS_LIST;
@@ -369,6 +370,22 @@ use YATT::Lite::Constants;
   $AS_LIST[TYPE_ATT_NESTED] = sub {undef}; # XXX: 微妙
   sub as_list {
     shift->gen_as(list => \@AS_LIST, 0, 0, @_);
+  }
+  # as_list は式だけを受け取る。要素や <?perl ?> は、出力を捕捉できる
+  # text/html の値の中でだけ使える (as_text, as_cast_to_html)。
+  sub list_from_element {
+    (my MY $self, my $node) = @_;
+    die $self->generror_at($node->[NODE_LNO]
+                           , q{Element <%s> is not allowed in expression}
+                           . q{ (only in text or html value)}
+                           , join(":", @{$node->[NODE_PATH]}));
+  }
+  sub list_from_pi {
+    (my MY $self, my $node) = @_;
+    die $self->generror_at($node->[NODE_LNO]
+                           , q{<?%s ?> is not allowed in expression}
+                           . q{ (only in text or html value)}
+                           , $node->[NODE_PATH][0]);
   }
   #========================================
   sub from_element {
@@ -386,22 +403,36 @@ use YATT::Lite::Constants;
       $self->gen_call($node, @{$node->[NODE_PATH]});
     }
   }
-  sub text_from_element {
-    (my MY $self, my $node) = @_;
-    my $call_ref = $self->from_element($node);
-    sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $$call_ref;
+  # 捕捉中の $CON は、元の CON に delegate する proxy (GH-295)
+  sub gen_captured {
+    (my MY $self, my $statements) = @_;
+    sprintf q{(YATT::Lite::ConnectionProxy->capture($CON, sub {my ($CON) = @_; %s}))}
+      , $statements;
   }
-  sub text_from_pi {
-    (my MY $self, my $node) = @_;
-    my $statements = $self->from_pi($node);
-    sprintf q{(YATT::Lite::Util::captured {my ($CON) = @_; %s})}, $statements;
+  sub gen_maybe_captured {
+    my ($self, @expr) = @_;
+    if (grep {ref} @expr) {
+      # XXX: as_print と違って、行番号の狂いが生じる可能性がある
+      # → 個々の要素の生成の段階で、改行を \"\n" みたいに生成しておく？？
+      my @stmt;
+      foreach my $expr (@expr) {
+        if (ref $expr) {
+          push @stmt, $$expr.";";
+        } else {
+          push @stmt, q{print $CON (}, $expr, q{);};
+        }
+      }
+      $self->gen_captured(join "", @stmt);
+    } else {
+      join '.', @expr;
+    }
   }
 
   sub gen_call {
     (my MY $self, my ($node, @path)) = @_;
     if (my ($kw, $condNode, $stripped) = $self->cut_conditional_arg($node)) {
       # Generate the condition before the call, like macro_if does.
-      my $cond = join "", $self->as_list(lexpand(argValue($condNode)));
+      my $cond = $self->as_list(lexpand(argValue($condNode)));
       my $call = $self->gen_call($stripped, @path);
       return \ sprintf(q{%s %s (%s)}, $$call, $kw, $cond);
     }
@@ -609,7 +640,7 @@ use YATT::Lite::Constants;
     my @value = lexpand(argValue($arg));
     return $default if not @value or @value == 1 and not ref $value[0]
       and $value[0] eq '';
-    join '', $self->as_list(@value);
+    scalar $self->as_list(@value);
   }
 
   sub as_lvalue {
@@ -684,7 +715,9 @@ use YATT::Lite::Constants;
       $self->{_curline} += numLines($value);
       return qtext($value);
     }
-    join '.', shift->gen_as(text => \@AS_TEXT, 1, 1, @$value);
+    local $self->{_scope} = $self->mkscope({}, $self->{_scope});
+    my @expr = $self->gen_as(text => \@AS_TEXT, 1, 1, @$value);
+    $self->gen_maybe_captured(@expr);
   }
   sub as_cast_to_scalar {
     (my MY $self, my ($var, $value)) = @_;
@@ -1117,7 +1150,7 @@ sub feed_arg_spec {
       local $self->{_scope} = $self->mkscope({}, $self->{_scope});
       local $self->{_curtoks} = [@body];
       (defined $guard
-       ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : $fmt)
+       ? sprintf($fmt, scalar $self->as_list(lexpand($guard))) : $fmt)
 	.'{'.$self->cut_next_nl.$self->as_print('}');
     } @arms;
     \ join "", @expr, $self->cut_next_nl;
@@ -1150,14 +1183,15 @@ sub take_spread_name {
       if (my $sub = $self->can("_macro_my_$typename")) {
 	$sub->($self, $node, $name, $valNode);
       } else {
-	my $var = $self->{_scope}[0]{$name}
-	  = $self->mkvar_at(undef, $typename, $name)
+	my $var = $self->mkvar_at(undef, $typename, $name)
 	  or die $self->generror("Unknown type '%s' for variable '%s'"
 				 , $typename, $name);
 	# typename == source の時が問題だ。
 	my $expr = 'my '.$self->as_lvalue($var);
 	my $value = argValue($valNode);
 	$expr .= defined $value ? (' = '.$self->as_cast_to($var, $value)) : ';';
+        $self->{_scope}[0]{$name} = $var;
+        $expr;
       }
     };
     my $adder = sub {
@@ -1233,11 +1267,18 @@ sub take_spread_name {
     }
     \ join "; ", @assign;
   }
+  # 変数の登録は、初期値を生成した後に行う (自分の初期値の中からは見えない)。
+  # 本体は Perl の sub になるので、YATT のスコープも作る (as_cast_to_code と同じ)。
   sub _macro_my_code {
     (my MY $self, my ($node, $name, $valNode)) = @_;
-    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, code => $name);
-    local $self->{_curtoks} = [lexpand(argValue($valNode))];
-    'my '.$self->as_lvalue($var).' = '.q|sub { my $CON = shift;| . $self->as_print('}');
+    my $var = $self->mkvar_at(undef, code => $name);
+    my $expr = do {
+      local $self->{_curtoks} = [lexpand(argValue($valNode))];
+      local $self->{_scope} = $self->mkscope({}, $self->{_scope});
+      'my '.$self->as_lvalue($var).' = '.q|sub { my $CON = shift;| . $self->as_print('}');
+    };
+    $self->{_scope}[0]{$name} = $var;
+    $expr;
   }
   sub _macro_my_expr {
     (my MY $self, my ($node, $name, $valNode)) = @_;
@@ -1245,17 +1286,21 @@ sub take_spread_name {
     if ($body and $valNode == $body) {
       die $self->generror(q{expr variable '%s' can't have a body}, $name);
     }
-    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, expr => $name);
+    my $var = $self->mkvar_at(undef, expr => $name);
     my $value = argValue($valNode);
-    'my '.$self->as_lvalue($var)
+    my $expr = 'my '.$self->as_lvalue($var)
       .(defined $value ? ' = '.$self->as_cast_to_expr($var, $value) : ';');
+    $self->{_scope}[0]{$name} = $var;
+    $expr;
   }
   sub _macro_my_source {
     (my MY $self, my ($node, $name, $valNode)) = @_;
-    my $var = $self->{_scope}[0]{$name} = $self->mkvar_at(undef, text => $name);
-    'my '.$self->as_lvalue($var).' = '
+    my $var = $self->mkvar_at(undef, text => $name);
+    my $expr = 'my '.$self->as_lvalue($var).' = '
       .join(q|."\n".|, map {qtext($_)}
 	    split /\n/, $self->{_curtmpl}->node_body_source($node));
+    $self->{_scope}[0]{$name} = $var;
+    $expr;
   }
 
   sub macro_block {

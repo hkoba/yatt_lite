@@ -299,3 +299,55 @@ IN:
 OUT:
  {&lt;b&gt;x&lt;/b&gt;}
  
+
+TITLE: my html nesting
+IN: <yatt:my a><yatt:my b><b>x</b></yatt:my><h2>[&yatt:b;]</h2></yatt:my>{&yatt:a;}
+OUT: {<h2>[<b>x</b>]</h2>}
+
+TITLE: my html nesting var scope
+IN:
+ <yatt:my x>
+   <yatt:my a=3 y>
+     foo
+   </yatt:my>
+   &yatt:y;
+ </yatt:my>
+ &yatt:x;
+ &yatt:a;
+ERROR: No such variable 'a'
+
+
+TITLE: my html var scope
+IN: <yatt:my a>&yatt:a;</yatt:my>
+ERROR: No such variable 'a'
+
+
+TITLE: my code var scope
+IN: <yatt:my c:code>&yatt:c();</yatt:my>
+ERROR: No such entity in namespace
+
+TITLE: my code body var scope
+IN:
+ <yatt:my c:code><yatt:my inner>x</yatt:my>[&yatt:inner;]</yatt:my>
+ &yatt:inner;
+ERROR: No such variable 'inner'
+
+
+TITLE: element is not allowed in scalar my
+IN:
+ <yatt:my x:scalar><yatt:foo/></yatt:my>&yatt:x;
+ <!yatt:widget foo>
+ foo
+ERROR: Element <yatt:foo> is not allowed in expression
+
+TITLE: element is not allowed in list my
+IN:
+ <yatt:my x:list><yatt:foo/></yatt:my>&yatt:x;
+ <!yatt:widget foo>
+ foo
+ERROR: Element <yatt:foo> is not allowed in expression
+
+TITLE: pi is not allowed in scalar my
+IN: <yatt:my x:scalar><?perl= 1+1 ?></yatt:my>&yatt:x;
+ERROR: <\?perl \?> is not allowed in expression
+
