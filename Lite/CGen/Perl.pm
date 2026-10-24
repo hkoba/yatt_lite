@@ -371,6 +371,22 @@ use YATT::Lite::Constants;
   sub as_list {
     shift->gen_as(list => \@AS_LIST, 0, 0, @_);
   }
+  # as_list は式だけを受け取る。要素や <?perl ?> は、出力を捕捉できる
+  # text/html の値の中でだけ使える (as_text, as_cast_to_html)。
+  sub list_from_element {
+    (my MY $self, my $node) = @_;
+    die $self->generror_at($node->[NODE_LNO]
+                           , q{Element <%s> is not allowed in expression}
+                           . q{ (only in text or html value)}
+                           , join(":", @{$node->[NODE_PATH]}));
+  }
+  sub list_from_pi {
+    (my MY $self, my $node) = @_;
+    die $self->generror_at($node->[NODE_LNO]
+                           , q{<?%s ?> is not allowed in expression}
+                           . q{ (only in text or html value)}
+                           , $node->[NODE_PATH][0]);
+  }
   #========================================
   sub from_element {
     # XXX: macro (if, foreach, my, format) (error if は?)
