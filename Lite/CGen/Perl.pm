@@ -358,6 +358,7 @@ use YATT::Lite::Constants;
   # というか、 html 型には capture が必要か。 capture は buffering したいよね？
   sub as_text {
     my ($self, @rest) = @_;
+    local $self->{_scope} = $self->mkscope({}, $self->{_scope});
     my @expr = $self->gen_as(text => \@AS_TEXT, 0, 1, @rest);
     $self->gen_maybe_captured(@expr);
   }
@@ -709,6 +710,7 @@ use YATT::Lite::Constants;
       $self->{_curline} += numLines($value);
       return qtext($value);
     }
+    local $self->{_scope} = $self->mkscope({}, $self->{_scope});
     my @expr = $self->gen_as(text => \@AS_TEXT, 1, 1, @$value);
     $self->gen_maybe_captured(@expr);
   }

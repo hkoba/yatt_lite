@@ -304,6 +304,20 @@ TITLE: my html nesting
 IN: <yatt:my a><yatt:my b><b>x</b></yatt:my><h2>[&yatt:b;]</h2></yatt:my>{&yatt:a;}
 OUT: {<h2>[<b>x</b>]</h2>}
 
+TITLE: my html nesting var scope
+IN:
+ <yatt:my x>
+   <yatt:my a=3 y>
+     foo
+   </yatt:my>
+   &yatt:y;
+ </yatt:my>
+ &yatt:x;
+ &yatt:a;
+ERROR: No such variable 'a'
+
+
 TITLE: my html var scope
 IN: <yatt:my a>&yatt:a;</yatt:my>
 ERROR: No such variable 'a'
+
