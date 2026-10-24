@@ -300,6 +300,10 @@ OUT:
  {&lt;b&gt;x&lt;/b&gt;}
  
 
+TITLE: my html nesting
+IN: <yatt:my a><yatt:my b><b>x</b></yatt:my><h2>[&yatt:b;]</h2></yatt:my>{&yatt:a;}
+OUT: {<h2>[<b>x</b>]</h2>}
+
 TITLE: my html var scope
 IN: <yatt:my a>&yatt:a;</yatt:my>
 ERROR: No such variable 'a'

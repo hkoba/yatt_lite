@@ -338,13 +338,10 @@ use YATT::Lite::Constants;
       };
       my $expr = $sub->($self, $node);
       next unless defined $expr;
-      push @result, do {
-        if (ref $expr) {
-          $self->gen_captured($$expr);
-        } else {
-          $expr;
-        }
-      };
+      if (ref $expr and not wantarray) {
+        die $self->generror("Syntax error, not allowed here: %s", $$expr);
+      }
+      push @result, $expr;
     }
     wantarray ? @result : join("", @result);
   }
@@ -360,7 +357,9 @@ use YATT::Lite::Constants;
   # でも、 escape 有無を flag で渡せた方が、 html 型にも使えて便利では?
   # というか、 html 型には capture が必要か。 capture は buffering したいよね？
   sub as_text {
-    join '.', shift->gen_as(text => \@AS_TEXT, 0, 1, @_);
+    my ($self, @rest) = @_;
+    my @expr = $self->gen_as(text => \@AS_TEXT, 0, 1, @rest);
+    $self->gen_maybe_captured(@expr);
   }
 
   our @AS_LIST;
@@ -390,19 +389,37 @@ use YATT::Lite::Constants;
   sub text_from_element {
     (my MY $self, my $node) = @_;
     my $call_ref = $self->from_element($node);
-    $self->gen_captured($$call_ref);
+    # $self->gen_captured($$call_ref);
   }
   # 文 (<?perl ?>) は出力を捕捉し、式 (<?perl= ?>) はそのまま値にする
   sub text_from_pi {
     (my MY $self, my $node) = @_;
     my $script = $self->from_pi($node);
-    ref $script ? $self->gen_captured($$script) : $script;
+    # ref $script ? $self->gen_captured($$script) : $script;
   }
   # 捕捉中の $CON は、元の CON に delegate する proxy (GH-295)
   sub gen_captured {
     (my MY $self, my $statements) = @_;
     sprintf q{(YATT::Lite::ConnectionProxy->capture($CON, sub {my ($CON) = @_; %s}))}
       , $statements;
+  }
+  sub gen_maybe_captured {
+    my ($self, @expr) = @_;
+    if (grep {ref} @expr) {
+      # XXX: as_print と違って、行番号の狂いが生じる可能性がある
+      # → 個々の要素の生成の段階で、改行を \"\n" みたいに生成しておく？？
+      my @stmt;
+      foreach my $expr (@expr) {
+        if (ref $expr) {
+          push @stmt, $$expr.";";
+        } else {
+          push @stmt, q{print $CON (}, $expr, q{);};
+        }
+      }
+      $self->gen_captured(join "", @stmt);
+    } else {
+      join '.', @expr;
+    }
   }
 
   sub gen_call {
@@ -692,7 +709,8 @@ use YATT::Lite::Constants;
       $self->{_curline} += numLines($value);
       return qtext($value);
     }
-    join '.', shift->gen_as(text => \@AS_TEXT, 1, 1, @$value);
+    my @expr = $self->gen_as(text => \@AS_TEXT, 1, 1, @$value);
+    $self->gen_maybe_captured(@expr);
   }
   sub as_cast_to_scalar {
     (my MY $self, my ($var, $value)) = @_;
