@@ -427,7 +427,7 @@ use YATT::Lite::Constants;
     (my MY $self, my ($node, @path)) = @_;
     if (my ($kw, $condNode, $stripped) = $self->cut_conditional_arg($node)) {
       # Generate the condition before the call, like macro_if does.
-      my $cond = join "", $self->as_list(lexpand(argValue($condNode)));
+      my $cond = $self->as_list(lexpand(argValue($condNode)));
       my $call = $self->gen_call($stripped, @path);
       return \ sprintf(q{%s %s (%s)}, $$call, $kw, $cond);
     }
@@ -635,7 +635,7 @@ use YATT::Lite::Constants;
     my @value = lexpand(argValue($arg));
     return $default if not @value or @value == 1 and not ref $value[0]
       and $value[0] eq '';
-    join '', $self->as_list(@value);
+    scalar $self->as_list(@value);
   }
 
   sub as_lvalue {
@@ -1145,7 +1145,7 @@ sub feed_arg_spec {
       local $self->{_scope} = $self->mkscope({}, $self->{_scope});
       local $self->{_curtoks} = [@body];
       (defined $guard
-       ? sprintf($fmt, join "", $self->as_list(lexpand($guard))) : $fmt)
+       ? sprintf($fmt, scalar $self->as_list(lexpand($guard))) : $fmt)
 	.'{'.$self->cut_next_nl.$self->as_print('}');
     } @arms;
     \ join "", @expr, $self->cut_next_nl;
