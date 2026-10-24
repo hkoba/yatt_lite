@@ -412,6 +412,19 @@ X<my>
 (属性値の中で呼び出した場合も取り込まれますが、型が L</text> なので、
 取り込んだ html は出力時に escape されます。)
 
+本体の中で宣言した変数 (入れ子の C<< <yatt:my> >>) は、その本体の中でだけ使えます。
+閉じタグより後からは参照できません。また、宣言する変数自身を、
+その初期値の中から参照することも出来ません。
+
+  <yatt:my foo>
+    <yatt:my bar>...</yatt:my>
+    &yatt:bar;        <!-- OK -->
+  </yatt:my>
+  &yatt:bar;          <!-- エラー: No such variable 'bar' -->
+
+(C<< <?perl my $x = ...; ?> >> で宣言した Perl の変数も同様で、
+同じ本体の中の後続の C<< <?perl ?> >> からだけ使えます。)
+
 
 =head2 C<yatt:if>, C<:yatt:else>
 X<if> X<else>
