@@ -332,3 +332,22 @@ IN:
  &yatt:inner;
 ERROR: No such variable 'inner'
 
+
+TITLE: element is not allowed in scalar my
+IN:
+ <yatt:my x:scalar><yatt:foo/></yatt:my>&yatt:x;
+ <!yatt:widget foo>
+ foo
+ERROR: Element <yatt:foo> is not allowed in expression
+
+TITLE: element is not allowed in list my
+IN:
+ <yatt:my x:list><yatt:foo/></yatt:my>&yatt:x;
+ <!yatt:widget foo>
+ foo
+ERROR: Element <yatt:foo> is not allowed in expression
+
+TITLE: pi is not allowed in scalar my
+IN: <yatt:my x:scalar><?perl= 1+1 ?></yatt:my>&yatt:x;
+ERROR: <\?perl \?> is not allowed in expression
+
