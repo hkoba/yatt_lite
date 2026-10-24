@@ -1158,14 +1158,15 @@ sub take_spread_name {
       if (my $sub = $self->can("_macro_my_$typename")) {
 	$sub->($self, $node, $name, $valNode);
       } else {
-	my $var = $self->{_scope}[0]{$name}
-	  = $self->mkvar_at(undef, $typename, $name)
+	my $var = $self->mkvar_at(undef, $typename, $name)
 	  or die $self->generror("Unknown type '%s' for variable '%s'"
 				 , $typename, $name);
 	# typename == source の時が問題だ。
 	my $expr = 'my '.$self->as_lvalue($var);
 	my $value = argValue($valNode);
 	$expr .= defined $value ? (' = '.$self->as_cast_to($var, $value)) : ';';
+        $self->{_scope}[0]{$name} = $var;
+        $expr;
       }
     };
     my $adder = sub {

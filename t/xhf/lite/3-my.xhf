@@ -299,3 +299,7 @@ IN:
 OUT:
  {&lt;b&gt;x&lt;/b&gt;}
  
+
+TITLE: my html var scope
+IN: <yatt:my a>&yatt:a;</yatt:my>
+ERROR: No such variable 'a'
