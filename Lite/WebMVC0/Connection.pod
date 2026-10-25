@@ -139,12 +139,40 @@ the name tells this never-return behavior.
 
   $CON->raise_redirect($CON->site_path("/login", [nx => $nx]));
 
-B<Open redirect protection is built in>: if C<$url> is a plain
-string pointing to a foreign host (C<//host/...> or
-C<scheme://host/...>), it is rejected with C<400 Bad Request>.
+B<Open redirect protection is built in>: a plain string C<$url>
+is accepted only when it stays on this origin, as a browser would
+interpret the C<Location:> header:
+
+=over 4
+
+=item *
+
+a path (C</...>) or a relative reference (C<./>, C<index?x=1>,
+C<?x=1>, C<#frag>), or
+
+=item *
+
+an absolute C<http(s)://host/...> or scheme-relative C<//host/...>
+url whose C<host> equals C<< $CON->mkhost >>.
+
+=back
+
+Anything else is rejected with C<400 Bad Request>: a foreign host,
+a non-http scheme (C<javascript:>, C<data:>), and the forms browsers
+normalize into a foreign host - C<\\host>, C</\host>, C<///host>,
+C<http:\\host>, or a url with leading whitespace or control characters
+(which would also allow header injection). The check is
+L</is_same_origin_redirect_url($url)>.
+
 To intentionally redirect to an external site, pass a SCALAR REF:
 
   $CON->raise_redirect(\ $external_url);
+
+=head2 is_same_origin_redirect_url($url)
+
+Returns true if the plain string C<$url> passes the open redirect
+check described above. Exposed so that application code can test a
+user-supplied url (e.g. a C<nx> parameter) before storing it.
 
 Output printed so far is discarded, and the session (if any)
 is flushed before the redirect.

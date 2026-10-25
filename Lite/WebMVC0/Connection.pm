@@ -774,6 +774,44 @@ sub request_uri {
 
 #========================================
 
+# True if $url, given as a plain string, stays on this origin:
+# a path or relative reference, or an absolute http(s) url whose host
+# equals mkhost. Written against how browsers parse Location:, not
+# against RFC 3986 alone: for http(s), '\' is treated as '/', runs of
+# slashes after the scheme collapse, and leading C0 controls / spaces
+# are stripped before parsing. So "\\evil", "/\evil", "///evil",
+# "http:\\evil" and " //evil" all mean evil.example to a browser and
+# are rejected here.
+sub is_same_origin_redirect_url {
+  my ($glob, $url) = @_;
+  return 0 unless defined $url and length $url;
+
+  # Control chars (CR/LF would split the header) and whitespace.
+  return 0 if $url =~ /[\x00-\x20\x7f]/;
+
+  if ($url =~ m{^([A-Za-z][A-Za-z0-9+.-]*):(.*)\z}s) {
+    # Has a scheme. Only http(s) to this very host is accepted.
+    my ($scheme, $rest) = (lc($1), $2);
+    return 0 unless $scheme eq 'http' or $scheme eq 'https';
+    my ($host) = $rest =~ m{^//([^/?#\\]+)(?:[/?#]|\z)}
+      or return 0;
+    return lc($host) eq lc($glob->mkhost($scheme) // '') ? 1 : 0;
+  }
+
+  if ($url =~ m{^//([^/?#\\]+)(?:[/?#]|\z)}) {
+    # Scheme-relative "//host/...": accepted only for this host.
+    return lc($1) eq lc($glob->mkhost // '') ? 1 : 0;
+  }
+
+  if ($url =~ m{^[/\\]}) {
+    # A path. Exactly one leading '/', not followed by '/' or '\'.
+    return $url =~ m{^/(?![/\\])} ? 1 : 0;
+  }
+
+  # Relative reference ("./", "index?x=1", "?x=1", "#frag").
+  1;
+}
+
 # GH-251: raise_redirect is the preferred name (raise_* family tells
 # this never returns to the caller). redirect is kept for compatibility.
 *raise_redirect = *redirect; *raise_redirect = *redirect;
@@ -786,14 +824,13 @@ sub redirect {
       my $arg = shift;
       # die "redirect url is not a scalar ref: $arg";
       $$arg;
-    } elsif ($_[0] =~ m{^(?:\w+:)?//([^/]+)}
-	     and $1 ne ($glob->mkhost // '')) {
-      die $glob->error_with_status(
-        400, "External redirect is not allowed: %s", $_[0]
-      );
-    } else {
-      # taint check
+    } elsif ($glob->is_same_origin_redirect_url($_[0])) {
       shift;
+    } else {
+      die $glob->error_with_status(
+        400, "External redirect is not allowed: %s"
+        , YATT::Lite::Util::escape($_[0])
+      );
     }
   };
   if ($prop->{_header_was_sent}++) {
