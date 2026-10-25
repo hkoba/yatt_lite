@@ -606,16 +606,39 @@ BEGIN {
 	      }
 	    };
 	  } $sub->($str))).')';
-	} else {
-	  # XXX: Is this secure???
-	  # XXX: Should be JSON?
+	} elsif (escape_may_dump_ref()) {
+	  # Development aid: show the structure, fully escaped (inside <pre>
+	  # the browser renders the entities back, so readability is kept).
+	  # Use &yatt:dump() when you really mean to print a structure.
 	  my $copy = indented_dump($str);
-	  $copy =~ s{([<\"]|-->)}{$escape{$1}}g; # XXX: Minimum. May be insecure.
+	  $copy =~ s{([<>&\"\'])}{$escape{$1}}g;
 	  $copy;
+	} else {
+	  # Production: never leak the contents of a structure that was
+	  # (probably by accident) printed as text. Type name only.
+	  '[' . escape(ref $str) . ']';
 	}
       };
     }
     wantarray ? @result : $result[0];
+  }
+
+  #
+  # Whether escape() may dump a reference. Decided per request through
+  # $CON->has_htdebug('dump') (cached in the connection), which consults
+  # $ENV{HTDEBUG_DUMP} and $app_root/.htdebug_dump. Without either,
+  # dumping is allowed only under PLACK_ENV=development.
+  #
+  sub escape_may_dump_ref {
+    if (exists $ENV{HTDEBUG_DUMP}) {
+      return $ENV{HTDEBUG_DUMP} ? 1 : 0;
+    }
+    if (my $con = $YATT::Lite::Entities::CON) {
+      if ($con->can('has_htdebug') and $con->has_htdebug('dump')) {
+        return 1;
+      }
+    }
+    ($ENV{PLACK_ENV} // '') eq 'development' ? 1 : 0;
   }
 }
 

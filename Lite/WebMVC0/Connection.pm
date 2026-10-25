@@ -23,6 +23,8 @@ use YATT::Lite::MFields
     _sigil_type_item
 
     _current_user
+
+    _htdebug_cache
    /);
 use YATT::Lite::Util qw(globref url_encode nonempty empty rootname lexpand);
 use YATT::Lite::PSGIEnv;
@@ -515,6 +517,24 @@ sub mkprefix {
     || $env->{'psgi.url_scheme'} || $prop->{cgi}->protocol;
   my $host = $glob->mkhost($scheme);
   $scheme . '://' . $host . join("", @_);
+}
+
+#
+# $CON->has_htdebug($name): per-request cache of
+# $SYS->has_htdebug($name) (YATT::Lite::WebMVC0::SiteApp), which does an
+# %ENV lookup and a stat() of $app_root/.htdebug_$name every time.
+# escape() consults this for every reference it is asked to print, so
+# the answer is computed at most once per connection and name.
+#
+sub has_htdebug {
+  my PROP $prop = (my $glob = shift)->prop;
+  my ($name) = @_;
+  my $cache = $prop->{_htdebug_cache} //= {};
+  return $cache->{$name} if exists $cache->{$name};
+  $cache->{$name} = do {
+    my $sys = $prop->{system};
+    ($sys and $sys->can('has_htdebug')) ? ($sys->has_htdebug($name) // 0) : 0;
+  };
 }
 
 # True if this request came over TLS (see YATT::Lite::PSGIEnv::is_https).

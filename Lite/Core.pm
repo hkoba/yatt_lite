@@ -390,8 +390,22 @@ use YATT::Lite::Breakpoint ();
         next;
       }
       my @value = $cgi->multi_param($name);
-      $list->[$argdecl->argno] = $argdecl->type->[0] eq 'list'
-	? \@value : $value[0];
+      my $type = $argdecl->type->[0];
+      if ($type eq 'list') {
+        $list->[$argdecl->argno] = \@value;
+      } elsif ($type eq 'scalar') {
+        # scalar may receive nested query structures (?choice[foo]=1).
+        $list->[$argdecl->argno] = $value[0];
+      } elsif (grep {ref $_} @value) {
+        # text/bool never take a reference (?q[]=... would otherwise
+        # reach escape() as a structure). Treat like an unknown param.
+        if ($stash) {
+          push @{$stash->{$name}}, @value;
+        }
+        next;
+      } else {
+        $list->[$argdecl->argno] = $value[0];
+      }
     }
     @$list;
   }
