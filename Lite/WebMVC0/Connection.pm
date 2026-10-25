@@ -517,6 +517,18 @@ sub mkprefix {
   $scheme . '://' . $host . join("", @_);
 }
 
+# True if this request came over TLS (see YATT::Lite::PSGIEnv::is_https).
+sub is_https {
+  my PROP $prop = (my $glob = shift)->prop;
+  if (my Env $env = $prop->{env}) {
+    Env->is_https($env);
+  } elsif (my $cgi = $prop->{cgi}) {
+    ($cgi->can('protocol') and lc($cgi->protocol // '') eq 'https') ? 1 : 0;
+  } else {
+    0;
+  }
+}
+
 sub http_host_domain {
   my PROP $prop = (my $glob = shift)->prop;
   my Env $env = $prop->{env};

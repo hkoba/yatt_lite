@@ -205,6 +205,41 @@ require File::Spec;
     ckrequire($_[0]);
   }
 
+  #
+  # secure_random_bytes($n) returns $n bytes from the OS CSPRNG, for
+  # session ids and tokens. Never falls back to perl's rand().
+  #
+  our $SECURE_RANDOM_SOURCE;
+  sub secure_random_bytes {
+    my ($n) = @_;
+    $SECURE_RANDOM_SOURCE //= do {
+      if (eval {permissive_require('Crypt::SysRandom'); 1}) {
+        sub { Crypt::SysRandom::random_bytes($_[0]) };
+      } elsif (eval {permissive_require('Crypt::URandom'); 1}) {
+        sub { Crypt::URandom::urandom($_[0]) };
+      } elsif (-r '/dev/urandom') {
+        sub {
+          open my $fh, '<:raw', '/dev/urandom'
+            or croak "Can't open /dev/urandom: $!";
+          my $buf = '';
+          while (length $buf < $_[0]) {
+            my $got = sysread $fh, $buf, $_[0] - length $buf, length $buf;
+            croak "Can't read /dev/urandom: $!" unless defined $got and $got > 0;
+          }
+          $buf;
+        };
+      } else {
+        croak "No secure random source! Please install Crypt::SysRandom";
+      }
+    };
+    $SECURE_RANDOM_SOURCE->($n);
+  }
+
+  sub secure_random_hex {
+    my ($nbytes) = @_;
+    unpack('H*', secure_random_bytes($nbytes));
+  }
+
   use Scalar::Util qw(refaddr);
   sub cached_in {
     my ($dir, $dict, $nameSpec, $sys, $mark, $loader, $refresher) = @_;
