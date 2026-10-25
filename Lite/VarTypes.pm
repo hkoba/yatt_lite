@@ -43,6 +43,8 @@ BEGIN {
   # our @EXPORT = our @EXPORT_OK;
 }
 
+our %SAFE_TYPES; $SAFE_TYPES{$_} = 1 for qw(text list scalar bool);
+
 sub list_field_names {
   our @fields;
 }
@@ -75,7 +77,7 @@ sub list_field_names {
     my ($var) = @_;
     $var->[VSLOT_IS_BODY_ARGUMENT]
       ||
-    $var->[VSLOT_TYPE][0] =~ /^(?:code|expr)\z/;
+      ! $SAFE_TYPES{$var->[VSLOT_TYPE][0]};
   }
   sub YATT::Lite::VarTypes::Base::default_dflag_default {
     ();
