@@ -251,10 +251,18 @@ sub validate_request_sigils_dict {
   if (defined $subpage and defined $action) {
     # XXX: Reserved for future use.
     $glob->error("Can't use subpage and action at one time: %s vs %s"
-		 , $subpage, $action);
+                 , $subpage, $action);
   } elsif (defined $subpage) {
+    unless ($subpage =~ m{^\w*\z}a) {
+      $glob->error(+{http_status_code => 400}, "Invalid subpage: %s",
+                   YATT::Lite::Util::escape($subpage));
+    }
     (page => $subpage);
   } elsif (defined $action) {
+    unless ($action =~ m{^\w*\z}a) {
+      $glob->error(+{http_status_code => 400}, "Invalid action: %s",
+                   YATT::Lite::Util::escape($action));
+    }
     (action => $action);
   } else {
     ();
