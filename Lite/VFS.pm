@@ -468,6 +468,16 @@ require File::Glob;
       return;
     }
 
+    # A (part) name must never escape $in->{path}. Request-derived names
+    # are already restricted to \w+ in WebMVC0::Connection; this is the
+    # last line of defense for every other caller.
+    foreach my $n ($partName, $realFile) {
+      next unless defined $n;
+      if ($n =~ m{/} or $n =~ m{\.\.}) {
+        croak "Invalid part name (contains '/' or '..'): $n";
+      }
+    }
+
     $realFile ||= $partName;
     # Template-derived names are decoded strings; paths are octets. GH-275
     utf8::encode($realFile) if utf8::is_utf8($realFile);
