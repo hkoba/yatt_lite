@@ -91,6 +91,8 @@ my $make_site = sub {
 #========================================
 subtest "deployment: html/attr params are stashed, never bound", sub {
   local $ENV{PLACK_ENV} = 'deployment';
+  # &yatt:CON:stash() prints a HASH; escape() dumps it only with HTDEBUG_DUMP.
+  local $ENV{HTDEBUG_DUMP} = 1;
   my $site = $make_site->();
 
   test_psgi $site->to_app, sub {
@@ -107,7 +109,7 @@ flag=1
 items=a,
 n=42
 stash={
-  'yatt.unknown_params' => {}
+  &#39;yatt.unknown_params&#39; =&gt; {}
 }
 
 END
@@ -126,12 +128,12 @@ flag=
 items=,
 n=
 stash={
-  'yatt.unknown_params' => {
-    'cls' => [
-      '&quot; onload=&quot;x'
+  &#39;yatt.unknown_params&#39; =&gt; {
+    &#39;cls&#39; =&gt; [
+      &#39;&quot; onload=&quot;x&#39;
     ],
-    'header' => [
-      '&lt;script>alert(document.cookie)&lt;/script>'
+    &#39;header&#39; =&gt; [
+      &#39;&lt;script&gt;alert(document.cookie)&lt;/script&gt;&#39;
     ]
   }
 }

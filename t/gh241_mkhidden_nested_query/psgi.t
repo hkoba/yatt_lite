@@ -27,6 +27,9 @@ BEGIN {
 }
 
 {
+  # param_test.yatt prints :param(.foo[]) (an ARRAY) via escape(), which
+  # dumps references only with HTDEBUG_DUMP (or in development).
+  $ENV{HTDEBUG_DUMP} = 1; # not local: Test::Spec runs the blocks later
   my $app = Plack::Util::load_psgi "$FindBin::Bin/app/app.psgi";
   my $test = Plack::Test->create($app);
 
@@ -35,14 +38,14 @@ BEGIN {
       my $res = $test->request(GET "/param_test?.foo[]=aa&.foo[]=bb");
       eq_or_diff $res->content, <<'END';
 [
-  'aa',
-  'bb'
+  &#39;aa&#39;,
+  &#39;bb&#39;
 ]
 
 
 [
-  'aa',
-  'bb'
+  &#39;aa&#39;,
+  &#39;bb&#39;
 ]
 
 END

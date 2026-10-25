@@ -39,6 +39,9 @@ stash=&yatt:CON:stash();
 END
 
   local $ENV{PLACK_ENV} = 'deployment';
+  # This test prints the stash (a HASH) via &yatt:CON:stash(); escape()
+  # dumps references only when HTDEBUG_DUMP is on (or in development).
+  local $ENV{HTDEBUG_DUMP} = 1;
 
   my $site = YATT::Lite::WebMVC0::SiteApp->new(
     app_ns => $CLS
@@ -57,7 +60,7 @@ x=A
 y=B
 z=C
 stash={
-  'yatt.unknown_params' => {}
+  &#39;yatt.unknown_params&#39; =&gt; {}
 }
 
 
@@ -71,15 +74,15 @@ x=Z
 y=
 z=
 stash={
-  'yatt.unknown_params' => {
-    'a' => [
-      'X'
+  &#39;yatt.unknown_params&#39; =&gt; {
+    &#39;a&#39; =&gt; [
+      &#39;X&#39;
     ],
-    'b' => [
-      'Y'
+    &#39;b&#39; =&gt; [
+      &#39;Y&#39;
     ],
-    'body' => [
-      'ZZZ'
+    &#39;body&#39; =&gt; [
+      &#39;ZZZ&#39;
     ]
   }
 }
@@ -94,9 +97,9 @@ x=
 y=
 z=
 stash={
-  'yatt.unknown_params' => {
-    'body' => [
-      'foo'
+  &#39;yatt.unknown_params&#39; =&gt; {
+    &#39;body&#39; =&gt; [
+      &#39;foo&#39;
     ]
   }
 }

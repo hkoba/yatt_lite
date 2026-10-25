@@ -34,6 +34,10 @@ use YATT::Lite::Util qw/
                          is_done
                          terse_dump
                      /;
+
+# Several fixtures print references (lists, hashes) through escape(),
+# which dumps them only when HTDEBUG_DUMP is on (or in development).
+$ENV{HTDEBUG_DUMP} = 1;
 sub myapp {join _ => MyTest => appname($0), @_}
 
 use YATT::Lite::Breakpoint;
