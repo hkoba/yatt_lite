@@ -77,6 +77,17 @@ Create an empty file named C<DEBUG_YATT_LANGSERVER> in the workspace root
 messages on STDERR. If a directory C<var/debug_yatt_ls/> also exists there,
 the document state after every C<textDocument/didChange> is written into it.
 
+=head2 Workspace root and app.psgi
+
+On C<initialize> the server opens the workspace (C<rootUri>, else the
+first of C<workspaceFolders>, else C<rootPath>; the server's cwd when
+none is given) through L<YATT::Lite::Site/load_or_default>. The
+F<app.psgi> / F<runyatt.psgi> search is limited to the workspace root
+itself (C<< stop_at => $rootUri >>): a factory script in a parent
+directory is never executed, because the editor only vouched for the
+workspace. A workspace without its own factory script is served by a
+default site, as a bare template directory.
+
 =head2 Paths and URIs
 
 File URIs are percent-decoded to octet paths and used as they are: the

@@ -54,9 +54,11 @@ sub load {
   my ($pack, %opts) = @_;
   my $class = $pack->_facade_factory_class;
   my $dir = delete $opts{dir} // '.';
-  my ($script) = $class->find_factory_script($dir)
+  my $stop_at = delete $opts{stop_at};
+  my ($script) = $class->find_factory_script($dir, stop_at => $stop_at)
     or croak "Can't find factory script (app.psgi or runyatt.psgi)"
-    . " at or above: $dir";
+    . " at or above: $dir"
+    . (defined $stop_at ? " (search stopped at: $stop_at)" : "");
   my $key = YATT::Lite::Util::normalize_fs_path($class->rel2abs($script));
   if (my $site = $SCRIPT_CACHE{$key}) {
     $site->configure(%opts) if %opts;
@@ -77,10 +79,11 @@ sub load_or_default {
   my ($pack, %opts) = @_;
   my $class = $pack->_facade_factory_class;
   my $app_class = delete $opts{class} // 'YATT::Lite::WebMVC0::SiteApp';
-  if ($class->find_factory_script($opts{dir})) {
+  if ($class->find_factory_script($opts{dir}, stop_at => $opts{stop_at})) {
     return $pack->load(%opts);
   }
   my $dir = delete $opts{dir};
+  delete $opts{stop_at};
   $opts{offline} = 1 unless exists $opts{offline};
   YATT::Lite::Util::ckrequire($app_class);
   $app_class->new

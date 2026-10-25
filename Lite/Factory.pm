@@ -180,7 +180,9 @@ sub want_object { $want_object }
 
 sub find_load_factory_script {
   my ($pack, %opts) = @_;
-  my ($found) = $pack->find_factory_script(delete $opts{dir})
+  my $stop_at = delete $opts{stop_at};
+  my ($found) = $pack->find_factory_script(delete $opts{dir}
+                                           , stop_at => $stop_at)
     or return;
   my $self = $pack->load_factory_script($found)
     or croak "Can't load YATT::Lite::Factory instance from $found";
@@ -486,17 +488,45 @@ sub _inc_root {
   Cwd::realpath($path) // $path;
 }
 
+#
+# find_factory_script($dir, %opts): search runyatt.psgi / app.psgi
+# upward from $dir. With stop_at => $boundary the search never leaves
+# $boundary (compared by realpath, so symlinked workspaces behave), and
+# returns nothing instead. Tools working from their own cwd leave it
+# unset; the language server sets it to the workspace root the client
+# named, so a script planted above the workspace is never executed.
+#
 sub find_factory_script {
   my $pack = shift;
-  my $dir = $pack->rel2abs($_[0] // $pack->curdir);
+  my ($start, %opts) = @_;
+  my $dir = $pack->rel2abs($start // $pack->curdir);
+  my $boundary = defined $opts{stop_at}
+    ? $pack->_canonical_dir($opts{stop_at}) : undef;
   my @path = $pack->no_upwards($pack->splitdir($dir));
   my $rootdir = $pack->rootdir;
   while (@path and length($dir = $pack->catdir(@path)) > length($rootdir)) {
+    if (defined $boundary and not $pack->_dir_is_within($dir, $boundary)) {
+      return;
+    }
     if (my ($found) = grep {-r} map {"$dir/$_.psgi"} qw(runyatt app)) {
       return $found;
     }
   } continue { pop @path }
   return;
+}
+
+sub _canonical_dir {
+  my ($pack, $dir) = @_;
+  require Cwd;
+  my $abs = $pack->rel2abs($dir);
+  Cwd::realpath($abs) // $abs;
+}
+
+sub _dir_is_within {
+  my ($pack, $dir, $boundary) = @_;
+  my $real = $pack->_canonical_dir($dir);
+  return 1 if $boundary eq $pack->rootdir;
+  $real eq $boundary or index($real, "$boundary/") == 0;
 }
 
 #========================================

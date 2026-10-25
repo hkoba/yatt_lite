@@ -315,7 +315,12 @@ sub inspector {
 sub load_inspector {
   (my MY $self, my $rootPath) = @_;
   $self->{_inspector}{$rootPath} //= do {
-    $self->Inspector->new(dir => $rootPath);
+    # The workspace root is the trust boundary the editor named: only an
+    # app.psgi/runyatt.psgi inside it (in practice: directly in it) may be
+    # executed. Without this, a script planted in any ancestor directory
+    # (e.g. /tmp/app.psgi for a workspace under /tmp) would run on
+    # initialize.
+    $self->Inspector->new(dir => $rootPath, search_boundary => $rootPath);
   };
 }
 

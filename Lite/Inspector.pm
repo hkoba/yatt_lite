@@ -7,6 +7,7 @@ use MOP4Import::Base::CLI_JSON -as_base
   , [fields =>
        qw/_SITE _app_root _file_line_cache/,
      [dir => doc => "starting directory to search app.psgi upward"],
+     [search_boundary => doc => "never search app.psgi above this directory (the language server sets it to the workspace root)"],
      [emit_absolute_path => doc => "emit absolute path instead of \$app_root-relative"],
      [site_class => doc => "class name for SiteApp (to load app.psgi)", default => "YATT::Lite::WebMVC0::SiteApp"],
      [ignore_symlink => doc => "ignore symlinked templates"],
@@ -95,7 +96,9 @@ sub after_configure_default {
     # default site instead of dying. GH-269
     my $class = Plack::Util::load_class($self->{site_class});
     $class->load_or_default(dir => $self->{dir}
-			    , class => $self->{site_class});
+			    , class => $self->{site_class}
+                            , (defined $self->{search_boundary}
+                               ? (stop_at => $self->{search_boundary}) : ()));
   };
 
   $self->{_app_root} = $self->{_SITE}->cget('app_root');

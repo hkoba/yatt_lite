@@ -63,13 +63,21 @@ object per process>: loading the same script twice would collide on
 C<app_ns> anyway, so subsequent C<load()>s return the cached instance
 (re-configuring any explicitly given C<%opts> onto it).
 
+C<< stop_at => $boundary >> limits the upward search: directories
+above C<$boundary> (compared after resolving symlinks) are never
+looked at, so a factory script found there is not executed. Tools
+working from their own cwd normally leave this unset; the language
+server sets it to the workspace root the editor named, because a
+script planted above an untrusted workspace must not run.
+
 =head2 load_or_default (dir => $dir, %opts)
 
-Like C<load>, but when no factory script is found, synthesizes a plain
-site (L<YATT::Lite::WebMVC0::SiteApp> by default; override with
-C<< class => 'My::SiteApp' >>) with C<doc_root>/C<app_root> set to
-C<$dir>, utf-8 defaults, and an auto-uniquified C<app_ns> so that
-multiple default sites can coexist in one process.
+Like C<load>, but when no factory script is found (within C<stop_at>,
+if given), synthesizes a plain site (L<YATT::Lite::WebMVC0::SiteApp>
+by default; override with C<< class => 'My::SiteApp' >>) with
+C<doc_root>/C<app_root> set to C<$dir>, utf-8 defaults, and an
+auto-uniquified C<app_ns> so that multiple default sites can coexist
+in one process.
 
 =head1 INSTANCE METHODS
 
