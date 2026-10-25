@@ -1008,19 +1008,61 @@ sub raise_response {
 #
 # $this->raise_download($fileName, $bytesOrBytesRef, ?[@header]?)
 #
+# $fileName is treated as data (templates pass request-derived names
+# here): control characters are dropped so it can never break out of the
+# header, and anything beyond plain ASCII is carried in an RFC 8187
+# filename*= parameter with an ASCII-only filename= fallback.
+#
 sub raise_download {
   my $this = $_[0];
   my $filename = $_[1];
   my $bytesRef = ref $_[2] eq 'SCALAR' ? $_[2] : \$_[2];
   my @header = ("Content-type" => qq{application/octet-stream},
                 , "Content-Length" => length($$bytesRef));
-  push @header, "Content-Disposition" => qq{attachment; filename="$filename"}
-    if defined $filename and $filename ne '';
+  if (my $disposition = content_disposition_attachment($filename)) {
+    push @header, "Content-Disposition" => $disposition;
+  }
   if (defined $_[3] and ref $_[3]) {
-    push @header, lexpand($_[3]);
+    my @extra = lexpand($_[3]);
+    for (my $i = 0; $i < @extra; $i += 2) {
+      my ($k, $v) = @extra[$i, $i+1];
+      croak "raise_download: header name is not a token: ".($k // 'undef')
+        unless defined $k and $k =~ /^[\w-]+\z/;
+      croak "raise_download: header '$k' contains a control character"
+        if defined $v and $v =~ /[\x00-\x1f\x7f]/;
+    }
+    push @header, @extra;
   }
 
   $this->raise_response([200, \@header, [$$bytesRef]]);
+}
+
+#
+# content_disposition_attachment($filename) returns the value of a
+# Content-Disposition header for an attachment download, or undef when
+# $filename is empty. Control characters (CR, LF, NUL, ...) are removed.
+# When the remainder is not plain ASCII without '"' or '\', an ASCII
+# fallback is used for filename= and the real name goes to filename*=
+# (RFC 8187, UTF-8 percent-encoded).
+#
+sub content_disposition_attachment {
+  my ($filename) = @_;
+  return undef unless defined $filename and $filename ne '';
+
+  (my $name = $filename) =~ s/[\x00-\x1f\x7f]//g;
+  return undef if $name eq '';
+
+  if ($name =~ /^[\x20-\x7e]+\z/ and $name !~ /["\\]/) {
+    return qq{attachment; filename="$name"};
+  }
+
+  (my $fallback = $name) =~ s/[^\x20-\x7e]|["\\]/_/g;
+
+  my $encoded = utf8::is_utf8($name)
+    ? URI::Escape::uri_escape_utf8($name)
+    : URI::Escape::uri_escape($name);
+
+  qq{attachment; filename="$fallback"; filename*=UTF-8''$encoded};
 }
 
 #========================================
