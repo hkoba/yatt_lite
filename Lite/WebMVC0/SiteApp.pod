@@ -147,6 +147,58 @@ If it is given and it has C<startup> method is implemented,
 C<< $backend->startup($siteapp, @all_dirapps) >>
 will be called when C<prepare_app>.
 
+=head2 allow_debug_from
+
+List of client addresses which may see developer-only error output:
+the C<error_trace> widget of the shipped F<ytmpl/error.ytmpl>
+(backtrace, source lines and frame arguments) and, under
+C<runas_fcgi>, the raw exception text. Anything else gets the public
+error page. Templates can ask the same question with
+C<&yatt:is_debug_allowed_ip();>.
+
+Default is C<['127.0.0.1', '::1']>: the loopback client only.
+Giving this option I<replaces> the default, so list the loopback
+addresses too if you still want them.
+
+Each entry is compared with the client address as a whole string,
+exactly. (Earlier versions anchored this check only at the start, so
+C<127.0.0.1> also matched C<127.0.0.100>.) For CIDR ranges, IPv6
+normalization and IPv4-mapped IPv6 addresses, use
+L<YATT::Lite::WebMVC0::Partial::StrictIPMatch>.
+
+The client address is C<REMOTE_ADDR>, unless L</trusted_proxies>
+says otherwise.
+
+=head2 trusted_proxies
+
+List of addresses of the reverse proxies in front of this app.
+When C<REMOTE_ADDR> is one of them, the client address (for
+L</allow_debug_from>) is taken from the headers the proxy added:
+C<X-Real-IP>, then C<X-Client-IP>, then C<X-Forwarded-For>, whose
+entries are read from the right, skipping other trusted proxies, so
+that a value the client itself planted at the left is not used.
+Entries are matched like L</allow_debug_from> (exact string by
+default, CIDR with L<YATT::Lite::WebMVC0::Partial::StrictIPMatch>).
+
+B<Compatibility note>: before this option existed, those headers
+were believed from I<any> peer, so a remote client could send
+C<X-Real-IP: 127.0.0.1> and pass C<allow_debug_from>. Now they are
+ignored unless C<trusted_proxies> is set. If your app runs behind a
+proxy and you rely on C<allow_debug_from> for addresses other than
+the proxy itself, add the proxy here:
+
+  trusted_proxies => ['10.0.0.1'],
+
+Alternatively, keep this option unset and let
+L<Plack::Middleware::ReverseProxy> rewrite C<REMOTE_ADDR>, enabled
+only for connections from the proxy:
+
+  enable_if { $_[0]->{REMOTE_ADDR} eq '10.0.0.1' } 'ReverseProxy';
+
+C<X-Forwarded-Proto> is not affected by this option: it is still
+honoured from any peer for URL building and the C<Secure> cookie
+attribute.
+
 =head1 METHODS
 
 =head2 call($env)
@@ -266,6 +318,22 @@ QUERY is optional and must be C<[key,value,...]> array form.
 Same as C<< $CON->raise_redirect >>. Html made so far is discarded
 and the rendering stops there.
 See L<YATT::Lite::WebMVC0::Connection/REDIRECT>.
+
+=back
+
+=head2 Debugging
+
+=over 4
+
+=item &yatt:is_debug_allowed_ip();
+
+=item &yatt:is_debug_allowed_ip(ADDRESS);
+
+True if the client address (or the given ADDRESS) is listed in
+L</allow_debug_from>. Without an argument the client address is
+decided by L</trusted_proxies>. The shipped F<ytmpl/error.ytmpl>
+uses this to choose between the developer trace and the public
+error page.
 
 =back
 

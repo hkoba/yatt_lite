@@ -21,6 +21,7 @@ use YATT::Lite::MFields qw/noheader
 			   no_nested_query
 			   mkquery_with_body_params
 			   _allow_debug_from
+			   _trusted_proxies
 			   debug_cgi
 			   debug_psgi
 			   debug_connection
@@ -707,18 +708,38 @@ sub is_debug_allowed {
 sub is_debug_allowed_ip {
   (my MY $self, my $ip) = @_;
   $self->configure_allow_debug_from unless $self->{_allow_debug_from};
-  $ip =~ $self->{_allow_debug_from};
+  $self->{_allow_debug_from}->($ip);
 }
 
+#
+# The address of the client, for is_debug_allowed. Proxy headers
+# (X-Real-IP, X-Client-IP, X-Forwarded-For) are written by whoever
+# sends the request, so they are believed only when the peer
+# (REMOTE_ADDR) is one of the configured trusted_proxies. Without that
+# config this is just REMOTE_ADDR. X-Forwarded-For is read from the
+# right: the rightmost hop not in trusted_proxies is the client; values
+# to the left of it may have been planted by the client itself.
+#
 sub guess_client_ip {
   (my MY $self, my Env $env) = @_;
-  $env->{HTTP_X_REAL_IP} // $env->{HTTP_X_CLIENT_IP} // do {
-    if (defined(my $forward = $env->{HTTP_X_FORWARDED_FOR})) {
-      [split /(?:\s*,\s*|\s+)/, $forward]->[0];
-    } else {
-      $env->{REMOTE_ADDR}
+  my $remote = $env->{REMOTE_ADDR};
+  return $remote unless defined $remote and $self->is_trusted_proxy($remote);
+  foreach my $direct ($env->{HTTP_X_REAL_IP}, $env->{HTTP_X_CLIENT_IP}) {
+    return $direct if defined $direct and $direct ne '';
+  }
+  if (defined(my $forward = $env->{HTTP_X_FORWARDED_FOR})) {
+    foreach my $hop (reverse grep {$_ ne ''} split /\s*,\s*/, ($forward =~ s/^\s+|\s+$//gr)) {
+      return $hop unless $self->is_trusted_proxy($hop);
     }
   }
+  $remote;
+}
+
+sub is_trusted_proxy {
+  (my MY $self, my $ip) = @_;
+  my $matcher = $self->{_trusted_proxies}
+    or return 0;
+  $matcher->($ip);
 }
 
 *configure_debug_allowed_ip = *configure_allow_debug_from;
@@ -726,8 +747,29 @@ sub guess_client_ip {
 
 sub configure_allow_debug_from {
   (my MY $self, my $data) = @_;
-  my $pat = join "|", map { quotemeta($_) } lexpand($data // ['127.0.0.1']);
-  $self->{_allow_debug_from} = qr{^(?:$pat)};
+  $self->{_allow_debug_from}
+    = $self->compile_addr_matcher(allow_debug_from => $data // ['127.0.0.1', '::1']);
+}
+
+sub configure_trusted_proxies {
+  (my MY $self, my $data) = @_;
+  $self->{_trusted_proxies}
+    = defined $data ? $self->compile_addr_matcher(trusted_proxies => $data) : undef;
+}
+
+#
+# Build a predicate sub for an address list. The default compares the
+# address as a whole string, exactly (no parsing, no extra module, to
+# keep CGI startup cheap). YATT::Lite::WebMVC0::Partial::StrictIPMatch
+# overrides this to parse addresses and accept CIDR ranges.
+#
+sub compile_addr_matcher {
+  (my MY $self, my ($name, $list)) = @_;
+  my @items = grep {defined $_ and $_ ne ''} lexpand($list);
+  return sub { 0 } unless @items;
+  my $pat = join "|", map { quotemeta($_) } @items;
+  my $re = qr{^(?:$pat)\z};
+  sub { defined $_[0] and $_[0] =~ $re };
 }
 
 sub has_htdebug {
