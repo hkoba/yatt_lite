@@ -121,7 +121,13 @@ is_deeply list_of(type => 'expr'), [
   "public/index.yatt 5 page index calc=[expr n]",
 ], "type => expr";
 
-{
+SKIP: {
+  # Running Lite/Inspector.pm as a modulino needs File::AddInc to map its
+  # path to YATT/Lite/Inspector.pm, which only works when the checkout
+  # is named YATT (not in a dist dir like YATT-Lite-X.Y, see inspector.t).
+  skip "CLI tests only work when \$distDir ends with 'YATT'", 6
+    unless [File::Spec->splitdir($distDir)]->[-1] eq "YATT";
+
   my $cmd = Test::Command->new(cmd => [
     "$distDir/Lite/Inspector.pm",
     "--dir=$app",
@@ -135,11 +141,9 @@ is_deeply list_of(type => 'expr'), [
   is scalar(@lines), 4, "CLI emits one line per code arg";
   like $lines[0], qr{^public/index\.yatt\t3\tpage\tindex\tf\t\[code x y\]$}
     , "CLI tsv line";
-}
 
-{
   # command specific options and global options after the command name
-  my $cmd = Test::Command->new(cmd => [
+  $cmd = Test::Command->new(cmd => [
     "$distDir/Lite/Inspector.pm",
     "--dir=$app",
     "list_code_args",

@@ -24,7 +24,7 @@ use List::MoreUtils qw/last_index/;
     $app_root = do { $app_root =~ m{^(.*)$} && $& }; # Untaint.
     if (-d (my $dn = "$app_root/lib")) {
       push @libdir, $dn
-    } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/}) {
+    } elsif (my ($found) = $app_root =~ m{^(.*?/)YATT/samples(?:/|\z)}) {
       push @libdir, $found;
     }
     if (-d (my $dn = "$app_root/extlib")) {
