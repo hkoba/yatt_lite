@@ -127,6 +127,8 @@ Lite/WebMVC0/Partial/Session.pm
 Lite/WebMVC0/Partial/Session2.pm
 Lite/WebMVC0/Partial/Session2.pod
 Lite/WebMVC0/Partial/Session3.pm
+Lite/WebMVC0/Partial/StrictIPMatch.pm
+Lite/WebMVC0/Partial/StrictIPMatch.pod
 Lite/WebMVC0/SiteApp.pm
 Lite/WebMVC0/SiteApp.pod
 Lite/WebMVC0/SiteApp/CGI.pm
@@ -405,6 +407,7 @@ samples/sess_backed/1/t/http_localhost.t
 samples/sess_backed/1/t/offline.t
 samples/sess_backed/1/t/psgi_offline.t
 samples/sess_backed/1/var/.htaccess
+samples/sess_backed/2/.htdebug_dump
 samples/sess_backed/2/app.psgi
 samples/sess_backed/2/config/development.pl
 samples/sess_backed/2/cpanfile
@@ -702,6 +705,7 @@ t/error.t
 t/factory.t
 t/factory_approot_normalize.t
 t/factory_crossbase.t
+t/factory_find_script_stop_at.t
 t/factory_invoke_sub.t
 t/factory_mixed_lib.t
 t/gh241_mkhidden_nested_query/app/app.psgi
@@ -714,6 +718,7 @@ t/inspector_definition.t
 t/inspector_list_code_args.t
 t/inspector_pagevars.t
 t/instpkg.t
+t/langserver_stop_at.t
 t/langserver_transport.t
 t/lib/.symlinks
 t/lineno.t
@@ -751,18 +756,26 @@ t/psgi_action_in_many_ways.t
 t/psgi_action_should_get_declared_params.t
 t/psgi_conn_param.t
 t/psgi_conn_upload.t
+t/psgi_debug_allowed_ip.t
 t/psgi_error_status.t
+t/psgi_escape_ref_dump.t
 t/psgi_is_current_page.t
 t/psgi_param_filter.t
+t/psgi_param_type_whitelist.t
 t/psgi_path_abstraction.t
 t/psgi_pi.t
 t/psgi_raise_response.t
+t/psgi_redirect_guard.t
 t/psgi_root_index.t
 t/psgi_sess2/app.d/public/.htyattrc.pl
 t/psgi_sess2/app.d/public/index.yatt
 t/psgi_sess2/app.psgi
 t/psgi_sess2/app.t
+t/psgi_session2_cookie.t
+t/psgi_session_cookie.t
+t/psgi_sigil_word_only.t
 t/psgi_site_config.t
+t/psgi_strict_ip_match.t
 t/psgi_ydo_error.t
 t/reload.t
 t/render_context.t
@@ -819,6 +832,7 @@ t/util_file.t
 t/util_nestedq.t
 t/util_other.t
 t/util_path.t
+t/util_raise_download.t
 t/vfs.t
 t/xhf.t
 t/xhf/errdiag/1-static.xhf
