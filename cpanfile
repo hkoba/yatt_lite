@@ -16,6 +16,7 @@ requires 'parent';
 requires 'autodie';
 requires 'File::Path';
 
+requires 'URI';
 requires 'URI::Escape';
 requires 'Tie::IxHash'; # For nested_query
 requires 'Devel::StackTrace';
