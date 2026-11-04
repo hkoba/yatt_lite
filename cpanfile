@@ -9,7 +9,7 @@ requires 'perl' => '>= 5.10.1, != 5.17, != 5.19.3';
 
 requires 'List::Util';
 requires 'List::MoreUtils';
-requires 'Plack';
+requires 'Plack', '!= 1.0053'; # 1.0053 calls undefined return_405 in Plack::App::File
 requires 'Hash::MultiValue';
 requires 'version' => 0.77;
 requires 'parent';
