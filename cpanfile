@@ -42,9 +42,6 @@ requires 'Sub::Identify'; # For LanguageServer
 
 recommends 'Devel::StackTrace::WithLexicals' => 0.08;
 
-recommends 'Test::Requires'; # which is required by Sub::Inspector
-recommends 'Sub::Inspector';
-
 recommends 'B::Utils' => '!= 0.26';
 
 # For Inspector
