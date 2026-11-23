@@ -1,0 +1,70 @@
+# -*- coding: utf-8 -*-
+# Tests of language specific overrides (FIELD[lang] and ONLY) with perl runner.
+# Values for js and go in this file are dummies which never match.
+YATT_CONFIG[js][
+no_such_config_for_perl: 1
+]
+
+TITLE: OUT[js] is ignored in perl
+IN:
+ <!yatt:args x=bool>
+ &yatt:x;
+PARAM[
+- 1
+]
+OUT:
+ 1
+OUT[js]:
+ true
+
+TITLE: OUT[perl] overrides OUT
+IN:
+ <h2>perl</h2>
+OUT:
+ <h2>spec</h2>
+OUT[perl]:
+ <h2>perl</h2>
+
+TITLE: OUT with ERROR[js] is a test of OUT in perl
+IN:
+ <h2>ok</h2>
+OUT:
+ <h2>ok</h2>
+ERROR[js]: ^never match in perl
+
+TITLE: ERROR[perl] replaces OUT as a group
+IN:
+ <yatt:no_such_widget/>
+OUT:
+ dummy for other languages
+ERROR[perl]: ^No such widget <yatt:no_such_widget>
+
+TITLE: ONLY: js is skipped in perl
+ONLY: js
+IN:
+ <h2>js only</h2>
+OUT:
+ never match in perl
+
+TITLE: ONLY: perl go runs in perl
+ONLY: perl go
+IN:
+ <h2><?perl= 'perl'?></h2>
+OUT:
+ <h2>perl</h2>
+
+TITLE: SKIP[js] and TODO[go] are ignored in perl
+SKIP[js]: not supported in js
+TODO[go]: not yet implemented in go
+IN:
+ <h2>run</h2>
+OUT:
+ <h2>run</h2>
+
+TITLE: SKIP[perl] skips in perl
+SKIP[perl]: out of scope in perl
+IN:
+ <h2>skipped</h2>
+OUT:
+ never match in perl
+
