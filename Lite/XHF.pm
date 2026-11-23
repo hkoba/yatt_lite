@@ -15,6 +15,7 @@ use fields qw(FH filename string tokens
 	      encoding crlf
 	      nocr subst
               first_lineno
+              _lineno
               _depth
 	      skip_comment bytes);
 
@@ -144,14 +145,34 @@ sub tokenize {
   my @tokens;
  LOOP: {
     do {
-      defined (my $para = <$fh>) or last LOOP;
+      my ($para, $lineno) = $self->read_paragraph($fh) or last LOOP;
       $para = untaint_unless_tainted
 	($self->{filename} // $self->{string}
 	 , $para);
-      @tokens = $self->tokenize_1($para);
+      @tokens = $self->tokenize_1($para, $lineno);
     } until (not $self->{skip_comment} or @tokens);
   }
   @tokens;
+}
+
+# Reads one paragraph (like $/ = "") and returns it with its first line number.
+sub read_paragraph {
+  (my MY $self, my $fh) = @_;
+  local $/ = "\n";
+  $self->{_lineno} //= ($self->{first_lineno} // 1) - 1;
+  my $line;
+  # Leading empty lines are skipped.
+  do {
+    defined ($line = <$fh>) or return;
+    $self->{_lineno}++;
+  } while ($line eq "\n");
+  my ($para, $start) = ($line, $self->{_lineno});
+  while (defined ($line = <$fh>)) {
+    $self->{_lineno}++;
+    last if $line eq "\n";
+    $para .= $line;
+  }
+  ($para, $start);
 }
 
 sub tokenize_1 {
@@ -163,10 +184,11 @@ sub tokenize_1 {
     *_ =  \ $_[0];
     $sub->($_);
   }
-  my $lineno = $reader->{first_lineno} // 1;
-  my ($pos, $ncomments, @tokens, @result);
+  my $lineno = $_[1] // $reader->{first_lineno} // 1;
+  my ($pos, $ncomments, $nlines, @tokens, @result);
   foreach my $token (@tokens = split /(?<=\n)(?=[^\ \t])/, $_[0]) {
     $pos++;
+    $nlines = ($token =~ tr/\n//) || 1;
     if ($token =~ s{^(?:\#[^\n]*(?:\n|$))+}{}) {
       $ncomments++;
       next if $token eq '';
@@ -212,7 +234,7 @@ sub tokenize_1 {
     }
     push @result, [$name, $sigil, $token, $lineno];
   } continue {
-    $lineno++;
+    $lineno += $nlines;
   }
 
   # Comment only paragraph should return nothing.
