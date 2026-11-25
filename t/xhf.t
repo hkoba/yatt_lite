@@ -25,7 +25,10 @@ sub test_error {
   my ($input, $wanterr, $theme) = @_;
   my $err = do {
     local $@;
-    eval { $CLASS->new(string => $input)->read };
+    eval {
+      my $p = $CLASS->new(string => $input);
+      1 while $p->read;
+    };
     $@;
   };
   like $err, $wanterr, $theme;
@@ -230,6 +233,52 @@ chklst[]: 2
 chklst[]: 5
 END
     , ['chklst[]' => 1, 'chklst[]' => 2, 'chklst[]' => 5];
+
+  # Subscripted names are just names for the parser.
+  # (YATT::Lite::Test::XHFTest uses them as language specific overrides)
+  test_parser [parser(<<END)->read]
+OUT:
+ 1
+OUT[js]:
+ true
+ERROR_BODY[js][
+- x
+]
+YATT_CONFIG[go]{
+a: b
+}
+END
+    , [OUT => "1\n", 'OUT[js]' => "true\n", 'ERROR_BODY[js]' => ['x']
+       , 'YATT_CONFIG[go]' => {a => 'b'}];
+
+  # Line numbers of tokens are real line numbers of the input.
+  {
+    my $p = parser(<<END);
+# comment
+
+foo: 1
+bar:
+ a
+ b
+
+
+baz[
+- x
+]
+qux: 3
+END
+    my @lines;
+    while (my @tokens = $p->tokenize) {
+      push @lines, [map {[$_->[0], $_->[3]]} @tokens];
+    }
+    is_deeply \@lines
+      , [[[foo => 3], [bar => 4]]
+         , [[baz => 9], ['' => 10], [undef, 11], [qux => 12]]]
+      , "line numbers of tokens";
+  }
+
+  test_error "foo: 1\n\n\nbar: 2\nbaz\n", qr/Invalid XHF token 'baz\n' at \S+ line 5/
+    , "line number in error";
 
   test_error <<END, qr/Missing close '\]'/, "missing close ]";
 foo[

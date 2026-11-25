@@ -108,9 +108,12 @@ foreach my MY $sect (@section) {
     $title .= " ($test->{_num})" if $test->{_num};
     local $TODO = $test->{TODO};
   SKIP: {
-      if (($test->{SKIP} or $test->{PERL_MINVER} or $skip_no_utf8)
+      if (($test->{_only_skip} or $test->{SKIP} or $test->{PERL_MINVER}
+           or $skip_no_utf8)
 	  and my $skip = $test->ntests) {
-	if ($test->{PERL_MINVER} and $] < $test->{PERL_MINVER}) {
+	if ($test->{_only_skip}) {
+	  skip "by $test->{_only_skip}: $title", $skip;
+	} elsif ($test->{PERL_MINVER} and $] < $test->{PERL_MINVER}) {
 	  skip "by perl-$] < PERL_MINVER($test->{PERL_MINVER}) $title", $skip
 	} elsif ($test->{SKIP}) {
 	  skip "by SKIP: $title", $skip;

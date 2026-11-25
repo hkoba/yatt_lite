@@ -169,10 +169,11 @@ IN:
  &yatt:x;
 OUT:
  
-      漢
-      字
-  
-  
+       漢
+     字
+ 
+ 
+
 TITLE: destructuring bind and spread operator
 IN:
  <yatt:my [x y :::z]="1..8" />

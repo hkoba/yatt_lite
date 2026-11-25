@@ -56,6 +56,14 @@ jobs:
           sudo apt-get install -y zsh libnsl-dev
           curl -fsSL --compressed https://raw.githubusercontent.com/skaji/cpm/main/cpm > cpm
           perl ./cpm install -g Test::Requires B::Debug
-          perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test
+          cpanfile=cpanfile
+          if [ "${{ matrix.threaded }}" = true ]; then
+            # GH-314: Coro 6.57 fails to build with threaded perl on ubuntu-26.04.
+            # (https://rt.cpan.org/Public/Bug/Display.html?id=158609)
+            # Without Coro, t/langserver_*.t are skipped.
+            grep -v "^recommends 'Coro" cpanfile > cpanfile.without-coro
+            cpanfile=cpanfile.without-coro
+          fi
+          perl ./cpm install -g --show-build-log-on-failure --with-recommends --with-test --cpanfile=$cpanfile
       - name: Run Tests
         run: PERL=$(which perl) lib/YATT/t/runtests.zsh
